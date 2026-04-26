@@ -55,7 +55,11 @@ export function AppProvider({ children }) {
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        window.location.href = '/passwort-zuruecksetzen'
+        return
+      }
       setSession(session)
       if (session) {
         await ladeProfil(session.user.id)

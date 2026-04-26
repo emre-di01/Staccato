@@ -11,6 +11,193 @@ const STATUS_FARBE = {
   zu_spaet:    { bg:'#f59e0b',        text:'#fff' },
 }
 
+// ─── Einzelne Stunde erstellen Modal ─────────────────────────
+function EinzelStundeModal({ kursId, raumId, onClose, onErfolg }) {
+  const [form, setForm] = useState({
+    datum:      new Date().toISOString().slice(0, 10),
+    uhrzeit_von: '09:00',
+    uhrzeit_bis: '10:00',
+    notizen:    '',
+    hausaufgaben:'',
+  })
+  const [raeume, setRaeume] = useState([])
+  const [raum_id, setRaumId] = useState(raumId ?? '')
+  const [laden,  setLaden]  = useState(false)
+  const [fehler, setFehler] = useState('')
+
+  useEffect(() => {
+    supabase.from('raeume').select('id, name').eq('aktiv', true).order('name')
+      .then(({ data }) => setRaeume(data ?? []))
+  }, [])
+
+  async function erstellen() {
+    if (!form.datum || !form.uhrzeit_von || !form.uhrzeit_bis) {
+      setFehler('Datum und Uhrzeit sind erforderlich.'); return
+    }
+    setLaden(true)
+    const beginn = `${form.datum}T${form.uhrzeit_von}:00`
+    const ende   = `${form.datum}T${form.uhrzeit_bis}:00`
+
+    // Stunde anlegen
+    const { data: stunde, error } = await supabase.from('stunden').insert({
+      unterricht_id: kursId,
+      raum_id:       raum_id || null,
+      beginn,
+      ende,
+      notizen:       form.notizen || null,
+      hausaufgaben:  form.hausaufgaben || null,
+    }).select().single()
+
+    if (error) { setFehler(error.message); setLaden(false); return }
+
+    // Lehrer der Stunde aus Unterricht übernehmen
+    const { data: ul } = await supabase.from('unterricht_lehrer')
+      .select('lehrer_id, rolle').eq('unterricht_id', kursId)
+    if (ul?.length > 0) {
+      await supabase.from('stunden_lehrer').insert(
+        ul.map(l => ({ stunde_id: stunde.id, lehrer_id: l.lehrer_id, rolle: l.rolle }))
+      )
+    }
+
+    onErfolg()
+    onClose()
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+          <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>+ Einzelne Stunde</h3>
+          <button onClick={onClose} style={s.iconBtn}>✕</button>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <label style={s.label}>Datum</label>
+            <input type="date" style={s.input} value={form.datum}
+              onChange={e => setForm(f => ({ ...f, datum: e.target.value }))} />
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={s.label}>Von</label>
+              <input type="time" style={s.input} value={form.uhrzeit_von}
+                onChange={e => setForm(f => ({ ...f, uhrzeit_von: e.target.value }))} />
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={s.label}>Bis</label>
+              <input type="time" style={s.input} value={form.uhrzeit_bis}
+                onChange={e => setForm(f => ({ ...f, uhrzeit_bis: e.target.value }))} />
+            </div>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <label style={s.label}>Raum</label>
+            <select style={s.input} value={raum_id} onChange={e => setRaumId(e.target.value)}>
+              <option value="">– Kein Raum –</option>
+              {raeume.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <label style={s.label}>Notizen</label>
+            <textarea style={{ ...s.input, minHeight:60, resize:'vertical' }} value={form.notizen}
+              onChange={e => setForm(f => ({ ...f, notizen: e.target.value }))} />
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <label style={s.label}>Hausaufgaben</label>
+            <textarea style={{ ...s.input, minHeight:60, resize:'vertical' }} value={form.hausaufgaben}
+              onChange={e => setForm(f => ({ ...f, hausaufgaben: e.target.value }))} />
+          </div>
+          {fehler && <p style={{ margin:0, color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
+          <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+            <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+            <button onClick={erstellen} disabled={laden} style={s.btnPri}>
+              {laden ? 'Erstelle …' : '+ Stunde erstellen'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Anwesenheits-Übersicht pro Schüler ───────────────────────
+function AnwesenheitUebersicht({ schueler, stunden }) {
+  const [anwesenheiten, setAnwesenheiten] = useState({})
+  const [laden, setLaden] = useState(true)
+
+  useEffect(() => {
+    async function ladeAnwesenheit() {
+      const stundenIds = stunden.filter(s => s.status === 'stattgefunden').map(s => s.id)
+      if (stundenIds.length === 0) { setLaden(false); return }
+      const { data } = await supabase.from('anwesenheit')
+        .select('*').in('stunde_id', stundenIds)
+      const map = {}
+      data?.forEach(a => {
+        if (!map[a.schueler_id]) map[a.schueler_id] = {}
+        map[a.schueler_id][a.stunde_id] = a.status
+      })
+      setAnwesenheiten(map)
+      setLaden(false)
+    }
+    ladeAnwesenheit()
+  }, [stunden])
+
+  const stattgefunden = stunden.filter(s => s.status === 'stattgefunden')
+
+  if (laden) return <div style={{ color:'var(--text-3)', fontSize:13, padding:16 }}>Lade Anwesenheiten …</div>
+  if (stattgefunden.length === 0) return <div style={s.leer}>Noch keine Stunden abgehalten.</div>
+
+  return (
+    <div style={{ overflowX:'auto' }}>
+      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+        <thead>
+          <tr style={{ background:'var(--bg-2)' }}>
+            <th style={{ padding:'10px 14px', textAlign:'left', fontWeight:700, color:'var(--text-3)', fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--border)', whiteSpace:'nowrap' }}>Schüler</th>
+            {stattgefunden.map(st => (
+              <th key={st.id} style={{ padding:'8px 6px', textAlign:'center', fontWeight:700, color:'var(--text-3)', fontSize:10, textTransform:'uppercase', borderBottom:'1px solid var(--border)', minWidth:44 }}>
+                {new Date(st.beginn).toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
+              </th>
+            ))}
+            <th style={{ padding:'10px 14px', textAlign:'center', fontWeight:700, color:'var(--text-3)', fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--border)' }}>Quote</th>
+          </tr>
+        </thead>
+        <tbody>
+          {schueler.map((sc, i) => {
+            const scAnw = anwesenheiten[sc.schueler_id] ?? {}
+            const anwesend = Object.values(scAnw).filter(v => v === 'anwesend' || v === 'zu_spaet').length
+            const gesamt   = stattgefunden.length
+            const quote    = gesamt > 0 ? Math.round(100 * anwesend / gesamt) : null
+            return (
+              <tr key={sc.schueler_id} style={{ background: i%2===0 ? 'var(--surface)' : 'var(--bg)', borderBottom:'1px solid var(--border)' }}>
+                <td style={{ padding:'10px 14px', fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>
+                  {sc.profiles?.voller_name}
+                </td>
+                {stattgefunden.map(st => {
+                  const status = scAnw[st.id]
+                  const f = STATUS_FARBE[status]
+                  return (
+                    <td key={st.id} style={{ padding:'6px', textAlign:'center' }}>
+                      <span title={status ?? 'nicht erfasst'} style={{ display:'inline-block', width:24, height:24, borderRadius:'50%', background: f ? f.bg : 'var(--bg-3)', fontSize:12, lineHeight:'24px', textAlign:'center' }}>
+                        {status === 'anwesend' ? '✓' : status === 'abwesend' ? '✗' : status === 'entschuldigt' ? 'E' : status === 'zu_spaet' ? 'S' : '·'}
+                      </span>
+                    </td>
+                  )
+                })}
+                <td style={{ padding:'10px 14px', textAlign:'center' }}>
+                  {quote !== null ? (
+                    <span style={{ fontWeight:800, color: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' }}>
+                      {quote}%
+                    </span>
+                  ) : '–'}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ─── Anwesenheit erfassen Modal ───────────────────────────────
 function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
   const { profil } = useApp()
@@ -156,7 +343,7 @@ export default function KursDetail() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:20, borderBottom:'2px solid var(--border)' }}>
-        {[['stunden','📅 Stunden'],['schueler','👥 Schüler'],['repertoire','🎼 Repertoire']].map(([key, label]) => (
+        {[['stunden','📅 Stunden'],['anwesenheit','✅ Anwesenheit'],['schueler','👥 Schüler'],['repertoire','🎼 Repertoire']].map(([key, label]) => (
           <button key={key} onClick={() => setAktiveTab(key)}
             style={{ padding:'10px 18px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: aktiveTab===key ? 'var(--text)' : 'var(--text-3)', fontWeight: aktiveTab===key ? 800 : 500, borderBottom:`2px solid ${aktiveTab===key ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, transition:'all 0.15s' }}>
             {label}
@@ -166,9 +353,15 @@ export default function KursDetail() {
 
       {/* Tab: Stunden */}
       {aktiveTab === 'stunden' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {stunden.length === 0 ? <div style={s.leer}>Keine Stunden gefunden. Stunden im Admin-Bereich generieren.</div> :
-           stunden.map(st => {
+        <div>
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:14 }}>
+            <button onClick={() => setModal({ typ:'einzelstunde' })} style={s.btnPri}>
+              + Einzelne Stunde
+            </button>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {stunden.length === 0 ? <div style={s.leer}>Keine Stunden gefunden.</div> :
+            stunden.map(st => {
             const beginn   = new Date(st.beginn)
             const istVorbei = beginn < jetzt
             const istHeute  = beginn.toDateString() === jetzt.toDateString()
@@ -191,21 +384,43 @@ export default function KursDetail() {
                   </div>
                   {st.hausaufgaben && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>📝 {st.hausaufgaben}</div>}
                 </div>
-                {!istVorbei && st.status === 'geplant' && (
-                  <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
-                    style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                    ✅ Anwesenheit
-                  </button>
-                )}
-                {istVorbei && st.status === 'geplant' && (
-                  <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
-                    style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                    ✅ Nachtragen
-                  </button>
-                )}
+                <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                  {!istVorbei && st.status === 'geplant' && (
+                    <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
+                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      ✅ Anwesenheit
+                    </button>
+                  )}
+                  {istVorbei && st.status === 'geplant' && (
+                    <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
+                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      ✅ Nachtragen
+                    </button>
+                  )}
+                  {st.status === 'geplant' && (
+                    <button onClick={() => setModal({ typ:'absagen', stunde: st })}
+                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      ❌ Absagen
+                    </button>
+                  )}
+                  {st.status === 'abgesagt' && (
+                    <button onClick={() => stundeWiederherstellen(st.id)}
+                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      ↩ Wiederherstellen
+                    </button>
+                  )}
+                </div>
               </div>
             )
           })}
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Anwesenheit */}
+      {aktiveTab === 'anwesenheit' && (
+        <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', overflow:'hidden', boxShadow:'var(--shadow)' }}>
+          <AnwesenheitUebersicht schueler={schueler} stunden={stunden} />
         </div>
       )}
 
@@ -254,6 +469,17 @@ export default function KursDetail() {
           onClose={() => setModal(null)}
           onErfolg={() => {
             setStunden(prev => prev.map(st => st.id === modal.stunde.id ? { ...st, status: 'stattgefunden' } : st))
+          }}
+        />
+      )}
+      {modal?.typ === 'einzelstunde' && (
+        <EinzelStundeModal
+          kursId={id}
+          raumId={kurs?.raum_id}
+          onClose={() => setModal(null)}
+          onErfolg={async () => {
+            const { data } = await supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn', { ascending: false }).limit(20)
+            setStunden(data ?? [])
           }}
         />
       )}

@@ -172,6 +172,85 @@ function PdfViewer({ datei }) {
   )
 }
 
+// ─── Schüler Anwesenheits-Übersicht ──────────────────────────
+function SchuelerAnwesenheit({ profil, kursId, stunden }) {
+  const [anwesenheiten, setAnwesenheiten] = useState([])
+  const [laden, setLaden] = useState(true)
+
+  useEffect(() => {
+    async function ladeData() {
+      const stundenIds = stunden.filter(s => s.status === 'stattgefunden').map(s => s.id)
+      if (stundenIds.length === 0) { setLaden(false); return }
+      const { data } = await supabase.from('anwesenheit')
+        .select('*, stunden(beginn)')
+        .eq('schueler_id', profil.id)
+        .in('stunde_id', stundenIds)
+        .order('stunde_id')
+      setAnwesenheiten(data ?? [])
+      setLaden(false)
+    }
+    ladeData()
+  }, [profil?.id, stunden])
+
+  const stattgefunden = stunden.filter(s => s.status === 'stattgefunden')
+  const anwesend = anwesenheiten.filter(a => a.status === 'anwesend' || a.status === 'zu_spaet').length
+  const quote = stattgefunden.length > 0 ? Math.round(100 * anwesend / stattgefunden.length) : null
+
+  const STATUS_ICON = { anwesend:'✅', abwesend:'❌', entschuldigt:'🟡', zu_spaet:'⏰' }
+  const STATUS_TEXT = { anwesend:'Anwesend', abwesend:'Abwesend', entschuldigt:'Entschuldigt', zu_spaet:'Zu spät' }
+
+  if (laden) return <div style={{ padding:20, color:'var(--text-3)' }}>Laden …</div>
+  if (stattgefunden.length === 0) return <div style={s.leer}>Noch keine Stunden abgehalten.</div>
+
+  return (
+    <div>
+      {/* Statistik */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap:12, marginBottom:20 }}>
+        {[
+          { label:'Stunden gesamt', wert: stattgefunden.length, farbe:'var(--primary)' },
+          { label:'Anwesend', wert: anwesend, farbe:'var(--success)' },
+          { label:'Anwesenheitsquote', wert: quote !== null ? `${quote}%` : '–', farbe: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' },
+        ].map(item => (
+          <div key={item.label} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
+            <div style={{ fontSize:11, color:'var(--text-3)', fontWeight:600, marginBottom:6 }}>{item.label}</div>
+            <div style={{ fontSize:24, fontWeight:800, color: item.farbe }}>{item.wert}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Liste */}
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        {stattgefunden.map(st => {
+          const anw = anwesenheiten.find(a => a.stunde_id === st.id)
+          const beginn = new Date(st.beginn)
+          return (
+            <div key={st.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 16px', borderRadius:'var(--radius)', background:'var(--surface)', border:'1px solid var(--border)' }}>
+              <div style={{ textAlign:'center', minWidth:44 }}>
+                <div style={{ fontSize:11, color:'var(--text-3)', textTransform:'uppercase', fontWeight:700 }}>
+                  {beginn.toLocaleDateString('de-DE', { weekday:'short' })}
+                </div>
+                <div style={{ fontSize:16, fontWeight:800, color:'var(--text)' }}>
+                  {beginn.toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
+                </div>
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, color:'var(--text-2)' }}>
+                  {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr
+                </div>
+                {anw?.notiz && <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>📝 {anw.notiz}</div>}
+              </div>
+              <div style={{ textAlign:'right' }}>
+                <span style={{ fontSize:16 }}>{anw ? STATUS_ICON[anw.status] : '–'}</span>
+                {anw && <div style={{ fontSize:11, color:'var(--text-3)', marginTop:2 }}>{STATUS_TEXT[anw.status]}</div>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function SchuelerKursDetail() {
   const { id }     = useParams()
@@ -258,6 +337,7 @@ export default function SchuelerKursDetail() {
       <div style={{ display:'flex', gap:2, marginBottom:20, borderBottom:'2px solid var(--border)', overflowX:'auto' }}>
         {[
           ['stunden', `📅 Stundenplan`],
+          ['anwesenheit', `✅ Anwesenheit`],
           ['repertoire', `🎼 Repertoire (${stuecke.length})`],
           ['dateien', `📁 Dateien (${dateien.length})`],
         ].map(([k, l]) => (
@@ -304,6 +384,11 @@ export default function SchuelerKursDetail() {
             )
           })}
         </div>
+      )}
+
+      {/* ANWESENHEIT */}
+      {tab === 'anwesenheit' && (
+        <SchuelerAnwesenheit profil={profil} kursId={id} stunden={stunden} />
       )}
 
       {/* REPERTOIRE */}

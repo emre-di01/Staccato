@@ -85,6 +85,79 @@ function TerminBlock({ stunde, onClick }) {
   )
 }
 
+// ─── Event Block ──────────────────────────────────────────────
+
+const EVENT_TYP_FARBE = { konzert: '#f59e0b', vorspiel: '#8b5cf6', pruefung: '#ef4444', veranstaltung: '#10b981', sonstiges: '#6b7280' }
+const EVENT_TYP_ICON  = { konzert: '🎵', vorspiel: '🎤', pruefung: '📝', veranstaltung: '🎭', sonstiges: '📅' }
+
+function EventBlock({ event, onClick }) {
+  const beginn = new Date(event.beginn)
+  const ende   = event.ende ? new Date(event.ende) : new Date(beginn.getTime() + 60 * 60 * 1000)
+  const startMin = (beginn.getHours() - STUNDEN_VON) * 60 + beginn.getMinutes()
+  const dauerMin = (ende - beginn) / 60000
+  const top    = (startMin / 60) * SLOT_HOEHE
+  const hoehe  = Math.max((dauerMin / 60) * SLOT_HOEHE - 2, 20)
+  const farbe  = EVENT_TYP_FARBE[event.typ] ?? '#6b7280'
+
+  return (
+    <div onClick={() => onClick(event)}
+      style={{
+        position: 'absolute', top: top + 1, left: 2, right: 2, height: hoehe,
+        background: `color-mix(in srgb, ${farbe} 25%, var(--surface))`,
+        border: `1.5px solid ${farbe}`,
+        borderRadius: 6, padding: '3px 6px', cursor: 'pointer', overflow: 'hidden',
+        zIndex: 6, boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: farbe, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {EVENT_TYP_ICON[event.typ]} {event.titel}
+      </div>
+      {hoehe > 32 && (
+        <div style={{ fontSize: 10, color: farbe, opacity: 0.8, marginTop: 2 }}>
+          {beginn.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+          {' – '}
+          {ende.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Event Detail Modal ───────────────────────────────────────
+
+function EventDetailModal({ event, onClose }) {
+  const beginn = new Date(event.beginn)
+  const ende   = event.ende ? new Date(event.ende) : null
+  const farbe  = EVENT_TYP_FARBE[event.typ] ?? '#6b7280'
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'flex-end', justifyContent:'center', padding:'16px' }}
+      onClick={onClose}>
+      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:24, width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display:'flex', gap:12, alignItems:'flex-start', marginBottom:16 }}>
+          <div style={{ width:4, borderRadius:99, alignSelf:'stretch', background: farbe, flexShrink:0 }} />
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12, fontWeight:700, color: farbe, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>
+              {EVENT_TYP_ICON[event.typ]} {event.typ}
+            </div>
+            <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{event.titel}</h3>
+          </div>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'var(--text-3)', padding:0, lineHeight:1 }}>✕</button>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:8, fontSize:14, color:'var(--text-2)' }}>
+          <div>📅 {beginn.toLocaleDateString('de-DE', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</div>
+          <div>🕐 {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr
+            {ende && ` – ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr`}
+          </div>
+          {event.ort && <div>📍 {event.ort}</div>}
+          {event.beschreibung && <div style={{ marginTop:4, color:'var(--text-3)', lineHeight:1.5 }}>{event.beschreibung}</div>}
+          {event.oeffentlich && <div style={{ fontSize:12, color:'var(--accent)', fontWeight:600 }}>🌐 Öffentliche Veranstaltung</div>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Detail Modal ─────────────────────────────────────────────
 
 function DetailModal({ stunde, onClose }) {
@@ -157,11 +230,13 @@ function DetailModal({ stunde, onClose }) {
 
 export default function Stundenplan() {
   const { profil, rolle } = useApp()
-  const [stunden,    setStunden]    = useState([])
-  const [laden,      setLaden]      = useState(true)
-  const [woche,      setWoche]      = useState(() => getMontag(new Date()))
-  const [ansicht,    setAnsicht]    = useState('woche') // 'woche' | 'liste'
-  const [ausgewaehlt, setAusgewaehlt] = useState(null)
+  const [stunden,         setStunden]         = useState([])
+  const [events,          setEvents]          = useState([])
+  const [laden,           setLaden]           = useState(true)
+  const [woche,           setWoche]           = useState(() => getMontag(new Date()))
+  const [ansicht,         setAnsicht]         = useState('woche')
+  const [ausgewaehlt,     setAusgewaehlt]     = useState(null)
+  const [ausgewaehltEvent, setAusgewaehltEvent] = useState(null)
 
   const wocheTage = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(woche)
@@ -209,6 +284,16 @@ export default function Stundenplan() {
 
     const { data } = await query
     setStunden(data ?? [])
+
+    // Events für die Woche laden
+    const { data: evData } = await supabase
+      .from('events')
+      .select('*')
+      .gte('beginn', von.toISOString())
+      .lte('beginn', bis.toISOString())
+      .order('beginn')
+    setEvents(evData ?? [])
+
     setLaden(false)
   }, [profil, woche, rolle])
 
@@ -221,10 +306,10 @@ export default function Stundenplan() {
   }
 
   const stundenProTag = wocheTage.map(tag =>
-    stunden.filter(st => {
-      const b = new Date(st.beginn)
-      return b.toDateString() === tag.toDateString()
-    })
+    stunden.filter(st => new Date(st.beginn).toDateString() === tag.toDateString())
+  )
+  const eventsProTag = wocheTage.map(tag =>
+    events.filter(ev => new Date(ev.beginn).toDateString() === tag.toDateString())
   )
 
   const zeitSlots = Array.from({ length: STUNDEN_BIS - STUNDEN_VON }, (_, i) => STUNDEN_VON + i)
@@ -319,6 +404,10 @@ export default function Stundenplan() {
                 {stundenProTag[i].map(st => (
                   <TerminBlock key={st.id} stunde={st} onClick={setAusgewaehlt} />
                 ))}
+                {/* Events */}
+                {eventsProTag[i].map(ev => (
+                  <EventBlock key={ev.id} event={ev} onClick={setAusgewaehltEvent} />
+                ))}
                 {/* Jetzt-Linie */}
                 {istHeute(tag) && (() => {
                   const jetzt = new Date()
@@ -338,46 +427,84 @@ export default function Stundenplan() {
       ) : (
 
         // ── LISTENANSICHT ──────────────────────────────────────
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {stunden.length === 0 ? (
-            <div style={s.leer}>Keine Stunden in dieser Woche.</div>
-          ) : stunden.map(st => {
-            const beginn = new Date(st.beginn)
-            const ende   = st.ende ? new Date(st.ende) : null
-            const farbe  = st.unterricht?.farbe ?? TYP_FARBE[st.unterricht?.typ] ?? 'var(--primary)'
-            const heute  = istHeute(beginn)
-            return (
-              <div key={st.id} onClick={() => setAusgewaehlt(st)}
-                style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:`1px solid ${heute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center', cursor:'pointer', boxShadow:'var(--shadow)' }}>
-                <div style={{ width:4, borderRadius:99, alignSelf:'stretch', background: farbe, flexShrink:0 }} />
-                <div style={{ textAlign:'center', minWidth:52 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color: heute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
-                    {WOCHENTAGE[beginn.getDay() === 0 ? 6 : beginn.getDay() - 1]}
+        (() => {
+          const alleTermine = [
+            ...stunden.map(st => ({ ...st, _typ: 'stunde' })),
+            ...events.map(ev => ({ ...ev, _typ: 'event' })),
+          ].sort((a, b) => new Date(a.beginn) - new Date(b.beginn))
+
+          if (alleTermine.length === 0) return <div style={s.leer}>Keine Termine in dieser Woche.</div>
+
+          return (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {alleTermine.map(item => {
+                const beginn = new Date(item.beginn)
+                const heute  = istHeute(beginn)
+
+                if (item._typ === 'event') {
+                  const farbe = EVENT_TYP_FARBE[item.typ] ?? '#6b7280'
+                  return (
+                    <div key={'ev-' + item.id} onClick={() => setAusgewaehltEvent(item)}
+                      style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:`1px solid ${heute ? farbe : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center', cursor:'pointer', boxShadow:'var(--shadow)' }}>
+                      <div style={{ width:4, borderRadius:99, alignSelf:'stretch', background: farbe, flexShrink:0 }} />
+                      <div style={{ textAlign:'center', minWidth:52 }}>
+                        <div style={{ fontSize:11, fontWeight:700, color: farbe, textTransform:'uppercase' }}>
+                          {WOCHENTAGE[beginn.getDay() === 0 ? 6 : beginn.getDay() - 1]}
+                        </div>
+                        <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>
+                          {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
+                        </div>
+                        <div style={{ fontSize:11, color:'var(--text-3)' }}>{formatDatum(beginn)}</div>
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>
+                          {EVENT_TYP_ICON[item.typ]} {item.titel}
+                        </div>
+                        <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2, display:'flex', gap:10 }}>
+                          {item.ende && `bis ${new Date(item.ende).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr`}
+                          {item.ort && `· 📍 ${item.ort}`}
+                        </div>
+                      </div>
+                      {item.oeffentlich && <span style={{ fontSize:11, color:'var(--accent)', fontWeight:700 }}>🌐</span>}
+                    </div>
+                  )
+                }
+
+                const farbe = item.unterricht?.farbe ?? TYP_FARBE[item.unterricht?.typ] ?? 'var(--primary)'
+                const ende  = item.ende ? new Date(item.ende) : null
+                return (
+                  <div key={'st-' + item.id} onClick={() => setAusgewaehlt(item)}
+                    style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:`1px solid ${heute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center', cursor:'pointer', boxShadow:'var(--shadow)' }}>
+                    <div style={{ width:4, borderRadius:99, alignSelf:'stretch', background: farbe, flexShrink:0 }} />
+                    <div style={{ textAlign:'center', minWidth:52 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color: heute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
+                        {WOCHENTAGE[beginn.getDay() === 0 ? 6 : beginn.getDay() - 1]}
+                      </div>
+                      <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>
+                        {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
+                      </div>
+                      <div style={{ fontSize:11, color:'var(--text-3)' }}>{formatDatum(beginn)}</div>
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{item.unterricht?.name}</div>
+                      <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2, display:'flex', gap:10 }}>
+                        {ende && `bis ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr`}
+                        {item.unterricht?.raeume && `· 🏫 ${item.unterricht.raeume.name}`}
+                      </div>
+                    </div>
+                    <span style={{ fontSize:11, fontWeight:700, color: item.status === 'abgesagt' ? 'var(--danger)' : item.status === 'stattgefunden' ? 'var(--success)' : 'var(--text-3)', whiteSpace:'nowrap' }}>
+                      {item.status === 'stattgefunden' ? '✅' : item.status === 'abgesagt' ? '❌' : '⏳'}
+                    </span>
                   </div>
-                  <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>
-                    {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
-                  </div>
-                  <div style={{ fontSize:11, color:'var(--text-3)' }}>
-                    {formatDatum(beginn)}
-                  </div>
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{st.unterricht?.name}</div>
-                  <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2, display:'flex', gap:10 }}>
-                    {ende && `bis ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr`}
-                    {st.unterricht?.raeume && `· 🏫 ${st.unterricht.raeume.name}`}
-                  </div>
-                </div>
-                <span style={{ fontSize:11, fontWeight:700, color: st.status === 'abgesagt' ? 'var(--danger)' : st.status === 'stattgefunden' ? 'var(--success)' : 'var(--text-3)', whiteSpace:'nowrap' }}>
-                  {st.status === 'stattgefunden' ? '✅' : st.status === 'abgesagt' ? '❌' : '⏳'}
-                </span>
-              </div>
-            )
-          })}
-        </div>
+                )
+              })}
+            </div>
+          )
+        })()
       )}
 
-      {ausgewaehlt && <DetailModal stunde={ausgewaehlt} onClose={() => setAusgewaehlt(null)} />}
+      {ausgewaehlt     && <DetailModal      stunde={ausgewaehlt}      onClose={() => setAusgewaehlt(null)} />}
+      {ausgewaehltEvent && <EventDetailModal event={ausgewaehltEvent} onClose={() => setAusgewaehltEvent(null)} />}
     </div>
   )
 }

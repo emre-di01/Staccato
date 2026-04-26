@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -182,7 +182,13 @@ function DateiUploadModal({ stueckId, onClose, onErfolg }) {
 export default function StueckDetail() {
   const { kursId, stueckId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { rolle } = useApp()
+
+  const istEvent = location.pathname.includes('/events/')
+  const backPfad = istEvent
+    ? `/${location.pathname.split('/')[1]}/events/${kursId}/repertoire`
+    : `/lehrer/kurse/${kursId}/repertoire`
   const [stueck,  setStueck]  = useState(null)
   const [dateien, setDateien] = useState([])
   const [laden,   setLaden]   = useState(true)
@@ -250,7 +256,7 @@ export default function StueckDetail() {
   return (
     <div>
       {/* Zurück */}
-      <button onClick={() => navigate(`/lehrer/kurse/${kursId}/repertoire`)}
+      <button onClick={() => navigate(backPfad)}
         style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 16px' }}>
         ← Repertoire
       </button>

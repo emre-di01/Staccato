@@ -7,10 +7,13 @@ import { THEMES, THEME_KEYS } from '../themes/themes'
 
 export default function LoginPage() {
   const { session, rolle, laden, T, theme, darkMode, changeTheme, toggleDark, lang, setLang } = useApp()
-  const [email,    setEmail]    = useState('')
-  const [passwort, setPasswort] = useState('')
-  const [fehler,   setFehler]   = useState('')
-  const [senden,   setSenden]   = useState(false)
+  const [email,      setEmail]      = useState('')
+  const [passwort,   setPasswort]   = useState('')
+  const [fehler,     setFehler]     = useState('')
+  const [senden,     setSenden]     = useState(false)
+  const [ansicht,    setAnsicht]    = useState('login') // 'login' | 'reset'
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetOk,    setResetOk]    = useState(false)
 
   if (!laden && session) return <Navigate to={startseiteNach(rolle)} replace />
 
@@ -20,6 +23,18 @@ export default function LoginPage() {
     setFehler('')
     const { error } = await supabase.auth.signInWithPassword({ email, password: passwort })
     if (error) setFehler(T('login_error'))
+    setSenden(false)
+  }
+
+  async function handleReset(e) {
+    e.preventDefault()
+    setSenden(true)
+    setFehler('')
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: window.location.origin + '/passwort-zuruecksetzen',
+    })
+    if (error) setFehler(T('reset_email_error'))
+    else setResetOk(true)
     setSenden(false)
   }
 
@@ -64,36 +79,80 @@ export default function LoginPage() {
         </div>
 
         <div style={{ width: '100%', maxWidth: 340 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.5px' }}>
-            {T('login_title')}
-          </h1>
-          <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 32 }}>{T('login_sub')}</p>
+          {ansicht === 'login' ? (
+            <>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.5px' }}>
+                {T('login_title')}
+              </h1>
+              <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 32 }}>{T('login_sub')}</p>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={lbl}>{T('email')}</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-                placeholder="name@beispiel.de" style={inp} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={lbl}>{T('password')}</label>
-              <input type="password" value={passwort} onChange={e => setPasswort(e.target.value)} required
-                placeholder="••••••••" style={inp} />
-            </div>
-            {fehler && <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{fehler}</p>}
-            <button type="submit" disabled={senden} style={{
-              marginTop: 8, padding: '13px', borderRadius: 'var(--radius)',
-              border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)',
-              fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              opacity: senden ? 0.7 : 1, transition: 'opacity 0.15s',
-            }}>
-              {senden ? T('loading') : T('login_btn')}
-            </button>
-          </form>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={lbl}>{T('email')}</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                    placeholder="name@beispiel.de" style={inp} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={lbl}>{T('password')}</label>
+                    <button type="button" onClick={() => { setAnsicht('reset'); setFehler(''); setResetOk(false) }}
+                      style={{ fontSize: 12, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                      {T('forgot_password')}
+                    </button>
+                  </div>
+                  <input type="password" value={passwort} onChange={e => setPasswort(e.target.value)} required
+                    placeholder="••••••••" style={inp} />
+                </div>
+                {fehler && <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{fehler}</p>}
+                <button type="submit" disabled={senden} style={{
+                  marginTop: 8, padding: '13px', borderRadius: 'var(--radius)',
+                  border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)',
+                  fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  opacity: senden ? 0.7 : 1, transition: 'opacity 0.15s',
+                }}>
+                  {senden ? T('loading') : T('login_btn')}
+                </button>
+              </form>
 
-          <p style={{ marginTop: 24, fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
-            {T('no_access')}
-          </p>
+              <p style={{ marginTop: 24, fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
+                {T('no_access')}
+              </p>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={() => { setAnsicht('login'); setFehler(''); setResetOk(false) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginBottom: 24 }}>
+                ← {T('back_to_login')}
+              </button>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.5px' }}>
+                {T('reset_email_title')}
+              </h1>
+              <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 32 }}>{T('reset_email_sub')}</p>
+
+              {resetOk ? (
+                <div style={{ background: 'color-mix(in srgb, var(--success) 15%, transparent)', border: '1px solid var(--success)', borderRadius: 'var(--radius)', padding: '14px 16px', color: 'var(--success)', fontSize: 14 }}>
+                  {T('reset_email_sent')}
+                </div>
+              ) : (
+                <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={lbl}>{T('email')}</label>
+                    <input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} required
+                      placeholder="name@beispiel.de" style={inp} autoFocus />
+                  </div>
+                  {fehler && <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{fehler}</p>}
+                  <button type="submit" disabled={senden} style={{
+                    marginTop: 8, padding: '13px', borderRadius: 'var(--radius)',
+                    border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)',
+                    fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    opacity: senden ? 0.7 : 1, transition: 'opacity 0.15s',
+                  }}>
+                    {senden ? T('loading') : T('reset_email_btn')}
+                  </button>
+                </form>
+              )}
+            </>
+          )}
 
           {/* Theme-Auswahl */}
           <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>

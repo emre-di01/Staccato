@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext'
 import ProtectedRoute, { startseiteNach } from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
+import PasswortZuruecksetzen from './pages/PasswortZuruecksetzen'
 import AdminDashboard from './pages/admin/Dashboard'
 import Mitgliederverwaltung from './pages/admin/Mitgliederverwaltung'
 import Kursverwaltung from './pages/admin/Kursverwaltung'
@@ -15,6 +16,12 @@ import StueckDetail from './pages/lehrer/StueckDetail'
 import SchuelerDashboard from './pages/schueler/Dashboard'
 import SchuelerKurse from './pages/schueler/Kurse'
 import SchuelerKursDetail from './pages/schueler/KursDetail'
+import SchuelerAnwesenheit from './pages/schueler/Anwesenheit'
+import AdminEvents from './pages/admin/Events'
+import LehrerEvents from './pages/lehrer/Events'
+import EventRepertoire from './pages/lehrer/EventRepertoire'
+import SchuelerEvents from './pages/schueler/Events'
+import ProfilSeite from './pages/ProfilSeite'
 import Stundenplan from './pages/Stundenplan'
 import Platzhalter from './pages/Platzhalter'
 
@@ -33,6 +40,7 @@ function AppRoutes() {
   return (
     <Routes location={location} key={location.pathname}>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/passwort-zuruecksetzen" element={<PasswortZuruecksetzen />} />
       <Route path="/" element={<RollenWeiterleitung />} />
 
       {/* ── Admin / Superadmin ── */}
@@ -42,9 +50,11 @@ function AppRoutes() {
           <Route path="/admin/mitglieder"       element={<Mitgliederverwaltung />} />
           <Route path="/admin/kurse"            element={<Kursverwaltung />} />
           <Route path="/admin/stundenplan"      element={<Stundenplan />} />
-          <Route path="/admin/raeume"           element={<Raumverwaltung />} />
+          <Route path="/admin/profil"            element={<ProfilSeite />} />
           <Route path="/admin/repertoire"       element={P('Repertoire', '🎼')} />
-          <Route path="/admin/events"           element={P('Veranstaltungen', '🎭')} />
+          <Route path="/admin/events"                                          element={<AdminEvents />} />
+          <Route path="/admin/events/:id/repertoire"                         element={<EventRepertoire />} />
+          <Route path="/admin/events/:kursId/repertoire/:stueckId"           element={<StueckDetail />} />
           <Route path="/admin/abrechnung"       element={P('Abrechnung', '💰')} />
           <Route path="/admin/interessenten"    element={P('Interessenten', '📋')} />
           <Route path="/admin/nachrichten"      element={P('Nachrichten', '💬')} />
@@ -63,8 +73,11 @@ function AppRoutes() {
           <Route path="/lehrer/schueler"        element={P('Meine Schüler', '👥')} />
           <Route path="/lehrer/anwesenheit"     element={<Stundenplan />} />
           <Route path="/lehrer/repertoire"      element={P('Repertoire', '🎼')} />
-          <Route path="/lehrer/events"          element={P('Veranstaltungen', '🎭')} />
+          <Route path="/lehrer/events"                                         element={<LehrerEvents />} />
+          <Route path="/lehrer/events/:id/repertoire"                        element={<EventRepertoire />} />
+          <Route path="/lehrer/events/:kursId/repertoire/:stueckId"          element={<StueckDetail />} />
           <Route path="/lehrer/nachrichten"     element={P('Nachrichten', '💬')} />
+          <Route path="/lehrer/profil"          element={<ProfilSeite />} />
         </Route>
       </Route>
 
@@ -74,9 +87,13 @@ function AppRoutes() {
           <Route path="/schueler"                     element={<SchuelerDashboard />} />
           <Route path="/schueler/stundenplan"         element={<SchuelerKurse />} />
           <Route path="/schueler/kurse/:id"           element={<SchuelerKursDetail />} />
+          <Route path="/schueler/kurse/:id/anwesenheit" element={<SchuelerAnwesenheit />} />
           <Route path="/schueler/dateien"             element={P('Dateien', '📁')} />
-          <Route path="/schueler/events"              element={P('Veranstaltungen', '🎭')} />
+          <Route path="/schueler/events"                                       element={<SchuelerEvents />} />
+          <Route path="/schueler/events/:id/repertoire"                      element={<EventRepertoire />} />
+          <Route path="/schueler/events/:kursId/repertoire/:stueckId"        element={<StueckDetail />} />
           <Route path="/schueler/nachrichten"         element={P('Nachrichten', '💬')} />
+          <Route path="/schueler/profil"              element={<ProfilSeite />} />
         </Route>
       </Route>
 
@@ -88,11 +105,19 @@ function AppRoutes() {
           <Route path="/eltern/dateien"         element={P('Dateien', '📁')} />
           <Route path="/eltern/events"          element={P('Veranstaltungen', '🎭')} />
           <Route path="/eltern/nachrichten"     element={P('Nachrichten', '💬')} />
+          <Route path="/eltern/profil"          element={<ProfilSeite />} />
         </Route>
       </Route>
 
-      {/* Session beitreten (ohne Login) */}
+      {/* Session beitreten */}
       <Route path="/session/:code" element={P('Session beitreten', '🎬')} />
+
+      {/* Profil - für alle Rollen */}
+      <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern']} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/profil" element={<ProfilSeite />} />
+        </Route>
+      </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

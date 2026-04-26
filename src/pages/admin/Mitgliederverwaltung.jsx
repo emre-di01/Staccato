@@ -309,6 +309,73 @@ function ZuordnungModal({ mitglied, onClose, T }) {
   )
 }
 
+// ─── Passwort zurücksetzen Modal ─────────────────────────────
+
+function PasswortModal({ mitglied, onClose }) {
+  const [pw,     setPw]     = useState('')
+  const [pw2,    setPw2]    = useState('')
+  const [laden,  setLaden]  = useState(false)
+  const [fehler, setFehler] = useState('')
+  const [erfolg, setErfolg] = useState(false)
+
+  async function speichern() {
+    if (!pw || pw.length < 6) { setFehler('Mindestens 6 Zeichen.'); return }
+    if (pw !== pw2) { setFehler('Passwörter stimmen nicht überein.'); return }
+    setLaden(true); setFehler('')
+
+    // SQL Funktion um Passwort zu setzen
+    const { error } = await supabase.rpc('admin_set_password', {
+      p_user_id:  mitglied.id,
+      p_passwort: pw,
+    })
+
+    if (error) {
+      // Fallback: direkt in auth.users
+      const { error: e2 } = await supabase.rpc('admin_set_password_direct', {
+        p_user_id:  mitglied.id,
+        p_passwort: pw,
+      })
+      if (e2) { setFehler('Fehler: ' + (error.message ?? e2.message)); setLaden(false); return }
+    }
+
+    setErfolg(true)
+    setLaden(false)
+    setTimeout(onClose, 1500)
+  }
+
+  return (
+    <Modal titel={`🔑 Passwort – ${mitglied.voller_name}`} onClose={onClose}>
+      <div style={s.formGrid}>
+        {erfolg ? (
+          <div style={{ padding:'16px', borderRadius:'var(--radius)', background:'#d1fae5', color:'#065f46', fontWeight:700, textAlign:'center' }}>
+            ✅ Passwort erfolgreich geändert!
+          </div>
+        ) : (
+          <>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={s.label}>Neues Passwort</label>
+              <input type="password" style={s.input} value={pw} placeholder="Mindestens 6 Zeichen"
+                onChange={e => setPw(e.target.value)} />
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={s.label}>Passwort bestätigen</label>
+              <input type="password" style={s.input} value={pw2} placeholder="Wiederholen"
+                onChange={e => setPw2(e.target.value)} />
+            </div>
+            {fehler && <p style={s.fehler}>{fehler}</p>}
+            <div style={s.btnRow}>
+              <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+              <button onClick={speichern} disabled={laden} style={s.btnPri}>
+                {laden ? 'Setze …' : '🔑 Passwort setzen'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Löschen Bestätigung Modal ────────────────────────────────
 
 function LoeschenModal({ mitglied, onClose, onErfolg }) {
@@ -478,6 +545,7 @@ export default function Mitgliederverwaltung() {
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={s.btnKlein} title="Bearbeiten">✏️</button>
+                        <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={s.btnKlein} title="Passwort">🔑</button>
                         {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
                           <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Zuordnungen">🔗</button>
                         )}
@@ -515,6 +583,9 @@ export default function Mitgliederverwaltung() {
                   <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
                     ✏️ Bearbeiten
                   </button>
+                  <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>
+                    🔑
+                  </button>
                   {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
                     <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
                       🔗 Zuordnungen
@@ -533,6 +604,7 @@ export default function Mitgliederverwaltung() {
       {/* Modals */}
       {modal?.typ === 'anlegen'   && <NutzerAnlegenModal onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
       {modal?.typ === 'profil'    && <ProfilModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
+      {modal?.typ === 'passwort'  && <PasswortModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'zuordnung' && <ZuordnungModal mitglied={modal.mitglied} onClose={() => setModal(null)} T={T} />}
       {modal?.typ === 'loeschen'  && (
         <LoeschenModal

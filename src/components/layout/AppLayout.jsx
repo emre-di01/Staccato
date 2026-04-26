@@ -192,6 +192,9 @@ export default function AppLayout() {
 
         {/* Bottom */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <NavLink to="/profil" style={({ isActive }) => ({ ...btnStyle, color: isActive ? 'var(--primary)' : 'var(--text-3)', textDecoration:'none' })}>
+            👤 Mein Profil
+          </NavLink>
           <button onClick={() => setSettingsOffen(true)} style={btnStyle}>⚙️ {T('settings')}</button>
           <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
         </div>
@@ -214,6 +217,9 @@ export default function AppLayout() {
               {navItems.map(item => <NavItem key={item.to} item={item} />)}
             </nav>
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <NavLink to={`/${rolle === 'superadmin' ? 'admin' : rolle}/profil`} onClick={() => setSidebarOffen(false)} style={{ ...btnStyle, textDecoration:'none', color:'var(--text-3)' }}>
+                👤 Mein Profil
+              </NavLink>
               <button onClick={() => { setSettingsOffen(true); setSidebarOffen(false) }} style={btnStyle}>⚙️ {T('settings')}</button>
               <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
             </div>
