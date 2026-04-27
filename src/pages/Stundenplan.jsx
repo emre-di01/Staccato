@@ -116,7 +116,7 @@ function EventBlock({ event, onClick, tz }) {
 }
 
 // ─── Detail Modal ─────────────────────────────────────────────
-function DetailModal({ stunde, onClose }) {
+function DetailModal({ stunde, onClose, tz }) {
   const { T } = useApp()
   const beginn = new Date(stunde.beginn)
   const ende   = stunde.ende ? new Date(stunde.ende) : null
@@ -175,7 +175,7 @@ function DetailModal({ stunde, onClose }) {
 }
 
 // ─── Event Detail Modal ───────────────────────────────────────
-function EventDetailModal({ event, onClose }) {
+function EventDetailModal({ event, onClose, tz }) {
   const beginn = new Date(event.beginn)
   const ende   = event.ende ? new Date(event.ende) : null
   const farbe  = EVENT_TYP_FARBE[event.typ] ?? '#6b7280'
@@ -504,8 +504,8 @@ export default function Stundenplan() {
         })()
       )}
 
-      {ausgewaehlt      && <DetailModal       stunde={ausgewaehlt}      onClose={() => setAusgewaehlt(null)} />}
-      {ausgewaehltEvent && <EventDetailModal  event={ausgewaehltEvent}  onClose={() => setAusgewaehltEvent(null)} />}
+      {ausgewaehlt      && <DetailModal       stunde={ausgewaehlt}      onClose={() => setAusgewaehlt(null)}      tz={tz} />}
+      {ausgewaehltEvent && <EventDetailModal  event={ausgewaehltEvent}  onClose={() => setAusgewaehltEvent(null)} tz={tz} />}
     </div>
   )
 }

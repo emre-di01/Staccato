@@ -173,6 +173,12 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Footer */}
+      <div style={{ position:'fixed', bottom:0, left:0, right:0, textAlign:'center', padding:'10px', fontSize:12, color:'var(--text-3)', display:'flex', justifyContent:'center', gap:16, zIndex:10 }}>
+        <a href="/impressum"   style={{ color:'var(--text-3)', textDecoration:'none' }}>Impressum</a>
+        <a href="/datenschutz" style={{ color:'var(--text-3)', textDecoration:'none' }}>Datenschutz</a>
+      </div>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }

@@ -21,7 +21,7 @@ function toInputVal(ts) {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-const leerForm = { titel: '', typ: 'veranstaltung', beginn: '', ende: '', ort: '', beschreibung: '', oeffentlich: false }
+const leerForm = { titel: '', typ: 'veranstaltung', beginn: '', ende: '', ort: '', raum_id: '', beschreibung: '', oeffentlich: false }
 
 export default function AdminEvents() {
   const { T } = useApp()
@@ -40,14 +40,19 @@ export default function AdminEvents() {
   const [addProfil,  setAddProfil]  = useState('')
   const [fehlerTn,   setFehlerTn]   = useState(null)
   const [tnSuche,    setTnSuche]    = useState('')
+  const [raeume,     setRaeume]     = useState([])
 
   useEffect(() => { ladeEvents() }, [])
+  useEffect(() => {
+    supabase.from('raeume').select('id, name').eq('aktiv', true).order('name')
+      .then(({ data }) => setRaeume(data ?? []))
+  }, [])
 
   async function ladeEvents() {
     setLaden(true)
     const { data, error } = await supabase
       .from('events')
-      .select('*')
+      .select('*, raeume(name)')
       .order('beginn', { ascending: true })
     if (error) setFehler(error.message)
     else setEvents(data || [])
@@ -85,6 +90,7 @@ export default function AdminEvents() {
       beginn: toInputVal(ev.beginn),
       ende: toInputVal(ev.ende),
       ort: ev.ort || '',
+      raum_id: ev.raum_id || '',
       beschreibung: ev.beschreibung || '',
       oeffentlich: ev.oeffentlich || false,
     })
@@ -110,6 +116,7 @@ export default function AdminEvents() {
       beginn: new Date(form.beginn).toISOString(),
       ende: form.ende ? new Date(form.ende).toISOString() : null,
       ort: form.ort.trim() || null,
+      raum_id: form.raum_id || null,
       beschreibung: form.beschreibung.trim() || null,
       oeffentlich: form.oeffentlich,
     }
@@ -233,6 +240,7 @@ export default function AdminEvents() {
                 <span>📅 {formatDatum(ev.beginn)}, {formatZeit(ev.beginn)}</span>
                 {ev.ende && <span>– {formatZeit(ev.ende)}</span>}
               </div>
+              {ev.raeume && <div style={s.cardMeta}>🏫 {ev.raeume.name}</div>}
               {ev.ort && <div style={s.cardMeta}>📍 {ev.ort}</div>}
               {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
               <div style={s.cardActions}>
@@ -276,8 +284,15 @@ export default function AdminEvents() {
                 <input type="datetime-local" value={form.ende} onChange={e => setForm(f => ({...f, ende: e.target.value}))} style={s.inp} />
               </div>
               <div style={s.formRow}>
+                <label style={s.lbl}>Raum</label>
+                <select value={form.raum_id} onChange={e => setForm(f => ({...f, raum_id: e.target.value}))} style={s.inp}>
+                  <option value="">– Kein Raum –</option>
+                  {raeume.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+              <div style={s.formRow}>
                 <label style={s.lbl}>{T('event_location')}</label>
-                <input value={form.ort} onChange={e => setForm(f => ({...f, ort: e.target.value}))} style={s.inp} placeholder="z.B. Aula, Musiksaal" />
+                <input value={form.ort} onChange={e => setForm(f => ({...f, ort: e.target.value}))} style={s.inp} placeholder="z.B. externer Ort, Adresse" />
               </div>
               <div style={s.formRow}>
                 <label style={s.lbl}>{T('event_description')}</label>
