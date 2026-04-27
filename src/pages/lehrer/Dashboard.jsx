@@ -28,7 +28,7 @@ export default function LehrerDashboard() {
 
   const jetzt = new Date()
   const stunde = jetzt.getHours()
-  const gruss = stunde < 12 ? '☀️ Guten Morgen' : stunde < 17 ? '👋 Guten Tag' : '🌙 Guten Abend'
+  const gruss = stunde < 12 ? T('greeting_morning') : stunde < 17 ? T('greeting_day') : T('greeting_evening')
 
   useEffect(() => {
     if (!profil) return
@@ -76,20 +76,20 @@ export default function LehrerDashboard() {
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:16, marginBottom:32 }}>
-        <StatCard icon="🎵" label="Meine Kurse"      wert={laden ? '…' : kurse.length}         farbe="var(--primary)" />
-        <StatCard icon="👥" label="Aktive Schüler"   wert={laden ? '…' : aktiveSchueler}        farbe="var(--accent)" />
-        <StatCard icon="📅" label="Nächste Stunden"  wert={laden ? '…' : naechsteStunden.length} farbe="var(--success)" />
+        <StatCard icon="🎵" label={T('dash_my_courses')}      wert={laden ? '…' : kurse.length}         farbe="var(--primary)" />
+        <StatCard icon="👥" label={T('dash_active_students')} wert={laden ? '…' : aktiveSchueler}        farbe="var(--accent)" />
+        <StatCard icon="📅" label={T('dash_next_lessons')}    wert={laden ? '…' : naechsteStunden.length} farbe="var(--success)" />
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24 }} className="dashboard-grid">
         {/* Meine Kurse */}
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-            <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', margin:0 }}>🎵 Meine Kurse</h2>
-            <button onClick={() => navigate('/lehrer/kurse')} style={s.linkBtn}>Alle →</button>
+            <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', margin:0 }}>{T('dash_my_courses')}</h2>
+            <button onClick={() => navigate('/lehrer/kurse')} style={s.linkBtn}>{T('dash_all')}</button>
           </div>
-          {laden ? <div style={s.leer}>Laden …</div> :
-           kurse.length === 0 ? <div style={s.leer}>Noch keine Kurse zugeordnet.</div> : (
+          {laden ? <div style={s.leer}>{T('loading')}</div> :
+           kurse.length === 0 ? <div style={s.leer}>{T('dash_no_courses')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {kurse.slice(0, 4).map(k => (
                 <div key={k.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:'1px solid var(--border)', cursor:'pointer', transition:'box-shadow 0.15s' }}
@@ -117,10 +117,10 @@ export default function LehrerDashboard() {
         {/* Nächste Stunden */}
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-            <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', margin:0 }}>📅 Nächste Stunden</h2>
+            <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', margin:0 }}>📅 {T('dash_next_lessons')}</h2>
           </div>
-          {laden ? <div style={s.leer}>Laden …</div> :
-           naechsteStunden.length === 0 ? <div style={s.leer}>Keine geplanten Stunden.</div> : (
+          {laden ? <div style={s.leer}>{T('loading')}</div> :
+           naechsteStunden.length === 0 ? <div style={s.leer}>{T('dash_no_lessons')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {naechsteStunden.map(st => {
                 const beginn = new Date(st.beginn)
@@ -129,7 +129,7 @@ export default function LehrerDashboard() {
                   <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:`1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center' }}>
                     <div style={{ textAlign:'center', minWidth:44 }}>
                       <div style={{ fontSize:11, fontWeight:700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
-                        {istHeute ? 'Heute' : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
+                        {istHeute ? T('dash_today') : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
                       </div>
                       <div style={{ fontSize:18, fontWeight:800, color:'var(--text)' }}>
                         {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
@@ -144,7 +144,7 @@ export default function LehrerDashboard() {
                     {istHeute && (
                       <button onClick={() => navigate(`/lehrer/kurse/${st.unterricht_id}`)}
                         style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                        🎬 Starten
+                        {T('dash_start')}
                       </button>
                     )}
                   </div>

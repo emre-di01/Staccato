@@ -54,6 +54,7 @@ function Badge({ typ }) {
 // ─── Kurs erstellen / bearbeiten Modal ────────────────────────
 
 function KursModal({ kurs, onClose, onErfolg }) {
+  const { T } = useApp()
   const istNeu = !kurs?.id
   const [form, setForm] = useState({
     name:             kurs?.name            ?? '',
@@ -254,7 +255,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
                     {aktiv && '✓'}
                   </div>
                   <span style={{ fontSize:14, color:'var(--text)', fontWeight: aktiv ? 600 : 400 }}>{l.voller_name}</span>
-                  {istErster && aktiv && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--accent)', fontWeight:700 }}>HAUPTLEHRER</span>}
+                  {istErster && aktiv && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--accent)', fontWeight:700 }}>{T('kurs_head_teacher')}</span>}
                   {aktiv && !istErster && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--text-3)', fontWeight:700 }}>CO-LEHRER</span>}
                 </div>
               )
@@ -272,7 +273,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
           <Feld label="" halb>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <input type="checkbox" id="aktiv" checked={form.aktiv} onChange={e => setForm(f => ({ ...f, aktiv: e.target.checked }))} />
-              <label htmlFor="aktiv" style={{ ...s.label, textTransform:'none', letterSpacing:0 }}>Kurs aktiv</label>
+              <label htmlFor="aktiv" style={{ ...s.label, textTransform:'none', letterSpacing:0 }}>{T('kurs_course_active')}</label>
             </div>
           </Feld>
         )}
@@ -280,9 +281,9 @@ function KursModal({ kurs, onClose, onErfolg }) {
         {fehler && <p style={{ ...s.fehler, gridColumn:'span 2' }}>{fehler}</p>}
 
         <div style={{ gridColumn:'span 2', display:'flex', gap:10, justifyContent:'flex-end', marginTop:8 }}>
-          <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+          <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
           <button onClick={speichern} disabled={laden} style={s.btnPri}>
-            {laden ? 'Speichere …' : istNeu ? '+ Kurs erstellen' : '💾 Speichern'}
+            {laden ? '…' : istNeu ? '+ Kurs erstellen' : `💾 ${T('save')}`}
           </button>
         </div>
       </div>
@@ -293,6 +294,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
 // ─── Schüler verwalten Modal ──────────────────────────────────
 
 function SchuelerModal({ kurs, onClose, onErfolg }) {
+  const { T } = useApp()
   const [teilnehmer, setTeilnehmer] = useState([])
   const [alleSchueler, setAlleSchueler] = useState([])
   const [laden, setLaden] = useState(true)
@@ -341,8 +343,8 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
         {/* Aktuelle Teilnehmer */}
         <div>
           <div style={s.sectionLabel}>Aktuelle Teilnehmer ({teilnehmer.length})</div>
-          {laden ? <p style={{ color:'var(--text-3)', fontSize:13 }}>Laden …</p> :
-          teilnehmer.length === 0 ? <p style={{ color:'var(--text-3)', fontSize:13 }}>Noch keine Schüler.</p> : (
+          {laden ? <p style={{ color:'var(--text-3)', fontSize:13 }}>{T('loading')}</p> :
+          teilnehmer.length === 0 ? <p style={{ color:'var(--text-3)', fontSize:13 }}>{T('kurs_no_students_yet')}</p> : (
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {teilnehmer.map(t => (
                 <div key={t.schueler_id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)' }}>
@@ -367,7 +369,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
         {/* Schüler hinzufügen */}
         {verfuegbar.length > 0 && (
           <div>
-            <div style={s.sectionLabel}>Schüler hinzufügen</div>
+            <div style={s.sectionLabel}>{T('kurs_add_students')}</div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginTop:8 }}>
               {verfuegbar.map(s => (
                 <button key={s.id} onClick={() => hinzufuegen(s.id)}
@@ -390,31 +392,47 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
 // ─── Stunden generieren Modal ─────────────────────────────────
 
 function StundenModal({ kurs, onClose, onErfolg }) {
-  const [von,    setVon]    = useState('')
-  const [bis,    setBis]    = useState('')
-  const [laden,  setLaden]  = useState(false)
-  const [result, setResult] = useState(null)
-  const [fehler, setFehler] = useState('')
+  const { T } = useApp()
+  const [von,         setVon]         = useState('')
+  const [bis,         setBis]         = useState('')
+  const [laden,       setLaden]       = useState(false)
+  const [loeschLaden, setLoeschLaden] = useState(false)
+  const [result,      setResult]      = useState(null)
+  const [geloescht,   setGeloescht]   = useState(null)
+  const [fehler,      setFehler]      = useState('')
 
   async function generieren() {
     if (!von || !bis) { setFehler('Bitte Von- und Bis-Datum wählen.'); return }
     if (!kurs.wochentag) { setFehler('Kurs hat keinen Wochentag definiert.'); return }
-    setLaden(true)
-    setFehler('')
-
+    setLaden(true); setFehler(''); setGeloescht(null)
     const { data, error } = await supabase.rpc('stunden_generieren', {
       p_unterricht_id: kurs.id,
       p_von: von,
       p_bis: bis,
     })
-
     if (error) setFehler(error.message)
     else setResult(data)
     setLaden(false)
   }
 
+  async function loeschen() {
+    if (!von || !bis) { setFehler('Bitte Von- und Bis-Datum wählen.'); return }
+    if (!confirm(`Alle Stunden von ${von} bis ${bis} für „${kurs.name}" löschen?`)) return
+    setLoeschLaden(true); setFehler(''); setResult(null)
+    const { data, error } = await supabase
+      .from('stunden')
+      .delete()
+      .eq('unterricht_id', kurs.id)
+      .gte('beginn', `${von}T00:00:00`)
+      .lte('beginn', `${bis}T23:59:59`)
+      .select('id')
+    if (error) setFehler(error.message)
+    else setGeloescht(data?.length ?? 0)
+    setLoeschLaden(false)
+  }
+
   return (
-    <Modal titel={`Stunden generieren – ${kurs.name}`} onClose={onClose}>
+    <Modal titel={`Stunden – ${kurs.name}`} onClose={onClose}>
       <div style={s.formGrid}>
         {kurs.wochentag ? (
           <div style={{ padding:'10px 14px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)', fontSize:14, color:'var(--text-2)' }}>
@@ -442,14 +460,25 @@ function StundenModal({ kurs, onClose, onErfolg }) {
             ✅ {result} Stunden wurden generiert!
           </div>
         )}
+        {geloescht !== null && (
+          <div style={{ padding:'12px 16px', borderRadius:'var(--radius)', background:'#fee2e2', border:'1px solid #fecaca', color:'var(--danger)', fontWeight:700, fontSize:14 }}>
+            🗑 {geloescht} Stunden wurden gelöscht.
+          </div>
+        )}
 
         {fehler && <p style={s.fehler}>{fehler}</p>}
 
-        <div style={s.btnRow}>
-          <button onClick={onClose} style={s.btnSek}>Schließen</button>
-          <button onClick={generieren} disabled={laden || !kurs.wochentag} style={s.btnPri}>
-            {laden ? 'Generiere …' : '⚡ Stunden generieren'}
+        <div style={{ display:'flex', gap:10, justifyContent:'space-between', marginTop:8 }}>
+          <button onClick={loeschen} disabled={loeschLaden || !von || !bis}
+            style={{ ...s.btnSek, color:'var(--danger)', borderColor:'var(--danger)' }}>
+            {loeschLaden ? 'Lösche …' : '🗑 Stunden löschen'}
           </button>
+          <div style={{ display:'flex', gap:10 }}>
+            <button onClick={onClose} style={s.btnSek}>{T('close')}</button>
+            <button onClick={generieren} disabled={laden || !kurs.wochentag} style={s.btnPri}>
+              {laden ? 'Generiere …' : '⚡ Generieren'}
+            </button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -522,16 +551,42 @@ function KursKarte({ kurs, onBearbeiten, onSchueler, onStunden, onLoeschen }) {
 // ─── Kurs Löschen Modal ───────────────────────────────────────
 
 function KursLoeschenModal({ kurs, onClose, onErfolg }) {
+  const { T } = useApp()
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
 
   async function loeschen() {
     setLaden(true)
-    const { error } = await supabase.rpc('delete_unterricht', {
-      p_unterricht_id: kurs.id,
-    })
+    setFehler('')
+
+    // 1. Kurs-Dateien aus Storage löschen (kurs-dateien & schueler-dateien)
+    const { data: docs } = await supabase.from('dateien')
+      .select('bucket_pfad, schueler_id').eq('unterricht_id', kurs.id)
+    if (docs?.length > 0) {
+      const kursPfade     = docs.filter(d => !d.schueler_id).map(d => d.bucket_pfad)
+      const schuelerPfade = docs.filter(d =>  d.schueler_id).map(d => d.bucket_pfad)
+      if (kursPfade.length > 0)     await supabase.storage.from('kurs-dateien').remove(kursPfade)
+      if (schuelerPfade.length > 0) await supabase.storage.from('schueler-dateien').remove(schuelerPfade)
+    }
+
+    // 2. Stücke löschen die ausschließlich in diesem Kurs verwendet werden
+    const { data: kStuecke } = await supabase.from('unterricht_stuecke')
+      .select('stueck_id').eq('unterricht_id', kurs.id)
+    for (const { stueck_id } of (kStuecke ?? [])) {
+      const [{ count: kCount }, { count: eCount }] = await Promise.all([
+        supabase.from('unterricht_stuecke').select('*', { count: 'exact', head: true }).eq('stueck_id', stueck_id).neq('unterricht_id', kurs.id),
+        supabase.from('event_stuecke').select('*', { count: 'exact', head: true }).eq('stueck_id', stueck_id),
+      ])
+      if ((kCount ?? 0) === 0 && (eCount ?? 0) === 0) {
+        const { data: sDocs } = await supabase.from('stueck_dateien').select('bucket_pfad').eq('stueck_id', stueck_id)
+        if (sDocs?.length > 0) await supabase.storage.from('stueck-dateien').remove(sDocs.map(d => d.bucket_pfad))
+        await supabase.from('stuecke').delete().eq('id', stueck_id)
+      }
+    }
+
+    // 3. Kurs löschen (kaskadiert auf stunden, anwesenheit, dateien, etc.)
+    const { error } = await supabase.rpc('delete_unterricht', { p_unterricht_id: kurs.id })
     if (error) {
-      // Fallback: direkt löschen
       const { error: e2 } = await supabase.from('unterricht').delete().eq('id', kurs.id)
       if (e2) { setFehler(e2.message); setLaden(false); return }
     }
@@ -548,7 +603,7 @@ function KursLoeschenModal({ kurs, onClose, onErfolg }) {
         </div>
         {fehler && <p style={s.fehler}>{fehler}</p>}
         <div style={s.btnRow}>
-          <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+          <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
           <button onClick={loeschen} disabled={laden}
             style={{ ...s.btnPri, background:'var(--danger)' }}>
             {laden ? 'Lösche …' : '🗑 Endgültig löschen'}
@@ -608,7 +663,7 @@ export default function Kursverwaltung() {
 
       {/* Filter */}
       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
-        <input placeholder="🔍 Kurs suchen …" value={suche} onChange={e => setSuche(e.target.value)}
+        <input placeholder={T('kurs_search')} value={suche} onChange={e => setSuche(e.target.value)}
           style={{ ...s.input, flex:1, maxWidth:300 }} />
         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
           {['alle','einzel','gruppe','chor','ensemble'].map(t => (
@@ -627,9 +682,9 @@ export default function Kursverwaltung() {
 
       {/* Kurse Grid */}
       {laden ? (
-        <div style={s.leer}>Lade Kurse …</div>
+        <div style={s.leer}>{T('kurs_loading')}</div>
       ) : gefiltert.length === 0 ? (
-        <div style={s.leer}>Keine Kurse gefunden.</div>
+        <div style={s.leer}>{T('kurs_none_found')}</div>
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:16 }}>
           {gefiltert.map(kurs => (

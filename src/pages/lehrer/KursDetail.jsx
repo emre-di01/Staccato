@@ -198,6 +198,53 @@ function AnwesenheitUebersicht({ schueler, stunden }) {
   )
 }
 
+// ─── Stunde absagen Modal ────────────────────────────────────
+function AbsagenModal({ stunde, onClose, onErfolg }) {
+  const [grund, setGrund] = useState('')
+  const [laden, setLaden] = useState(false)
+  const [fehler, setFehler] = useState('')
+
+  async function absagen() {
+    setLaden(true)
+    const { error } = await supabase.from('stunden')
+      .update({ status: 'abgesagt', notizen: grund || null })
+      .eq('id', stunde.id)
+    if (error) { setFehler(error.message); setLaden(false); return }
+    onErfolg()
+    onClose()
+  }
+
+  const beginn = new Date(stunde.beginn)
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+          <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>Stunde absagen</h3>
+          <button onClick={onClose} style={s.iconBtn}>✕</button>
+        </div>
+        <p style={{ margin:'0 0 16px', color:'var(--text-2)', fontSize:14 }}>
+          {beginn.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })} um {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr
+        </p>
+        <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:20 }}>
+          <label style={s.label}>Grund (optional)</label>
+          <textarea style={{ ...s.input, minHeight:70, resize:'vertical' }}
+            placeholder="z.B. Lehrer krank, Feiertag …"
+            value={grund} onChange={e => setGrund(e.target.value)} />
+        </div>
+        {fehler && <p style={{ margin:'0 0 12px', color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
+        <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+          <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+          <button onClick={absagen} disabled={laden}
+            style={{ ...s.btnPri, background:'var(--danger)' }}>
+            {laden ? 'Absage …' : '❌ Stunde absagen'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Anwesenheit erfassen Modal ───────────────────────────────
 function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
   const { profil } = useApp()
@@ -274,7 +321,7 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
 export default function KursDetail() {
   const { id }     = useParams()
   const navigate   = useNavigate()
-  const { profil } = useApp()
+  const { profil, T } = useApp()
   const [kurs,     setKurs]     = useState(null)
   const [schueler, setSchueler] = useState([])
   const [stunden,  setStunden]  = useState([])
@@ -297,7 +344,15 @@ export default function KursDetail() {
     ladeData()
   }, [id])
 
-  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>Laden …</div>
+  async function stundeWiederherstellen(stundeId) {
+    const { error } = await supabase.from('stunden')
+      .update({ status: 'geplant' })
+      .eq('id', stundeId)
+    if (error) { alert(error.message); return }
+    setStunden(prev => prev.map(st => st.id === stundeId ? { ...st, status: 'geplant' } : st))
+  }
+
+  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
   if (!kurs)  return <div style={{ padding:40, color:'var(--danger)' }}>Kurs nicht gefunden.</div>
 
   const jetzt = new Date()
@@ -306,7 +361,7 @@ export default function KursDetail() {
   return (
     <div>
       {/* Header */}
-      <button onClick={() => navigate('/lehrer/kurse')} style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 16px' }}>← Kurse</button>
+      <button onClick={() => navigate('/lehrer/kurse')} style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 16px' }}>{T('kurs_back_to')}</button>
 
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', overflow:'hidden', marginBottom:24, boxShadow:'var(--shadow)' }}>
         <div style={{ height:6, background: kurs.farbe ?? 'var(--primary)' }} />
@@ -326,7 +381,7 @@ export default function KursDetail() {
             </div>
             <button onClick={() => navigate(`/lehrer/kurse/${id}/unterrichtsmodus`)}
               style={{ padding:'10px 20px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:14, fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>
-              🎬 Unterrichtsmodus
+              {T('kurs_teaching_mode')}
             </button>
           </div>
 
@@ -343,7 +398,7 @@ export default function KursDetail() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:20, borderBottom:'2px solid var(--border)' }}>
-        {[['stunden','📅 Stunden'],['anwesenheit','✅ Anwesenheit'],['schueler','👥 Schüler'],['repertoire','🎼 Repertoire']].map(([key, label]) => (
+        {[['stunden', T('kurs_tab_lessons')],['anwesenheit', T('kurs_tab_attendance')],['schueler', T('kurs_tab_students')],['repertoire', T('kurs_tab_repertoire')]].map(([key, label]) => (
           <button key={key} onClick={() => setAktiveTab(key)}
             style={{ padding:'10px 18px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: aktiveTab===key ? 'var(--text)' : 'var(--text-3)', fontWeight: aktiveTab===key ? 800 : 500, borderBottom:`2px solid ${aktiveTab===key ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, transition:'all 0.15s' }}>
             {label}
@@ -356,11 +411,11 @@ export default function KursDetail() {
         <div>
           <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:14 }}>
             <button onClick={() => setModal({ typ:'einzelstunde' })} style={s.btnPri}>
-              + Einzelne Stunde
+              {T('kurs_create_lesson')}
             </button>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {stunden.length === 0 ? <div style={s.leer}>Keine Stunden gefunden.</div> :
+            {stunden.length === 0 ? <div style={s.leer}>{T('kurs_no_lessons_found')}</div> :
             stunden.map(st => {
             const beginn   = new Date(st.beginn)
             const istVorbei = beginn < jetzt
@@ -380,7 +435,7 @@ export default function KursDetail() {
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:12, color:'var(--text-3)' }}>
-                    {st.status === 'stattgefunden' ? '✅ Stattgefunden' : st.status === 'abgesagt' ? '❌ Abgesagt' : '⏳ Geplant'}
+                    {st.status === 'stattgefunden' ? T('kurs_status_done') : st.status === 'abgesagt' ? T('kurs_status_cancelled') : T('kurs_status_planned')}
                   </div>
                   {st.hausaufgaben && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>📝 {st.hausaufgaben}</div>}
                 </div>
@@ -388,25 +443,25 @@ export default function KursDetail() {
                   {!istVorbei && st.status === 'geplant' && (
                     <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
                       style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                      ✅ Anwesenheit
+                      {T('kurs_mark_attendance')}
                     </button>
                   )}
                   {istVorbei && st.status === 'geplant' && (
                     <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
                       style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                      ✅ Nachtragen
+                      {T('kurs_mark_late')}
                     </button>
                   )}
                   {st.status === 'geplant' && (
                     <button onClick={() => setModal({ typ:'absagen', stunde: st })}
                       style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                      ❌ Absagen
+                      {T('kurs_cancel_btn')}
                     </button>
                   )}
                   {st.status === 'abgesagt' && (
                     <button onClick={() => stundeWiederherstellen(st.id)}
                       style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                      ↩ Wiederherstellen
+                      {T('kurs_restore')}
                     </button>
                   )}
                 </div>
@@ -427,7 +482,7 @@ export default function KursDetail() {
       {/* Tab: Schüler */}
       {aktiveTab === 'schueler' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {schueler.length === 0 ? <div style={s.leer}>Keine aktiven Schüler.</div> :
+          {schueler.length === 0 ? <div style={s.leer}>{T('kurs_no_active')}</div> :
            schueler.map(sc => (
             <div key={sc.schueler_id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:14 }}>
               <div style={{ width:40, height:40, borderRadius:'50%', background:'var(--primary)', color:'var(--primary-fg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:800, flexShrink:0 }}>
@@ -457,7 +512,7 @@ export default function KursDetail() {
           <div style={{ fontSize:40, marginBottom:12 }}>🎼</div>
           <p style={{ color:'var(--text-3)', marginBottom:16 }}>Zum vollständigen Repertoire & Dateien-Bereich</p>
           <button onClick={() => navigate(`/lehrer/kurse/${id}/repertoire`)} style={s.btnPri}>
-            🎼 Repertoire öffnen
+            {T('kurs_open_repertoire')}
           </button>
         </div>
       )}
@@ -469,6 +524,16 @@ export default function KursDetail() {
           onClose={() => setModal(null)}
           onErfolg={() => {
             setStunden(prev => prev.map(st => st.id === modal.stunde.id ? { ...st, status: 'stattgefunden' } : st))
+          }}
+        />
+      )}
+      {modal?.typ === 'absagen' && (
+        <AbsagenModal
+          stunde={modal.stunde}
+          onClose={() => setModal(null)}
+          onErfolg={() => {
+            setStunden(prev => prev.map(st => st.id === modal.stunde.id ? { ...st, status: 'abgesagt' } : st))
+            setModal(null)
           }}
         />
       )}
@@ -491,4 +556,7 @@ const s = {
   leer:   { padding:'32px', textAlign:'center', color:'var(--text-3)', fontSize:13, background:'var(--surface)', borderRadius:'var(--radius)', border:'1px solid var(--border)' },
   btnPri: { padding:'10px 18px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' },
   btnSek: { padding:'10px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit' },
+  iconBtn:{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4, lineHeight:1 },
+  label:  { fontSize:13, fontWeight:600, color:'var(--text-2)' },
+  input:  { padding:'9px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text)', fontSize:14, fontFamily:'inherit', outline:'none', width:'100%', boxSizing:'border-box' },
 }

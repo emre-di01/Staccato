@@ -1,9 +1,42 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 
+const DOK_TYP_LABEL = {
+  aufnahmeformular: 'Aufnahmeformular',
+  vertrag:          'Vertrag',
+  sepa:             'SEPA-Mandat',
+  einverstaendnis:  'Einverständnis',
+  sonstiges:        'Sonstiges',
+}
+
+function DokumentZeile({ datei, T }) {
+  const [laden, setLaden] = useState(false)
+  async function oeffnen() {
+    setLaden(true)
+    const { data } = await supabase.storage.from('mitglied-dateien').createSignedUrl(datei.bucket_pfad, 3600)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+    setLaden(false)
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 'var(--radius)', background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
+      <span style={{ fontSize: 22, flexShrink: 0 }}>📄</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{datei.name}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+          {T(`dok_type_${datei.typ}`) || datei.typ} · {new Date(datei.hochgeladen_am).toLocaleDateString('de-DE')}
+        </div>
+      </div>
+      <button onClick={oeffnen} disabled={laden}
+        style={{ padding: '8px 14px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+        {laden ? '…' : T('dok_open')}
+      </button>
+    </div>
+  )
+}
+
 export default function ProfilSeite() {
-  const { profil, ladeProfil, T } = useApp()
+  const { profil, ladeProfil, T, rolle } = useApp()
   const fileRef = useRef()
 
   const [form, setForm] = useState({
@@ -18,10 +51,20 @@ export default function ProfilSeite() {
   const [erfolg, setErfolg] = useState('')
   const [fehler, setFehler] = useState('')
   const [avatarLaden, setAvatarLaden] = useState(false)
+  const [dateien,     setDateien]     = useState([])
+  const [dateiLaden,  setDateiLaden]  = useState(true)
+
+  useEffect(() => {
+    if (!profil?.id) return
+    supabase.from('mitglied_dateien')
+      .select('*').eq('profil_id', profil.id).order('hochgeladen_am', { ascending: false })
+      .then(({ data }) => { setDateien(data ?? []); setDateiLaden(false) })
+  }, [profil?.id])
 
   async function profilSpeichern() {
     setLaden(true); setFehler(''); setErfolg('')
-    const { error } = await supabase.from('profiles').update(form).eq('id', profil.id)
+    const payload = { ...form, geburtsdatum: form.geburtsdatum || null }
+    const { error } = await supabase.from('profiles').update(payload).eq('id', profil.id)
     if (error) setFehler(error.message)
     else { setErfolg('Profil gespeichert!'); await ladeProfil(profil.id) }
     setLaden(false)
@@ -40,15 +83,16 @@ export default function ProfilSeite() {
   async function avatarHochladen(e) {
     const datei = e.target.files[0]
     if (!datei) return
-    setAvatarLaden(true)
+    setAvatarLaden(true); setFehler(''); setErfolg('')
     const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const pfad = `${profil.id}/avatar_${Date.now()}_${sauberName}`
     const { error: sErr } = await supabase.storage.from('avatare').upload(pfad, datei, { upsert: true })
-    if (!sErr) {
-      const { data } = supabase.storage.from('avatare').getPublicUrl(pfad)
-      await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', profil.id)
-      await ladeProfil(profil.id)
-    }
+    if (sErr) { setFehler('Bild-Upload fehlgeschlagen: ' + sErr.message); setAvatarLaden(false); return }
+    const { data } = supabase.storage.from('avatare').getPublicUrl(pfad)
+    const { error: dErr } = await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', profil.id)
+    if (dErr) { setFehler('Profil-Update fehlgeschlagen: ' + dErr.message); setAvatarLaden(false); return }
+    await ladeProfil(profil.id)
+    setErfolg('Profilbild gespeichert!')
     setAvatarLaden(false)
   }
 
@@ -56,13 +100,13 @@ export default function ProfilSeite() {
 
   return (
     <div style={{ maxWidth: 600 }}>
-      <h1 style={s.h1}>👤 Mein Profil</h1>
+      <h1 style={s.h1}>👤 {T('profile_title')}</h1>
 
       {/* Avatar */}
       <div style={{ display:'flex', alignItems:'center', gap:20, marginBottom:32, padding:'20px 24px', background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
         <div style={{ position:'relative' }}>
           {profil?.avatar_url ? (
-            <img src={profil.avatar_url} alt="Avatar"
+            <img src={profil.avatar_url + '?t=' + (profil.updated_at ?? '')} alt="Avatar"
               style={{ width:72, height:72, borderRadius:'50%', objectFit:'cover', border:'3px solid var(--primary)' }} />
           ) : (
             <div style={{ width:72, height:72, borderRadius:'50%', background:'var(--primary)', color:'var(--primary-fg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, fontWeight:800 }}>
@@ -87,45 +131,61 @@ export default function ProfilSeite() {
 
       {/* Profil Daten */}
       <div style={s.card}>
-        <h2 style={s.h2}>📋 Persönliche Daten</h2>
+        <h2 style={s.h2}>📋 {T('profile_personal_data')}</h2>
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <Feld label="Name">
+            <Feld label={T('name')}>
               <input style={s.input} value={form.voller_name}
                 onChange={e => setForm(f => ({ ...f, voller_name: e.target.value }))} />
             </Feld>
-            <Feld label="Telefon">
+            <Feld label={T('profile_phone')}>
               <input style={s.input} value={form.telefon} placeholder="+49 123 456789"
                 onChange={e => setForm(f => ({ ...f, telefon: e.target.value }))} />
             </Feld>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <Feld label="Geburtsdatum">
+            <Feld label={T('profile_birthday')}>
               <input type="date" style={s.input} value={form.geburtsdatum}
                 onChange={e => setForm(f => ({ ...f, geburtsdatum: e.target.value }))} />
             </Feld>
-            <Feld label="Adresse">
+            <Feld label={T('profile_address')}>
               <input style={s.input} value={form.adresse}
                 onChange={e => setForm(f => ({ ...f, adresse: e.target.value }))} />
             </Feld>
           </div>
           <div style={{ display:'flex', justifyContent:'flex-end' }}>
             <button onClick={profilSpeichern} disabled={laden} style={s.btnPri}>
-              {laden ? 'Speichere …' : '💾 Speichern'}
+              {laden ? T('loading') : `💾 ${T('save')}`}
             </button>
           </div>
         </div>
       </div>
 
+      {/* Dokumente */}
+      <div style={s.card}>
+        <h2 style={s.h2}>📁 {T('profile_documents')}</h2>
+        {dateiLaden ? (
+          <div style={{ color: 'var(--text-3)', fontSize: 13 }}>{T('loading')}</div>
+        ) : dateien.length === 0 ? (
+          <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '12px 0', textAlign: 'center' }}>
+            {T('profile_no_documents')}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {dateien.map(d => <DokumentZeile key={d.id} datei={d} T={T} />)}
+          </div>
+        )}
+      </div>
+
       {/* Passwort */}
       <div style={s.card}>
-        <h2 style={s.h2}>🔑 Passwort ändern</h2>
+        <h2 style={s.h2}>🔑 {T('profile_change_password')}</h2>
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          <Feld label="Neues Passwort">
+          <Feld label={T('profile_new_password')}>
             <input type="password" style={s.input} value={pw.neu} placeholder="Mindestens 6 Zeichen"
               onChange={e => setPw(p => ({ ...p, neu: e.target.value }))} />
           </Feld>
-          <Feld label="Passwort bestätigen">
+          <Feld label={T('profile_confirm_password')}>
             <input type="password" style={s.input} value={pw.neu2} placeholder="Wiederholen"
               onChange={e => setPw(p => ({ ...p, neu2: e.target.value }))} />
           </Feld>

@@ -6,7 +6,7 @@ import { useApp } from '../../context/AppContext'
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
 export default function SchuelerKurse() {
-  const { profil } = useApp()
+  const { profil, T } = useApp()
   const navigate   = useNavigate()
   const [kurse, setKurse] = useState([])
   const [laden, setLaden] = useState(true)
@@ -25,15 +25,15 @@ export default function SchuelerKurse() {
     ladeData()
   }, [profil])
 
-  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>Laden …</div>
+  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
 
   return (
     <div>
-      <h1 style={s.h1}>🎵 Meine Kurse</h1>
-      <p style={s.sub}>{kurse.length} Kurse</p>
+      <h1 style={s.h1}>🎵 {T('kurs_my_courses')}</h1>
+      <p style={s.sub}>{kurse.length} {T('kurs_lessons')}</p>
 
       {kurse.length === 0 ? (
-        <div style={s.leer}>Du bist noch keinem Kurs zugeordnet.</div>
+        <div style={s.leer}>{T('kurs_no_assigned')}</div>
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:16, marginTop:24 }}>
           {kurse.map(k => (
@@ -59,7 +59,7 @@ export default function SchuelerKurse() {
                 </div>
                 <div style={{ marginTop:14 }}>
                   <span style={{ fontSize:13, padding:'6px 14px', borderRadius:'var(--radius)', background:'var(--primary)', color:'var(--primary-fg)', fontWeight:700 }}>
-                    Öffnen →
+                    {T('next')} →
                   </span>
                 </div>
               </div>

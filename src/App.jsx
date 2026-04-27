@@ -24,6 +24,9 @@ import SchuelerEvents from './pages/schueler/Events'
 import ProfilSeite from './pages/ProfilSeite'
 import Stundenplan from './pages/Stundenplan'
 import Platzhalter from './pages/Platzhalter'
+import Unterrichtsmodus from './pages/lehrer/Unterrichtsmodus'
+import SchuelerSession from './pages/SchuelerSession'
+import Repertoire from './pages/Repertoire'
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -69,7 +72,7 @@ function AppRoutes() {
           <Route path="/lehrer/kurse/:id"       element={<KursDetail />} />
           <Route path="/lehrer/kurse/:id/repertoire" element={<KursRepertoire />} />
           <Route path="/lehrer/kurse/:kursId/repertoire/:stueckId" element={<StueckDetail />} />
-          <Route path="/lehrer/kurse/:id/unterrichtsmodus" element={P('Unterrichtsmodus', '🎬')} />
+          <Route path="/lehrer/kurse/:id/unterrichtsmodus" element={<Unterrichtsmodus />} />
           <Route path="/lehrer/schueler"        element={P('Meine Schüler', '👥')} />
           <Route path="/lehrer/anwesenheit"     element={<Stundenplan />} />
           <Route path="/lehrer/repertoire"      element={P('Repertoire', '🎼')} />
@@ -110,7 +113,7 @@ function AppRoutes() {
       </Route>
 
       {/* Session beitreten */}
-      <Route path="/session/:code" element={P('Session beitreten', '🎬')} />
+      <Route path="/session/:code" element={<SchuelerSession />} />
 
       {/* Profil - für alle Rollen */}
       <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern']} />}>

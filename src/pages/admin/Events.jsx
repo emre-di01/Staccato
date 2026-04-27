@@ -126,6 +126,22 @@ export default function AdminEvents() {
 
   async function loeschen(id) {
     if (!confirm(T('confirm_delete'))) return
+
+    // Stücke löschen die ausschließlich in dieser Veranstaltung verwendet werden
+    const { data: evStuecke } = await supabase.from('event_stuecke')
+      .select('stueck_id').eq('event_id', id)
+    for (const { stueck_id } of (evStuecke ?? [])) {
+      const [{ count: kCount }, { count: eCount }] = await Promise.all([
+        supabase.from('unterricht_stuecke').select('*', { count: 'exact', head: true }).eq('stueck_id', stueck_id),
+        supabase.from('event_stuecke').select('*', { count: 'exact', head: true }).eq('stueck_id', stueck_id).neq('event_id', id),
+      ])
+      if ((kCount ?? 0) === 0 && (eCount ?? 0) === 0) {
+        const { data: sDocs } = await supabase.from('stueck_dateien').select('bucket_pfad').eq('stueck_id', stueck_id)
+        if (sDocs?.length > 0) await supabase.storage.from('stueck-dateien').remove(sDocs.map(d => d.bucket_pfad))
+        await supabase.from('stuecke').delete().eq('id', stueck_id)
+      }
+    }
+
     const { error } = await supabase.from('events').delete().eq('id', id)
     if (error) setFehler(error.message)
     else await ladeEvents()

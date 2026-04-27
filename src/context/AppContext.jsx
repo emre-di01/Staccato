@@ -11,6 +11,7 @@ const DEFAULT_LANG  = 'de'
 export function AppProvider({ children }) {
   const [session,  setSession]  = useState(undefined)
   const [profil,   setProfil]   = useState(null)
+  const [zeitzone, setZeitzone] = useState('Europe/Berlin')
   const [laden,    setLaden]    = useState(true)
   const [theme,    setThemeKey] = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('staccato_dark') === 'true')
@@ -37,6 +38,10 @@ export function AppProvider({ children }) {
       if (data) {
         setProfil(data)
         if (data.sprache) setLang(data.sprache)
+        if (data.schule_id) {
+          const { data: schule } = await supabase.from('schulen').select('zeitzone').eq('id', data.schule_id).single()
+          if (schule?.zeitzone) setZeitzone(schule.zeitzone)
+        }
       }
     } catch (e) {
       console.warn('Profil nicht geladen:', e)
@@ -91,7 +96,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       session, profil, rolle, laden,
-      theme, darkMode, lang,
+      theme, darkMode, lang, zeitzone,
       changeTheme, toggleDark, setLang,
       abmelden, T, ladeProfil,
     }}>

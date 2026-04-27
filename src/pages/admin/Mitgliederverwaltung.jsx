@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -180,7 +180,8 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
 
   async function speichern() {
     setLaden(true)
-    const { error } = await supabase.from('profiles').update(form).eq('id', mitglied.id)
+    const payload = { ...form, geburtsdatum: form.geburtsdatum || null }
+    const { error } = await supabase.from('profiles').update(payload).eq('id', mitglied.id)
     if (error) setFehler(error.message)
     else { onErfolg(); onClose() }
     setLaden(false)
@@ -265,16 +266,16 @@ function ZuordnungModal({ mitglied, onClose, T }) {
       : u.unterricht_schueler?.some(us => us.schueler_id === mitglied.id)
   )
 
-  if (laden) return <Modal titel="Zuordnungen" onClose={onClose}><p style={{ color: 'var(--text-3)' }}>Laden …</p></Modal>
+  if (laden) return <Modal titel="Zuordnungen" onClose={onClose}><p style={{ color: 'var(--text-3)' }}>{T('loading')}</p></Modal>
 
   return (
     <Modal titel={`Zuordnungen – ${mitglied.voller_name}`} onClose={onClose} breit>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Aktuelle Unterrichte */}
         <div>
-          <div style={s.sectionLabel}>Aktuelle Unterrichte</div>
+          <div style={s.sectionLabel}>{T('member_current_courses')}</div>
           {meineUnterricht.length === 0 ? (
-            <p style={{ color: 'var(--text-3)', fontSize: 13 }}>Noch keinem Unterricht zugeordnet.</p>
+            <p style={{ color: 'var(--text-3)', fontSize: 13 }}>{T('member_not_assigned')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
               {meineUnterricht.map(u => (
@@ -312,6 +313,7 @@ function ZuordnungModal({ mitglied, onClose, T }) {
 // ─── Passwort zurücksetzen Modal ─────────────────────────────
 
 function PasswortModal({ mitglied, onClose }) {
+  const { T } = useApp()
   const [pw,     setPw]     = useState('')
   const [pw2,    setPw2]    = useState('')
   const [laden,  setLaden]  = useState(false)
@@ -348,25 +350,25 @@ function PasswortModal({ mitglied, onClose }) {
       <div style={s.formGrid}>
         {erfolg ? (
           <div style={{ padding:'16px', borderRadius:'var(--radius)', background:'#d1fae5', color:'#065f46', fontWeight:700, textAlign:'center' }}>
-            ✅ Passwort erfolgreich geändert!
+            {T('member_pw_success')}
           </div>
         ) : (
           <>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={s.label}>Neues Passwort</label>
-              <input type="password" style={s.input} value={pw} placeholder="Mindestens 6 Zeichen"
+              <label style={s.label}>{T('new_password')}</label>
+              <input type="password" style={s.input} value={pw} placeholder={T('password_min_chars')}
                 onChange={e => setPw(e.target.value)} />
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={s.label}>Passwort bestätigen</label>
-              <input type="password" style={s.input} value={pw2} placeholder="Wiederholen"
+              <label style={s.label}>{T('confirm_password')}</label>
+              <input type="password" style={s.input} value={pw2} placeholder={T('password_min_chars')}
                 onChange={e => setPw2(e.target.value)} />
             </div>
             {fehler && <p style={s.fehler}>{fehler}</p>}
             <div style={s.btnRow}>
-              <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+              <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
               <button onClick={speichern} disabled={laden} style={s.btnPri}>
-                {laden ? 'Setze …' : '🔑 Passwort setzen'}
+                {laden ? T('member_pw_setting') : T('member_set_password')}
               </button>
             </div>
           </>
@@ -376,16 +378,162 @@ function PasswortModal({ mitglied, onClose }) {
   )
 }
 
+// ─── Dokumente Modal ─────────────────────────────────────────
+
+const DOK_TYPEN = [
+  { key: 'aufnahmeformular', label: 'Aufnahmeformular' },
+  { key: 'vertrag',          label: 'Vertrag' },
+  { key: 'sepa',             label: 'SEPA-Mandat' },
+  { key: 'einverstaendnis',  label: 'Einverständnis' },
+  { key: 'sonstiges',        label: 'Sonstiges' },
+]
+
+function DokumenteModal({ mitglied, onClose }) {
+  const { T } = useApp()
+  const fileRef = useRef()
+  const [dateien,  setDateien]  = useState([])
+  const [laden,    setLaden]    = useState(true)
+  const [form,     setForm]     = useState({ name: '', typ: 'sonstiges' })
+  const [datei,    setDatei]    = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [fehler,   setFehler]   = useState('')
+
+  async function ladeData() {
+    const { data } = await supabase.from('mitglied_dateien')
+      .select('*').eq('profil_id', mitglied.id).order('hochgeladen_am', { ascending: false })
+    setDateien(data ?? [])
+    setLaden(false)
+  }
+
+  useEffect(() => { ladeData() }, [mitglied.id])
+
+  async function hochladen() {
+    if (!datei) { setFehler('Bitte eine Datei wählen.'); return }
+    const name = form.name.trim() || datei.name
+    setUploading(true); setFehler('')
+    const sauber = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const pfad = `${mitglied.id}/${Date.now()}_${sauber}`
+    const { error: sErr } = await supabase.storage.from('mitglied-dateien').upload(pfad, datei)
+    if (sErr) { setFehler(sErr.message); setUploading(false); return }
+    const { error: dErr } = await supabase.from('mitglied_dateien').insert({
+      profil_id: mitglied.id, name, typ: form.typ, bucket_pfad: pfad,
+    })
+    if (dErr) setFehler(dErr.message)
+    else { setForm({ name: '', typ: 'sonstiges' }); setDatei(null); ladeData() }
+    setUploading(false)
+  }
+
+  async function loeschen(d) {
+    if (!confirm(`„${d.name}" wirklich löschen?`)) return
+    await supabase.storage.from('mitglied-dateien').remove([d.bucket_pfad])
+    await supabase.from('mitglied_dateien').delete().eq('id', d.id)
+    setDateien(prev => prev.filter(x => x.id !== d.id))
+  }
+
+  async function oeffnen(d) {
+    const { data } = await supabase.storage.from('mitglied-dateien').createSignedUrl(d.bucket_pfad, 3600)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+  }
+
+  return (
+    <Modal titel={`📁 Dokumente – ${mitglied.voller_name}`} onClose={onClose} breit>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* Dateiliste */}
+        <div>
+          <div style={s.sectionLabel}>{T('dok_documents')}</div>
+          {laden ? (
+            <div style={{ color: 'var(--text-3)', fontSize: 13 }}>{T('loading')}</div>
+          ) : dateien.length === 0 ? (
+            <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '12px 0' }}>{T('dok_none')}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {dateien.map(d => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 'var(--radius)', background: 'var(--bg-2)', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 20 }}>📄</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>
+                      {DOK_TYPEN.find(t => t.key === d.typ)?.label ?? d.typ} · {new Date(d.hochgeladen_am).toLocaleDateString('de-DE')}
+                    </div>
+                  </div>
+                  <button onClick={() => oeffnen(d)} style={s.btnSek}>↗ Öffnen</button>
+                  <button onClick={() => loeschen(d)} style={{ ...s.btnKlein, color: 'var(--danger)' }}>🗑</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Upload */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+          <div style={s.sectionLabel}>{T('member_upload_doc')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={s.label}>{T('dok_label')}</label>
+                <input style={s.input} placeholder="z.B. Aufnahmeformular 2024" value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={s.label}>Typ</label>
+                <select style={s.input} value={form.typ} onChange={e => setForm(f => ({ ...f, typ: e.target.value }))}>
+                  {DOK_TYPEN.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ border: '2px dashed var(--border)', borderRadius: 'var(--radius)', padding: '20px', textAlign: 'center', cursor: 'pointer', background: 'var(--bg-2)' }}
+              onClick={() => fileRef.current.click()}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); setDatei(e.dataTransfer.files[0]) }}>
+              {datei
+                ? <span style={{ color: 'var(--text)', fontWeight: 600 }}>📎 {datei.name}</span>
+                : <span style={{ color: 'var(--text-3)', fontSize: 14 }}>{T('dok_choose_file')}</span>
+              }
+              <input ref={fileRef} type="file" hidden onChange={e => setDatei(e.target.files[0])} />
+            </div>
+            {fehler && <p style={{ margin: 0, color: 'var(--danger)', fontSize: 13 }}>{fehler}</p>}
+            <div style={s.btnRow}>
+              <button onClick={onClose} style={s.btnSek}>{T('close')}</button>
+              <button onClick={hochladen} disabled={uploading || !datei} style={s.btnPri}>
+                {uploading ? T('dok_uploading') : T('dok_upload')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Löschen Bestätigung Modal ────────────────────────────────
 
 function LoeschenModal({ mitglied, onClose, onErfolg }) {
+  const { T } = useApp()
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
 
   async function loeschen() {
     setLaden(true)
-    // Profil löschen (cascaded auf auth.users via RLS)
-    const { error } = await supabase.from('profiles').delete().eq('id', mitglied.id)
+    setFehler('')
+
+    // 1. Alle Mitglied-Dokumente aus Storage löschen
+    const { data: docs } = await supabase.from('mitglied_dateien')
+      .select('bucket_pfad').eq('profil_id', mitglied.id)
+    if (docs?.length > 0) {
+      await supabase.storage.from('mitglied-dateien').remove(docs.map(d => d.bucket_pfad))
+    }
+
+    // 2. Avatar löschen (falls vorhanden)
+    if (mitglied.avatar_url) {
+      const match = mitglied.avatar_url.split('?')[0].match(/\/avatare\/(.+)$/)
+      if (match?.[1]) {
+        await supabase.storage.from('avatare').remove([decodeURIComponent(match[1])])
+      }
+    }
+
+    // 3. Auth-User löschen (kaskadiert auf profiles, mitglied_dateien, etc.)
+    const { error } = await supabase.rpc('delete_auth_user', { p_user_id: mitglied.id })
     if (error) {
       setFehler(error.message)
       setLaden(false)
@@ -403,10 +551,10 @@ function LoeschenModal({ mitglied, onClose, onErfolg }) {
         </div>
         {fehler && <p style={s.fehler}>{fehler}</p>}
         <div style={s.btnRow}>
-          <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+          <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
           <button onClick={loeschen} disabled={laden}
             style={{ ...s.btnPri, background:'var(--danger)' }}>
-            {laden ? 'Lösche …' : '🗑 Endgültig löschen'}
+            {laden ? '…' : `🗑 ${T('delete')}`}
           </button>
         </div>
       </div>
@@ -491,7 +639,7 @@ export default function Mitgliederverwaltung() {
       {/* Suche */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         <input
-          placeholder="🔍 Name suchen …"
+          placeholder={T('member_search')}
           value={suche}
           onChange={e => setSuche(e.target.value)}
           style={{ ...s.input, flex: 1, maxWidth: 340 }}
@@ -505,9 +653,9 @@ export default function Mitgliederverwaltung() {
 
       {/* Tabelle / Karten */}
       {laden ? (
-        <div style={s.leer}>Lade Mitglieder …</div>
+        <div style={s.leer}>{T('member_loading')}</div>
       ) : gefiltert.length === 0 ? (
-        <div style={s.leer}>Keine Mitglieder gefunden.</div>
+        <div style={s.leer}>{T('member_none_found')}</div>
       ) : (
         <>
           {/* Desktop Tabelle */}
@@ -549,6 +697,7 @@ export default function Mitgliederverwaltung() {
                         {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
                           <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Zuordnungen">🔗</button>
                         )}
+                        <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={s.btnKlein} title="Dokumente">📁</button>
                         <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnKlein, color:'var(--danger)' }} title="Löschen">🗑</button>
                       </div>
                     </td>
@@ -591,6 +740,9 @@ export default function Mitgliederverwaltung() {
                       🔗 Zuordnungen
                     </button>
                   )}
+                  <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>
+                    📁
+                  </button>
                   <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>
                     🗑
                   </button>
@@ -606,6 +758,7 @@ export default function Mitgliederverwaltung() {
       {modal?.typ === 'profil'    && <ProfilModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
       {modal?.typ === 'passwort'  && <PasswortModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'zuordnung' && <ZuordnungModal mitglied={modal.mitglied} onClose={() => setModal(null)} T={T} />}
+      {modal?.typ === 'dokumente' && <DokumenteModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'loeschen'  && (
         <LoeschenModal
           mitglied={modal.mitglied}

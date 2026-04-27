@@ -255,7 +255,7 @@ function SchuelerAnwesenheit({ profil, kursId, stunden }) {
 export default function SchuelerKursDetail() {
   const { id }     = useParams()
   const navigate   = useNavigate()
-  const { profil } = useApp()
+  const { profil, T } = useApp()
   const [kurs,     setKurs]     = useState(null)
   const [stuecke,  setStuecke]  = useState([])
   const [dateien,  setDateien]  = useState([])
@@ -296,7 +296,7 @@ export default function SchuelerKursDetail() {
     }
   }
 
-  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>Laden …</div>
+  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
   if (!kurs)  return <div style={{ padding:40, color:'var(--danger)' }}>Kurs nicht gefunden.</div>
 
   const jetzt = new Date()
@@ -336,10 +336,10 @@ export default function SchuelerKursDetail() {
       {/* Tabs */}
       <div style={{ display:'flex', gap:2, marginBottom:20, borderBottom:'2px solid var(--border)', overflowX:'auto' }}>
         {[
-          ['stunden', `📅 Stundenplan`],
-          ['anwesenheit', `✅ Anwesenheit`],
-          ['repertoire', `🎼 Repertoire (${stuecke.length})`],
-          ['dateien', `📁 Dateien (${dateien.length})`],
+          ['stunden',     `📅 ${T('schedule_title')}`],
+          ['anwesenheit', T('kurs_tab_attendance')],
+          ['repertoire',  `🎼 ${T('repertoire_title')} (${stuecke.length})`],
+          ['dateien',     `📁 ${T('files')} (${dateien.length})`],
         ].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
             style={{ padding:'10px 16px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: tab===k ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===k ? 800 : 500, borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, whiteSpace:'nowrap' }}>
@@ -352,7 +352,7 @@ export default function SchuelerKursDetail() {
       {tab === 'stunden' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {stunden.length === 0 ? (
-            <div style={s.leer}>Keine Stunden in den nächsten Wochen.</div>
+            <div style={s.leer}>{T('kurs_no_lessons_found')}</div>
           ) : stunden.map(st => {
             const beginn   = new Date(st.beginn)
             const istHeute = beginn.toDateString() === jetzt.toDateString()
@@ -361,7 +361,7 @@ export default function SchuelerKursDetail() {
               <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:`1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center' }}>
                 <div style={{ textAlign:'center', minWidth:52 }}>
                   <div style={{ fontSize:11, fontWeight:700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
-                    {istHeute ? 'Heute' : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
+                    {istHeute ? T('dash_today') : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
                   </div>
                   <div style={{ fontSize:18, fontWeight:800, color:'var(--text)' }}>
                     {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
@@ -372,7 +372,7 @@ export default function SchuelerKursDetail() {
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:12, color: st.status === 'abgesagt' ? 'var(--danger)' : st.status === 'stattgefunden' ? 'var(--success)' : 'var(--text-3)' }}>
-                    {st.status === 'stattgefunden' ? '✅ Stattgefunden' : st.status === 'abgesagt' ? '❌ Abgesagt' : '⏳ Geplant'}
+                    {st.status === 'stattgefunden' ? T('kurs_status_done') : st.status === 'abgesagt' ? T('kurs_status_cancelled') : T('kurs_status_planned')}
                   </div>
                   {st.hausaufgaben && (
                     <div style={{ fontSize:13, color:'var(--text-2)', marginTop:4, background:'var(--bg-2)', padding:'6px 10px', borderRadius:8 }}>
@@ -395,7 +395,7 @@ export default function SchuelerKursDetail() {
       {tab === 'repertoire' && (
         <div>
           {stuecke.length === 0 ? (
-            <div style={s.leer}>Noch keine Stücke im Repertoire.</div>
+            <div style={s.leer}>{T('repertoire_no_pieces')}</div>
           ) : (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:12 }}>
               {stuecke.map(us => {
@@ -429,7 +429,7 @@ export default function SchuelerKursDetail() {
       {tab === 'dateien' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {dateien.length === 0 ? (
-            <div style={s.leer}>Keine Dateien vorhanden.</div>
+            <div style={s.leer}>{T('no_data')}</div>
           ) : dateien.map(d => (
             <div key={d.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderRadius:'var(--radius)', background:'var(--surface)', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
               <span style={{ fontSize:22 }}>

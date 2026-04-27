@@ -13,7 +13,7 @@ const STATUS_INFO = {
 export default function SchuelerAnwesenheit() {
   const { id }     = useParams()
   const navigate   = useNavigate()
-  const { profil } = useApp()
+  const { profil, T } = useApp()
   const [kurs,       setKurs]       = useState(null)
   const [anwesenheit, setAnwesenheit] = useState([])
   const [stunden,    setStunden]    = useState([])
@@ -41,7 +41,7 @@ export default function SchuelerAnwesenheit() {
     ladeData()
   }, [id, profil])
 
-  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>Laden …</div>
+  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
   if (!kurs)  return <div style={{ padding:40, color:'var(--danger)' }}>Kurs nicht gefunden.</div>
 
   const anwesenheitMap = Object.fromEntries(anwesenheit.map(a => [a.stunde_id, a]))
@@ -60,17 +60,17 @@ export default function SchuelerAnwesenheit() {
         ← {kurs.name}
       </button>
 
-      <h1 style={s.h1}>✅ Meine Anwesenheit</h1>
+      <h1 style={s.h1}>{T('attendance_my')}</h1>
       <p style={{ ...s.sub, marginBottom:24 }}>{kurs.name}</p>
 
       {/* Statistiken */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap:12, marginBottom:28 }}>
         {[
-          { label:'Stunden gesamt', wert: gesamt, farbe:'var(--text-2)' },
-          { label:'Anwesend', wert: anwesend, farbe:'var(--success)' },
-          { label:'Abwesend', wert: abwesend, farbe:'var(--danger)' },
-          { label:'Entschuldigt', wert: entschuldigt, farbe:'var(--warning)' },
-          { label:'Anwesenheitsquote', wert: quote !== null ? `${quote}%` : '–', farbe: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' },
+          { label: T('attendance_total_lessons'), wert: gesamt, farbe:'var(--text-2)' },
+          { label: T('kurs_present'),             wert: anwesend, farbe:'var(--success)' },
+          { label: T('kurs_absent'),              wert: abwesend, farbe:'var(--danger)' },
+          { label: T('kurs_excused'),             wert: entschuldigt, farbe:'var(--warning)' },
+          { label: T('attendance_rate_label'),    wert: quote !== null ? `${quote}%` : '–', farbe: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' },
         ].map(stat => (
           <div key={stat.label} style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'16px', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
             <div style={{ fontSize:11, color:'var(--text-3)', fontWeight:600, marginBottom:6 }}>{stat.label}</div>
@@ -81,7 +81,7 @@ export default function SchuelerAnwesenheit() {
 
       {/* Anwesenheitsliste */}
       {stunden.length === 0 ? (
-        <div style={s.leer}>Noch keine Stunden stattgefunden.</div>
+        <div style={s.leer}>{T('attendance_no_entries')}</div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {stunden.map(st => {
@@ -114,7 +114,7 @@ export default function SchuelerAnwesenheit() {
                       {info.icon} {info.label}
                     </span>
                   ) : (
-                    <span style={{ fontSize:12, color:'var(--text-3)' }}>Nicht erfasst</span>
+                    <span style={{ fontSize:12, color:'var(--text-3)' }}>{T('attendance_not_recorded')}</span>
                   )}
                 </div>
               </div>
