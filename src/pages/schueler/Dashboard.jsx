@@ -35,11 +35,23 @@ export default function SchuelerDashboard() {
     async function ladeData() {
       const { data: us } = await supabase
         .from('unterricht_schueler')
-        .select('*, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
+        .select('*, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id))')
         .eq('schueler_id', profil.id)
         .eq('status', 'aktiv')
 
-      const meineKurse = (us ?? []).map(u => u.unterricht)
+      const meineKurse = (us ?? []).map(u => u.unterricht).filter(Boolean)
+
+      // Lehrernamen separat laden
+      if (meineKurse.length > 0) {
+        const alleIds = [...new Set(meineKurse.flatMap(k => (k.unterricht_lehrer ?? []).map(ul => ul.lehrer_id)))]
+        if (alleIds.length > 0) {
+          const { data: lp } = await supabase.from('profiles').select('id, voller_name').in('id', alleIds)
+          const nameMap = Object.fromEntries((lp ?? []).map(p => [p.id, p]))
+          meineKurse.forEach(k => {
+            k.unterricht_lehrer = (k.unterricht_lehrer ?? []).map(ul => ({ ...ul, profiles: nameMap[ul.lehrer_id] ?? null }))
+          })
+        }
+      }
       setKurse(meineKurse)
 
       // Nächste Stunden

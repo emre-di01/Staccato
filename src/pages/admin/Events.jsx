@@ -165,6 +165,9 @@ export default function AdminEvents() {
     else {
       await ladeTeilnehmer(modal.event.id)
       setAddProfil('')
+      supabase.functions.invoke('send-email', {
+        body: { type: 'event_invite', event_id: modal.event.id, profil_id: addProfil },
+      }).catch(console.error)
     }
     setSenden(false)
   }
@@ -197,7 +200,7 @@ export default function AdminEvents() {
       <div style={s.header}>
         <div>
           <h1 style={s.titel}>{T('events')}</h1>
-          <p style={s.sub}>{events.length} Veranstaltungen insgesamt</p>
+          <p style={s.sub}>{events.length} {T('events').toLowerCase()}</p>
         </div>
         <button onClick={oeffneNeu} style={s.btnPrimary}>+ {T('new_event')}</button>
       </div>
@@ -206,7 +209,7 @@ export default function AdminEvents() {
 
       <input
         value={suche} onChange={e => setSuche(e.target.value)}
-        placeholder="🔍 Veranstaltung suchen…"
+        placeholder={T('events_search')}
         style={{ ...s.inp, marginBottom: 12, maxWidth: 340 }}
       />
 
@@ -232,7 +235,7 @@ export default function AdminEvents() {
                   <span style={s.typLabel}>{T('event_' + ev.typ)}</span>
                 </div>
                 {ev.oeffentlich && (
-                  <span style={s.badge}>🌐 Öffentlich</span>
+                  <span style={s.badge}>{T('event_public_badge')}</span>
                 )}
               </div>
               <div style={s.cardTitel}>{ev.titel}</div>
@@ -244,7 +247,7 @@ export default function AdminEvents() {
               {ev.ort && <div style={s.cardMeta}>📍 {ev.ort}</div>}
               {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
               <div style={s.cardActions}>
-                <button onClick={() => navigate(`/admin/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 Repertoire</button>
+                <button onClick={() => navigate(`/admin/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 {T('repertoire')}</button>
                 <button onClick={() => oeffneTeilnehmer(ev)} style={s.btnSm}>👥 {T('manage_participants')}</button>
                 <button onClick={() => oeffneBearbeiten(ev)} style={s.btnSm}>{T('edit')}</button>
                 <button onClick={() => loeschen(ev.id)} style={{ ...s.btnSm, color: 'var(--danger)' }}>{T('delete')}</button>
@@ -265,9 +268,9 @@ export default function AdminEvents() {
             <div style={s.modalBody}>
               {fehler && <div style={s.fehlerBox}>{fehler}</div>}
               <div style={s.formRow}>
-                <label style={s.lbl}>Name *</label>
+                <label style={s.lbl}>{T('event_name_label')}</label>
                 <input value={form.titel} onChange={e => setForm(f => ({...f, titel: e.target.value}))}
-                  style={s.inp} placeholder="z.B. Sommerkonzert 2025" />
+                  style={s.inp} placeholder={T('event_name_placeholder')} />
               </div>
               <div style={s.formRow}>
                 <label style={s.lbl}>{T('type')}</label>
@@ -284,20 +287,20 @@ export default function AdminEvents() {
                 <input type="datetime-local" value={form.ende} onChange={e => setForm(f => ({...f, ende: e.target.value}))} style={s.inp} />
               </div>
               <div style={s.formRow}>
-                <label style={s.lbl}>Raum</label>
+                <label style={s.lbl}>{T('room')}</label>
                 <select value={form.raum_id} onChange={e => setForm(f => ({...f, raum_id: e.target.value}))} style={s.inp}>
-                  <option value="">– Kein Raum –</option>
+                  <option value="">{T('no_room_option')}</option>
                   {raeume.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </div>
               <div style={s.formRow}>
                 <label style={s.lbl}>{T('event_location')}</label>
-                <input value={form.ort} onChange={e => setForm(f => ({...f, ort: e.target.value}))} style={s.inp} placeholder="z.B. externer Ort, Adresse" />
+                <input value={form.ort} onChange={e => setForm(f => ({...f, ort: e.target.value}))} style={s.inp} placeholder={T('event_location_placeholder')} />
               </div>
               <div style={s.formRow}>
                 <label style={s.lbl}>{T('event_description')}</label>
                 <textarea value={form.beschreibung} onChange={e => setForm(f => ({...f, beschreibung: e.target.value}))}
-                  style={{ ...s.inp, height: 80, resize: 'vertical' }} placeholder="Kurze Beschreibung…" />
+                  style={{ ...s.inp, height: 80, resize: 'vertical' }} placeholder={T('event_description_placeholder')} />
               </div>
               <label style={s.checkRow}>
                 <input type="checkbox" checked={form.oeffentlich} onChange={e => setForm(f => ({...f, oeffentlich: e.target.checked}))} />
@@ -333,12 +336,12 @@ export default function AdminEvents() {
               {/* Hinzufügen */}
               <input
                 value={tnSuche} onChange={e => { setTnSuche(e.target.value); setAddProfil('') }}
-                placeholder="🔍 Name suchen…"
+                placeholder={T('member_search')}
                 style={s.inp}
               />
               <div style={{ display: 'flex', gap: 8 }}>
                 <select value={addProfil} onChange={e => setAddProfil(e.target.value)} style={{ ...s.inp, flex: 1 }}>
-                  <option value="">{verfuegbar.length === 0 ? '– Keine verfügbar –' : `${T('add_participant')}…`}</option>
+                  <option value="">{verfuegbar.length === 0 ? T('no_available') : `${T('add_participant')}…`}</option>
                   {verfuegbar.map(p => (
                     <option key={p.id} value={p.id}>{p.voller_name} ({T(p.rolle)})</option>
                   ))}

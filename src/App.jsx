@@ -26,11 +26,12 @@ import ProfilSeite from './pages/ProfilSeite'
 import Stundenplan from './pages/Stundenplan'
 import Platzhalter from './pages/Platzhalter'
 import Unterrichtsmodus from './pages/lehrer/Unterrichtsmodus'
+import LehrerSchueler from './pages/lehrer/LehrerSchueler'
 import SchuelerSession from './pages/SchuelerSession'
 import Repertoire from './pages/Repertoire'
 import Impressum from './pages/Impressum'
 import Datenschutz from './pages/Datenschutz'
-import CookieBanner from './components/CookieBanner'
+import ConsentBanner from './components/ConsentBanner'
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -60,6 +61,7 @@ function AppRoutes() {
           <Route path="/admin/stundenplan"      element={<Stundenplan />} />
           <Route path="/admin/profil"            element={<ProfilSeite />} />
           <Route path="/admin/repertoire"       element={<Repertoire />} />
+          <Route path="/admin/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/admin/events"                                          element={<AdminEvents />} />
           <Route path="/admin/events/:id/repertoire"                         element={<EventRepertoire />} />
           <Route path="/admin/events/:kursId/repertoire/:stueckId"           element={<StueckDetail />} />
@@ -78,9 +80,10 @@ function AppRoutes() {
           <Route path="/lehrer/kurse/:id/repertoire" element={<KursRepertoire />} />
           <Route path="/lehrer/kurse/:kursId/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/lehrer/kurse/:id/unterrichtsmodus" element={<Unterrichtsmodus />} />
-          <Route path="/lehrer/schueler"        element={P('Meine Schüler', '👥')} />
+          <Route path="/lehrer/schueler"        element={<LehrerSchueler />} />
           <Route path="/lehrer/anwesenheit"     element={<Stundenplan />} />
           <Route path="/lehrer/repertoire"      element={<Repertoire />} />
+          <Route path="/lehrer/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/lehrer/events"                                         element={<LehrerEvents />} />
           <Route path="/lehrer/events/:id/repertoire"                        element={<EventRepertoire />} />
           <Route path="/lehrer/events/:kursId/repertoire/:stueckId"          element={<StueckDetail />} />
@@ -93,7 +96,8 @@ function AppRoutes() {
       <Route element={<ProtectedRoute erlaubteRollen={['schueler']} />}>
         <Route element={<AppLayout />}>
           <Route path="/schueler"                     element={<SchuelerDashboard />} />
-          <Route path="/schueler/stundenplan"         element={<SchuelerKurse />} />
+          <Route path="/schueler/stundenplan"         element={<Stundenplan />} />
+          <Route path="/schueler/kurse"               element={<SchuelerKurse />} />
           <Route path="/schueler/kurse/:id"           element={<SchuelerKursDetail />} />
           <Route path="/schueler/kurse/:id/anwesenheit" element={<SchuelerAnwesenheit />} />
           <Route path="/schueler/dateien"             element={P('Dateien', '📁')} />
@@ -101,6 +105,7 @@ function AppRoutes() {
           <Route path="/schueler/events/:id/repertoire"                      element={<EventRepertoire />} />
           <Route path="/schueler/events/:kursId/repertoire/:stueckId"        element={<StueckDetail />} />
           <Route path="/schueler/repertoire"         element={<Repertoire />} />
+          <Route path="/schueler/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/schueler/nachrichten"         element={P('Nachrichten', '💬')} />
           <Route path="/schueler/profil"              element={<ProfilSeite />} />
         </Route>
@@ -141,7 +146,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppProvider>
-        <CookieBanner />
+        <ConsentBanner />
         <AppRoutes />
       </AppProvider>
     </BrowserRouter>

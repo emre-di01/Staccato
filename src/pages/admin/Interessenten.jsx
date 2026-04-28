@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
-const STATUS_LABEL = { interessent: 'Interessent', probe: 'Probe' }
+const STATUS_LABEL_KEYS = { interessent: 'interessent_status_interessent', probe: 'interessent_status_probe' }
 const STATUS_FARBE = {
   interessent: { bg:'#e0e7ff', text:'#4338ca' },
   probe:       { bg:'#fef3c7', text:'#d97706' },
@@ -10,6 +10,7 @@ const STATUS_FARBE = {
 
 // ─── Interessent anlegen / bearbeiten ─────────────────────────
 function InteressentModal({ item, onClose, onErfolg }) {
+  const { T } = useApp()
   const istNeu = !item?.id
   const [form, setForm] = useState({
     voller_name:  item?.voller_name  ?? '',
@@ -42,7 +43,7 @@ function InteressentModal({ item, onClose, onErfolg }) {
   }, [])
 
   async function speichern() {
-    if (!form.voller_name.trim()) { setFehler('Name ist erforderlich.'); return }
+    if (!form.voller_name.trim()) { setFehler(T('name_required')); return }
     setLaden(true)
     const payload = {
       ...form,
@@ -76,38 +77,38 @@ function InteressentModal({ item, onClose, onErfolg }) {
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:520, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>
-            {istNeu ? '+ Neuer Interessent' : 'Interessent bearbeiten'}
+            {istNeu ? T('interessent_new') : T('interessent_edit')}
           </h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div style={{ gridColumn:'span 2' }}>{F('voller_name','Name *','text','Vor- und Nachname')}</div>
-            {F('email','E-Mail','email','name@beispiel.de')}
-            {F('telefon','Telefon','tel','+49 ...')}
-            {F('geburtsdatum','Geburtsdatum','date')}
+            <div style={{ gridColumn:'span 2' }}>{F('voller_name',T('full_name_label'),'text',T('interessent_name_placeholder'))}</div>
+            {F('email',T('email'),'email','name@beispiel.de')}
+            {F('telefon',T('profile_phone'),'tel','+49 ...')}
+            {F('geburtsdatum',T('profile_birthday'),'date')}
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={s.label}>Status</label>
+              <label style={s.label}>{T('status')}</label>
               <select style={s.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                <option value="interessent">Interessent</option>
-                <option value="probe">Probe</option>
+                <option value="interessent">{T('interessent_status_interessent')}</option>
+                <option value="probe">{T('interessent_status_probe')}</option>
               </select>
             </div>
           </div>
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={s.label}>Instrument</label>
+              <label style={s.label}>{T('instrument')}</label>
               <select style={s.input} value={form.instrument_id} onChange={e => setForm(f => ({ ...f, instrument_id: e.target.value }))}>
-                <option value="">– Kein –</option>
+                <option value="">{T('none_option')}</option>
                 {instrumente.map(i => <option key={i.id} value={i.id}>{i.icon} {i.name_de}</option>)}
               </select>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={s.label}>Wunsch-Lehrer</label>
+              <label style={s.label}>{T('interessent_wunsch_lehrer')}</label>
               <select style={s.input} value={form.wunsch_lehrer} onChange={e => setForm(f => ({ ...f, wunsch_lehrer: e.target.value }))}>
-                <option value="">– Kein –</option>
+                <option value="">{T('none_option')}</option>
                 {lehrer.map(l => <option key={l.id} value={l.id}>{l.voller_name}</option>)}
               </select>
             </div>
@@ -115,11 +116,11 @@ function InteressentModal({ item, onClose, onErfolg }) {
 
           {form.status === 'probe' && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              {F('probe_datum','Probe-Termin','datetime-local')}
+              {F('probe_datum',T('interessent_probe_termin'),'datetime-local')}
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                <label style={s.label}>Probe-Raum</label>
+                <label style={s.label}>{T('interessent_probe_raum')}</label>
                 <select style={s.input} value={form.probe_raum_id} onChange={e => setForm(f => ({ ...f, probe_raum_id: e.target.value }))}>
-                  <option value="">– Kein –</option>
+                  <option value="">{T('none_option')}</option>
                   {raeume.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </div>
@@ -127,16 +128,16 @@ function InteressentModal({ item, onClose, onErfolg }) {
           )}
 
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Notizen</label>
+            <label style={s.label}>{T('notes')}</label>
             <textarea style={{ ...s.input, minHeight:70, resize:'vertical' }}
               value={form.notizen} onChange={e => setForm(f => ({ ...f, notizen: e.target.value }))} />
           </div>
 
           {fehler && <p style={{ margin:0, color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
           <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-            <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+            <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
             <button onClick={speichern} disabled={laden} style={s.btnPri}>
-              {laden ? 'Speichere …' : istNeu ? '+ Anlegen' : '💾 Speichern'}
+              {laden ? T('saving') : istNeu ? T('interessent_anlegen') : T('save')}
             </button>
           </div>
         </div>
@@ -147,6 +148,7 @@ function InteressentModal({ item, onClose, onErfolg }) {
 
 // ─── Zu Mitglied konvertieren Modal ───────────────────────────
 function KonvertierenModal({ item, onClose, onErfolg }) {
+  const { T } = useApp()
   const [kurse,    setKurse]    = useState([])
   const [kursId,   setKursId]   = useState('')
   const [passwort, setPasswort] = useState('')
@@ -160,8 +162,8 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
   }, [])
 
   async function konvertieren() {
-    if (!item.email)    { setFehler('E-Mail-Adresse wird für die Konvertierung benötigt.'); return }
-    if (!passwort.trim()) { setFehler('Bitte ein Passwort vergeben.'); return }
+    if (!item.email)    { setFehler(T('interessent_email_required')); return }
+    if (!passwort.trim()) { setFehler(T('interessent_password_required')); return }
     setLaden(true); setFehler('')
 
     const { error: createErr } = await supabase.rpc('create_user', {
@@ -173,7 +175,7 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
 
     if (createErr) {
       setFehler(createErr.message.includes('409') || createErr.message.includes('already')
-        ? 'Diese E-Mail existiert bereits im System.'
+        ? T('interessent_email_exists')
         : createErr.message)
       setLaden(false); return
     }
@@ -202,11 +204,11 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'32px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', textAlign:'center' }}>
         <div style={{ fontSize:48, marginBottom:12 }}>✅</div>
-        <h3 style={{ margin:'0 0 8px', fontSize:18, fontWeight:800, color:'var(--text)' }}>{item.voller_name} ist jetzt Mitglied</h3>
+        <h3 style={{ margin:'0 0 8px', fontSize:18, fontWeight:800, color:'var(--text)' }}>{item.voller_name} {T('interessent_converted_title')}</h3>
         <p style={{ margin:'0 0 20px', color:'var(--text-3)', fontSize:13 }}>
-          Das Konto wurde angelegt. Der Schüler erhält keinen Systemzugang bis Sie ihn per Passwort-Reset einladen.
+          {T('interessent_converted_desc')}
         </p>
-        <button onClick={() => { onErfolg(); onClose() }} style={s.btnPri}>Fertig</button>
+        <button onClick={() => { onErfolg(); onClose() }} style={s.btnPri}>{T('done')}</button>
       </div>
     </div>
   )
@@ -216,7 +218,7 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
-          <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>Zu Mitglied konvertieren</h3>
+          <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{T('interessent_konvertieren')}</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
 
@@ -228,20 +230,20 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
 
         {!item.email && (
           <div style={{ background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:'var(--radius)', padding:'10px 14px', marginBottom:16, fontSize:13, color:'#92400e' }}>
-            ⚠️ Keine E-Mail-Adresse hinterlegt. Bitte zuerst im Profil ergänzen.
+            {T('interessent_no_email_warning')}
           </div>
         )}
 
         <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:20 }}>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Passwort *</label>
-            <input type="password" style={s.input} placeholder="Passwort vergeben"
+            <label style={s.label}>{T('interessent_password_label')}</label>
+            <input type="password" style={s.input} placeholder={T('interessent_password_placeholder')}
               value={passwort} onChange={e => setPasswort(e.target.value)} />
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Kurs zuweisen (optional)</label>
+            <label style={s.label}>{T('interessent_assign_course')}</label>
             <select style={s.input} value={kursId} onChange={e => setKursId(e.target.value)}>
-              <option value="">– Kein Kurs –</option>
+              <option value="">{T('no_course_option')}</option>
               {kurse.map(k => <option key={k.id} value={k.id}>{k.instrumente?.icon} {k.name}</option>)}
             </select>
           </div>
@@ -249,9 +251,9 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
 
         {fehler && <p style={{ margin:'0 0 14px', color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
         <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-          <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+          <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
           <button onClick={konvertieren} disabled={laden || !item.email} style={s.btnPri}>
-            {laden ? 'Konvertiere …' : '🎓 Zu Mitglied machen'}
+            {laden ? T('interessent_converting') : T('interessent_make_member')}
           </button>
         </div>
       </div>
@@ -261,7 +263,7 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Interessenten() {
-  const { profil } = useApp()
+  const { profil, T } = useApp()
   const [liste,        setListe]        = useState([])
   const [laden,        setLaden]        = useState(true)
   const [filterStatus, setFilterStatus] = useState('alle')
@@ -298,15 +300,15 @@ export default function Interessenten() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
         <div>
-          <h1 style={s.h1}>📋 Interessenten</h1>
-          <p style={s.sub}>{liste.length} gesamt · {liste.filter(i => i.status === 'probe').length} mit Probe-Termin</p>
+          <h1 style={s.h1}>📋 {T('prospects')}</h1>
+          <p style={s.sub}>{liste.length} {T('all').toLowerCase()} · {liste.filter(i => i.status === 'probe').length} {T('interessent_probe_date').toLowerCase().replace(':','')}</p>
         </div>
-        <button onClick={() => setModal({ typ:'interessent' })} style={s.btnPri}>+ Neuer Interessent</button>
+        <button onClick={() => setModal({ typ:'interessent' })} style={s.btnPri}>{T('interessent_new')}</button>
       </div>
 
       {/* Filter */}
       <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap', alignItems:'center' }}>
-        <input style={{ ...s.input, width:220 }} placeholder="Suche …" value={suche}
+        <input style={{ ...s.input, width:220 }} placeholder={T('search') + ' …'} value={suche}
           onChange={e => setSuche(e.target.value)} />
         <div style={{ display:'flex', gap:6 }}>
           {['alle','interessent','probe'].map(st => (
@@ -315,7 +317,7 @@ export default function Interessenten() {
                 background: filterStatus===st ? 'var(--primary)' : 'var(--surface)',
                 color:      filterStatus===st ? 'var(--primary-fg)' : 'var(--text-2)',
                 borderColor:filterStatus===st ? 'var(--primary)' : 'var(--border)' }}>
-              {st === 'alle' ? 'Alle' : STATUS_LABEL[st]}
+              {st === 'alle' ? T('all') : T(STATUS_LABEL_KEYS[st])}
             </button>
           ))}
         </div>
@@ -323,9 +325,9 @@ export default function Interessenten() {
 
       {/* Liste */}
       {laden ? (
-        <div style={s.leer}>Lade …</div>
+        <div style={s.leer}>{T('loading')}</div>
       ) : gefiltert.length === 0 ? (
-        <div style={s.leer}>Keine Interessenten gefunden.</div>
+        <div style={s.leer}>{T('interessent_none_found')}</div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {gefiltert.map(item => {
@@ -350,8 +352,8 @@ export default function Interessenten() {
                     {item.telefon  && <span>📞 {item.telefon}</span>}
                     {item.instrumente && <span>{item.instrumente.icon} {item.instrumente.name_de}</span>}
                     {item.profiles && <span>👨‍🏫 {item.profiles.voller_name}</span>}
-                    {item.probe_datum && <span>🗓 Probe: {new Date(item.probe_datum).toLocaleDateString('de-DE', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span>}
-                    <span style={{ color:'var(--bg-3)' }}>seit {new Date(item.angemeldet_am).toLocaleDateString('de-DE')}</span>
+                    {item.probe_datum && <span>🗓 {T('interessent_probe_date')} {new Date(item.probe_datum).toLocaleDateString('de-DE', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span>}
+                    <span style={{ color:'var(--bg-3)' }}>{T('interessent_since')} {new Date(item.angemeldet_am).toLocaleDateString('de-DE')}</span>
                   </div>
                   {item.notizen && (
                     <div style={{ fontSize:12, color:'var(--text-3)', marginTop:4, fontStyle:'italic', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:400 }}>
@@ -364,7 +366,7 @@ export default function Interessenten() {
                 <div style={{ display:'flex', gap:6, flexShrink:0 }}>
                   <button onClick={() => setModal({ typ:'konvertieren', item })}
                     style={{ padding:'7px 13px', borderRadius:'var(--radius)', border:'none', background:'var(--success)', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                    🎓 Mitglied
+                    {T('interessent_make_member_short')}
                   </button>
                   <button onClick={() => setModal({ typ:'interessent', item })} style={s.btnKlein}>✏️</button>
                   <button onClick={() => loeschen(item)} style={{ ...s.btnKlein, color:'var(--danger)' }}>🗑</button>

@@ -19,7 +19,16 @@ export default function SchuelerKurse() {
         .select('*, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
         .eq('schueler_id', profil.id)
         .eq('status', 'aktiv')
-      setKurse((data ?? []).map(u => u.unterricht))
+
+      setKurse(
+        (data ?? [])
+          .map(u => u.unterricht)
+          .filter(Boolean)
+          .map(k => ({
+            ...k,
+            lehrerNamen: (k.unterricht_lehrer ?? []).map(ul => ul.profiles?.voller_name).filter(Boolean),
+          }))
+      )
       setLaden(false)
     }
     ladeData()
@@ -53,8 +62,8 @@ export default function SchuelerKurse() {
                 <div style={{ display:'flex', flexDirection:'column', gap:5, fontSize:13, color:'var(--text-2)' }}>
                   {k.wochentag && <span>📅 {k.wochentag.toUpperCase()} {k.uhrzeit_von?.slice(0,5)}–{k.uhrzeit_bis?.slice(0,5)}</span>}
                   {k.raeume    && <span>🏫 {k.raeume.name}</span>}
-                  {k.unterricht_lehrer?.length > 0 && (
-                    <span>👨‍🏫 {k.unterricht_lehrer.map(ul => ul.profiles?.voller_name).filter(Boolean).join(', ')}</span>
+                  {k.lehrerNamen?.length > 0 && (
+                    <span>👨‍🏫 {k.lehrerNamen.join(', ')}</span>
                   )}
                 </div>
                 <div style={{ marginTop:14 }}>

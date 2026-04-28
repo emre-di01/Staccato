@@ -81,7 +81,7 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
 
   async function anlegen() {
     if (!form.email || !form.voller_name || !form.passwort) {
-      setFehler('Bitte alle Pflichtfelder ausfüllen.')
+      setFehler(T('all_fields_required'))
       return
     }
     setLaden(true)
@@ -96,7 +96,7 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
 
     if (error) {
       setFehler(error.message.includes('409') || error.message.includes('already')
-        ? 'Diese E-Mail existiert bereits.'
+        ? T('interessent_email_exists')
         : error.message)
       setLaden(false)
       return
@@ -110,50 +110,53 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
 
     setErfolg(true)
     setLaden(false)
+    supabase.functions.invoke('send-email', {
+      body: { type: 'welcome', email: form.email, voller_name: form.voller_name, passwort: form.passwort, rolle: form.rolle },
+    }).catch(console.error)
     setTimeout(() => { onErfolg(); onClose() }, 1200)
   }
 
   return (
-    <Modal titel="Neues Mitglied anlegen" onClose={onClose}>
+    <Modal titel={T('member_new_title')} onClose={onClose}>
       <div style={s.formGrid}>
         {erfolg ? (
-          <div style={s.erfolg}>✅ Nutzer erfolgreich angelegt!</div>
+          <div style={s.erfolg}>{T('member_created')}</div>
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Feld label="Vorname + Nachname *">
+              <Feld label={T('full_name_label')}>
                 <input style={s.input} placeholder="Max Mustermann" value={form.voller_name}
                   onChange={e => setForm(f => ({ ...f, voller_name: e.target.value }))} />
               </Feld>
-              <Feld label="Rolle">
+              <Feld label={T('role')}>
                 <select style={s.input} value={form.rolle} onChange={e => setForm(f => ({ ...f, rolle: e.target.value }))}>
                   {ROLLEN.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
                 </select>
               </Feld>
             </div>
-            <Feld label="E-Mail *">
+            <Feld label={`${T('email')} *`}>
               <input type="email" style={s.input} placeholder="max@beispiel.de" value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             </Feld>
-            <Feld label="Passwort *">
-              <input type="password" style={s.input} placeholder="Mindestens 6 Zeichen" value={form.passwort}
+            <Feld label={`${T('password')} *`}>
+              <input type="password" style={s.input} placeholder={T('password_min_chars')} value={form.passwort}
                 onChange={e => setForm(f => ({ ...f, passwort: e.target.value }))} />
             </Feld>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Feld label="Telefon">
+              <Feld label={T('profile_phone')}>
                 <input style={s.input} placeholder="+49 123 456789" value={form.telefon}
                   onChange={e => setForm(f => ({ ...f, telefon: e.target.value }))} />
               </Feld>
-              <Feld label="Geburtsdatum">
+              <Feld label={T('profile_birthday')}>
                 <input type="date" style={s.input} value={form.geburtsdatum}
                   onChange={e => setForm(f => ({ ...f, geburtsdatum: e.target.value }))} />
               </Feld>
             </div>
             {fehler && <p style={s.fehler}>{fehler}</p>}
             <div style={s.btnRow}>
-              <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+              <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
               <button onClick={anlegen} disabled={laden} style={s.btnPri}>
-                {laden ? 'Anlegen …' : '+ Mitglied anlegen'}
+                {laden ? T('saving') : T('member_create')}
               </button>
             </div>
           </>
@@ -191,40 +194,40 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
     <Modal titel={`Profil – ${mitglied.voller_name}`} onClose={onClose} breit>
       <div style={s.formGrid}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Feld label="Name">
+          <Feld label={T('name')}>
             <input style={s.input} value={form.voller_name} onChange={e => setForm(f => ({ ...f, voller_name: e.target.value }))} />
           </Feld>
-          <Feld label="Rolle">
+          <Feld label={T('role')}>
             <select style={s.input} value={form.rolle} onChange={e => setForm(f => ({ ...f, rolle: e.target.value }))}>
               {ROLLEN.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
             </select>
           </Feld>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Feld label="Telefon">
+          <Feld label={T('profile_phone')}>
             <input style={s.input} value={form.telefon} onChange={e => setForm(f => ({ ...f, telefon: e.target.value }))} />
           </Feld>
-          <Feld label="Geburtsdatum">
+          <Feld label={T('profile_birthday')}>
             <input type="date" style={s.input} value={form.geburtsdatum}
               onChange={e => setForm(f => ({ ...f, geburtsdatum: e.target.value }))} />
           </Feld>
         </div>
-        <Feld label="Adresse">
+        <Feld label={T('profile_address')}>
           <input style={s.input} value={form.adresse} onChange={e => setForm(f => ({ ...f, adresse: e.target.value }))} />
         </Feld>
-        <Feld label="Interne Notizen">
+        <Feld label={T('member_internal_notes')}>
           <textarea style={{ ...s.input, minHeight: 80, resize: 'vertical' }} value={form.notizen}
             onChange={e => setForm(f => ({ ...f, notizen: e.target.value }))} />
         </Feld>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input type="checkbox" id="aktiv" checked={form.aktiv} onChange={e => setForm(f => ({ ...f, aktiv: e.target.checked }))} />
-          <label htmlFor="aktiv" style={s.label}>Aktiv</label>
+          <label htmlFor="aktiv" style={s.label}>{T('active')}</label>
         </div>
         {fehler && <p style={s.fehler}>{fehler}</p>}
         <div style={s.btnRow}>
-          <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+          <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
           <button onClick={speichern} disabled={laden} style={s.btnPri}>
-            {laden ? 'Speichere …' : '💾 Speichern'}
+            {laden ? T('saving') : `💾 ${T('save')}`}
           </button>
         </div>
       </div>
@@ -297,13 +300,12 @@ function ZuordnungModal({ mitglied, onClose, T }) {
 
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
           <p style={{ color: 'var(--text-3)', fontSize: 13, margin: 0 }}>
-            💡 Lehrer-Schüler Zuordnungen werden über die <strong>Unterrichtsverwaltung</strong> gesteuert.
-            Dort kannst du einem Unterricht Lehrer und Schüler hinzufügen.
+            💡 {T('zuordnung_hint')}
           </p>
         </div>
 
         <div style={s.btnRow}>
-          <button onClick={onClose} style={s.btnPri}>Fertig</button>
+          <button onClick={onClose} style={s.btnPri}>{T('done')}</button>
         </div>
       </div>
     </Modal>
@@ -321,8 +323,8 @@ function PasswortModal({ mitglied, onClose }) {
   const [erfolg, setErfolg] = useState(false)
 
   async function speichern() {
-    if (!pw || pw.length < 6) { setFehler('Mindestens 6 Zeichen.'); return }
-    if (pw !== pw2) { setFehler('Passwörter stimmen nicht überein.'); return }
+    if (!pw || pw.length < 6) { setFehler(T('password_min_error')); return }
+    if (pw !== pw2) { setFehler(T('password_mismatch')); return }
     setLaden(true); setFehler('')
 
     // SQL Funktion um Passwort zu setzen
@@ -378,14 +380,67 @@ function PasswortModal({ mitglied, onClose }) {
   )
 }
 
+// ─── E-Mail ändern Modal ─────────────────────────────────────
+
+function EmailModal({ mitglied, onClose, onErfolg }) {
+  const { T } = useApp()
+  const [email,  setEmail]  = useState(mitglied.email ?? '')
+  const [laden,  setLaden]  = useState(false)
+  const [fehler, setFehler] = useState('')
+  const [erfolg, setErfolg] = useState(false)
+
+  async function speichern() {
+    if (!email || !email.includes('@')) { setFehler(T('email_invalid')); return }
+    setLaden(true); setFehler('')
+
+    const { error } = await supabase.rpc('admin_set_email', {
+      p_user_id: mitglied.id,
+      p_email:   email,
+    })
+
+    if (error) { setFehler(error.message); setLaden(false); return }
+
+    setErfolg(true)
+    setLaden(false)
+    setTimeout(() => { onErfolg(); onClose() }, 1500)
+  }
+
+  return (
+    <Modal titel={`📧 E-Mail – ${mitglied.voller_name}`} onClose={onClose}>
+      <div style={s.formGrid}>
+        {erfolg ? (
+          <div style={{ padding:'16px', borderRadius:'var(--radius)', background:'#d1fae5', color:'#065f46', fontWeight:700, textAlign:'center' }}>
+            {T('member_email_updated')}
+          </div>
+        ) : (
+          <>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={s.label}>{T('email_address')}</label>
+              <input type="email" style={s.input} value={email}
+                onChange={e => setEmail(e.target.value)} />
+            </div>
+            {fehler && <p style={s.fehler}>{fehler}</p>}
+            <div style={s.btnRow}>
+              <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
+              <button onClick={speichern} disabled={laden} style={s.btnPri}>
+                {laden ? T('saving') : T('member_change_email')}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Dokumente Modal ─────────────────────────────────────────
 
 const DOK_TYPEN = [
-  { key: 'aufnahmeformular', label: 'Aufnahmeformular' },
-  { key: 'vertrag',          label: 'Vertrag' },
-  { key: 'sepa',             label: 'SEPA-Mandat' },
-  { key: 'einverstaendnis',  label: 'Einverständnis' },
-  { key: 'sonstiges',        label: 'Sonstiges' },
+  { key: 'aufnahmeformular', tKey: 'dok_type_aufnahmeformular' },
+  { key: 'vertrag',          tKey: 'dok_type_vertrag' },
+  { key: 'sepa',             tKey: 'dok_type_sepa' },
+  { key: 'einverstaendnis',  tKey: 'dok_type_einverstaendnis' },
+  { key: 'sonstiges',        tKey: 'dok_type_sonstiges' },
 ]
 
 function DokumenteModal({ mitglied, onClose }) {
@@ -408,7 +463,7 @@ function DokumenteModal({ mitglied, onClose }) {
   useEffect(() => { ladeData() }, [mitglied.id])
 
   async function hochladen() {
-    if (!datei) { setFehler('Bitte eine Datei wählen.'); return }
+    if (!datei) { setFehler(T('dok_no_file')); return }
     const name = form.name.trim() || datei.name
     setUploading(true); setFehler('')
     const sauber = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -454,10 +509,10 @@ function DokumenteModal({ mitglied, onClose }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>
-                      {DOK_TYPEN.find(t => t.key === d.typ)?.label ?? d.typ} · {new Date(d.hochgeladen_am).toLocaleDateString('de-DE')}
+                      {T(DOK_TYPEN.find(t => t.key === d.typ)?.tKey ?? d.typ)} · {new Date(d.hochgeladen_am).toLocaleDateString('de-DE')}
                     </div>
                   </div>
-                  <button onClick={() => oeffnen(d)} style={s.btnSek}>↗ Öffnen</button>
+                  <button onClick={() => oeffnen(d)} style={s.btnSek}>{T('dok_open')}</button>
                   <button onClick={() => loeschen(d)} style={{ ...s.btnKlein, color: 'var(--danger)' }}>🗑</button>
                 </div>
               ))}
@@ -476,9 +531,9 @@ function DokumenteModal({ mitglied, onClose }) {
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={s.label}>Typ</label>
+                <label style={s.label}>{T('type')}</label>
                 <select style={s.input} value={form.typ} onChange={e => setForm(f => ({ ...f, typ: e.target.value }))}>
-                  {DOK_TYPEN.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                  {DOK_TYPEN.map(t => <option key={t.key} value={t.key}>{T(t.tKey)}</option>)}
                 </select>
               </div>
             </div>
@@ -544,10 +599,10 @@ function LoeschenModal({ mitglied, onClose, onErfolg }) {
   }
 
   return (
-    <Modal titel="Mitglied löschen" onClose={onClose}>
+    <Modal titel={T('member_delete')} onClose={onClose}>
       <div style={s.formGrid}>
         <div style={{ padding:'16px', borderRadius:'var(--radius)', background:'#fee2e2', border:'1px solid #fecaca', color:'var(--danger)', fontSize:14 }}>
-          ⚠️ Bist du sicher, dass du <strong>{mitglied.voller_name}</strong> löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.
+          {T('member_delete_confirm').replace('{name}', mitglied.voller_name)}
         </div>
         {fehler && <p style={s.fehler}>{fehler}</p>}
         <div style={s.btnRow}>
@@ -576,7 +631,7 @@ export default function Mitgliederverwaltung() {
   const ladeMitglieder = useCallback(async () => {
     setLaden(true)
     const { data } = await supabase
-      .from('profiles')
+      .from('mitglieder_mit_email')
       .select('*')
       .order('voller_name')
     setMitglieder(data ?? [])
@@ -606,21 +661,21 @@ export default function Mitgliederverwaltung() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={s.h1}>👥 {T('members')}</h1>
-          <p style={s.sub}>{stats.gesamt} Mitglieder · {stats.lehrer} Lehrer · {stats.schueler} Schüler</p>
+          <p style={s.sub}>{stats.gesamt} {T('members')} · {stats.lehrer} {T('lehrer')} · {stats.schueler} {T('schueler')}</p>
         </div>
         <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>
-          + Mitglied anlegen
+          {T('member_create')}
         </button>
       </div>
 
       {/* Stats Chips */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {[
-          { label: 'Alle', wert: stats.gesamt, key: 'alle' },
-          { label: 'Lehrer', wert: stats.lehrer, key: 'lehrer' },
-          { label: 'Schüler', wert: stats.schueler, key: 'schueler' },
-          { label: 'Eltern', wert: stats.eltern, key: 'eltern' },
-          { label: 'Admin', wert: mitglieder.filter(m => m.rolle === 'admin').length, key: 'admin' },
+          { label: T('all'), wert: stats.gesamt, key: 'alle' },
+          { label: T('lehrer'), wert: stats.lehrer, key: 'lehrer' },
+          { label: T('schueler'), wert: stats.schueler, key: 'schueler' },
+          { label: T('eltern'), wert: stats.eltern, key: 'eltern' },
+          { label: T('admin'), wert: mitglieder.filter(m => m.rolle === 'admin').length, key: 'admin' },
         ].map(item => (
           <button key={item.key} onClick={() => setFilterRolle(item.key)}
             style={{
@@ -645,9 +700,9 @@ export default function Mitgliederverwaltung() {
           style={{ ...s.input, flex: 1, maxWidth: 340 }}
         />
         <select style={{ ...s.input, width: 'auto' }} value={filterAktiv} onChange={e => setFilterAktiv(e.target.value)}>
-          <option value="alle">Alle Status</option>
-          <option value="aktiv">Aktiv</option>
-          <option value="inaktiv">Inaktiv</option>
+          <option value="alle">{T('all_status')}</option>
+          <option value="aktiv">{T('active')}</option>
+          <option value="inaktiv">{T('inactive')}</option>
         </select>
       </div>
 
@@ -663,7 +718,7 @@ export default function Mitgliederverwaltung() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-2)' }}>
-                  {['Mitglied', 'Rolle', 'Telefon', 'Geburtstag', 'Status', 'Aktionen'].map(h => (
+                  {[T('member_header'), T('role'), T('profile_phone'), T('profile_birthday'), T('status'), T('actions')].map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)' }}>{h}</th>
                   ))}
                 </tr>
@@ -676,7 +731,8 @@ export default function Mitgliederverwaltung() {
                         <Avatar name={m.voller_name} />
                         <div>
                           <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{m.voller_name}</div>
-                          {m.notizen && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>📝 hat Notizen</div>}
+                          {m.email && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{m.email}</div>}
+                          {m.notizen && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{T('has_notes')}</div>}
                         </div>
                       </div>
                     </td>
@@ -687,12 +743,13 @@ export default function Mitgliederverwaltung() {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: m.aktiv ? 'var(--success)' : 'var(--danger)' }}>
-                        {m.aktiv ? '● Aktiv' : '○ Inaktiv'}
+                        {m.aktiv ? `● ${T('active')}` : `○ ${T('inactive')}`}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={s.btnKlein} title="Bearbeiten">✏️</button>
+                        <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={s.btnKlein} title="E-Mail">📧</button>
                         <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={s.btnKlein} title="Passwort">🔑</button>
                         {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
                           <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Zuordnungen">🔗</button>
@@ -719,10 +776,11 @@ export default function Mitgliederverwaltung() {
                   <Avatar name={m.voller_name} size={44} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{m.voller_name}</div>
+                    {m.email && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{m.email}</div>}
                     <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                       <Badge rolle={m.rolle} />
                       <span style={{ fontSize: 11, fontWeight: 700, color: m.aktiv ? 'var(--success)' : 'var(--danger)' }}>
-                        {m.aktiv ? '● Aktiv' : '○ Inaktiv'}
+                        {m.aktiv ? `● ${T('active')}` : `○ ${T('inactive')}`}
                       </span>
                     </div>
                   </div>
@@ -730,14 +788,17 @@ export default function Mitgliederverwaltung() {
                 {m.telefon && <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 8 }}>📞 {m.telefon}</div>}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                    ✏️ Bearbeiten
+                    ✏️ {T('edit')}
+                  </button>
+                  <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>
+                    📧
                   </button>
                   <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>
                     🔑
                   </button>
                   {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
                     <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                      🔗 Zuordnungen
+                      🔗 {T('member_assignments')}
                     </button>
                   )}
                   <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>
@@ -756,6 +817,7 @@ export default function Mitgliederverwaltung() {
       {/* Modals */}
       {modal?.typ === 'anlegen'   && <NutzerAnlegenModal onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
       {modal?.typ === 'profil'    && <ProfilModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
+      {modal?.typ === 'email'     && <EmailModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} />}
       {modal?.typ === 'passwort'  && <PasswortModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'zuordnung' && <ZuordnungModal mitglied={modal.mitglied} onClose={() => setModal(null)} T={T} />}
       {modal?.typ === 'dokumente' && <DokumenteModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}

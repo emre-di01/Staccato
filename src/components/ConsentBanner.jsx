@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useApp } from '../context/AppContext'
 
 const KEY = 'staccato_cookie_ok'
 
 export default function CookieBanner() {
+  const { T } = useApp()
   const [sichtbar, setSichtbar] = useState(false)
 
   useEffect(() => {
@@ -27,15 +29,14 @@ export default function CookieBanner() {
       gap: 16, flexWrap: 'wrap',
     }}>
       <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, flex: 1, minWidth: 220 }}>
-        🍪 Diese App verwendet technisch notwendige Cookies für Anmeldung und Einstellungen.
-        Keine Tracking- oder Werbe-Cookies.{' '}
+        🍪 {T('cookie_text')}{' '}
         <Link to="/datenschutz" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
-          Datenschutzerklärung
+          {T('privacy_policy')}
         </Link>
       </p>
       <button onClick={akzeptieren}
         style={{ padding: '9px 20px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 }}>
-        Verstanden
+        {T('cookie_accept')}
       </button>
     </div>
   )

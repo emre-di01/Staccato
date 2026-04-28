@@ -15,7 +15,7 @@ function AudioPlayer({ datei }) {
   return (
     <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'12px 16px', border:'1px solid var(--border)' }}>
       <div style={{ fontWeight:600, fontSize:13, color:'var(--text)', marginBottom:8 }}>🎵 {datei.name}</div>
-      {url ? <audio controls src={url} style={{ width:'100%' }} /> : <span style={{ color:'var(--text-3)', fontSize:12 }}>Lade …</span>}
+      {url ? <audio controls src={url} style={{ width:'100%' }} /> : <span style={{ color:'var(--text-3)', fontSize:12 }}>…</span>}
     </div>
   )
 }
@@ -98,7 +98,7 @@ function StueckModal({ stueck, onClose }) {
 
         {/* Inhalt */}
         <div style={{ flex:1, overflowY:'auto', padding:24 }}>
-          {laden ? <div style={{ color:'var(--text-3)' }}>Laden …</div> : (
+          {laden ? <div style={{ color:'var(--text-3)' }}>…</div> : (
             <>
               {tab === 'text' && (
                 <pre style={{ fontFamily:'Georgia, serif', fontSize:15, lineHeight:1.9, color:'var(--text)', whiteSpace:'pre-wrap', margin:0 }}>
@@ -174,6 +174,7 @@ function PdfViewer({ datei }) {
 
 // ─── Schüler Anwesenheits-Übersicht ──────────────────────────
 function SchuelerAnwesenheit({ profil, kursId, stunden }) {
+  const { T } = useApp()
   const [anwesenheiten, setAnwesenheiten] = useState([])
   const [laden, setLaden] = useState(true)
 
@@ -197,19 +198,18 @@ function SchuelerAnwesenheit({ profil, kursId, stunden }) {
   const quote = stattgefunden.length > 0 ? Math.round(100 * anwesend / stattgefunden.length) : null
 
   const STATUS_ICON = { anwesend:'✅', abwesend:'❌', entschuldigt:'🟡', zu_spaet:'⏰' }
-  const STATUS_TEXT = { anwesend:'Anwesend', abwesend:'Abwesend', entschuldigt:'Entschuldigt', zu_spaet:'Zu spät' }
 
-  if (laden) return <div style={{ padding:20, color:'var(--text-3)' }}>Laden …</div>
-  if (stattgefunden.length === 0) return <div style={s.leer}>Noch keine Stunden abgehalten.</div>
+  if (laden) return <div style={{ padding:20, color:'var(--text-3)' }}>{T('loading')}</div>
+  if (stattgefunden.length === 0) return <div style={s.leer}>{T('attendance_none_held')}</div>
 
   return (
     <div>
       {/* Statistik */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap:12, marginBottom:20 }}>
         {[
-          { label:'Stunden gesamt', wert: stattgefunden.length, farbe:'var(--primary)' },
-          { label:'Anwesend', wert: anwesend, farbe:'var(--success)' },
-          { label:'Anwesenheitsquote', wert: quote !== null ? `${quote}%` : '–', farbe: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' },
+          { label: T('attendance_total_lessons'), wert: stattgefunden.length, farbe:'var(--primary)' },
+          { label: T('present'), wert: anwesend, farbe:'var(--success)' },
+          { label: T('attendance_rate_label'), wert: quote !== null ? `${quote}%` : '–', farbe: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' },
         ].map(item => (
           <div key={item.label} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
             <div style={{ fontSize:11, color:'var(--text-3)', fontWeight:600, marginBottom:6 }}>{item.label}</div>
@@ -241,7 +241,7 @@ function SchuelerAnwesenheit({ profil, kursId, stunden }) {
               </div>
               <div style={{ textAlign:'right' }}>
                 <span style={{ fontSize:16 }}>{anw ? STATUS_ICON[anw.status] : '–'}</span>
-                {anw && <div style={{ fontSize:11, color:'var(--text-3)', marginTop:2 }}>{STATUS_TEXT[anw.status]}</div>}
+                {anw && <div style={{ fontSize:11, color:'var(--text-3)', marginTop:2 }}>{T(anw.status === 'zu_spaet' ? 'late' : anw.status === 'entschuldigt' ? 'excused' : anw.status === 'abwesend' ? 'absent' : 'present')}</div>}
               </div>
             </div>
           )
@@ -262,7 +262,8 @@ export default function SchuelerKursDetail() {
   const [stunden,  setStunden]  = useState([])
   const [laden,    setLaden]    = useState(true)
   const [tab,      setTab]      = useState('stunden')
-  const [stueckModal, setStueckModal] = useState(null)
+  const [stueckModal,   setStueckModal]   = useState(null)
+  const [anwesenheiten, setAnwesenheiten] = useState({})
 
   useEffect(() => {
     if (!profil) return
@@ -274,16 +275,41 @@ export default function SchuelerKursDetail() {
         supabase.from('dateien').select('*')
           .or(`unterricht_id.eq.${id},schueler_id.eq.${profil.id}`)
           .order('hochgeladen_am', { ascending: false }),
-        supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn').gte('beginn', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).limit(10),
+        supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn').gte('beginn', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).limit(20),
       ])
       setKurs(k.data)
       setStuecke(us.data ?? [])
       setDateien(d.data ?? [])
-      setStunden(st.data ?? [])
+      const stundenListe = st.data ?? []
+      setStunden(stundenListe)
+
+      // Eigene Anwesenheitseinträge laden
+      if (stundenListe.length > 0) {
+        const { data: anw } = await supabase
+          .from('anwesenheit')
+          .select('*')
+          .eq('schueler_id', profil.id)
+          .in('stunde_id', stundenListe.map(s => s.id))
+        const anwMap = Object.fromEntries((anw ?? []).map(a => [a.stunde_id, a]))
+        setAnwesenheiten(anwMap)
+      }
       setLaden(false)
     }
     ladeData()
   }, [id, profil])
+
+  async function stundeAbsagen(stunde) {
+    const vorhanden = anwesenheiten[stunde.id]
+    if (vorhanden) {
+      await supabase.from('anwesenheit').delete().eq('id', vorhanden.id)
+      setAnwesenheiten(prev => { const n = { ...prev }; delete n[stunde.id]; return n })
+    } else {
+      const { error } = await supabase.from('anwesenheit').insert({
+        stunde_id: stunde.id, schueler_id: profil.id, status: 'entschuldigt',
+      })
+      if (!error) setAnwesenheiten(prev => ({ ...prev, [stunde.id]: { stunde_id: stunde.id, schueler_id: profil.id, status: 'entschuldigt' } }))
+    }
+  }
 
   async function dateiHerunterladen(datei) {
     const bucket = datei.schueler_id ? 'schueler-dateien' : 'kurs-dateien'
@@ -297,7 +323,7 @@ export default function SchuelerKursDetail() {
   }
 
   if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
-  if (!kurs)  return <div style={{ padding:40, color:'var(--danger)' }}>Kurs nicht gefunden.</div>
+  if (!kurs)  return <div style={{ padding:40, color:'var(--danger)' }}>{T('kurs_not_found')}</div>
 
   const jetzt = new Date()
 
@@ -305,7 +331,7 @@ export default function SchuelerKursDetail() {
     <div>
       <button onClick={() => navigate('/schueler/stundenplan')}
         style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 16px' }}>
-        ← Zurück
+        ← {T('back')}
       </button>
 
       {/* Header */}
@@ -354,33 +380,41 @@ export default function SchuelerKursDetail() {
           {stunden.length === 0 ? (
             <div style={s.leer}>{T('kurs_no_lessons_found')}</div>
           ) : stunden.map(st => {
-            const beginn   = new Date(st.beginn)
-            const istHeute = beginn.toDateString() === jetzt.toDateString()
-            const istVorbei = beginn < jetzt
+            const beginn      = new Date(st.beginn)
+            const istHeute    = beginn.toDateString() === jetzt.toDateString()
+            const anw         = anwesenheiten[st.id]
+            const istAbgesagt = anw?.status === 'entschuldigt'
+            const kannAbsagen = st.status === 'geplant' && beginn > jetzt
             return (
-              <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:`1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center' }}>
-                <div style={{ textAlign:'center', minWidth:52 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
-                    {istHeute ? T('dash_today') : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
-                  </div>
-                  <div style={{ fontSize:18, fontWeight:800, color:'var(--text)' }}>
-                    {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
-                  </div>
-                  <div style={{ fontSize:11, color:'var(--text-3)' }}>
-                    {beginn.toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
-                  </div>
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:12, color: st.status === 'abgesagt' ? 'var(--danger)' : st.status === 'stattgefunden' ? 'var(--success)' : 'var(--text-3)' }}>
-                    {st.status === 'stattgefunden' ? T('kurs_status_done') : st.status === 'abgesagt' ? T('kurs_status_cancelled') : T('kurs_status_planned')}
-                  </div>
-                  {st.hausaufgaben && (
-                    <div style={{ fontSize:13, color:'var(--text-2)', marginTop:4, background:'var(--bg-2)', padding:'6px 10px', borderRadius:8 }}>
-                      📝 {st.hausaufgaben}
+                  <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:`1px solid ${istHeute ? 'var(--accent)' : istAbgesagt ? 'var(--warning)' : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center' }}>
+                    <div style={{ textAlign:'center', minWidth:52 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
+                        {istHeute ? T('dash_today') : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
+                      </div>
+                      <div style={{ fontSize:18, fontWeight:800, color:'var(--text)' }}>
+                        {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
+                      </div>
+                      <div style={{ fontSize:11, color:'var(--text-3)' }}>
+                        {beginn.toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, color: st.status === 'abgesagt' ? 'var(--danger)' : st.status === 'stattgefunden' ? 'var(--success)' : istAbgesagt ? 'var(--warning)' : 'var(--text-3)' }}>
+                        {st.status === 'stattgefunden' ? T('kurs_status_done') : st.status === 'abgesagt' ? T('kurs_status_cancelled') : istAbgesagt ? `🟡 ${T('excused')}` : T('kurs_status_planned')}
+                      </div>
+                      {st.hausaufgaben && (
+                        <div style={{ fontSize:13, color:'var(--text-2)', marginTop:4, background:'var(--bg-2)', padding:'6px 10px', borderRadius:8 }}>
+                          📝 {st.hausaufgaben}
+                        </div>
+                      )}
+                    </div>
+                    {kannAbsagen && (
+                      <button onClick={() => stundeAbsagen(st)}
+                        style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:`1.5px solid ${istAbgesagt ? 'var(--warning)' : 'var(--border)'}`, background: istAbgesagt ? 'var(--warning)' : 'var(--bg-2)', color: istAbgesagt ? '#fff' : 'var(--text-2)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                        {istAbgesagt ? T('lesson_excuse_undo') : T('lesson_excuse')}
+                      </button>
+                    )}
+                  </div>
             )
           })}
         </div>
@@ -438,13 +472,13 @@ export default function SchuelerKursDetail() {
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:600, fontSize:14, color:'var(--text)' }}>{d.name}</div>
                 <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>
-                  {d.schueler_id ? '👤 Nur für dich' : '👥 Für alle'}
+                  {d.schueler_id ? T('file_only_for_you') : T('file_for_all')}
                   {' · '}{new Date(d.hochgeladen_am).toLocaleDateString('de-DE')}
                 </div>
               </div>
               <button onClick={() => dateiHerunterladen(d)}
                 style={{ padding:'7px 14px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                ⬇ Download
+                ⬇ {T('download')}
               </button>
             </div>
           ))}

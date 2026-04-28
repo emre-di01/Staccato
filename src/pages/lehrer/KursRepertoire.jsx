@@ -5,13 +5,13 @@ import { useApp } from '../../context/AppContext'
 
 // ─── Stück anlegen Modal ──────────────────────────────────────
 function NeuesStueckModal({ kursId, onClose, onErfolg }) {
-  const { profil } = useApp()
+  const { profil, T } = useApp()
   const [form, setForm] = useState({ titel:'', komponist:'', tonart:'', tempo:'', youtube_url:'' })
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
 
   async function speichern() {
-    if (!form.titel) { setFehler('Titel ist erforderlich.'); return }
+    if (!form.titel) { setFehler(T('title_required')); return }
     setLaden(true)
     const { data: stueck, error } = await supabase.from('stuecke').insert({
       ...form, erstellt_von: profil.id,
@@ -22,6 +22,9 @@ function NeuesStueckModal({ kursId, onClose, onErfolg }) {
     await supabase.from('unterricht_stuecke').insert({
       unterricht_id: kursId, stueck_id: stueck.id, status:'aktuell',
     })
+    supabase.functions.invoke('send-email', {
+      body: { type: 'new_piece', unterricht_id: kursId, stueck_id: stueck.id },
+    }).catch(console.error)
     onErfolg(); onClose()
   }
 
@@ -48,9 +51,9 @@ function NeuesStueckModal({ kursId, onClose, onErfolg }) {
           ))}
           {fehler && <p style={{ margin:0, color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
           <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-            <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+            <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
             <button onClick={speichern} disabled={laden} style={s.btnPri}>
-              {laden ? 'Speichere …' : '+ Stück erstellen'}
+              {laden ? T('saving') : T('piece_create')}
             </button>
           </div>
         </div>
@@ -61,7 +64,7 @@ function NeuesStueckModal({ kursId, onClose, onErfolg }) {
 
 // ─── Allgemeine Datei hochladen Modal ─────────────────────────
 function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
-  const { profil } = useApp()
+  const { profil, T } = useApp()
   const fileRef = useRef()
   const [form, setForm] = useState({ name:'', typ:'dokument', schueler_id:'' })
   const [datei, setDatei] = useState(null)
@@ -69,7 +72,7 @@ function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
   const [fehler, setFehler] = useState('')
 
   async function hochladen() {
-    if (!datei) { setFehler('Bitte eine Datei wählen.'); return }
+    if (!datei) { setFehler(T('dok_no_file')); return }
     setLaden(true)
     const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const bucket = form.schueler_id ? 'schueler-dateien' : 'kurs-dateien'
@@ -97,41 +100,41 @@ function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
     <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={s.modal}>
         <div style={s.modalHeader}>
-          <h3 style={s.modalTitel}>📁 Datei hochladen</h3>
+          <h3 style={s.modalTitel}>📁 {T('upload')}</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
           {/* Für wen */}
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Für wen?</label>
+            <label style={s.label}>{T('upload_for_whom')}</label>
             <select style={s.input} value={form.schueler_id} onChange={e => setForm(f => ({ ...f, schueler_id: e.target.value }))}>
-              <option value="">Alle Schüler des Kurses</option>
+              <option value="">{T('upload_all_students')}</option>
               {schuelerListe.map(sc => <option key={sc.schueler_id} value={sc.schueler_id}>{sc.profiles?.voller_name}</option>)}
             </select>
           </div>
           {/* Datei */}
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Datei</label>
+            <label style={s.label}>{T('file_label')}</label>
             <div style={{ border:'2px dashed var(--border)', borderRadius:'var(--radius)', padding:20, textAlign:'center', cursor:'pointer', background:'var(--bg-2)' }}
               onClick={() => fileRef.current.click()}
               onDragOver={e => e.preventDefault()}
               onDrop={e => { e.preventDefault(); setDatei(e.dataTransfer.files[0]) }}>
               {datei ? <span style={{ color:'var(--text)', fontWeight:600 }}>📎 {datei.name}</span>
-                     : <span style={{ color:'var(--text-3)' }}>Klicken oder Datei hierher ziehen</span>}
+                     : <span style={{ color:'var(--text-3)' }}>{T('dok_choose_file')}</span>}
               <input ref={fileRef} type="file" hidden onChange={e => setDatei(e.target.files[0])} />
             </div>
           </div>
           {/* Name */}
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Anzeigename (optional)</label>
+            <label style={s.label}>{T('display_name_optional')}</label>
             <input style={s.input} placeholder={datei?.name ?? 'Dateiname'} value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
           </div>
           {fehler && <p style={{ margin:0, color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
           <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-            <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+            <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
             <button onClick={hochladen} disabled={laden} style={s.btnPri}>
-              {laden ? 'Hochladen …' : '⬆ Hochladen'}
+              {laden ? T('dok_uploading') : T('dok_upload')}
             </button>
           </div>
         </div>
@@ -144,7 +147,7 @@ function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
 export default function KursRepertoire() {
   const { id: kursId } = useParams()
   const navigate = useNavigate()
-  const { rolle, profil } = useApp()
+  const { rolle, profil, T } = useApp()
   const [kurs,      setKurs]      = useState(null)
   const [stuecke,   setStuecke]   = useState([])
   const [dateien,   setDateien]   = useState([])
@@ -178,7 +181,7 @@ export default function KursRepertoire() {
   }
 
   async function stueckEntfernen(unterrichtStueckId) {
-    if (!confirm('Stück aus diesem Kurs entfernen?')) return
+    if (!confirm(T('piece_remove_confirm'))) return
     await supabase.from('unterricht_stuecke').delete().eq('unterricht_id', kursId).eq('stueck_id', unterrichtStueckId)
     setStuecke(prev => prev.filter(s => s.stueck_id !== unterrichtStueckId))
   }
@@ -189,7 +192,7 @@ export default function KursRepertoire() {
   }
 
   async function dateiLoeschen(datei) {
-    if (!confirm('Datei löschen?')) return
+    if (!confirm(T('file_delete_confirm'))) return
     const bucket = datei.schueler_id ? 'schueler-dateien' : 'kurs-dateien'
     await supabase.storage.from(bucket).remove([datei.bucket_pfad])
     await supabase.from('dateien').delete().eq('id', datei.id)
@@ -218,7 +221,7 @@ export default function KursRepertoire() {
     abgeschlossen:{ bg:'var(--bg-3)',    text:'var(--text-3)' },
   }
 
-  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>Laden …</div>
+  if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
 
   return (
     <div>
@@ -230,8 +233,8 @@ export default function KursRepertoire() {
 
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
         <div>
-          <h1 style={s.h1}>🎼 Repertoire & Dateien</h1>
-          <p style={s.sub}>{stuecke.length} Stücke · {dateien.length} Dateien</p>
+          <h1 style={s.h1}>{T('kursrep_title')}</h1>
+          <p style={s.sub}>{stuecke.length} {T('repertoire').toLowerCase()} · {dateien.length} {T('files').toLowerCase()}</p>
         </div>
         {kannBearbeiten && (
           <div style={{ display:'flex', gap:8 }}>
@@ -243,7 +246,7 @@ export default function KursRepertoire() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:2, marginBottom:20, borderBottom:'2px solid var(--border)' }}>
-        {[['stuecke',`🎵 Stücke (${stuecke.length})`],['dateien',`📁 Dateien (${dateien.length})`]].map(([k,l]) => (
+        {[['stuecke',`🎵 ${T('kurs_tab_repertoire').replace('🎼 ','')} (${stuecke.length})`],['dateien',`📁 ${T('files')} (${dateien.length})`]].map(([k,l]) => (
           <button key={k} onClick={() => setTab(k)}
             style={{ padding:'10px 18px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: tab===k ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===k ? 800 : 500, borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2 }}>
             {l}
@@ -259,7 +262,7 @@ export default function KursRepertoire() {
 
           {gefilterteStuecke.length === 0 ? (
             <div style={s.leer}>
-              {kannBearbeiten ? 'Noch keine Stücke. Klick auf "+ Stück" um zu beginnen.' : 'Noch keine Stücke im Repertoire.'}
+              {kannBearbeiten ? T('kursrep_no_pieces') : T('repertoire_no_pieces')}
             </div>
           ) : (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:14 }}>
@@ -301,9 +304,9 @@ export default function KursRepertoire() {
                           <div style={{ display:'flex', gap:4 }} onClick={e => e.stopPropagation()}>
                             <select value={us.status} onChange={e => statusAendern(us.stueck_id, e.target.value)}
                               style={{ ...s.input, width:'auto', fontSize:11, padding:'3px 8px' }}>
-                              <option value="aktuell">Aktuell</option>
-                              <option value="geplant">Geplant</option>
-                              <option value="abgeschlossen">Fertig</option>
+                              <option value="aktuell">{T('status_aktuell')}</option>
+                              <option value="geplant">{T('status_geplant')}</option>
+                              <option value="abgeschlossen">{T('status_fertig')}</option>
                             </select>
                             <button onClick={() => stueckEntfernen(us.stueck_id)} style={{ ...s.iconBtn, color:'var(--danger)' }} title="Entfernen">🗑</button>
                           </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { THEMES, THEME_KEYS } from '../themes/themes'
@@ -10,6 +10,21 @@ export default function PasswortZuruecksetzen() {
   const [fehler,     setFehler]     = useState('')
   const [erfolg,     setErfolg]     = useState(false)
   const [senden,     setSenden]     = useState(false)
+  const [bereit,     setBereit]     = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setBereit(true)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) setBereit(true)
+      if (event === 'USER_UPDATED') {
+        setErfolg(true)
+        setSenden(false)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -18,15 +33,20 @@ export default function PasswortZuruecksetzen() {
       return
     }
     if (passwort.length < 6) {
-      setFehler('Mindestens 6 Zeichen.')
+      setFehler(T('password_min_error'))
       return
     }
     setSenden(true)
     setFehler('')
-    const { error } = await supabase.auth.updateUser({ password: passwort })
-    if (error) setFehler(error.message)
-    else setErfolg(true)
-    setSenden(false)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwort })
+      if (error) setFehler(error.message)
+      else setErfolg(true)
+    } catch (e) {
+      setFehler(e.message ?? T('unknown_error'))
+    } finally {
+      setSenden(false)
+    }
   }
 
   return (
@@ -74,7 +94,9 @@ export default function PasswortZuruecksetzen() {
           </h1>
           <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 32 }}>{T('password_reset_sub')}</p>
 
-          {erfolg ? (
+          {!bereit && !erfolg ? (
+            <div style={{ color: 'var(--text-3)', fontSize: 14 }}>{T('link_checking')}</div>
+          ) : erfolg ? (
             <div>
               <div style={{ background: 'color-mix(in srgb, var(--success) 15%, transparent)', border: '1px solid var(--success)', borderRadius: 'var(--radius)', padding: '14px 16px', color: 'var(--success)', fontSize: 14, marginBottom: 20 }}>
                 {T('password_changed')}
