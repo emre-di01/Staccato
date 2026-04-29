@@ -305,7 +305,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
         supabase.from('unterricht_schueler')
           .select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum)')
           .eq('unterricht_id', kurs.id),
-        supabase.from('profiles').select('id, voller_name').eq('rolle', 'schueler').eq('aktiv', true).order('voller_name'),
+        supabase.from('profiles').select('id, voller_name, rolle').in('rolle', ['schueler', 'vorstand']).eq('aktiv', true).order('voller_name'),
       ])
       setTeilnehmer(t.data ?? [])
       setAlleSchueler(s.data ?? [])
