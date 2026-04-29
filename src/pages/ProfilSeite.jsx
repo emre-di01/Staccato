@@ -54,6 +54,11 @@ export default function ProfilSeite() {
   const [dateien,     setDateien]     = useState([])
   const [dateiLaden,  setDateiLaden]  = useState(true)
 
+  const DEFAULT_NOTIF = { event_invite: true, new_piece: true }
+  const [notifPrefs,  setNotifPrefs]  = useState({ ...DEFAULT_NOTIF, ...(profil?.email_benachrichtigungen ?? {}) })
+  const [notifLaden,  setNotifLaden]  = useState(false)
+  const [notifErfolg, setNotifErfolg] = useState(false)
+
   useEffect(() => {
     if (!profil?.id) return
     supabase.from('mitglied_dateien')
@@ -68,6 +73,15 @@ export default function ProfilSeite() {
     if (error) setFehler(error.message)
     else { setErfolg('Profil gespeichert!'); await ladeProfil(profil.id) }
     setLaden(false)
+  }
+
+  async function notifSpeichern() {
+    setNotifLaden(true)
+    await supabase.from('profiles').update({ email_benachrichtigungen: notifPrefs }).eq('id', profil.id)
+    await ladeProfil(profil.id)
+    setNotifErfolg(true)
+    setTimeout(() => setNotifErfolg(false), 2000)
+    setNotifLaden(false)
   }
 
   async function passwortAendern() {
@@ -193,6 +207,35 @@ export default function ProfilSeite() {
             {dateien.map(d => <DokumentZeile key={d.id} datei={d} T={T} />)}
           </div>
         )}
+      </div>
+
+      {/* E-Mail-Benachrichtigungen */}
+      <div style={s.card}>
+        <h2 style={s.h2}>{T('email_notifications_title')}</h2>
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {[
+            { key: 'event_invite', label: T('notif_event_invite'), desc: T('notif_event_invite_desc') },
+            { key: 'new_piece',    label: T('notif_new_piece'),    desc: T('notif_new_piece_desc') },
+          ].map(opt => (
+            <label key={opt.key} style={{ display:'flex', alignItems:'center', gap:14, cursor:'pointer', padding:'12px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: notifPrefs[opt.key] ? 'var(--bg-2)' : 'var(--bg)', transition:'background 0.15s' }}>
+              <div style={{ position:'relative', flexShrink:0 }} onClick={e => { e.preventDefault(); setNotifPrefs(p => ({ ...p, [opt.key]: !p[opt.key] })) }}>
+                <div style={{ width:42, height:24, borderRadius:99, background: notifPrefs[opt.key] ? 'var(--primary)' : 'var(--border)', position:'relative', transition:'background 0.2s' }}>
+                  <div style={{ position:'absolute', top:3, left: notifPrefs[opt.key] ? 21 : 3, width:18, height:18, borderRadius:'50%', background:'#fff', boxShadow:'0 1px 4px rgba(0,0,0,.2)', transition:'left 0.2s' }} />
+                </div>
+              </div>
+              <div onClick={() => setNotifPrefs(p => ({ ...p, [opt.key]: !p[opt.key] }))}>
+                <div style={{ fontWeight:600, fontSize:14, color:'var(--text)' }}>{opt.label}</div>
+                <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>{opt.desc}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+        {notifErfolg && <div style={{ ...s.erfolg, marginTop:12 }}>{T('save')} ✓</div>}
+        <div style={{ display:'flex', justifyContent:'flex-end', marginTop:16 }}>
+          <button onClick={notifSpeichern} disabled={notifLaden} style={s.btnPri}>
+            {notifLaden ? T('loading') : `💾 ${T('save')}`}
+          </button>
+        </div>
       </div>
 
       {/* Passwort */}
