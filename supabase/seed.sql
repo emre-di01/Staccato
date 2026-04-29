@@ -56,23 +56,8 @@ CREATE POLICY "admin_loeschen_mitglied" ON storage.objects FOR DELETE TO authent
   USING (bucket_id = 'mitglied-dateien' AND (SELECT rolle FROM public.profiles WHERE id = auth.uid()) = ANY(ARRAY['admin'::public.user_rolle, 'superadmin'::public.user_rolle]));
 
 -- ─── Storage Policies: vorstand-dateien ──────────────────────
-CREATE POLICY "vorstand_dateien_insert" ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'vorstand-dateien' AND (EXISTS (
-    SELECT 1 FROM profiles WHERE id = auth.uid()
-    AND rolle = ANY(ARRAY['vorstand'::public.user_rolle, 'admin'::public.user_rolle, 'superadmin'::public.user_rolle])
-  )));
-
-CREATE POLICY "vorstand_dateien_select" ON storage.objects FOR SELECT TO authenticated
-  USING (bucket_id = 'vorstand-dateien' AND (EXISTS (
-    SELECT 1 FROM profiles WHERE id = auth.uid()
-    AND rolle = ANY(ARRAY['vorstand'::public.user_rolle, 'admin'::public.user_rolle, 'superadmin'::public.user_rolle])
-  )));
-
-CREATE POLICY "vorstand_dateien_delete" ON storage.objects FOR DELETE TO authenticated
-  USING (bucket_id = 'vorstand-dateien' AND (EXISTS (
-    SELECT 1 FROM profiles WHERE id = auth.uid()
-    AND rolle = ANY(ARRAY['vorstand'::public.user_rolle, 'admin'::public.user_rolle, 'superadmin'::public.user_rolle])
-  )));
+-- Policies werden bereits in der Vorstand-Migration angelegt (idempotent via DO$$).
+-- Hier nichts tun, damit kein Duplicate-Policy-Fehler bei supabase db reset entsteht.
 
 -- ─── Admin User ───────────────────────────────────────────────
 SELECT public.create_user('emre.dingil01@gmail.com', 'Musik123!', 'Emre Dingil', 'admin');

@@ -147,3 +147,36 @@ GRANT ALL ON TABLE public.vorstand_ziele             TO anon, authenticated, ser
 GRANT ALL ON TABLE public.vorstand_aufgaben          TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.vorstand_protokolle        TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.vorstand_protokoll_dateien TO anon, authenticated, service_role;
+
+-- ── Storage Bucket ────────────────────────────────────────────────────────────
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('vorstand-dateien', 'vorstand-dateien', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- ── Storage Policies (idempotent) ─────────────────────────────────────────────
+DO $$ BEGIN
+  CREATE POLICY "vorstand_dateien_insert" ON storage.objects FOR INSERT TO authenticated
+    WITH CHECK (bucket_id = 'vorstand-dateien' AND (EXISTS (
+      SELECT 1 FROM public.profiles WHERE id = auth.uid()
+      AND rolle = ANY(ARRAY['vorstand'::public.user_rolle, 'admin'::public.user_rolle, 'superadmin'::public.user_rolle])
+    )));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "vorstand_dateien_select" ON storage.objects FOR SELECT TO authenticated
+    USING (bucket_id = 'vorstand-dateien' AND (EXISTS (
+      SELECT 1 FROM public.profiles WHERE id = auth.uid()
+      AND rolle = ANY(ARRAY['vorstand'::public.user_rolle, 'admin'::public.user_rolle, 'superadmin'::public.user_rolle])
+    )));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "vorstand_dateien_delete" ON storage.objects FOR DELETE TO authenticated
+    USING (bucket_id = 'vorstand-dateien' AND (EXISTS (
+      SELECT 1 FROM public.profiles WHERE id = auth.uid()
+      AND rolle = ANY(ARRAY['vorstand'::public.user_rolle, 'admin'::public.user_rolle, 'superadmin'::public.user_rolle])
+    )));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

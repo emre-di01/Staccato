@@ -1,7 +1,7 @@
--- ─── Vorstandsmodul Migration ────────────────────────────────────────────────
--- Ausführen via:
---   docker exec -i supabase_db_staccato psql -U postgres -d postgres \
---     < supabase_vorstand_migration.sql
+-- ─── Vorstandsmodul Migration (VERALTET) ─────────────────────────────────────
+-- Diese Datei ist durch supabase/migrations/20260428000003_vorstand.sql ersetzt.
+-- Bitte nur noch die offizielle Migration im migrations/-Ordner verwenden.
+-- Diese Datei bleibt zur Referenz erhalten, sollte aber nicht mehr manuell ausgeführt werden.
 
 -- ── Neue Enum-Werte ───────────────────────────────────────────────────────────
 ALTER TYPE public.user_rolle ADD VALUE IF NOT EXISTS 'vorstand';

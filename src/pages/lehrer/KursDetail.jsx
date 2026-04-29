@@ -352,6 +352,14 @@ export default function KursDetail() {
     setStunden(prev => prev.map(st => st.id === stundeId ? { ...st, status: 'geplant' } : st))
   }
 
+  async function stundeLoeschen(stundeId, beginn) {
+    const datum = new Date(beginn).toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })
+    if (!window.confirm(`Stunde vom ${datum} wirklich löschen? Alle Anwesenheiten werden ebenfalls gelöscht.`)) return
+    const { error } = await supabase.from('stunden').delete().eq('id', stundeId)
+    if (error) { alert(error.message); return }
+    setStunden(prev => prev.filter(st => st.id !== stundeId))
+  }
+
   if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
   if (!kurs)  return <div style={{ padding:40, color:'var(--danger)' }}>Kurs nicht gefunden.</div>
 
@@ -458,12 +466,22 @@ export default function KursDetail() {
                       {T('kurs_cancel_btn')}
                     </button>
                   )}
+                  {st.status === 'stattgefunden' && (
+                    <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
+                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      ✏️ Anwesenheit
+                    </button>
+                  )}
                   {st.status === 'abgesagt' && (
                     <button onClick={() => stundeWiederherstellen(st.id)}
                       style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
                       {T('kurs_restore')}
                     </button>
                   )}
+                  <button onClick={() => stundeLoeschen(st.id, st.beginn)}
+                    style={{ padding:'6px 10px', borderRadius:'var(--radius)', border:'1px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                    🗑
+                  </button>
                 </div>
               </div>
             )
