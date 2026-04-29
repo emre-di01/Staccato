@@ -32,6 +32,9 @@ import Repertoire from './pages/Repertoire'
 import Impressum from './pages/Impressum'
 import Datenschutz from './pages/Datenschutz'
 import ConsentBanner from './components/ConsentBanner'
+import VorstandDashboard from './pages/vorstand/Dashboard'
+import VorstandZiele from './pages/vorstand/Ziele'
+import VorstandProtokolle from './pages/vorstand/Protokolle'
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -111,6 +114,22 @@ function AppRoutes() {
         </Route>
       </Route>
 
+      {/* ── Vorstand ── */}
+      <Route element={<ProtectedRoute erlaubteRollen={['vorstand', 'admin', 'superadmin']} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/vorstand"                       element={<VorstandDashboard />} />
+          <Route path="/vorstand/ziele"                 element={<VorstandZiele />} />
+          <Route path="/vorstand/protokolle"            element={<VorstandProtokolle />} />
+          <Route path="/vorstand/stundenplan"           element={<Stundenplan />} />
+          <Route path="/vorstand/kurse"                 element={<SchuelerKurse />} />
+          <Route path="/vorstand/kurse/:id"             element={<SchuelerKursDetail />} />
+          <Route path="/vorstand/events"                element={<SchuelerEvents />} />
+          <Route path="/vorstand/events/:id/repertoire" element={<EventRepertoire />} />
+          <Route path="/vorstand/events/:kursId/repertoire/:stueckId" element={<StueckDetail />} />
+          <Route path="/vorstand/profil"                element={<ProfilSeite />} />
+        </Route>
+      </Route>
+
       {/* ── Eltern ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['eltern']} />}>
         <Route element={<AppLayout />}>
@@ -131,7 +150,7 @@ function AppRoutes() {
       <Route path="/datenschutz" element={<Datenschutz />} />
 
       {/* Profil - für alle Rollen */}
-      <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern']} />}>
+      <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern','vorstand']} />}>
         <Route element={<AppLayout />}>
           <Route path="/profil" element={<ProfilSeite />} />
         </Route>

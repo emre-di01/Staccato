@@ -29,6 +29,7 @@ export function startseiteNach(rolle) {
     case 'lehrer':   return '/lehrer'
     case 'schueler': return '/schueler'
     case 'eltern':   return '/eltern'
+    case 'vorstand': return '/vorstand'
     default:         return '/login'
   }
 }

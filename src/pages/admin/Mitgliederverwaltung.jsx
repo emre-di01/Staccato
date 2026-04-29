@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
-const ROLLEN = ['admin', 'lehrer', 'schueler', 'eltern']
+const ROLLEN = ['admin', 'lehrer', 'schueler', 'eltern', 'vorstand']
 const ROLLEN_FARBE = {
   admin:     { bg: 'var(--accent)',   text: 'var(--accent-fg)' },
   lehrer:    { bg: 'var(--primary)',  text: 'var(--primary-fg)' },
   schueler:  { bg: 'var(--success)',  text: '#fff' },
   eltern:    { bg: 'var(--warning)',  text: '#fff' },
   superadmin:{ bg: 'var(--danger)',   text: '#fff' },
+  vorstand:  { bg: '#7c3aed',         text: '#fff' },
 }
 
 // ─── UI Komponenten ───────────────────────────────────────────

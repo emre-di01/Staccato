@@ -26,8 +26,8 @@ const TYP_FARBE = {
   ensemble: '#10b981',
 }
 
-const EVENT_TYP_FARBE = { konzert:'#f59e0b', vorspiel:'#8b5cf6', pruefung:'#ef4444', veranstaltung:'#10b981', sonstiges:'#6b7280' }
-const EVENT_TYP_ICON  = { konzert:'🎵', vorspiel:'🎤', pruefung:'📝', veranstaltung:'🎭', sonstiges:'📅' }
+const EVENT_TYP_FARBE = { konzert:'#f59e0b', vorspiel:'#8b5cf6', pruefung:'#ef4444', veranstaltung:'#10b981', vorstandssitzung:'#7c3aed', sonstiges:'#6b7280' }
+const EVENT_TYP_ICON  = { konzert:'🎵', vorspiel:'🎤', pruefung:'📝', veranstaltung:'🎭', vorstandssitzung:'🏛', sonstiges:'📅' }
 
 // ─── Hilfsfunktionen ─────────────────────────────────────────
 function getMontag(datum) {

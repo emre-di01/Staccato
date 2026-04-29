@@ -24,16 +24,31 @@ function StatCard({ icon, label, value, color = 'var(--primary)', sub }) {
 export default function AdminDashboard() {
   const { profil, T } = useApp()
   const [stats, setStats] = useState(null)
+  const [vorstandStats, setVorstandStats] = useState(null)
   const [laden, setLaden] = useState(true)
 
   useEffect(() => {
     async function ladeStats() {
-      const { data } = await supabase.rpc('dashboard_stats')
+      const [{ data }, aufgabenRes, zieleRes, protokolleRes] = await Promise.all([
+        supabase.rpc('dashboard_stats'),
+        supabase.from('vorstand_aufgaben').select('status').eq('schule_id', profil?.schule_id ?? ''),
+        supabase.from('vorstand_ziele').select('status').eq('schule_id', profil?.schule_id ?? ''),
+        supabase.from('vorstand_protokolle').select('id', { count: 'exact', head: true }).eq('schule_id', profil?.schule_id ?? ''),
+      ])
       setStats(data)
+      const aufgaben = aufgabenRes.data ?? []
+      setVorstandStats({
+        aufgabenOffen:   aufgaben.filter(a => a.status === 'offen').length,
+        aufgabenLaufend: aufgaben.filter(a => a.status === 'in_bearbeitung').length,
+        aufgabenErledigt: aufgaben.filter(a => a.status === 'erledigt').length,
+        zieleGesamt:     (zieleRes.data ?? []).length,
+        zieleErledigt:   (zieleRes.data ?? []).filter(z => z.status === 'erledigt').length,
+        protokolle:      protokolleRes.count ?? 0,
+      })
       setLaden(false)
     }
-    ladeStats()
-  }, [])
+    if (profil?.schule_id) ladeStats()
+  }, [profil])
 
   const jetzt = new Date()
   const stunde = jetzt.getHours()
@@ -59,6 +74,24 @@ export default function AdminDashboard() {
         <StatCard icon="💰" label={T('revenue_month')}   value={laden ? '…' : stats?.einnahmen_monat ? `€${stats.einnahmen_monat}` : '€0'} color="var(--success)" />
         <StatCard icon="📋" label={T('prospects_open')}  value={laden ? '…' : stats?.interessenten}     color="var(--primary)" />
         <StatCard icon="📅" label={T('lessons_week')}    value={laden ? '…' : stats?.stunden_woche}     color="var(--text-2)" />
+      </div>
+
+      {/* Vorstandsmodul KPIs */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          🎯 Vorstandsmodul
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#7c3aed', background: '#7c3aed18', padding: '2px 10px', borderRadius: 99 }}>Vorstand</span>
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
+          <StatCard icon="🔴" label="Offene Aufgaben"      value={laden ? '…' : vorstandStats?.aufgabenOffen}    color="var(--warning)" />
+          <StatCard icon="🟡" label="In Bearbeitung"       value={laden ? '…' : vorstandStats?.aufgabenLaufend}  color="var(--accent)" />
+          <StatCard icon="✅" label="Erledigte Aufgaben"   value={laden ? '…' : vorstandStats?.aufgabenErledigt} color="var(--success)" />
+          <StatCard icon="🎯" label="Ziele"
+            value={laden ? '…' : vorstandStats ? `${vorstandStats.zieleErledigt}/${vorstandStats.zieleGesamt}` : '–'}
+            sub={laden ? '' : vorstandStats?.zieleGesamt > 0 ? `${Math.round(vorstandStats.zieleErledigt / vorstandStats.zieleGesamt * 100)}% erledigt` : ''}
+            color="#7c3aed" />
+          <StatCard icon="📝" label="Protokolle"           value={laden ? '…' : vorstandStats?.protokolle}       color="#7c3aed" />
+        </div>
       </div>
 
       {/* Upcoming Events */}
