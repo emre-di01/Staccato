@@ -393,6 +393,8 @@ export default function StueckDetail() {
   const [textGroesse,  setTextGroesse]  = useState(18)
   const [vollbild,     setVollbild]     = useState(false)
   const [halbtoene,    setHalbtoene]    = useState(0)
+  const [youtubeEdit,  setYoutubeEdit]  = useState(false)
+  const [youtubeInput, setYoutubeInput] = useState('')
 
   const kannBearbeiten = rolle === 'admin' || rolle === 'superadmin' || rolle === 'lehrer'
 
@@ -418,6 +420,13 @@ export default function StueckDetail() {
     await supabase.from('stuecke').update({ liedtext: neuerText, notizen: neueAkkorde }).eq('id', stueckId)
     setStueck(s => ({ ...s, liedtext: neuerText, notizen: neueAkkorde }))
     setBearbeiteText(false)
+  }
+
+  async function youtubeSpeichern() {
+    const url = youtubeInput.trim() || null
+    await supabase.from('stuecke').update({ youtube_url: url }).eq('id', stueckId)
+    setStueck(s => ({ ...s, youtube_url: url }))
+    setYoutubeEdit(false)
   }
 
   async function dateiLoeschen(dateiId, pfad) {
@@ -453,7 +462,7 @@ export default function StueckDetail() {
     { id:'akkorde', label:'🎸 Akkorde', zeigen: akkordDateien.length > 0 || (kannBearbeiten && !!stueck.notizen) },
     { id:'noten',   label:'📄 Noten',   zeigen: notenDateien.length > 0 },
     { id:'audio',   label:'🎵 Audio',   zeigen: audioDateien.length > 0 },
-    { id:'youtube', label:'▶️ Video',   zeigen: !!stueck.youtube_url },
+    { id:'youtube', label:'▶️ Video',   zeigen: !!stueck.youtube_url || kannBearbeiten },
     { id:'dateien', label:'📁 Dateien', zeigen: dokumente.length > 0 || kannBearbeiten },
   ].filter(t => t.zeigen)
 
@@ -632,25 +641,64 @@ export default function StueckDetail() {
         )}
 
         {/* YOUTUBE */}
-        {tab === 'youtube' && stueck.youtube_url && (
+        {tab === 'youtube' && (
           <div>
-            {/* Echter 16:9 Responsive Embed */}
-            <div style={{ position:'relative', paddingBottom:'56.25%', height:0, overflow:'hidden', borderRadius:'var(--radius)', background:'#000' }}>
-              <iframe
-                style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
-                src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_url)}`}
-                title="YouTube"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-            {/* Link zum Original */}
-            <div style={{ marginTop:12, textAlign:'right' }}>
-              <a href={stueck.youtube_url} target="_blank" rel="noreferrer"
-                style={{ fontSize:13, color:'var(--accent)', textDecoration:'none', fontWeight:600 }}>
-                ↗ Auf YouTube öffnen
-              </a>
-            </div>
+            {stueck.youtube_url && !youtubeEdit ? (
+              <>
+                <div style={{ position:'relative', paddingBottom:'56.25%', height:0, overflow:'hidden', borderRadius:'var(--radius)', background:'#000' }}>
+                  <iframe
+                    style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
+                    src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_url)}`}
+                    title="YouTube"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+                <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <a href={stueck.youtube_url} target="_blank" rel="noreferrer"
+                    style={{ fontSize:13, color:'var(--accent)', textDecoration:'none', fontWeight:600 }}>
+                    ↗ Auf YouTube öffnen
+                  </a>
+                  {kannBearbeiten && (
+                    <button onClick={() => { setYoutubeInput(stueck.youtube_url ?? ''); setYoutubeEdit(true) }}
+                      style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                      ✎ Link ändern
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : kannBearbeiten ? (
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                <p style={{ margin:0, fontSize:14, color:'var(--text-2)' }}>
+                  {stueck.youtube_url ? 'YouTube-Link bearbeiten:' : 'YouTube-Link hinzufügen:'}
+                </p>
+                <input
+                  type="url"
+                  value={youtubeInput}
+                  onChange={e => setYoutubeInput(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=..."
+                  style={{ padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', outline:'none', width:'100%', boxSizing:'border-box' }}
+                />
+                <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                  {stueck.youtube_url && (
+                    <button onClick={() => { setYoutubeInput(''); youtubeSpeichern() }}
+                      style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                      🗑 Entfernen
+                    </button>
+                  )}
+                  <button onClick={() => setYoutubeEdit(false)}
+                    style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                    Abbrechen
+                  </button>
+                  <button onClick={youtubeSpeichern} disabled={!youtubeInput.trim()}
+                    style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                    💾 Speichern
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={s.leer}>Kein Video verlinkt.</div>
+            )}
           </div>
         )}
 
