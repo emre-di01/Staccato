@@ -786,27 +786,31 @@ export default function Mitgliederverwaltung() {
                   </div>
                 </div>
                 {m.telefon && <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 8 }}>📞 {m.telefon}</div>}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                    ✏️ {T('edit')}
-                  </button>
-                  <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>
-                    📧
-                  </button>
-                  <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>
-                    🔑
-                  </button>
-                  {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
-                    <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                      🔗 {T('member_assignments')}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
+                      ✏️ {T('edit')}
                     </button>
-                  )}
-                  <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>
-                    📁
-                  </button>
-                  <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>
-                    🗑
-                  </button>
+                    {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
+                      <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
+                        🔗 {T('member_assignments')}
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
+                      📧
+                    </button>
+                    <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
+                      🔑
+                    </button>
+                    <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
+                      📁
+                    </button>
+                    <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>
+                      🗑
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

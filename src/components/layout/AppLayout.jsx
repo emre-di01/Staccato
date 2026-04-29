@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { startseiteNach } from '../ProtectedRoute'
 import { THEMES, THEME_KEYS } from '../../themes/themes'
 import { supabase } from '../../lib/supabase'
+import { version } from '../../../package.json'
 
 // Nav-Items je Rolle
 function getNavItems(rolle, T) {
@@ -249,6 +250,9 @@ export default function AppLayout() {
           </NavLink>
           <button onClick={() => setSettingsOffen(true)} style={btnStyle}>⚙️ {T('settings')}</button>
           <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5 }}>
+            v{version}
+          </div>
         </div>
       </aside>
 
