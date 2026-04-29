@@ -4,14 +4,35 @@ Musikschul-Management-Plattform — von der Mitgliederverwaltung bis zum digital
 
 ## Features
 
-- **Rollenbasierter Zugang** für Admins, Lehrer, Schüler und Eltern
+### Schulbetrieb
+- **Rollenbasierter Zugang** für Admins, Lehrer, Schüler, Eltern und Vorstand
 - **Kursverwaltung** mit Stundenplanung, Anwesenheitserfassung und Hausaufgaben
+- **Stundenplan** — Wochenansicht und Listenansicht, farb-kodiert nach Kurstyp
 - **Repertoire** mit Noten (PDF), Akkorden (ChordPro mit Transposition), Liedtexten, YouTube und Audio
 - **Live-Unterrichtsmodus** — Lehrer startet eine Session per QR-Code/Code, Schüler folgen dem aktuellen Stück in Echtzeit und senden Reaktionen
-- **Veranstaltungen** (Konzerte, Vorspiele, Prüfungen) mit RSVP-System
+- **Veranstaltungen** (Konzerte, Vorspiele, Prüfungen, Vorstandssitzungen) mit RSVP-System
 - **Interessenten-Pipeline** für Neuanmeldungen und Schnupperstunden
+- **Mitgliederverwaltung** mit Dokumenten-Upload (SEPA, Verträge, etc.)
+
+### Vorstandsmodul
+- **Ziele & Aufgaben** — Jahres-/Quartalsziele mit Aufgaben, Status-Tracking und Verantwortlichen
+- **Protokolle** — Sitzungsprotokolle mit Teilnehmern, Beschlüssen, Dateianhängen und Verknüpfung zur Vorstandssitzung
+- **Admin-KPIs** — Vorstandsmodul-Kennzahlen direkt auf dem Admin-Dashboard
+
+### Allgemein
 - **5 Themes** × Dark/Light Mode
 - **Mehrsprachig**: Deutsch, Englisch, Türkisch
+
+## Rollen
+
+| Rolle | Zugang |
+|-------|--------|
+| `superadmin` | Vollzugriff |
+| `admin` | Schulverwaltung + Vorstandsmodul (lesend) |
+| `lehrer` | Kurse, Stundenplan, Repertoire, Events |
+| `schueler` | Eigene Kurse, Stundenplan, Events, Repertoire |
+| `eltern` | Stundenplan, Dateien, Events |
+| `vorstand` | Vorstandsmodul + Schüler-Funktionen |
 
 ## Tech Stack
 
@@ -41,4 +62,14 @@ Der Dev-Server läuft auf `http://localhost:5173`.
 npm run dev      # Entwicklungsserver
 npm run build    # Produktions-Build → dist/
 npm run preview  # Produktions-Build lokal vorschauen
+```
+
+## Datenbank-Migrationen
+
+Neue Tabellen können über die SQL-Dateien im Projektroot eingespielt werden:
+
+```bash
+# Vorstandsmodul-Tabellen anlegen
+docker exec -i supabase_db_staccato psql -U postgres -d postgres \
+  < supabase_vorstand_migration.sql
 ```
