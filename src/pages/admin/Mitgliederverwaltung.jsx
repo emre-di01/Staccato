@@ -27,8 +27,6 @@ function Badge({ rolle }) {
   )
 }
 
-}
-
 function Modal({ titel, onClose, children, breit = false }) {
   return (
     <div style={{
