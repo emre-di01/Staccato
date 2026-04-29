@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Avatar from '../../components/Avatar'
 
 const ROLLEN = ['admin', 'lehrer', 'schueler', 'eltern', 'vorstand']
 const ROLLEN_FARBE = {
@@ -26,18 +27,6 @@ function Badge({ rolle }) {
   )
 }
 
-function Avatar({ name, size = 36 }) {
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%',
-      background: 'var(--primary)', color: 'var(--primary-fg)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.4, fontWeight: 800, flexShrink: 0,
-      letterSpacing: '-0.5px',
-    }}>
-      {name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ?? '?'}
-    </div>
-  )
 }
 
 function Modal({ titel, onClose, children, breit = false }) {
@@ -729,7 +718,7 @@ export default function Mitgliederverwaltung() {
                   <tr key={m.id} style={{ background: i % 2 === 0 ? 'var(--surface)' : 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar name={m.voller_name} />
+                        <Avatar name={m.voller_name} avatarUrl={m.avatar_url} />
                         <div>
                           <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{m.voller_name}</div>
                           {m.email && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{m.email}</div>}
@@ -774,7 +763,7 @@ export default function Mitgliederverwaltung() {
                 boxShadow: 'var(--shadow)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  <Avatar name={m.voller_name} size={44} />
+                  <Avatar name={m.voller_name} avatarUrl={m.avatar_url} size={44} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{m.voller_name}</div>
                     {m.email && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{m.email}</div>}

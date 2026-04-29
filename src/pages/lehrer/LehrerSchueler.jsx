@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Avatar from '../../components/Avatar'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 const STATUS_INFO = {
@@ -74,9 +75,7 @@ function DetailPanel({ eintrag, onClose }) {
       }}>
         {/* Header */}
         <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:14, flexShrink:0, position:'sticky', top:0, background:'var(--surface)', zIndex:1 }}>
-          <div style={{ width:52, height:52, borderRadius:'50%', background:'var(--primary)', color:'var(--primary-fg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:800, flexShrink:0 }}>
-            {profile.voller_name?.charAt(0)}
-          </div>
+          <Avatar name={profile.voller_name} avatarUrl={profile.avatar_url} size={52} />
           <div style={{ flex:1 }}>
             <div style={{ fontWeight:800, fontSize:18, color:'var(--text)' }}>{profile.voller_name}</div>
             {alter !== null && (
@@ -222,7 +221,7 @@ export default function LehrerSchueler() {
       if (profil.rolle === 'admin' || profil.rolle === 'superadmin') {
         const { data } = await supabase
           .from('unterricht')
-          .select('id, name, typ, farbe, unterricht_schueler(schueler_id, status, stimmgruppe, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, telefon, adresse))')
+          .select('id, name, typ, farbe, unterricht_schueler(schueler_id, status, stimmgruppe, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, telefon, adresse, avatar_url))')
           .order('name')
         rows = (data ?? []).flatMap(k =>
           (k.unterricht_schueler ?? [])
@@ -232,7 +231,7 @@ export default function LehrerSchueler() {
       } else {
         const { data } = await supabase
           .from('unterricht_lehrer')
-          .select('unterricht(id, name, typ, farbe, unterricht_schueler(schueler_id, status, stimmgruppe, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, telefon, adresse)))')
+          .select('unterricht(id, name, typ, farbe, unterricht_schueler(schueler_id, status, stimmgruppe, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, telefon, adresse, avatar_url)))')
           .eq('lehrer_id', profil.id)
         rows = (data ?? []).flatMap(ul =>
           (ul.unterricht?.unterricht_schueler ?? [])
@@ -283,7 +282,7 @@ export default function LehrerSchueler() {
               <div key={profile.id} style={{ ...s.karte, cursor:'pointer' }}
                 onClick={() => setAusgewaehlt(eintrag)}>
                 <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:12 }}>
-                  <div style={s.avatar}>{profile.voller_name?.charAt(0)}</div>
+                  <Avatar name={profile.voller_name} avatarUrl={profile.avatar_url} size={44} />
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontWeight:800, fontSize:15, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{profile.voller_name}</div>
                     {profile.geburtsdatum && (
@@ -333,7 +332,6 @@ const s = {
   suche:       { width:'100%', maxWidth:360, padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, fontFamily:'inherit', outline:'none', boxSizing:'border-box' },
   leer:        { marginTop:40, padding:48, textAlign:'center', background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'2px dashed var(--border)', color:'var(--text-3)', fontSize:14 },
   karte:       { background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', padding:'16px 18px', boxShadow:'var(--shadow)', transition:'box-shadow 0.15s' },
-  avatar:      { width:44, height:44, borderRadius:'50%', background:'var(--primary)', color:'var(--primary-fg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, flexShrink:0 },
   sectionTitle:{ fontSize:11, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:10 },
   infoRow:     { display:'flex', alignItems:'flex-start', gap:8, fontSize:13, color:'var(--text-2)' },
   infoIcon:    { fontSize:14, flexShrink:0, marginTop:1 },

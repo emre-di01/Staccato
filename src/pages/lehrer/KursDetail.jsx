@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Avatar from '../../components/Avatar'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 const STATUS_FARBE = {
@@ -291,9 +292,7 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
         <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:20 }}>
           {schueler.map(s => (
             <div key={s.schueler_id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)' }}>
-              <div style={{ width:36, height:36, borderRadius:'50%', background:'var(--primary)', color:'var(--primary-fg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:800, flexShrink:0 }}>
-                {s.profiles?.voller_name?.charAt(0)}
-              </div>
+              <Avatar name={s.profiles?.voller_name} avatarUrl={s.profiles?.avatar_url} size={36} />
               <span style={{ flex:1, fontSize:14, fontWeight:600, color:'var(--text)' }}>{s.profiles?.voller_name}</span>
               <div style={{ display:'flex', gap:4 }}>
                 {['anwesend','abwesend','entschuldigt','zu_spaet'].map(st => (
@@ -332,8 +331,8 @@ export default function KursDetail() {
   useEffect(() => {
     async function ladeData() {
       const [k, sc, st] = await Promise.all([
-        supabase.from('unterricht').select('*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name))').eq('id', id).single(),
-        supabase.from('unterricht_schueler').select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum)').eq('unterricht_id', id).eq('status', 'aktiv'),
+        supabase.from('unterricht').select('*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name, avatar_url))').eq('id', id).single(),
+        supabase.from('unterricht_schueler').select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, avatar_url)').eq('unterricht_id', id).eq('status', 'aktiv'),
         supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn', { ascending: false }).limit(20),
       ])
       setKurs(k.data)
@@ -503,9 +502,7 @@ export default function KursDetail() {
           {schueler.length === 0 ? <div style={s.leer}>{T('kurs_no_active')}</div> :
            schueler.map(sc => (
             <div key={sc.schueler_id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:14 }}>
-              <div style={{ width:40, height:40, borderRadius:'50%', background:'var(--primary)', color:'var(--primary-fg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:800, flexShrink:0 }}>
-                {sc.profiles?.voller_name?.charAt(0)}
-              </div>
+              <Avatar name={sc.profiles?.voller_name} avatarUrl={sc.profiles?.avatar_url} size={40} />
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{sc.profiles?.voller_name}</div>
                 {sc.profiles?.geburtsdatum && (

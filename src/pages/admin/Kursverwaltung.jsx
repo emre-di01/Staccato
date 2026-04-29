@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Avatar from '../../components/Avatar'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 const TYP_FARBE = {
@@ -303,7 +304,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
     async function laden() {
       const [t, s] = await Promise.all([
         supabase.from('unterricht_schueler')
-          .select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, rolle)')
+          .select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, rolle, avatar_url)')
           .eq('unterricht_id', kurs.id),
         supabase.from('profiles').select('id, voller_name, rolle').in('rolle', ['schueler', 'vorstand', 'admin', 'superadmin']).eq('aktiv', true).order('voller_name'),
       ])
@@ -317,7 +318,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
   async function hinzufuegen(schuelerId) {
     await supabase.from('unterricht_schueler').upsert({ unterricht_id: kurs.id, schueler_id: schuelerId, status: 'aktiv' })
     const { data } = await supabase.from('unterricht_schueler')
-      .select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum)')
+      .select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, rolle, avatar_url)')
       .eq('unterricht_id', kurs.id)
     setTeilnehmer(data ?? [])
   }
@@ -348,9 +349,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {teilnehmer.map(t => (
                 <div key={t.schueler_id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)' }}>
-                  <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--primary)', color:'var(--primary-fg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:800, flexShrink:0 }}>
-                    {t.profiles?.voller_name?.charAt(0)}
-                  </div>
+                  <Avatar name={t.profiles?.voller_name} avatarUrl={t.profiles?.avatar_url} size={32} />
                   <span style={{ flex:1, fontSize:14, fontWeight:600, color:'var(--text)' }}>{t.profiles?.voller_name}</span>
                   {(t.profiles?.rolle === 'admin' || t.profiles?.rolle === 'superadmin') && (
                     <span style={{ fontSize:10, color:'var(--text-3)', background:'var(--bg-2)', border:'1px solid var(--border)', borderRadius:4, padding:'1px 5px' }}>Admin</span>
