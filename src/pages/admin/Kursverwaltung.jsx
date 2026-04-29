@@ -303,9 +303,9 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
     async function laden() {
       const [t, s] = await Promise.all([
         supabase.from('unterricht_schueler')
-          .select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum)')
+          .select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, rolle)')
           .eq('unterricht_id', kurs.id),
-        supabase.from('profiles').select('id, voller_name, rolle').in('rolle', ['schueler', 'vorstand']).eq('aktiv', true).order('voller_name'),
+        supabase.from('profiles').select('id, voller_name, rolle').in('rolle', ['schueler', 'vorstand', 'admin', 'superadmin']).eq('aktiv', true).order('voller_name'),
       ])
       setTeilnehmer(t.data ?? [])
       setAlleSchueler(s.data ?? [])
@@ -352,6 +352,9 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
                     {t.profiles?.voller_name?.charAt(0)}
                   </div>
                   <span style={{ flex:1, fontSize:14, fontWeight:600, color:'var(--text)' }}>{t.profiles?.voller_name}</span>
+                  {(t.profiles?.rolle === 'admin' || t.profiles?.rolle === 'superadmin') && (
+                    <span style={{ fontSize:10, color:'var(--text-3)', background:'var(--bg-2)', border:'1px solid var(--border)', borderRadius:4, padding:'1px 5px' }}>Admin</span>
+                  )}
                   <select value={t.status} onChange={e => statusAendern(t.schueler_id, e.target.value)}
                     style={{ ...s.input, width:'auto', fontSize:12, padding:'4px 8px' }}>
                     <option value="aktiv">Aktiv</option>
@@ -374,7 +377,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
               {verfuegbar.map(s => (
                 <button key={s.id} onClick={() => hinzufuegen(s.id)}
                   style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }}>
-                  + {s.voller_name}
+                  + {s.voller_name}{(s.rolle === 'admin' || s.rolle === 'superadmin') ? ' (Admin)' : ''}
                 </button>
               ))}
             </div>
