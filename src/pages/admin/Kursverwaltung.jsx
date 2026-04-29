@@ -334,8 +334,12 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
     setTeilnehmer(prev => prev.map(t => t.schueler_id === schuelerId ? { ...t, status } : t))
   }
 
+  const [suche, setSuche] = useState('')
   const teilnehmerIds = new Set(teilnehmer.map(t => t.schueler_id))
-  const verfuegbar = alleSchueler.filter(s => !teilnehmerIds.has(s.id))
+  const verfuegbar = alleSchueler.filter(s =>
+    !teilnehmerIds.has(s.id) &&
+    (!suche || s.voller_name.toLowerCase().includes(suche.toLowerCase()))
+  )
 
   return (
     <Modal titel={`Schüler – ${kurs.name}`} onClose={onClose} breit>
@@ -369,17 +373,28 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
         </div>
 
         {/* Schüler hinzufügen */}
-        {verfuegbar.length > 0 && (
+        {alleSchueler.filter(s => !teilnehmerIds.has(s.id)).length > 0 && (
           <div>
             <div style={s.sectionLabel}>{T('kurs_add_students')}</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginTop:8 }}>
-              {verfuegbar.map(s => (
-                <button key={s.id} onClick={() => hinzufuegen(s.id)}
-                  style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }}>
-                  + {s.voller_name}{(s.rolle === 'admin' || s.rolle === 'superadmin') ? ' (Admin)' : ''}
-                </button>
-              ))}
-            </div>
+            <input
+              type="text"
+              value={suche}
+              onChange={e => setSuche(e.target.value)}
+              placeholder="Name suchen …"
+              style={{ ...s.input, marginTop:8, marginBottom:8, width:'100%', boxSizing:'border-box' }}
+            />
+            {verfuegbar.length === 0 ? (
+              <p style={{ fontSize:13, color:'var(--text-3)', margin:0 }}>Keine Treffer.</p>
+            ) : (
+              <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                {verfuegbar.map(sc => (
+                  <button key={sc.id} onClick={() => hinzufuegen(sc.id)}
+                    style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }}>
+                    + {sc.voller_name}{(sc.rolle === 'admin' || sc.rolle === 'superadmin') ? ' (Admin)' : ''}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
