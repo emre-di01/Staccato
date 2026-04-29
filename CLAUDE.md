@@ -28,7 +28,7 @@ The app throws immediately at startup if these are missing (`src/lib/supabase.js
 
 ### Role-based routing
 
-Five roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `eltern` (parent). Each role has its own route subtree (`/admin/*`, `/lehrer/*`, `/schueler/*`, `/eltern/*`). After login, users are redirected to their role's home page via `startseiteNach(rolle)` in `src/components/ProtectedRoute.jsx`. `superadmin` shares the `/admin` subtree with `admin`.
+Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `eltern` (parent), `vorstand` (board member). Each role has its own route subtree (`/admin/*`, `/lehrer/*`, `/schueler/*`, `/eltern/*`, `/vorstand/*`). After login, users are redirected to their role's home page via `startseiteNach(rolle)` in `src/components/ProtectedRoute.jsx`. `superadmin` shares the `/admin` subtree with `admin`. `vorstand` is an extended student: same course/schedule/events access as `schueler`, plus access to the Vorstandsmodul (`/vorstand/ziele`, `/vorstand/protokolle`). Admin and superadmin also have read access to all Vorstand pages.
 
 ### Global state — `useApp()`
 
@@ -57,7 +57,12 @@ Staccato is a full music school management platform. Features by area:
 - **Schedule** (`Stundenplan`): Shared by admin, teacher, parent. Two views: week grid (7–22 Uhr, 60px/h, timezone-aware) and list view. Colour-coded by course type. Events also appear inline. Teachers can mark lessons done/cancelled directly from the schedule.
 - **Repertoire**: Global piece library (`Repertoire.jsx`) plus per-course and per-event repertoire (`KursRepertoire`, `EventRepertoire`). Pieces have: title, composer, key, tempo, YouTube link, lyrics (plain text), chords (ChordPro format), and files (`stueck_dateien` with types `noten`/`liedtext`/`audio` and optional `stimme` voice part: soprano/alto/tenor/bass). Piece status: `aktuell`, `geplant`, `abgeschlossen`, `archiviert`.
 - **Piece detail** (`StueckDetail`): Renders ChordPro chords with live transposition (semitone up/down using SHARP/FLAT arrays). Renders PDFs inline via signed URL iframe. Plays audio. Shows YouTube embed. Per-voice file filtering.
-- **Events** (`Events`): Types: konzert, vorspiel, pruefung, veranstaltung, sonstiges. Admin creates events, manages participant list (invites by profile), participants RSVP (yes/no). Events have optional end time, location, room, and public flag. Each event has its own repertoire (`EventRepertoire`).
+- **Events** (`Events`): Types: konzert, vorspiel, pruefung, veranstaltung, vorstandssitzung, sonstiges. Admin creates events, manages participant list (invites by profile), participants RSVP (yes/no). Events have optional end time, location, room, and public flag. Each event has its own repertoire (`EventRepertoire`). Vorstand users see all events of their school.
+- **Vorstandsmodul** (`src/pages/vorstand/`): Board-member module accessible to `vorstand`, `admin`, `superadmin`.
+  - `Dashboard.jsx` — KPIs (open tasks, goals, protocols, next session) + student tiles (courses, upcoming lessons).
+  - `Ziele.jsx` — Annual/quarterly goals with collapsible tasks. Status cycles offen → in_bearbeitung → erledigt. Responsible person dropdown shows all vorstand/admin/superadmin of the same school.
+  - `Protokolle.jsx` — Meeting protocols with attendee chips, decisions field, file attachments (bucket `vorstand-dateien`), and optional link to a `vorstandssitzung` event.
+  - Admin dashboard also shows Vorstandsmodul KPIs (open/in-progress/done tasks, goal progress, protocol count).
 - **Prospects** (`Interessenten`): Pipeline for new sign-ups with statuses `interessent` → `probe`. Stores desired instrument, preferred teacher, trial-lesson date/room, and notes.
 - **Attendance**: Teachers mark per-lesson attendance (anwesend/abwesend/entschuldigt/zu_spaet) for each student. Students see their own attendance history with rate. Auto-recorded when a live session ends.
 - **Profile** (`ProfilSeite`): Any user can edit their name, phone, address, birthday, change password. Members see/download their documents (uploaded by admin).
@@ -65,11 +70,13 @@ Staccato is a full music school management platform. Features by area:
 
 ### Supabase tables
 
-`profiles`, `schulen`, `unterricht` (courses), `unterricht_lehrer` (teacher↔course), `stunden` (individual lessons), `stunden_lehrer`, `anwesenheit`, `instrumente`, `raeume`, `stuecke` (pieces), `unterricht_stuecke` (course↔piece join, has `status`), `stueck_dateien`, `events`, `event_teilnehmer` (RSVP), `session_teilnehmer`, `session_reaktionen`, `interessenten`, `mitglied_dateien`
+`profiles`, `schulen`, `unterricht` (courses), `unterricht_lehrer` (teacher↔course), `stunden` (individual lessons), `stunden_lehrer`, `anwesenheit`, `instrumente`, `raeume`, `stuecke` (pieces), `unterricht_stuecke` (course↔piece join, has `status`), `stueck_dateien`, `events`, `event_teilnehmer` (RSVP), `session_teilnehmer`, `session_reaktionen`, `interessenten`, `mitglied_dateien`, `vorstand_ziele`, `vorstand_aufgaben`, `vorstand_protokolle`, `vorstand_protokoll_dateien`
 
-Storage buckets: `stueck-dateien` (piece PDFs/audio), `mitglied-dateien` (member documents)
+Storage buckets: `stueck-dateien` (piece PDFs/audio), `mitglied-dateien` (member documents), `vorstand-dateien` (protocol attachments)
 
 RPC functions: `dashboard_stats`
+
+Helper functions: `meine_rolle()` SECURITY DEFINER — returns the calling user's role without triggering RLS recursion. `meine_schule_id()` SECURITY DEFINER — returns the calling user's school ID, used in RLS policies that need to compare against the same school without a self-referencing profiles query.
 
 ### Live Teaching Session
 
