@@ -23,6 +23,15 @@ function AvatarBereich({ profil, onUpdate }) {
     setLaden(false)
   }
 
+  async function loeschen() {
+    setLaden(true)
+    const match = profil.avatar_url.split('?')[0].match(/\/avatare\/(.+)$/)
+    if (match) await supabase.storage.from('avatare').remove([decodeURIComponent(match[1])])
+    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', profil.id)
+    if (!error) onUpdate({ ...profil, avatar_url: null })
+    setLaden(false)
+  }
+
   const initialen = profil.voller_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   return (
@@ -39,6 +48,12 @@ function AvatarBereich({ profil, onUpdate }) {
         <div style={{ position:'absolute', bottom:0, right:0, width:32, height:32, borderRadius:'50%', background:'var(--accent)', color:'var(--accent-fg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, border:'2px solid var(--surface)' }}>
           {laden ? '…' : '📷'}
         </div>
+        {profil.avatar_url && (
+          <button onClick={e => { e.stopPropagation(); loeschen() }} disabled={laden}
+            style={{ position:'absolute', top:0, right:0, width:24, height:24, borderRadius:'50%', background:'var(--danger)', color:'#fff', border:'2px solid var(--surface)', fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
+            ✕
+          </button>
+        )}
       </div>
       <span style={{ fontSize:12, color:'var(--text-3)' }}>{T('profile_tap_to_change')}</span>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => hochladen(e.target.files[0])} />

@@ -96,6 +96,18 @@ export default function ProfilSeite() {
     setAvatarLaden(false)
   }
 
+  async function avatarLoeschen() {
+    if (!profil.avatar_url) return
+    setAvatarLaden(true); setFehler(''); setErfolg('')
+    const match = profil.avatar_url.split('?')[0].match(/\/avatare\/(.+)$/)
+    if (match) await supabase.storage.from('avatare').remove([decodeURIComponent(match[1])])
+    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', profil.id)
+    if (error) { setFehler('Löschen fehlgeschlagen: ' + error.message); setAvatarLaden(false); return }
+    await ladeProfil(profil.id)
+    setErfolg('Profilbild gelöscht.')
+    setAvatarLaden(false)
+  }
+
   const initialen = profil?.voller_name?.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()
 
   return (
@@ -118,6 +130,12 @@ export default function ProfilSeite() {
             {avatarLaden ? '…' : '✎'}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={avatarHochladen} />
+          {profil?.avatar_url && (
+            <button onClick={avatarLoeschen} disabled={avatarLaden}
+              style={{ position:'absolute', top:-4, right:-4, width:20, height:20, borderRadius:'50%', background:'var(--danger)', border:'2px solid var(--surface)', color:'#fff', fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>
+              ✕
+            </button>
+          )}
         </div>
         <div>
           <div style={{ fontWeight:800, fontSize:18, color:'var(--text)' }}>{profil?.voller_name}</div>
