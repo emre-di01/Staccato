@@ -14,6 +14,7 @@ No linting or test commands are configured.
 
 ## Environment Setup
 
+### Frontend
 Copy `.env.example` to `.env` and fill in:
 ```
 VITE_SUPABASE_URL=http://YOUR-SERVER-IP:54321
@@ -21,6 +22,24 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 The app throws immediately at startup if these are missing (`src/lib/supabase.js`).
+
+### Supabase / Edge Functions
+`supabase/.env` (gitignored) holds SMTP credentials and app URL — these are injected into the edge runtime container via `[edge_runtime.secrets]` in `config.toml`:
+```
+SMTP_HOST=smtp.example.com
+SMTP_PORT=465
+SMTP_USER=user@example.com
+SMTP_PASS=password
+SMTP_FROM=noreply@example.com
+APP_URL=http://YOUR-SERVER-IP:5173
+```
+
+Start Supabase so the `.env` is exported to the container environment:
+```bash
+set -a && source supabase/.env && set +a && supabase start
+```
+
+`config.toml` already has `[edge_runtime.secrets]` wired to read these via `env()` substitution.
 
 ## Architecture
 
