@@ -21,7 +21,6 @@ export function AppProvider({ children }) {
   const [theme,      setThemeKey]   = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
   const [darkMode,   setDarkMode]   = useState(() => localStorage.getItem('staccato_dark') === 'true')
   const [lang,       setLang]       = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
-  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     applyTheme(theme, darkMode)
@@ -89,40 +88,14 @@ export function AppProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [ladeProfil])
 
-  // Wenn die App aus dem Hintergrund zurückkommt (Bildschirm aus/an, Browser
-  // minimiert, kurz zu anderer App gewechselt):
-  // - Live-Session-Seiten (Unterrichtsmodus / Schüler-Session) werden nie berührt.
-  // - > 2 min → voller Reload (alle Seitendaten frisch).
-  // - Jede kürzere Abwesenheit → Session + Profil auffrischen, dann refreshKey
-  //   hochzählen → <Routes key={refreshKey}> remountet die aktuelle Seite und
-  //   alle useEffects laufen neu. Das behebt stille Netzwerk-Fehler nach dem
-  //   Bildschirm-Einschalten, ohne dass jede Seite eigene Retry-Logik braucht.
-  // - "online"-Event: feuert wenn das Netz nach einem kurzen Ausfall zurückkommt
-  //   (typisch auf Mobile nach Bildschirm-Einschalten); löst ebenfalls refreshKey aus.
   useEffect(() => {
-    function bump() {
-      if (isLiveSession()) return
-      setRefreshKey(k => k + 1)
-    }
-
     function handleVisibility() {
-      if (document.visibilityState === 'hidden') {
-        hiddenAt.current = Date.now()
-        return
-      }
+      if (document.visibilityState === 'hidden') { hiddenAt.current = Date.now(); return }
       const elapsed = hiddenAt.current > 0 ? Date.now() - hiddenAt.current : 0
       hiddenAt.current = 0
       if (elapsed <= 0) return
       if (isLiveSession()) return
-      if (elapsed > 2 * 60 * 1000) {
-        window.location.reload()
-        return
-      }
-      // Sofort remounten — nicht auf Netzwerk warten.
-      // ladeProfil läuft parallel; wenn es setProfil aufruft, feuert
-      // useEffect([profil]) in der neu gemounteten Seite nochmal als
-      // zweite Chance falls der erste Fetch noch fehlschlug.
-      bump()
+      if (elapsed > 30_000) { window.location.reload(); return }
       supabase.auth.getSession().then(({ data: { session: fresh } }) => {
         setSession(fresh)
         if (fresh?.user) ladeProfil(fresh.user.id)
@@ -132,13 +105,11 @@ export function AppProvider({ children }) {
 
     function handleOnline() {
       if (isLiveSession()) return
-      // Netz kam zurück: Token auffrischen und Seite neu mounten
       supabase.auth.getSession().then(({ data: { session: fresh } }) => {
         setSession(fresh)
         if (fresh?.user) ladeProfil(fresh.user.id)
         else { setProfil(null); setLaden(false) }
       })
-      bump()
     }
 
     document.addEventListener('visibilitychange', handleVisibility)
@@ -169,7 +140,6 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       session, profil, rolle, laden,
       theme, darkMode, lang, zeitzone,
-      refreshKey,
       changeTheme, toggleDark, setLang,
       abmelden, T, ladeProfil,
     }}>

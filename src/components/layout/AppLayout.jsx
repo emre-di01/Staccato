@@ -265,6 +265,7 @@ export default function AppLayout() {
             👤 Mein Profil
           </NavLink>
           <button onClick={() => setSettingsOffen(true)} style={btnStyle}>⚙️ {T('settings')}</button>
+          <button onClick={() => window.location.reload()} style={btnStyle}>↻ Aktualisieren</button>
           <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
           <button onClick={() => setChangelogOffen(true)} style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '2px 0' }}>
             v{version} ✨
@@ -318,7 +319,10 @@ export default function AppLayout() {
         }} className="mobile-header">
           <button onClick={() => setSidebarOffen(true)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text)' }}>☰</button>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
-          <button onClick={() => setSettingsOffen(true)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)' }}>⚙️</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button onClick={() => setSettingsOffen(true)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)' }}>⚙️</button>
+            <button onClick={() => window.location.reload()} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)' }}>↻</button>
+          </div>
         </header>
 
         {/* Content */}

@@ -45,11 +45,11 @@ function RollenWeiterleitung() {
 }
 
 function AppRoutes() {
-  const { T, refreshKey } = useApp()
+  const { T } = useApp()
   const P = (titel, icon) => <Platzhalter titel={titel} icon={icon} />
 
   return (
-    <Routes key={refreshKey}>
+    <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/passwort-zuruecksetzen" element={<PasswortZuruecksetzen />} />
       <Route path="/" element={<RollenWeiterleitung />} />

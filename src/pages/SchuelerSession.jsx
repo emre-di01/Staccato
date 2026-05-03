@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
+import { startseiteNach } from '../components/ProtectedRoute'
 
 function ChordPro({ text }) {
   if (!text) return null
@@ -55,7 +56,7 @@ function PdfInline({ pfad }) {
   if (!url)  return <div style={{ padding: 24, textAlign: 'center', color: 'var(--danger)', fontSize: 13 }}>Datei nicht verfügbar</div>
   return (
     <div>
-      <iframe src={url} style={{ width: '100%', height: '70vh', border: 'none', borderRadius: 'var(--radius)', display: 'block' }} title="Noten" />
+      <iframe src={url + '#view=FitH&toolbar=0'} style={{ width: '100%', height: '85vh', border: 'none', borderRadius: 'var(--radius)', display: 'block' }} title="Noten" />
       <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 8, textAlign: 'center', fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>↗ In neuem Tab öffnen</a>
     </div>
   )
@@ -109,7 +110,7 @@ function AkkordText({ pfad }) {
 export default function SchuelerSession() {
   const { code: urlCode } = useParams()
   const navigate = useNavigate()
-  const { session: authSession, profil, laden: authLaden, T } = useApp()
+  const { session: authSession, profil, laden: authLaden, rolle, T } = useApp()
 
   const [phase, setPhase] = useState('eingabe') // eingabe | verbinden | aktiv | beendet
   const [code, setCode] = useState((urlCode ?? '').toUpperCase())
@@ -121,6 +122,7 @@ export default function SchuelerSession() {
   const [reaktionGesendet, setReaktionGesendet] = useState(false)
   const [zeigeFrageEingabe, setZeigeFrageEingabe] = useState(false)
   const [frageText, setFrageText] = useState('')
+  const [liedtextGroesse, setLiedtextGroesse] = useState(15)
   const channelRef = useRef(null)
 
   // Auto-join wenn Code in URL — nur im Eingabe-Zustand, damit ein
@@ -227,7 +229,8 @@ export default function SchuelerSession() {
   // ── EINGABE / VERBINDEN ────────────────────────────────────────
   if (phase === 'eingabe' || phase === 'verbinden') return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
-      <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
       </div>
       <div style={{ ...s.center, flex: 1 }}>
@@ -256,7 +259,8 @@ export default function SchuelerSession() {
   // ── BEENDET ────────────────────────────────────────────────────
   if (phase === 'beendet') return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
-      <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
       </div>
       <div style={{ ...s.center, flex: 1 }}>
@@ -278,7 +282,10 @@ export default function SchuelerSession() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
       {/* Header */}
       <div style={{ padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#16a34a', fontWeight: 700 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
           {T('join_live')}
@@ -301,7 +308,17 @@ export default function SchuelerSession() {
             {/* Inhalt nach Ansichtstyp */}
             {ansicht === 'liedtext' && (
               stueck.liedtext
-                ? <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', whiteSpace: 'pre-wrap', fontSize: 15, lineHeight: 1.8, color: 'var(--text)' }}>{stueck.liedtext}</div>
+                ? <>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 10, justifyContent: 'flex-end' }}>
+                      {[13, 16, 20].map(gr => (
+                        <button key={gr} onClick={() => setLiedtextGroesse(gr)}
+                          style={{ padding: '4px 10px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: liedtextGroesse === gr ? 'var(--primary)' : 'var(--bg-2)', color: liedtextGroesse === gr ? 'var(--primary-fg)' : 'var(--text-2)', fontSize: gr - 2, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          A
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', whiteSpace: 'pre-wrap', fontSize: liedtextGroesse, lineHeight: 1.8, color: 'var(--text)' }}>{stueck.liedtext}</div>
+                  </>
                 : <PlatzhalterBox info={ansichtInfo} />
             )}
 
