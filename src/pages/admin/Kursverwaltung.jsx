@@ -268,6 +268,11 @@ function KursModal({ kurs, onClose, onErfolg }) {
                     {aktiv && '✓'}
                   </div>
                   <span style={{ fontSize:14, color:'var(--text)', fontWeight: aktiv ? 600 : 400 }}>{l.voller_name}</span>
+                  {(l.rolle === 'admin' || l.rolle === 'superadmin') && (
+                    <span style={{ fontSize:10, fontWeight:700, color:'#7c3aed', background:'#ede9fe', padding:'2px 6px', borderRadius:99 }}>
+                      {l.rolle === 'superadmin' ? 'SUPERADMIN' : 'ADMIN'}
+                    </span>
+                  )}
                   {istErster && aktiv && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--accent)', fontWeight:700 }}>{T('kurs_head_teacher')}</span>}
                   {aktiv && !istErster && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--text-3)', fontWeight:700 }}>CO-LEHRER</span>}
                 </div>
