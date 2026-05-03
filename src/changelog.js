@@ -1,11 +1,11 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.1.1'
+export const CURRENT_VERSION = '1.1.2'
 
 export const CHANGELOG = [
   {
-    version: '1.1.1',
+    version: '1.1.2',
     date: '2026-05-03',
     features: [
       {
@@ -19,6 +19,24 @@ export const CHANGELOG = [
         de: '"Was ist neu?"-Anzeige beim Login und nach dem ersten Einloggen',
         en: '"What\'s new?" display on login and after first sign-in',
         tr: 'Giriş ekranında ve ilk girişten sonra "Yenilikler" gösterimi',
+      },
+      {
+        icon: '🔍',
+        de: 'Stunden: Jahr- und Monatsfilter, Status-Filter, kein Limit mehr',
+        en: 'Lessons: year & month filter, status filter, no more 20-item limit',
+        tr: 'Dersler: yıl & ay filtresi, durum filtresi, 20 öğe sınırı kaldırıldı',
+      },
+      {
+        icon: '👥',
+        de: 'Schülerliste: Filter nach Kurstyp (Einzel, Gruppe, Chor, Ensemble)',
+        en: 'Student list: filter by course type (individual, group, choir, ensemble)',
+        tr: 'Öğrenci listesi: ders türüne göre filtre (bireysel, grup, koro, topluluk)',
+      },
+      {
+        icon: '📱',
+        de: 'Mobile Stunden-Karte: Buttons in eigener Zeile, kein Überlauf mehr',
+        en: 'Mobile lesson card: buttons in own row, no more overflow',
+        tr: 'Mobil ders kartı: butonlar ayrı satırda, taşma sorunu giderildi',
       },
     ],
   },
