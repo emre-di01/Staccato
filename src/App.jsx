@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
 import ProtectedRoute, { startseiteNach } from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
@@ -45,11 +45,10 @@ function RollenWeiterleitung() {
 
 function AppRoutes() {
   const { T } = useApp()
-  const location = useLocation()
   const P = (titel, icon) => <Platzhalter titel={titel} icon={icon} />
 
   return (
-    <Routes location={location} key={location.pathname}>
+    <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/passwort-zuruecksetzen" element={<PasswortZuruecksetzen />} />
       <Route path="/" element={<RollenWeiterleitung />} />
@@ -126,6 +125,8 @@ function AppRoutes() {
           <Route path="/vorstand/events"                element={<SchuelerEvents />} />
           <Route path="/vorstand/events/:id/repertoire" element={<EventRepertoire />} />
           <Route path="/vorstand/events/:kursId/repertoire/:stueckId" element={<StueckDetail />} />
+          <Route path="/vorstand/repertoire"            element={<Repertoire />} />
+          <Route path="/vorstand/repertoire/:stueckId"  element={<StueckDetail />} />
           <Route path="/vorstand/profil"                element={<ProfilSeite />} />
         </Route>
       </Route>

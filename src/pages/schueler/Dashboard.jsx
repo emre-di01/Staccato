@@ -94,7 +94,7 @@ export default function SchuelerDashboard() {
            kurse.length === 0 ? <div style={s.leer}>{T('dash_no_courses')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {kurse.map(k => (
-                <div key={k.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
+                <div key={k.id} onClick={() => navigate(`/schueler/kurse/${k.id}`)} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:'1px solid var(--border)', boxShadow:'var(--shadow)', cursor:'pointer' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                     <span style={{ fontSize:20 }}>{TYP_ICON[k.typ]}</span>
                     <div style={{ flex:1 }}>

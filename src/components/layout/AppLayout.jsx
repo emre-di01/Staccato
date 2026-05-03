@@ -33,6 +33,7 @@ function getNavItems(rolle, T) {
       { icon: '🎼', label: T('repertoire'),            to: '/admin/repertoire' },
       { icon: '🎭', label: T('events'),                to: '/admin/events' },
       { icon: '💰', label: T('billing'),               to: '/admin/abrechnung' },
+      { icon: '📋', label: T('prospects'),             to: '/admin/interessenten' },
       { icon: '💬', label: T('messages'),              to: '/admin/nachrichten' },
       { icon: '📂', label: 'Kurs-Ansicht',            to: '/lehrer/kurse' },
       { icon: '🎯', label: T('vorstand_ziele'),        to: '/vorstand/ziele' },
@@ -63,12 +64,13 @@ function getNavItems(rolle, T) {
       { icon: '💬', label: T('messages'),    to: '/eltern/nachrichten' },
     ],
     vorstand: [
-      { icon: '📊', label: T('dashboard'),        to: '/vorstand' },
-      { icon: '🎯', label: T('vorstand_ziele'),   to: '/vorstand/ziele' },
+      { icon: '📊', label: T('dashboard'),           to: '/vorstand' },
+      { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
       { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
-      { icon: '📅', label: 'Stundenplan',         to: '/vorstand/stundenplan' },
-      { icon: '🎵', label: 'Meine Kurse',         to: '/vorstand/kurse' },
-      { icon: '🎭', label: T('events'),           to: '/vorstand/events' },
+      { icon: '📅', label: 'Stundenplan',            to: '/vorstand/stundenplan' },
+      { icon: '🎵', label: 'Meine Kurse',            to: '/vorstand/kurse' },
+      { icon: '🎼', label: T('repertoire'),          to: '/vorstand/repertoire' },
+      { icon: '🎭', label: T('events'),              to: '/vorstand/events' },
     ],
   }
   return items[rolle] ?? []

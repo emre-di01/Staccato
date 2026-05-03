@@ -51,9 +51,12 @@ export function AppProvider({ children }) {
   }, [])
 
   useEffect(() => {
+    // getSession() handles token refresh and is the authoritative initialization source.
+    // onAuthStateChange fires INITIAL_SESSION immediately (possibly with null while token
+    // is being refreshed), so we skip it here to avoid a race that redirects to /login.
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      if (session) {
+      if (session?.user) {
         ladeProfil(session.user.id)
       } else {
         setLaden(false)
@@ -61,12 +64,13 @@ export function AppProvider({ children }) {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION') return
       if (event === 'PASSWORD_RECOVERY') {
         window.location.href = '/passwort-zuruecksetzen'
         return
       }
       setSession(session)
-      if (session) {
+      if (session?.user) {
         await ladeProfil(session.user.id)
       } else {
         setProfil(null)

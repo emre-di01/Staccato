@@ -23,7 +23,7 @@ function Modal({ titel, onClose, children, breit = false }) {
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth: breit ? 680 : 500, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
+      <div className="kurs-modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth: breit ? 680 : 500, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{titel}</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
@@ -36,7 +36,7 @@ function Modal({ titel, onClose, children, breit = false }) {
 
 function Feld({ label, children, halb = false }) {
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:6, gridColumn: halb ? 'span 1' : 'span 2' }}>
+    <div className={halb ? 'kurs-feld-halb' : 'kurs-feld-voll'} style={{ display:'flex', flexDirection:'column', gap:6, gridColumn: halb ? 'span 1' : 'span 2' }}>
       <label style={s.label}>{label}</label>
       {children}
     </div>
@@ -156,7 +156,19 @@ function KursModal({ kurs, onClose, onErfolg }) {
 
   return (
     <Modal titel={istNeu ? '+ Neuer Kurs' : `Kurs bearbeiten`} onClose={onClose} breit>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+      <style>{`
+        @media (max-width: 600px) {
+          .kurs-modal-inner { padding: 20px 16px !important; }
+          .kurs-form-grid { grid-template-columns: 1fr !important; }
+          .kurs-feld-halb, .kurs-feld-voll { grid-column: span 1 !important; }
+          .kurs-zeit-row { flex-direction: column !important; align-items: stretch !important; }
+          .kurs-zeit-sep { display: none !important; }
+          .kurs-abrechnung-row { flex-wrap: wrap !important; }
+          .kurs-modal-btnrow { flex-direction: column-reverse !important; }
+          .kurs-modal-btnrow button { width: 100%; justify-content: center; }
+        }
+      `}</style>
+      <div className="kurs-form-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
 
         {/* Name */}
         <Feld label="Kursname *">
@@ -206,10 +218,10 @@ function KursModal({ kurs, onClose, onErfolg }) {
 
         {/* Uhrzeit */}
         <Feld label="Uhrzeit" halb>
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <div className="kurs-zeit-row" style={{ display:'flex', gap:8, alignItems:'center' }}>
             <input type="time" style={{ ...s.input, flex:1 }} value={form.uhrzeit_von}
               onChange={e => setForm(f => ({ ...f, uhrzeit_von: e.target.value }))} />
-            <span style={{ color:'var(--text-3)', fontSize:13 }}>bis</span>
+            <span className="kurs-zeit-sep" style={{ color:'var(--text-3)', fontSize:13 }}>bis</span>
             <input type="time" style={{ ...s.input, flex:1 }} value={form.uhrzeit_bis}
               onChange={e => setForm(f => ({ ...f, uhrzeit_bis: e.target.value }))} />
           </div>
@@ -217,7 +229,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
 
         {/* Abrechnung */}
         <Feld label="Abrechnung" halb>
-          <div style={{ display:'flex', gap:6 }}>
+          <div className="kurs-abrechnung-row" style={{ display:'flex', gap:6 }}>
             {['einzeln','paket','pauschale'].map(a => (
               <button key={a} onClick={() => setForm(f => ({ ...f, abrechnungs_typ: a }))}
                 style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:`2px solid ${form.abrechnungs_typ===a ? 'var(--accent)' : 'var(--border)'}`, background: form.abrechnungs_typ===a ? 'var(--accent)' : 'var(--bg-2)', color: form.abrechnungs_typ===a ? 'var(--accent-fg)' : 'var(--text-2)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
@@ -281,7 +293,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
 
         {fehler && <p style={{ ...s.fehler, gridColumn:'span 2' }}>{fehler}</p>}
 
-        <div style={{ gridColumn:'span 2', display:'flex', gap:10, justifyContent:'flex-end', marginTop:8 }}>
+        <div className="kurs-modal-btnrow kurs-feld-voll" style={{ gridColumn:'span 2', display:'flex', gap:10, justifyContent:'flex-end', marginTop:8 }}>
           <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
           <button onClick={speichern} disabled={laden} style={s.btnPri}>
             {laden ? '…' : istNeu ? '+ Kurs erstellen' : `💾 ${T('save')}`}
@@ -732,7 +744,7 @@ const s = {
   sub:          { margin:0, color:'var(--text-3)', fontSize:14 },
   label:        { fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' },
   sectionLabel: { fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 },
-  input:        { padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, outline:'none', fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', width:'100%', transition:'border-color 0.15s' },
+  input:        { padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, outline:'none', fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', width:'100%', boxSizing:'border-box', transition:'border-color 0.15s' },
   btnPri:       { padding:'10px 20px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' },
   btnSek:       { padding:'10px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit' },
   btnKlein:     { padding:'6px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:500 },

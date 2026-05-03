@@ -344,7 +344,7 @@ export default function Interessenten() {
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4, flexWrap:'wrap' }}>
                     <span style={{ fontWeight:700, fontSize:15, color:'var(--text)' }}>{item.voller_name}</span>
                     <span style={{ fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99, background: sf.bg, color: sf.text }}>
-                      {STATUS_LABEL[item.status] ?? item.status}
+                      {T(STATUS_LABEL_KEYS[item.status]) ?? item.status}
                     </span>
                   </div>
                   <div style={{ display:'flex', gap:14, flexWrap:'wrap', fontSize:12, color:'var(--text-3)' }}>
