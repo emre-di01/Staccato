@@ -14,23 +14,12 @@ export default function LehrerKurse() {
   useEffect(() => {
     if (!profil) return
     async function laden() {
-      let meineKurse = []
-
-      if (profil.rolle === 'admin' || profil.rolle === 'superadmin') {
-        // Admin sieht alle Kurse
-        const { data } = await supabase
-          .from('unterricht')
-          .select('*, instrumente(name_de, icon), raeume(name), unterricht_schueler(schueler_id, status), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name))')
-          .order('name')
-        meineKurse = (data ?? []).map(k => ({ ...k, meine_rolle: 'hauptlehrer' }))
-      } else {
-        // Lehrer sieht nur seine Kurse
-        const { data } = await supabase
-          .from('unterricht_lehrer')
-          .select('rolle, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_schueler(schueler_id, status), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
-          .eq('lehrer_id', profil.id)
-        meineKurse = (data ?? []).map(u => ({ ...u.unterricht, meine_rolle: u.rolle }))
-      }
+      // Immer nach eigenem profil.id filtern – auch Admins, die als Lehrer tätig sind
+      const { data } = await supabase
+        .from('unterricht_lehrer')
+        .select('rolle, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_schueler(schueler_id, status), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
+        .eq('lehrer_id', profil.id)
+      const meineKurse = (data ?? []).map(u => ({ ...u.unterricht, meine_rolle: u.rolle }))
 
       setKurse(meineKurse)
       setLaden(false)

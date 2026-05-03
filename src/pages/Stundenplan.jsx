@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 
@@ -212,8 +213,11 @@ function EventDetailModal({ event, onClose, tz }) {
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Stundenplan() {
   const { profil, rolle, T, zeitzone } = useApp()
+  const location = useLocation()
   const tz = zeitzone || 'Europe/Berlin'
   const mob = window.innerWidth < 640
+  // Admin unter /lehrer/* → eigene Kurse wie ein Lehrer anzeigen
+  const alsLehrer = rolle === 'lehrer' || location.pathname.startsWith('/lehrer')
 
   const [stunden,          setStunden]          = useState([])
   const [events,           setEvents]           = useState([])
@@ -248,7 +252,7 @@ export default function Stundenplan() {
       .lte('beginn', bis.toISOString())
       .order('beginn')
 
-    if (rolle === 'lehrer') {
+    if (alsLehrer) {
       const { data: ul } = await supabase.from('unterricht_lehrer').select('unterricht_id').eq('lehrer_id', profil.id)
       const ids = (ul ?? []).map(u => u.unterricht_id)
       if (ids.length === 0) { setStunden([]); setLaden(false); return }
