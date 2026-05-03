@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { applyTheme, THEMES } from '../themes/themes'
 import { t as translate } from '../i18n/translations'
@@ -27,6 +27,8 @@ export function AppProvider({ children }) {
     localStorage.setItem('staccato_lang', lang)
     document.documentElement.lang = lang
   }, [lang])
+
+  const hiddenAt = useRef(0)
 
   const ladeProfil = useCallback(async (userId) => {
     try {
@@ -79,6 +81,33 @@ export function AppProvider({ children }) {
     })
 
     return () => subscription.unsubscribe()
+  }, [ladeProfil])
+
+  // Wenn die App aus dem Hintergrund zurückkommt (z.B. Browser auf Mobile
+  // wiedereröffnet), Daten auffrischen.
+  // > 10 min im Hintergrund → voller Reload (alle Seitendaten frisch)
+  // 1–10 min im Hintergrund → nur Session + Profil aktualisieren
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt.current = Date.now()
+        return
+      }
+      const elapsed = hiddenAt.current > 0 ? Date.now() - hiddenAt.current : 0
+      if (elapsed > 10 * 60 * 1000) {
+        window.location.reload()
+        return
+      }
+      if (elapsed > 60_000) {
+        supabase.auth.getSession().then(({ data: { session: fresh } }) => {
+          setSession(fresh)
+          if (fresh?.user) ladeProfil(fresh.user.id)
+          else { setProfil(null); setLaden(false) }
+        })
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [ladeProfil])
 
   async function abmelden() {
