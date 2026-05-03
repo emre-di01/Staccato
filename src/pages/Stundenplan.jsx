@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
+import { useIsMobile } from '../hooks/useWindowWidth'
 
 function zeitInTZ(date, tz) {
   const fmt = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz })
@@ -215,7 +216,7 @@ export default function Stundenplan() {
   const { profil, rolle, T, zeitzone } = useApp()
   const location = useLocation()
   const tz = zeitzone || 'Europe/Berlin'
-  const mob = window.innerWidth < 640
+  const mob = useIsMobile()
   // Admin unter /lehrer/* → eigene Kurse wie ein Lehrer anzeigen
   const alsLehrer = rolle === 'lehrer' || location.pathname.startsWith('/lehrer')
 

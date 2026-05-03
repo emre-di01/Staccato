@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -26,18 +26,14 @@ function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
 export default function VorstandDashboard() {
   const { profil, T } = useApp()
   const navigate = useNavigate()
-  const [vorstandStats, setVorstandStats] = useState({ offeneAufgaben: 0, ziele: 0, protokolle: 0, naechsteSitzung: null })
-  const [kurse, setKurse] = useState([])
-  const [naechsteStunden, setNaechsteStunden] = useState([])
-  const [laden, setLaden] = useState(true)
-
   const jetzt = new Date()
   const stunde = jetzt.getHours()
   const gruss = stunde < 12 ? T('greeting_morning') : stunde < 17 ? T('greeting_day') : T('greeting_evening')
 
-  useEffect(() => {
-    if (!profil?.schule_id) return
-    async function ladeAlles() {
+  const { data, isLoading: laden } = useQuery({
+    queryKey: ['vorstand-dashboard', profil?.id],
+    enabled: !!profil?.schule_id,
+    queryFn: async () => {
       const [aufgabenRes, zieleRes, protokolleRes, sitzungRes, usRes] = await Promise.all([
         supabase.from('vorstand_aufgaben')
           .select('id', { count: 'exact', head: true })
@@ -61,14 +57,15 @@ export default function VorstandDashboard() {
           .eq('status', 'aktiv'),
       ])
 
-      setVorstandStats({
+      const vorstandStats = {
         offeneAufgaben: aufgabenRes.count ?? 0,
         ziele: zieleRes.count ?? 0,
         protokolle: protokolleRes.count ?? 0,
         naechsteSitzung: sitzungRes.data?.[0] ?? null,
-      })
+      }
 
       const meineKurse = (usRes.data ?? []).map(u => u.unterricht).filter(Boolean)
+      let naechsteStunden = []
 
       if (meineKurse.length > 0) {
         const alleIds = [...new Set(meineKurse.flatMap(k => (k.unterricht_lehrer ?? []).map(ul => ul.lehrer_id)))]
@@ -89,14 +86,16 @@ export default function VorstandDashboard() {
           .eq('status', 'geplant')
           .order('beginn')
           .limit(5)
-        setNaechsteStunden(st ?? [])
+        naechsteStunden = st ?? []
       }
 
-      setKurse(meineKurse)
-      setLaden(false)
-    }
-    ladeAlles()
-  }, [profil])
+      return { vorstandStats, kurse: meineKurse, naechsteStunden }
+    },
+  })
+
+  const vorstandStats = data?.vorstandStats ?? { offeneAufgaben: 0, ziele: 0, protokolle: 0, naechsteSitzung: null }
+  const kurse = data?.kurse ?? []
+  const naechsteStunden = data?.naechsteStunden ?? []
 
   const TYP_LABEL = {
     vorstandssitzung: T('vorstand_typ_vorstandssitzung'),

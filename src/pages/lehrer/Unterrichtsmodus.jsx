@@ -34,7 +34,7 @@ function PdfInline({ pfad }) {
   const [url, setUrl] = useState(null)
   const [laden, setLaden] = useState(true)
   useEffect(() => {
-    supabase.storage.from('stueck-dateien').createSignedUrl(pfad, 3600)
+    supabase.storage.from('stueck-dateien').createSignedUrl(pfad, 86400)
       .then(({ data }) => { setUrl(data?.signedUrl ?? null); setLaden(false) })
   }, [pfad])
   if (laden) return <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Lädt …</div>

@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.4.2'
+export const CURRENT_VERSION = '1.5.0'
 
 export const CHANGELOG = [
+  {
+    version: '1.5.0',
+    date: '2026-05-03',
+    features: [
+      {
+        icon: '⚡',
+        de: 'Seiten laden schneller: Daten bleiben 3 Minuten gecacht — kein erneutes Laden beim Zurücknavigieren',
+        en: 'Pages load faster: data is cached for 3 minutes — no reload when navigating back',
+        tr: 'Sayfalar daha hızlı yüklenir: veriler 3 dakika önbelleğe alınır — geri giderken yeniden yükleme yok',
+      },
+      {
+        icon: '🛡️',
+        de: 'Fehlermeldung statt weißem Bildschirm wenn eine Seite abstürzt',
+        en: 'Error message instead of white screen when a page crashes',
+        tr: 'Bir sayfa çöktüğünde beyaz ekran yerine hata mesajı',
+      },
+      {
+        icon: '📱',
+        de: 'Layout reagiert jetzt korrekt auf Bildschirmdrehung ohne Neu-laden',
+        en: 'Layout now responds correctly to screen rotation without reload',
+        tr: 'Düzen artık yeniden yükleme olmadan ekran döndürmeye doğru tepki veriyor',
+      },
+    ],
+  },
   {
     version: '1.4.2',
     date: '2026-05-03',

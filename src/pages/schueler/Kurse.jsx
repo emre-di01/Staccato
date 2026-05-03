@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -8,31 +8,25 @@ const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻
 export default function SchuelerKurse() {
   const { profil, T } = useApp()
   const navigate   = useNavigate()
-  const [kurse, setKurse] = useState([])
-  const [laden, setLaden] = useState(true)
-
-  useEffect(() => {
-    if (!profil) return
-    async function ladeData() {
+  const { data: kurse = [], isLoading: laden } = useQuery({
+    queryKey: ['schueler-kurse', profil?.id],
+    enabled: !!profil?.id,
+    queryFn: async () => {
       const { data } = await supabase
         .from('unterricht_schueler')
         .select('*, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
         .eq('schueler_id', profil.id)
         .eq('status', 'aktiv')
 
-      setKurse(
-        (data ?? [])
-          .map(u => u.unterricht)
-          .filter(Boolean)
-          .map(k => ({
-            ...k,
-            lehrerNamen: (k.unterricht_lehrer ?? []).map(ul => ul.profiles?.voller_name).filter(Boolean),
-          }))
-      )
-      setLaden(false)
-    }
-    ladeData()
-  }, [profil])
+      return (data ?? [])
+        .map(u => u.unterricht)
+        .filter(Boolean)
+        .map(k => ({
+          ...k,
+          lehrerNamen: (k.unterricht_lehrer ?? []).map(ul => ul.profiles?.voller_name).filter(Boolean),
+        }))
+    },
+  })
 
   if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
 

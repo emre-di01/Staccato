@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 
@@ -112,73 +113,74 @@ export default function Repertoire() {
   const istAdmin   = rolle === 'admin' || rolle === 'superadmin'
   const istSchueler = rolle === 'schueler'
 
-  const [tab,         setTab]         = useState(istSchueler ? 'meine' : 'bibliothek')
-  const [bibliothek,  setBibliothek]  = useState([])
-  const [meineStuecke, setMeineStuecke] = useState([])   // { stueck, kurse[] }
-  const [laden,       setLaden]       = useState(true)
-  const [suche,       setSuche]       = useState('')
-  const [filter,      setFilter]      = useState('alle')  // alle | noten | audio | video | text
-  const [kursFilter,  setKursFilter]  = useState('alle')
-  const [modal,       setModal]       = useState(false)
+  const [tab,        setTab]        = useState(istSchueler ? 'meine' : 'bibliothek')
+  const [suche,      setSuche]      = useState('')
+  const [filter,     setFilter]     = useState('alle')  // alle | noten | audio | video | text
+  const [kursFilter, setKursFilter] = useState('alle')
+  const [modal,      setModal]      = useState(false)
 
-  const ladeDaten = useCallback(async () => {
-    setLaden(true)
+  const queryClient = useQueryClient()
 
-    // ── Bibliothek: alle Stücke (nur für Admin/Lehrer) ──────
-    if (!istSchueler) {
-      const { data: alle } = await supabase
+  const { data, isLoading: laden } = useQuery({
+    queryKey: ['repertoire', profil?.id, istAdmin, istSchueler],
+    enabled: !!profil?.id,
+    queryFn: async () => {
+      let bibliothek = []
+
+      // ── Bibliothek: alle Stücke (nur für Admin/Lehrer) ──────
+      if (!istSchueler) {
+        const { data: alle } = await supabase
+          .from('stuecke')
+          .select('*, stueck_dateien(typ)')
+          .order('titel')
+        bibliothek = alle ?? []
+      }
+
+      // ── Meine Stücke: Stücke aus eigenen Kursen ──────────────
+      let unterrichtIds = []
+      if (istAdmin) {
+        const { data } = await supabase.from('unterricht').select('id, name')
+        unterrichtIds = data ?? []
+      } else if (istSchueler) {
+        const { data } = await supabase.from('unterricht_schueler').select('unterricht_id, unterricht(id, name)').eq('schueler_id', profil.id).eq('status', 'aktiv')
+        unterrichtIds = (data ?? []).map(d => d.unterricht).filter(Boolean)
+      } else {
+        const { data } = await supabase.from('unterricht_lehrer').select('unterricht_id, unterricht(id, name)').eq('lehrer_id', profil.id)
+        unterrichtIds = (data ?? []).map(d => d.unterricht).filter(Boolean)
+      }
+
+      if (unterrichtIds.length === 0) return { bibliothek, meineStuecke: [] }
+
+      const ids = unterrichtIds.map(u => u.id)
+      const { data: us } = await supabase
+        .from('unterricht_stuecke')
+        .select('stueck_id, status, unterricht_id')
+        .in('unterricht_id', ids)
+
+      if (!us?.length) return { bibliothek, meineStuecke: [] }
+
+      const stueckIds = [...new Set(us.map(u => u.stueck_id))]
+      const { data: stuecke } = await supabase
         .from('stuecke')
         .select('*, stueck_dateien(typ)')
+        .in('id', stueckIds)
         .order('titel')
-      setBibliothek(alle ?? [])
-    }
 
-    // ── Meine Stücke: Stücke aus eigenen Kursen ──────────────
-    if (!profil) { setLaden(false); return }
+      // Für jedes Stück: welche Kurse und Status?
+      const kursMap = Object.fromEntries(unterrichtIds.map(u => [u.id, u.name]))
+      const meineStuecke = (stuecke ?? []).map(st => ({
+        stueck: st,
+        kurse: us
+          .filter(u => u.stueck_id === st.id)
+          .map(u => ({ id: u.unterricht_id, name: kursMap[u.unterricht_id] ?? '–', status: u.status })),
+      }))
 
-    let unterrichtIds = []
-    if (istAdmin) {
-      const { data } = await supabase.from('unterricht').select('id, name')
-      unterrichtIds = data ?? []
-    } else if (istSchueler) {
-      const { data } = await supabase.from('unterricht_schueler').select('unterricht_id, unterricht(id, name)').eq('schueler_id', profil.id).eq('status', 'aktiv')
-      unterrichtIds = (data ?? []).map(d => d.unterricht).filter(Boolean)
-    } else {
-      const { data } = await supabase.from('unterricht_lehrer').select('unterricht_id, unterricht(id, name)').eq('lehrer_id', profil.id)
-      unterrichtIds = (data ?? []).map(d => d.unterricht).filter(Boolean)
-    }
+      return { bibliothek, meineStuecke }
+    },
+  })
 
-    if (unterrichtIds.length === 0) { setLaden(false); return }
-
-    const ids = unterrichtIds.map(u => u.id)
-    const { data: us } = await supabase
-      .from('unterricht_stuecke')
-      .select('stueck_id, status, unterricht_id')
-      .in('unterricht_id', ids)
-
-    if (!us?.length) { setMeineStuecke([]); setLaden(false); return }
-
-    const stueckIds = [...new Set(us.map(u => u.stueck_id))]
-    const { data: stuecke } = await supabase
-      .from('stuecke')
-      .select('*, stueck_dateien(typ)')
-      .in('id', stueckIds)
-      .order('titel')
-
-    // Für jedes Stück: welche Kurse und Status?
-    const kursMap = Object.fromEntries(unterrichtIds.map(u => [u.id, u.name]))
-    const grouped = (stuecke ?? []).map(st => ({
-      stueck: st,
-      kurse: us
-        .filter(u => u.stueck_id === st.id)
-        .map(u => ({ id: u.unterricht_id, name: kursMap[u.unterricht_id] ?? '–', status: u.status })),
-    }))
-
-    setMeineStuecke(grouped)
-    setLaden(false)
-  }, [profil, istAdmin])
-
-  useEffect(() => { ladeDaten() }, [ladeDaten])
+  const bibliothek   = data?.bibliothek   ?? []
+  const meineStuecke = data?.meineStuecke ?? []
 
   function oeffne(stueckId) {
     navigate(`/${rolle_}/repertoire/${stueckId}`)
@@ -303,7 +305,7 @@ export default function Repertoire() {
       )}
 
       {modal && (
-        <NeuesStueckModal onClose={() => setModal(false)} onErfolg={() => { setModal(false); ladeDaten() }} />
+        <NeuesStueckModal onClose={() => setModal(false)} onErfolg={() => { setModal(false); queryClient.invalidateQueries({ queryKey: ['repertoire'] }) }} />
       )}
     </div>
   )

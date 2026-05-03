@@ -14,7 +14,7 @@ function DokumentZeile({ datei, T }) {
   const [laden, setLaden] = useState(false)
   async function oeffnen() {
     setLaden(true)
-    const { data } = await supabase.storage.from('mitglied-dateien').createSignedUrl(datei.bucket_pfad, 3600)
+    const { data } = await supabase.storage.from('mitglied-dateien').createSignedUrl(datei.bucket_pfad, 86400)
     if (data?.signedUrl) window.open(data.signedUrl, '_blank')
     setLaden(false)
   }

@@ -474,7 +474,7 @@ function DokumenteModal({ mitglied, onClose }) {
   }
 
   async function oeffnen(d) {
-    const { data } = await supabase.storage.from('mitglied-dateien').createSignedUrl(d.bucket_pfad, 3600)
+    const { data } = await supabase.storage.from('mitglied-dateien').createSignedUrl(d.bucket_pfad, 86400)
     if (data?.signedUrl) window.open(data.signedUrl, '_blank')
   }
 

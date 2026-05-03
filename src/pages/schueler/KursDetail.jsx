@@ -9,7 +9,7 @@ const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻
 function AudioPlayer({ datei }) {
   const [url, setUrl] = useState(null)
   useEffect(() => {
-    supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 3600)
+    supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 86400)
       .then(({ data }) => setUrl(data?.signedUrl))
   }, [datei.bucket_pfad])
   return (
@@ -156,7 +156,7 @@ function AkkordAnzeige({ datei }) {
 function PdfViewer({ datei }) {
   const [url, setUrl] = useState(null)
   useEffect(() => {
-    supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 3600)
+    supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 86400)
       .then(({ data }) => setUrl(data?.signedUrl))
   }, [datei.bucket_pfad])
   return (

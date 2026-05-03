@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useIsMobile } from '../../hooks/useWindowWidth'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { marked } from 'marked'
 import { supabase } from '../../lib/supabase'
@@ -83,7 +84,7 @@ function dateiIcon(name = '') {
 
 // ─── Signed URL holen ─────────────────────────────────────────
 async function getSignedUrl(pfad) {
-  const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(pfad, 3600)
+  const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(pfad, 86400)
   return data?.signedUrl ?? null
 }
 
@@ -130,7 +131,7 @@ function OeffnenButton({ pfad }) {
 function PdfCard({ datei, kannLoeschen, onLoeschen }) {
   const [vorschau, setVorschau] = useState(false)
   const [url, setUrl] = useState(null)
-  const mob = window.innerWidth < 640
+  const mob = useIsMobile()
 
   async function toggleVorschau() {
     if (!vorschau && !url) {
@@ -181,10 +182,11 @@ function PdfCard({ datei, kannLoeschen, onLoeschen }) {
 function AudioPlayer({ datei, kannLoeschen, onLoeschen }) {
   const [url, setUrl] = useState(null)
 
-  useEffect(() => {
-    supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 3600)
-      .then(({ data }) => setUrl(data?.signedUrl))
-  }, [datei.bucket_pfad])
+  async function ladeUrl() {
+    if (url) return
+    const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 86400)
+    if (data?.signedUrl) setUrl(data.signedUrl)
+  }
 
   return (
     <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px solid var(--border)', overflow:'hidden' }}>
@@ -203,10 +205,12 @@ function AudioPlayer({ datei, kannLoeschen, onLoeschen }) {
           )}
         </div>
       </div>
-      {url
-        ? <div style={{ padding:'0 16px 14px' }}><audio controls src={url} style={{ width:'100%' }} /></div>
-        : <div style={{ padding:'0 16px 14px', color:'var(--text-3)', fontSize:13 }}>Lade Audio …</div>
-      }
+      <div style={{ padding:'0 16px 14px' }}>
+        {url
+          ? <audio controls src={url} style={{ width:'100%' }} />
+          : <button onClick={ladeUrl} style={{ fontSize:13, padding:'7px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-2)', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>▶ Abspielen</button>
+        }
+      </div>
     </div>
   )
 }
@@ -443,7 +447,7 @@ export default function StueckDetail() {
   const location = useLocation()
   const { rolle, T, schule } = useApp()
 
-  const mob = window.innerWidth < 640
+  const mob = useIsMobile()
   const istEvent = location.pathname.includes('/events/')
   const rolle_ = location.pathname.split('/')[1]   // admin | lehrer | schueler
   const backPfad = istEvent

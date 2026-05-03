@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -22,17 +22,15 @@ function StatCard({ icon, label, wert, farbe = 'var(--primary)' }) {
 export default function LehrerDashboard() {
   const { profil, T } = useApp()
   const navigate = useNavigate()
-  const [kurse,         setKurse]         = useState([])
-  const [naechsteStunden, setNaechsteStunden] = useState([])
-  const [laden,         setLaden]         = useState(true)
 
   const jetzt = new Date()
   const stunde = jetzt.getHours()
   const gruss = stunde < 12 ? T('greeting_morning') : stunde < 17 ? T('greeting_day') : T('greeting_evening')
 
-  useEffect(() => {
-    if (!profil) return
-    async function ladeData() {
+  const { data, isLoading: laden } = useQuery({
+    queryKey: ['lehrer-dashboard', profil?.id],
+    enabled: !!profil?.id,
+    queryFn: async () => {
       // Kurse des Lehrers laden
       const { data: ul } = await supabase
         .from('unterricht_lehrer')
@@ -40,9 +38,9 @@ export default function LehrerDashboard() {
         .eq('lehrer_id', profil.id)
 
       const meineKurse = (ul ?? []).map(u => ({ ...u.unterricht, meine_rolle: u.rolle }))
-      setKurse(meineKurse)
 
       // Nächste Stunden laden
+      let naechsteStunden = []
       const unterrichtIds = meineKurse.map(k => k.id)
       if (unterrichtIds.length > 0) {
         const { data: stunden } = await supabase
@@ -53,13 +51,15 @@ export default function LehrerDashboard() {
           .eq('status', 'geplant')
           .order('beginn')
           .limit(5)
-        setNaechsteStunden(stunden ?? [])
+        naechsteStunden = stunden ?? []
       }
 
-      setLaden(false)
-    }
-    ladeData()
-  }, [profil])
+      return { kurse: meineKurse, naechsteStunden }
+    },
+  })
+
+  const kurse = data?.kurse ?? []
+  const naechsteStunden = data?.naechsteStunden ?? []
 
   const aktiveSchueler = new Set(
     kurse.flatMap(k => (k.unterricht_schueler ?? []).filter(s => s.status === 'aktiv').map(s => s.schueler_id))

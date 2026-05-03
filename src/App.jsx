@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './lib/queryClient'
 import { AppProvider, useApp } from './context/AppContext'
+import PageErrorBoundary from './components/PageErrorBoundary'
 import ProtectedRoute, { startseiteNach } from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
@@ -167,12 +170,16 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppProvider>
-        <ConsentBanner />
-        <WhatsNewModal />
-        <AppRoutes />
-      </AppProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AppProvider>
+          <ConsentBanner />
+          <WhatsNewModal />
+          <PageErrorBoundary>
+            <AppRoutes />
+          </PageErrorBoundary>
+        </AppProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   )
 }

@@ -201,7 +201,7 @@ function ProtokollDetail({ protokoll, vorstandMitglieder, profilId, schuleId, on
   }
 
   async function oeffnen(d) {
-    const { data } = await supabase.storage.from('vorstand-dateien').createSignedUrl(d.bucket_pfad, 3600)
+    const { data } = await supabase.storage.from('vorstand-dateien').createSignedUrl(d.bucket_pfad, 86400)
     if (data?.signedUrl) window.open(data.signedUrl, '_blank')
   }
 

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -22,17 +23,15 @@ function StatCard({ icon, label, wert, farbe = 'var(--primary)' }) {
 export default function SchuelerDashboard() {
   const { profil, T } = useApp()
   const navigate = useNavigate()
-  const [kurse,          setKurse]          = useState([])
-  const [naechsteStunden, setNaechsteStunden] = useState([])
-  const [laden,          setLaden]          = useState(true)
 
   const jetzt = new Date()
   const stunde = jetzt.getHours()
   const gruss = stunde < 12 ? T('greeting_morning') : stunde < 17 ? T('greeting_day') : T('greeting_evening')
 
-  useEffect(() => {
-    if (!profil) return
-    async function ladeData() {
+  const { data, isLoading: laden } = useQuery({
+    queryKey: ['schueler-dashboard', profil?.id],
+    enabled: !!profil?.id,
+    queryFn: async () => {
       const { data: us } = await supabase
         .from('unterricht_schueler')
         .select('*, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id))')
@@ -52,9 +51,9 @@ export default function SchuelerDashboard() {
           })
         }
       }
-      setKurse(meineKurse)
 
       // Nächste Stunden
+      let naechsteStunden = []
       const ids = meineKurse.map(k => k.id)
       if (ids.length > 0) {
         const { data: st } = await supabase
@@ -65,12 +64,15 @@ export default function SchuelerDashboard() {
           .eq('status', 'geplant')
           .order('beginn')
           .limit(5)
-        setNaechsteStunden(st ?? [])
+        naechsteStunden = st ?? []
       }
-      setLaden(false)
-    }
-    ladeData()
-  }, [profil])
+
+      return { kurse: meineKurse, naechsteStunden }
+    },
+  })
+
+  const kurse          = data?.kurse          ?? []
+  const naechsteStunden = data?.naechsteStunden ?? []
 
   return (
     <div>

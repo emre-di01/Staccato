@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -8,35 +8,28 @@ const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻
 export default function LehrerKurse() {
   const { profil } = useApp()
   const navigate   = useNavigate()
-  const [kurse, setKurse] = useState([])
-  const [laden, setLaden] = useState(true)
 
-  useEffect(() => {
-    if (!profil) return
-    async function laden() {
-      let meineKurse = []
-
+  const { data: kurse = [], isLoading: laden } = useQuery({
+    queryKey: ['lehrer-kurse', profil?.id],
+    enabled: !!profil?.id,
+    queryFn: async () => {
       if (profil.rolle === 'admin' || profil.rolle === 'superadmin') {
         // Admin sieht alle Kurse
         const { data } = await supabase
           .from('unterricht')
           .select('*, instrumente(name_de, icon), raeume(name), unterricht_schueler(schueler_id, status), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name))')
           .order('name')
-        meineKurse = (data ?? []).map(k => ({ ...k, meine_rolle: 'hauptlehrer' }))
+        return (data ?? []).map(k => ({ ...k, meine_rolle: 'hauptlehrer' }))
       } else {
         // Lehrer sieht nur seine Kurse
         const { data } = await supabase
           .from('unterricht_lehrer')
           .select('rolle, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_schueler(schueler_id, status), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
           .eq('lehrer_id', profil.id)
-        meineKurse = (data ?? []).map(u => ({ ...u.unterricht, meine_rolle: u.rolle }))
+        return (data ?? []).map(u => ({ ...u.unterricht, meine_rolle: u.rolle }))
       }
-
-      setKurse(meineKurse)
-      setLaden(false)
-    }
-    laden()
-  }, [profil])
+    },
+  })
 
   return (
     <div>
