@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.1.2'
+export const CURRENT_VERSION = '1.2.0'
 
 export const CHANGELOG = [
+  {
+    version: '1.2.0',
+    date: '2026-05-03',
+    features: [
+      {
+        icon: '📱',
+        de: 'App-Refresh bei Rückkehr aus dem Hintergrund (mobile State)',
+        en: 'App refresh when returning from background (mobile state)',
+        tr: 'Arka plandan dönerken uygulama yenileme (mobil durum)',
+      },
+    ],
+  },
   {
     version: '1.1.2',
     date: '2026-05-03',
