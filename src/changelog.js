@@ -1,9 +1,39 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.4.0'
+export const CURRENT_VERSION = '1.4.1'
 
 export const CHANGELOG = [
+  {
+    version: '1.4.1',
+    date: '2026-05-03',
+    features: [
+      {
+        icon: '⚙️',
+        de: 'Schuleinstellungen: Name, Logo, Website, E-Mail, Telefon und Adresse direkt im Admin-Dashboard bearbeitbar',
+        en: 'School settings: name, logo, website, email, phone and address now editable in the admin dashboard',
+        tr: 'Okul ayarları: isim, logo, web sitesi, e-posta, telefon ve adres artık admin panelinde düzenlenebilir',
+      },
+      {
+        icon: '✍️',
+        de: 'Liedtext unterstützt jetzt Markdown: Abschnittstitel, Fettdruck, Trennlinien u.v.m.',
+        en: 'Lyrics now support Markdown: section headings, bold text, dividers and more',
+        tr: 'Şarkı sözleri artık Markdown destekler: bölüm başlıkları, kalın metin, ayırıcılar ve daha fazlası',
+      },
+      {
+        icon: '👁',
+        de: 'Liedtext-Editor mit Vorschau-Button und Markdown-Cheatsheet',
+        en: 'Lyrics editor now has a preview button and a Markdown cheatsheet',
+        tr: 'Şarkı sözleri editöründe önizleme butonu ve Markdown kılavuzu',
+      },
+      {
+        icon: '🖼️',
+        de: 'PDF-Export: Schullogo wird automatisch eingebettet (Logo in Schuleinstellungen hinterlegbar)',
+        en: 'PDF export: school logo is automatically embedded (configurable in school settings)',
+        tr: 'PDF dışa aktarma: okul logosu otomatik olarak eklenir (okul ayarlarında yapılandırılabilir)',
+      },
+    ],
+  },
   {
     version: '1.4.0',
     date: '2026-05-03',
