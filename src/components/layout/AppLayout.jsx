@@ -300,9 +300,9 @@ export default function AppLayout() {
               </NavLink>
               <button onClick={() => { setSettingsOffen(true); setSidebarOffen(false) }} style={btnStyle}>⚙️ {T('settings')}</button>
               <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
-              <div style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5 }}>
-                v{version}
-              </div>
+              <button onClick={() => { setChangelogOffen(true); setSidebarOffen(false) }} style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '2px 0' }}>
+                v{version} ✨
+              </button>
             </div>
           </aside>
         </div>

@@ -328,6 +328,7 @@ export default function KursDetail() {
   const [aktiveTab, setAktiveTab] = useState('stunden')
   const [modal,        setModal]        = useState(null)
   const [stundenFilter, setStundenFilter] = useState('alle')
+  const [monatFilter,  setMonatFilter]  = useState('')
 
   useEffect(() => {
     async function ladeData() {
@@ -417,17 +418,40 @@ export default function KursDetail() {
       {/* Tab: Stunden */}
       {aktiveTab === 'stunden' && (
         <div>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:14 }}>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-              {[['alle', T('filter_all')], ['geplant', T('kurs_status_planned')], ['stattgefunden', T('kurs_status_done')], ['abgesagt', T('kurs_status_cancelled')]].map(([val, label]) => (
-                <button key={val} onClick={() => setStundenFilter(val)} style={{
-                  padding:'5px 12px', borderRadius:99, border:'1.5px solid', fontSize:12, fontWeight:600,
-                  cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s',
-                  borderColor: stundenFilter===val ? 'var(--primary)' : 'var(--border)',
-                  background:  stundenFilter===val ? 'var(--primary)' : 'transparent',
-                  color:       stundenFilter===val ? 'var(--primary-fg)' : 'var(--text-3)',
-                }}>{label}</button>
-              ))}
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:14 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {/* Status-Filter */}
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {[['alle', T('filter_all')], ['geplant', T('kurs_status_planned')], ['stattgefunden', T('kurs_status_done')], ['abgesagt', T('kurs_status_cancelled')]].map(([val, label]) => (
+                  <button key={val} onClick={() => setStundenFilter(val)} style={{
+                    padding:'5px 12px', borderRadius:99, border:'1.5px solid', fontSize:12, fontWeight:600,
+                    cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s',
+                    borderColor: stundenFilter===val ? 'var(--primary)' : 'var(--border)',
+                    background:  stundenFilter===val ? 'var(--primary)' : 'transparent',
+                    color:       stundenFilter===val ? 'var(--primary-fg)' : 'var(--text-3)',
+                  }}>{label}</button>
+                ))}
+              </div>
+              {/* Monat/Jahr-Filter */}
+              {stunden.length > 0 && (() => {
+                const monate = [...new Map(stunden.map(st => {
+                  const d = new Date(st.beginn)
+                  const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+                  const label = d.toLocaleDateString('de-DE', { month:'long', year:'numeric' })
+                  return [key, { key, label }]
+                })).values()].sort((a, b) => b.key.localeCompare(a.key))
+                if (monate.length < 2) return null
+                return (
+                  <select value={monatFilter} onChange={e => setMonatFilter(e.target.value)} style={{
+                    padding:'5px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)',
+                    background:'var(--bg)', color:'var(--text)', fontSize:12, fontFamily:'inherit',
+                    cursor:'pointer', outline:'none', maxWidth:200,
+                  }}>
+                    <option value=''>📅 {T('filter_all')} Monate</option>
+                    {monate.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+                  </select>
+                )
+              })()}
             </div>
             <button onClick={() => setModal({ typ:'einzelstunde' })} style={s.btnPri}>
               {T('kurs_create_lesson')}
@@ -435,7 +459,11 @@ export default function KursDetail() {
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {(() => {
-              const gefiltert = stundenFilter === 'alle' ? stunden : stunden.filter(st => st.status === stundenFilter)
+              let gefiltert = stundenFilter === 'alle' ? stunden : stunden.filter(st => st.status === stundenFilter)
+              if (monatFilter) gefiltert = gefiltert.filter(st => {
+                const d = new Date(st.beginn)
+                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` === monatFilter
+              })
               if (gefiltert.length === 0) return <div style={s.leer}>{stunden.length === 0 ? T('kurs_no_lessons_found') : T('no_results')}</div>
               return gefiltert.map(st => {
             const beginn   = new Date(st.beginn)
