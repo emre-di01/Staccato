@@ -6,6 +6,9 @@ export const translations = {
     app_name: 'Staccato',
     app_tagline: 'Musikschule Management',
 
+    // Filter
+    filter_all: 'Alle',
+
     // What's New
     whats_new_title: "Was ist neu?",
     whats_new_ok: 'Alles klar!',
@@ -600,6 +603,9 @@ export const translations = {
     app_name: 'Staccato',
     app_tagline: 'Music School Management',
 
+    // Filter
+    filter_all: 'All',
+
     // What's New
     whats_new_title: "What's New?",
     whats_new_ok: 'Got it!',
@@ -1174,6 +1180,9 @@ export const translations = {
   tr: {
     app_name: 'Staccato',
     app_tagline: 'Müzik Okulu Yönetimi',
+
+    // Filter
+    filter_all: 'Tümü',
 
     // What's New
     whats_new_title: 'Yenilikler',

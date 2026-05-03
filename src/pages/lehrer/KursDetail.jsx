@@ -326,14 +326,15 @@ export default function KursDetail() {
   const [stunden,  setStunden]  = useState([])
   const [laden,    setLaden]    = useState(true)
   const [aktiveTab, setAktiveTab] = useState('stunden')
-  const [modal,    setModal]    = useState(null)
+  const [modal,        setModal]        = useState(null)
+  const [stundenFilter, setStundenFilter] = useState('alle')
 
   useEffect(() => {
     async function ladeData() {
       const [k, sc, st] = await Promise.all([
         supabase.from('unterricht').select('*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name, avatar_url))').eq('id', id).single(),
         supabase.from('unterricht_schueler').select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, avatar_url)').eq('unterricht_id', id).eq('status', 'aktiv'),
-        supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn', { ascending: false }).limit(20),
+        supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn', { ascending: false }),
       ])
       setKurs(k.data)
       setSchueler(sc.data ?? [])
@@ -416,14 +417,27 @@ export default function KursDetail() {
       {/* Tab: Stunden */}
       {aktiveTab === 'stunden' && (
         <div>
-          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:14 }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:14 }}>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {[['alle', T('filter_all')], ['geplant', T('kurs_status_planned')], ['stattgefunden', T('kurs_status_done')], ['abgesagt', T('kurs_status_cancelled')]].map(([val, label]) => (
+                <button key={val} onClick={() => setStundenFilter(val)} style={{
+                  padding:'5px 12px', borderRadius:99, border:'1.5px solid', fontSize:12, fontWeight:600,
+                  cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s',
+                  borderColor: stundenFilter===val ? 'var(--primary)' : 'var(--border)',
+                  background:  stundenFilter===val ? 'var(--primary)' : 'transparent',
+                  color:       stundenFilter===val ? 'var(--primary-fg)' : 'var(--text-3)',
+                }}>{label}</button>
+              ))}
+            </div>
             <button onClick={() => setModal({ typ:'einzelstunde' })} style={s.btnPri}>
               {T('kurs_create_lesson')}
             </button>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {stunden.length === 0 ? <div style={s.leer}>{T('kurs_no_lessons_found')}</div> :
-            stunden.map(st => {
+            {(() => {
+              const gefiltert = stundenFilter === 'alle' ? stunden : stunden.filter(st => st.status === stundenFilter)
+              if (gefiltert.length === 0) return <div style={s.leer}>{stunden.length === 0 ? T('kurs_no_lessons_found') : T('no_results')}</div>
+              return gefiltert.map(st => {
             const beginn   = new Date(st.beginn)
             const istVorbei = beginn < jetzt
             const istHeute  = beginn.toDateString() === jetzt.toDateString()
@@ -484,7 +498,8 @@ export default function KursDetail() {
                 </div>
               </div>
             )
-          })}
+          })
+            })()}
           </div>
         </div>
       )}
@@ -558,7 +573,7 @@ export default function KursDetail() {
           raumId={kurs?.raum_id}
           onClose={() => setModal(null)}
           onErfolg={async () => {
-            const { data } = await supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn', { ascending: false }).limit(20)
+            const { data } = await supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn', { ascending: false })
             setStunden(data ?? [])
           }}
         />

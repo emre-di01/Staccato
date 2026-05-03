@@ -210,7 +210,8 @@ export default function LehrerSchueler() {
   const { profil, T } = useApp()
   const [schueler,  setSchueler]  = useState([])
   const [laden,     setLaden]     = useState(true)
-  const [suche,     setSuche]     = useState('')
+  const [suche,       setSuche]       = useState('')
+  const [typFilter,   setTypFilter]   = useState('alle')
   const [ausgewaehlt, setAusgewaehlt] = useState(null)
 
   useEffect(() => {
@@ -254,21 +255,36 @@ export default function LehrerSchueler() {
     ladeSchueler()
   }, [profil])
 
-  const gefiltert = schueler.filter(s =>
-    s.profile.voller_name?.toLowerCase().includes(suche.toLowerCase())
-  )
+  const gefiltert = schueler.filter(s => {
+    const nameOk = s.profile.voller_name?.toLowerCase().includes(suche.toLowerCase())
+    const typOk  = typFilter === 'alle' || s.kurse.some(k => k.typ === typFilter)
+    return nameOk && typOk
+  })
 
   return (
     <div>
       <h1 style={s.h1}>👥 {T('my_students')}</h1>
       <p style={s.sub}>{schueler.length} {T('schueler')}{schueler.length !== gefiltert.length ? ` · ${gefiltert.length} ${T('filtered')}` : ''}</p>
 
-      <input
-        style={s.suche}
-        placeholder={T('schueler_search')}
-        value={suche}
-        onChange={e => setSuche(e.target.value)}
-      />
+      <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center', marginBottom:16 }}>
+        <input
+          style={{ ...s.suche, marginBottom:0, flex:'1 1 200px' }}
+          placeholder={T('schueler_search')}
+          value={suche}
+          onChange={e => setSuche(e.target.value)}
+        />
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+          {[['alle', T('filter_all')], ['einzel', '🎵 Einzel'], ['gruppe', '👥 Gruppe'], ['chor', '🎼 Chor'], ['ensemble', '🎻 Ensemble']].map(([val, label]) => (
+            <button key={val} onClick={() => setTypFilter(val)} style={{
+              padding:'7px 12px', borderRadius:99, border:'1.5px solid', fontSize:12, fontWeight:600,
+              cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s', whiteSpace:'nowrap',
+              borderColor: typFilter===val ? 'var(--primary)' : 'var(--border)',
+              background:  typFilter===val ? 'var(--primary)' : 'transparent',
+              color:       typFilter===val ? 'var(--primary-fg)' : 'var(--text-3)',
+            }}>{label}</button>
+          ))}
+        </div>
+      </div>
 
       {laden ? (
         <div style={s.leer}>{T('loading')}</div>
