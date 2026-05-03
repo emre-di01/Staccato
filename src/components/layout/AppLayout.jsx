@@ -251,8 +251,8 @@ export default function AppLayout() {
           {navItems.map(item => <NavItem key={item.to} item={item} />)}
         </nav>
 
-        {/* Session beitreten (nur Schüler) */}
-        {rolle === 'schueler' && (
+        {/* Session beitreten (Schüler + Vorstand) */}
+        {(rolle === 'schueler' || rolle === 'vorstand') && (
           <button onClick={() => setJoinSessionOffen(true)}
             style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginBottom:12, width:'100%' }}>
             🎬 Session beitreten
@@ -288,7 +288,7 @@ export default function AppLayout() {
             <nav style={{ flex: 1 }}>
               {navItems.map(item => <NavItem key={item.to} item={item} />)}
             </nav>
-            {rolle === 'schueler' && (
+            {(rolle === 'schueler' || rolle === 'vorstand') && (
               <button onClick={() => { setJoinSessionOffen(true); setSidebarOffen(false) }}
                 style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginBottom:12, width:'100%' }}>
                 🎬 Session beitreten
