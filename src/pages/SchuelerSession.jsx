@@ -123,9 +123,10 @@ export default function SchuelerSession() {
   const [frageText, setFrageText] = useState('')
   const channelRef = useRef(null)
 
-  // Auto-join wenn Code in URL
+  // Auto-join wenn Code in URL — nur im Eingabe-Zustand, damit ein
+  // Token-Refresh in AppContext keinen laufenden Session-Screen abbricht.
   useEffect(() => {
-    if (urlCode && authSession && !authLaden) beitreten(urlCode)
+    if (urlCode && authSession && !authLaden && phase === 'eingabe') beitreten(urlCode)
   }, [urlCode, authSession, authLaden])
 
   // Realtime: Session-Updates verfolgen

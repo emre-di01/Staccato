@@ -8,14 +8,20 @@ const AppContext = createContext(null)
 const DEFAULT_THEME = 'klassik'
 const DEFAULT_LANG  = 'de'
 
+function isLiveSession() {
+  const p = window.location.pathname
+  return p.includes('/unterrichtsmodus') || p.startsWith('/session/')
+}
+
 export function AppProvider({ children }) {
-  const [session,  setSession]  = useState(undefined)
-  const [profil,   setProfil]   = useState(null)
-  const [zeitzone, setZeitzone] = useState('Europe/Berlin')
-  const [laden,    setLaden]    = useState(true)
-  const [theme,    setThemeKey] = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('staccato_dark') === 'true')
-  const [lang,     setLang]     = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
+  const [session,    setSession]    = useState(undefined)
+  const [profil,     setProfil]     = useState(null)
+  const [zeitzone,   setZeitzone]   = useState('Europe/Berlin')
+  const [laden,      setLaden]      = useState(true)
+  const [theme,      setThemeKey]   = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
+  const [darkMode,   setDarkMode]   = useState(() => localStorage.getItem('staccato_dark') === 'true')
+  const [lang,       setLang]       = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     applyTheme(theme, darkMode)
@@ -83,31 +89,52 @@ export function AppProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [ladeProfil])
 
-  // Wenn die App aus dem Hintergrund zurückkommt (z.B. Browser auf Mobile
-  // wiedereröffnet), Daten auffrischen.
-  // > 10 min im Hintergrund → voller Reload (alle Seitendaten frisch)
-  // 1–10 min im Hintergrund → nur Session + Profil aktualisieren
+  // Wenn die App aus dem Hintergrund zurückkommt (Bildschirm aus/an, Browser
+  // minimiert, kurz zu anderer App gewechselt):
+  // - Live-Session-Seiten (Unterrichtsmodus / Schüler-Session) werden nie berührt.
+  // - > 2 min → voller Reload (alle Seitendaten frisch).
+  // - Jede kürzere Abwesenheit → Session + Profil auffrischen, dann refreshKey
+  //   hochzählen → <Routes key={refreshKey}> remountet die aktuelle Seite und
+  //   alle useEffects laufen neu. Das behebt stille Netzwerk-Fehler nach dem
+  //   Bildschirm-Einschalten, ohne dass jede Seite eigene Retry-Logik braucht.
+  // - "online"-Event: feuert wenn das Netz nach einem kurzen Ausfall zurückkommt
+  //   (typisch auf Mobile nach Bildschirm-Einschalten); löst ebenfalls refreshKey aus.
   useEffect(() => {
+    function bump() {
+      if (isLiveSession()) return
+      setRefreshKey(k => k + 1)
+    }
+
     function handleVisibility() {
       if (document.visibilityState === 'hidden') {
         hiddenAt.current = Date.now()
         return
       }
       const elapsed = hiddenAt.current > 0 ? Date.now() - hiddenAt.current : 0
-      if (elapsed > 10 * 60 * 1000) {
+      hiddenAt.current = 0
+      if (elapsed <= 0) return
+      if (isLiveSession()) return
+      if (elapsed > 2 * 60 * 1000) {
         window.location.reload()
         return
       }
-      if (elapsed > 60_000) {
-        supabase.auth.getSession().then(({ data: { session: fresh } }) => {
-          setSession(fresh)
-          if (fresh?.user) ladeProfil(fresh.user.id)
-          else { setProfil(null); setLaden(false) }
-        })
-      }
+      supabase.auth.getSession().then(({ data: { session: fresh } }) => {
+        setSession(fresh)
+        if (fresh?.user) {
+          ladeProfil(fresh.user.id).then(bump)
+        } else {
+          setProfil(null)
+          setLaden(false)
+        }
+      })
     }
+
     document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('online', bump)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('online', bump)
+    }
   }, [ladeProfil])
 
   async function abmelden() {
@@ -130,6 +157,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       session, profil, rolle, laden,
       theme, darkMode, lang, zeitzone,
+      refreshKey,
       changeTheme, toggleDark, setLang,
       abmelden, T, ladeProfil,
     }}>
