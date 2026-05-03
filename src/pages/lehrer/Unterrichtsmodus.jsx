@@ -121,6 +121,16 @@ export default function Unterrichtsmodus() {
     init()
   }, [kursId])
 
+  // Verpasste Realtime-Updates nachholen wenn App aus dem Hintergrund zurückkommt
+  useEffect(() => {
+    if (!session) return
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') ladeTeilnehmer(session.id)
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [session])
+
   useEffect(() => {
     if (!session) return
     ladeTeilnehmer(session.id)

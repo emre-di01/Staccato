@@ -129,6 +129,25 @@ export default function SchuelerSession() {
     if (urlCode && authSession && !authLaden && phase === 'eingabe') beitreten(urlCode)
   }, [urlCode, authSession, authLaden])
 
+  // Verpasste Realtime-Updates nachholen wenn App aus dem Hintergrund zurückkommt
+  useEffect(() => {
+    if (phase !== 'aktiv' || !sessionId) return
+    async function sync() {
+      const { data: sess } = await supabase
+        .from('unterricht_sessions').select('*').eq('id', sessionId).single()
+      if (!sess) return
+      if (sess.status === 'beendet') { setPhase('beendet'); return }
+      setSessionState(sess)
+      if (sess.aktuelles_stueck) await ladeStueck(sess.aktuelles_stueck)
+      else setStueck(null)
+    }
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') sync()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [phase, sessionId])
+
   // Realtime: Session-Updates verfolgen
   useEffect(() => {
     if (!sessionId) return
