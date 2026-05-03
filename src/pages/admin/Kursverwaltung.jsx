@@ -55,7 +55,7 @@ function Badge({ typ }) {
 // ─── Kurs erstellen / bearbeiten Modal ────────────────────────
 
 function KursModal({ kurs, onClose, onErfolg }) {
-  const { T } = useApp()
+  const { T, profil } = useApp()
   const istNeu = !kurs?.id
   const [form, setForm] = useState({
     name:             kurs?.name            ?? '',
@@ -83,7 +83,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
   useEffect(() => {
     async function ladeOptionen() {
       const [i, r, l] = await Promise.all([
-        supabase.from('instrumente').select('id, name_de, icon').eq('aktiv', true).order('name_de'),
+        supabase.from('instrumente').select('id, name_de, icon').eq('aktiv', true).eq('schule_id', profil?.schule_id).order('name_de'),
         supabase.from('raeume').select('id, name').eq('aktiv', true).order('name'),
         supabase.from('profiles').select('id, voller_name').eq('rolle', 'lehrer').eq('aktiv', true).order('voller_name'),
       ])

@@ -389,6 +389,8 @@ export default function StueckDetail() {
   const [tab,          setTab]          = useState('text')
   const [filterStimme, setFilterStimme] = useState('alle')
   const [bearbeiteText, setBearbeiteText] = useState(false)
+  const [bearbeiteMeta, setBearbeiteMeta] = useState(false)
+  const [metaForm,     setMetaForm]     = useState({ titel:'', komponist:'', tonart:'', tempo:'' })
   const [modal,        setModal]        = useState(null)
   const [textGroesse,  setTextGroesse]  = useState(18)
   const [vollbild,     setVollbild]     = useState(false)
@@ -420,6 +422,18 @@ export default function StueckDetail() {
     await supabase.from('stuecke').update({ liedtext: neuerText, notizen: neueAkkorde }).eq('id', stueckId)
     setStueck(s => ({ ...s, liedtext: neuerText, notizen: neueAkkorde }))
     setBearbeiteText(false)
+  }
+
+  function metaBearbeitenStarten() {
+    setMetaForm({ titel: stueck.titel ?? '', komponist: stueck.komponist ?? '', tonart: stueck.tonart ?? '', tempo: stueck.tempo ?? '' })
+    setBearbeiteMeta(true)
+  }
+
+  async function metaSpeichern() {
+    const payload = { titel: metaForm.titel.trim() || stueck.titel, komponist: metaForm.komponist.trim() || null, tonart: metaForm.tonart.trim() || null, tempo: metaForm.tempo.trim() || null }
+    await supabase.from('stuecke').update(payload).eq('id', stueckId)
+    setStueck(s => ({ ...s, ...payload }))
+    setBearbeiteMeta(false)
   }
 
   async function youtubeSpeichern() {
@@ -478,25 +492,50 @@ export default function StueckDetail() {
 
       {/* Header */}
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding: mob ? '16px' : '24px', border:'1px solid var(--border)', marginBottom:20, boxShadow:'var(--shadow)' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
-          <div style={{ flex:1, minWidth:0 }}>
-            <h1 style={{ margin:'0 0 6px', fontSize: mob ? 20 : 24, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', wordBreak:'break-word' }}>{stueck.titel}</h1>
-            <div style={{ display:'flex', gap:12, flexWrap:'wrap', fontSize:13, color:'var(--text-2)' }}>
-              {stueck.komponist && <span>🎼 {stueck.komponist}</span>}
-              {stueck.tonart    && <span>🎵 {stueck.tonart}</span>}
-              {stueck.tempo     && <span>♩ {stueck.tempo}</span>}
+        {bearbeiteMeta ? (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap:10 }}>
+              {[
+                { key:'titel',     label:'Titel *',  placeholder:'z.B. Ave Maria' },
+                { key:'komponist', label:'Komponist', placeholder:'z.B. Schubert' },
+                { key:'tonart',    label:'Tonart',    placeholder:'z.B. F-Dur' },
+                { key:'tempo',     label:'Tempo',     placeholder:'z.B. Andante / 80 BPM' },
+              ].map(f => (
+                <div key={f.key} style={{ display:'flex', flexDirection:'column', gap:5, gridColumn: f.key==='titel' ? 'span 2' : 'span 1' }}>
+                  <label style={s.label}>{f.label}</label>
+                  <input style={s.input} placeholder={f.placeholder} value={metaForm[f.key]}
+                    onChange={e => setMetaForm(p => ({ ...p, [f.key]: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter') metaSpeichern(); if (e.key === 'Escape') setBearbeiteMeta(false) }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button onClick={() => setBearbeiteMeta(false)} style={s.btnSek}>Abbrechen</button>
+              <button onClick={metaSpeichern} style={s.btnPri}>💾 Speichern</button>
             </div>
           </div>
-          {kannBearbeiten && (
-            <div style={{ display:'flex', gap:8 }}>
-              <button onClick={() => setModal('upload')} style={s.btnPri}>⬆ Upload</button>
-              <button onClick={stueckLoeschen}
-                style={{ padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                🗑
-              </button>
+        ) : (
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <h1 style={{ margin:'0 0 6px', fontSize: mob ? 20 : 24, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', wordBreak:'break-word' }}>{stueck.titel}</h1>
+              <div style={{ display:'flex', gap:12, flexWrap:'wrap', fontSize:13, color:'var(--text-2)' }}>
+                {stueck.komponist && <span>🎼 {stueck.komponist}</span>}
+                {stueck.tonart    && <span>🎵 {stueck.tonart}</span>}
+                {stueck.tempo     && <span>♩ {stueck.tempo}</span>}
+              </div>
             </div>
-          )}
-        </div>
+            {kannBearbeiten && (
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={metaBearbeitenStarten} style={s.btnSek} title="Metadaten bearbeiten">✏️</button>
+                <button onClick={() => setModal('upload')} style={s.btnPri}>⬆ Upload</button>
+                <button onClick={stueckLoeschen}
+                  style={{ padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  🗑
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Stimmen-Filter */}
         <div style={{ display:'flex', gap:6, marginTop:14, flexWrap:'wrap' }}>

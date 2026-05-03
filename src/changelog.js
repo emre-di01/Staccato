@@ -1,9 +1,39 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.3.0'
+export const CURRENT_VERSION = '1.4.0'
 
 export const CHANGELOG = [
+  {
+    version: '1.4.0',
+    date: '2026-05-03',
+    features: [
+      {
+        icon: '✏️',
+        de: 'Stück-Metadaten (Titel, Komponist, Tonart, Tempo) nachträglich bearbeitbar',
+        en: 'Piece metadata (title, composer, key, tempo) can now be edited',
+        tr: 'Parça meta verileri (başlık, besteci, ton, tempo) artık düzenlenebilir',
+      },
+      {
+        icon: '🔢',
+        de: 'Veranstaltungs-Repertoire: Reihenfolge der Stücke per ▲/▼ sortierbar',
+        en: 'Event repertoire: piece order can be rearranged with ▲/▼ buttons',
+        tr: 'Etkinlik repertuarı: parça sırası ▲/▼ butonlarıyla düzenlenebilir',
+      },
+      {
+        icon: '🎸',
+        de: 'Neues Admin-Modul: Instrumente verwalten (Emoji, Mehrsprachig, Aktiv-Status)',
+        en: 'New admin module: manage instruments (emoji, multilingual, active status)',
+        tr: 'Yeni admin modülü: enstrümanları yönetin (emoji, çok dilli, aktif durum)',
+      },
+      {
+        icon: '🎵',
+        de: 'Kursanlage: Instrument-Auswahl zeigt jetzt nur Instrumente der eigenen Schule',
+        en: "Course creation: instrument selector now shows only your school's instruments",
+        tr: 'Ders oluşturma: enstrüman seçici artık yalnızca kendi okulunuzun enstrümanlarını gösterir',
+      },
+    ],
+  },
   {
     version: '1.3.0',
     date: '2026-05-03',

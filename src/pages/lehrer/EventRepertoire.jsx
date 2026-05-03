@@ -176,6 +176,17 @@ export default function EventRepertoire() {
     setStuecke(prev => prev.filter(s => s.stueck_id !== stueckId))
   }
 
+  async function verschieben(idx, delta) {
+    const neuArr = [...stuecke]
+    const zielIdx = idx + delta
+    if (zielIdx < 0 || zielIdx >= neuArr.length) return
+    ;[neuArr[idx], neuArr[zielIdx]] = [neuArr[zielIdx], neuArr[idx]]
+    setStuecke(neuArr)
+    await Promise.all(neuArr.map((es, i) =>
+      supabase.from('event_stuecke').update({ reihenfolge: i }).eq('event_id', eventId).eq('stueck_id', es.stueck_id)
+    ))
+  }
+
   async function interpretSpeichern(stueckId, interpret) {
     await supabase.from('event_stuecke').update({ interpret }).eq('event_id', eventId).eq('stueck_id', stueckId)
     setStuecke(prev => prev.map(s => s.stueck_id === stueckId ? { ...s, interpret } : s))
@@ -233,9 +244,23 @@ export default function EventRepertoire() {
                 style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', boxShadow:'var(--shadow)', overflow:'hidden', cursor:'pointer', transition:'box-shadow 0.15s' }}>
                 <div style={{ height:3, background:'var(--accent)' }} />
                 <div style={{ padding:'14px 18px', display:'flex', gap:14, alignItems:'flex-start' }}>
-                  {/* Reihenfolge */}
-                  <div style={{ minWidth:28, height:28, borderRadius:'50%', background:'var(--bg-2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:'var(--text-3)', flexShrink:0, marginTop:2 }}>
-                    {i + 1}
+                  {/* Reihenfolge + Sortier-Buttons */}
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2, flexShrink:0, marginTop:2 }}>
+                    {kannBearbeiten && !suche ? (
+                      <>
+                        <button onClick={e => { e.stopPropagation(); verschieben(i, -1) }} disabled={i === 0}
+                          style={{ background:'none', border:'none', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--border)' : 'var(--text-3)', fontSize:12, padding:'1px 4px', lineHeight:1, fontFamily:'inherit' }}>▲</button>
+                        <div style={{ minWidth:24, height:24, borderRadius:'50%', background:'var(--bg-2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'var(--text-3)' }}>
+                          {i + 1}
+                        </div>
+                        <button onClick={e => { e.stopPropagation(); verschieben(i, 1) }} disabled={i === gefiltert.length - 1}
+                          style={{ background:'none', border:'none', cursor: i === gefiltert.length - 1 ? 'default' : 'pointer', color: i === gefiltert.length - 1 ? 'var(--border)' : 'var(--text-3)', fontSize:12, padding:'1px 4px', lineHeight:1, fontFamily:'inherit' }}>▼</button>
+                      </>
+                    ) : (
+                      <div style={{ minWidth:28, height:28, borderRadius:'50%', background:'var(--bg-2)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:'var(--text-3)' }}>
+                        {i + 1}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ flex:1 }}>
