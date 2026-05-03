@@ -467,6 +467,8 @@ export default function StueckDetail() {
   const [youtubeEdit,  setYoutubeEdit]  = useState(false)
   const [youtubeInput, setYoutubeInput] = useState('')
   const [pdfModal,     setPdfModal]     = useState(false)
+  const [mdModus,      setMdModusState] = useState(() => localStorage.getItem('staccato_liedtext_md') !== 'false')
+  function setMdModus(val) { localStorage.setItem('staccato_liedtext_md', String(val)); setMdModusState(val) }
 
   const kannBearbeiten = rolle === 'admin' || rolle === 'superadmin' || rolle === 'lehrer'
 
@@ -692,6 +694,10 @@ ${html}
                   <button onClick={() => setTextGroesse(g => Math.min(56, g + 2))}
                     style={{ width:36, height:36, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit', fontWeight:700, flexShrink:0 }}>A+</button>
                   <div style={{ flex:1 }} />
+                  <div style={{ display:'flex', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', overflow:'hidden', flexShrink:0 }}>
+                    <button onClick={() => setMdModus(true)}  style={{ padding:'5px 10px', background: mdModus  ? 'var(--primary)' : 'var(--bg-2)', color: mdModus  ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>MD</button>
+                    <button onClick={() => setMdModus(false)} style={{ padding:'5px 10px', background: !mdModus ? 'var(--primary)' : 'var(--bg-2)', color: !mdModus ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Plain</button>
+                  </div>
                   <button onClick={() => setPdfModal(true)} style={s.btnSek} title="Als PDF drucken">📄 PDF</button>
                   <button onClick={() => setVollbild(true)}
                     style={{ padding:'8px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
@@ -701,9 +707,11 @@ ${html}
                     <button onClick={() => setBearbeiteText(true)} style={s.btnSek}>✏️</button>
                   )}
                 </div>
-                <div
-                  dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }}
-                  style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', transition:'font-size 0.2s', wordBreak:'break-word' }} />
+                {mdModus
+                  ? <div dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }}
+                      style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', transition:'font-size 0.2s', wordBreak:'break-word' }} />
+                  : <pre style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', whiteSpace:'pre-wrap', margin:0, transition:'font-size 0.2s', wordBreak:'break-word' }}>{stueck.liedtext}</pre>
+                }
               </>
             ) : kannBearbeiten ? (
               <div style={{ textAlign:'center', padding:32 }}>
@@ -923,15 +931,23 @@ ${html}
               <div style={{ color:'#fff', fontWeight:800, fontSize:15, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{stueck.titel}</div>
               {stueck.komponist && <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>{stueck.komponist}</div>}
             </div>
-            <button onClick={() => setVollbild(false)}
-              style={{ background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', padding:'8px 16px', borderRadius:8, flexShrink:0 }}>
-              ✕ Schließen
-            </button>
+            <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+              <div style={{ display:'flex', borderRadius:6, border:'1px solid rgba(255,255,255,0.2)', overflow:'hidden' }}>
+                <button onClick={() => setMdModus(true)}  style={{ padding:'5px 9px', background: mdModus  ? 'rgba(255,255,255,0.25)' : 'transparent', color:'#fff', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>MD</button>
+                <button onClick={() => setMdModus(false)} style={{ padding:'5px 9px', background: !mdModus ? 'rgba(255,255,255,0.25)' : 'transparent', color:'#fff', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Plain</button>
+              </div>
+              <button onClick={() => setVollbild(false)}
+                style={{ background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', padding:'8px 16px', borderRadius:8, flexShrink:0 }}>
+                ✕ Schließen
+              </button>
+            </div>
           </div>
           <div style={{ flex:1, overflowY:'auto', padding: mob ? '24px 16px' : '40px 10vw', WebkitOverflowScrolling:'touch' }}>
-            <div
-              dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }}
-              style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'#fff', margin:'0 auto', maxWidth:700, transition:'font-size 0.15s', wordBreak:'break-word' }} />
+            {mdModus
+              ? <div dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }}
+                  style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'#fff', margin:'0 auto', maxWidth:700, transition:'font-size 0.15s', wordBreak:'break-word' }} />
+              : <pre style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'#fff', whiteSpace:'pre-wrap', margin:'0 auto', maxWidth:700, transition:'font-size 0.15s', wordBreak:'break-word' }}>{stueck.liedtext}</pre>
+            }
           </div>
           <div style={{ padding:'12px 16px', background:'rgba(255,255,255,0.06)', borderTop:'1px solid rgba(255,255,255,0.1)', flexShrink:0 }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>

@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.4.1'
+export const CURRENT_VERSION = '1.4.2'
 
 export const CHANGELOG = [
+  {
+    version: '1.4.2',
+    date: '2026-05-03',
+    features: [
+      {
+        icon: '🔀',
+        de: 'Liedtext: Freie Wahl zwischen Markdown-Formatierung und reinem Text (MD / Plain)',
+        en: 'Lyrics: freely switch between Markdown formatting and plain text (MD / Plain)',
+        tr: 'Şarkı sözleri: Markdown biçimlendirme ve düz metin arasında özgürce geçiş (MD / Plain)',
+      },
+    ],
+  },
   {
     version: '1.4.1',
     date: '2026-05-03',

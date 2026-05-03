@@ -91,6 +91,8 @@ export default function Unterrichtsmodus() {
   const [aktiveAnsicht, setAktiveAnsicht] = useState('noten')
   const [laden, setLaden] = useState(false)
   const [fehler, setFehler] = useState('')
+  const [mdModus, setMdModusState] = useState(() => localStorage.getItem('staccato_liedtext_md') !== 'false')
+  function setMdModus(val) { localStorage.setItem('staccato_liedtext_md', String(val)); setMdModusState(val) }
   const channelRef = useRef(null)
 
   useEffect(() => {
@@ -398,7 +400,18 @@ export default function Unterrichtsmodus() {
 
               {aktiveAnsicht === 'liedtext' && (
                 aktivStueck.liedtext
-                  ? <div dangerouslySetInnerHTML={{ __html: marked.parse(aktivStueck.liedtext) }} style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)' }} />
+                  ? <>
+                      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+                        <div style={{ display:'flex', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', overflow:'hidden' }}>
+                          <button onClick={() => setMdModus(true)}  style={{ padding:'3px 9px', background: mdModus  ? 'var(--primary)' : 'var(--bg-2)', color: mdModus  ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>MD</button>
+                          <button onClick={() => setMdModus(false)} style={{ padding:'3px 9px', background: !mdModus ? 'var(--primary)' : 'var(--bg-2)', color: !mdModus ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Plain</button>
+                        </div>
+                      </div>
+                      {mdModus
+                        ? <div dangerouslySetInnerHTML={{ __html: marked.parse(aktivStueck.liedtext) }} style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)' }} />
+                        : <pre style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'Georgia, serif', wordBreak: 'break-word' }}>{aktivStueck.liedtext}</pre>
+                      }
+                    </>
                   : <VorschauPlatzhalter ansicht={aktiveAnsicht} />
               )}
 

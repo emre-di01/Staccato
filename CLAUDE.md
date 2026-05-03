@@ -177,9 +177,9 @@ Staccato is a full music school management platform. Features by area:
   - ChordPro chords with live transposition (±semitone, SHARP/FLAT arrays)
   - PDFs inline via signed URL iframe; audio playback; YouTube embed
   - Per-voice file filtering (stimme: sopran/alt/tenor/bass)
-  - **Liedtext rendered as Markdown** (`dangerouslySetInnerHTML` + `marked.parse`) in detail view, fullscreen, Unterrichtsmodus, and SchuelerSession
-  - Editor has **preview toggle** (Bearbeiten ↔ Vorschau) and a `MarkdownTooltip` cheatsheet (## Refrain, ### Strophe, **fett**, *kursiv*, ---, > blockquote)
-  - **PDF export**: opens a confirmation modal showing the school logo (from `schule.logo_url`); logo is embedded in print layout. If no logo: note pointing to Schuleinstellungen.
+  - **MD/Plain-Toggle**: Pill-Button (MD | Plain) in der Liedtext-Toolbar, im Vollbild und in Unterrichtsmodus/SchuelerSession. Wahl wird in `localStorage` (`staccato_liedtext_md`) gespeichert (Default: `true` = Markdown). MD → `dangerouslySetInnerHTML + marked.parse`; Plain → `<pre whiteSpace:pre-wrap>`.
+  - Editor hat **Vorschau-Toggle** (Bearbeiten ↔ Vorschau) und einen `MarkdownTooltip`-Cheatsheet (## Refrain, ### Strophe, **fett**, *kursiv*, ---, > blockquote)
+  - **PDF export**: öffnet Bestätigungs-Modal mit Logo-Vorschau; Logo aus `schule.logo_url` wird ins Drucklayout eingebettet. PDF exportiert immer als Markdown (unabhängig vom Toggle).
 
 - **Events** (`Events`): Types: konzert, vorspiel, pruefung, veranstaltung, vorstandssitzung, sonstiges. Admin creates events, manages participant list (invites by profile), participants RSVP (yes/no). Events have optional end time, location, room, and public flag. Each event has its own repertoire (`EventRepertoire`). Vorstand users see all events of their school.
 
