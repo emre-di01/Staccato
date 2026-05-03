@@ -93,23 +93,14 @@ export function AppProvider({ children }) {
       if (document.visibilityState === 'hidden') { hiddenAt.current = Date.now(); return }
       const elapsed = hiddenAt.current > 0 ? Date.now() - hiddenAt.current : 0
       hiddenAt.current = 0
-      if (elapsed <= 0) return
+      if (elapsed < 5_000) return
       if (isLiveSession()) return
-      if (elapsed > 30_000) { window.location.reload(); return }
-      supabase.auth.getSession().then(({ data: { session: fresh } }) => {
-        setSession(fresh)
-        if (fresh?.user) ladeProfil(fresh.user.id)
-        else { setProfil(null); setLaden(false) }
-      })
+      window.location.reload()
     }
 
     function handleOnline() {
       if (isLiveSession()) return
-      supabase.auth.getSession().then(({ data: { session: fresh } }) => {
-        setSession(fresh)
-        if (fresh?.user) ladeProfil(fresh.user.id)
-        else { setProfil(null); setLaden(false) }
-      })
+      window.location.reload()
     }
 
     document.addEventListener('visibilitychange', handleVisibility)
