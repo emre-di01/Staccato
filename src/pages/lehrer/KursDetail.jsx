@@ -328,6 +328,7 @@ export default function KursDetail() {
   const [aktiveTab, setAktiveTab] = useState('stunden')
   const [modal,        setModal]        = useState(null)
   const [stundenFilter, setStundenFilter] = useState('alle')
+  const [jahrFilter,   setJahrFilter]   = useState('')
   const [monatFilter,  setMonatFilter]  = useState('')
 
   useEffect(() => {
@@ -432,24 +433,27 @@ export default function KursDetail() {
                   }}>{label}</button>
                 ))}
               </div>
-              {/* Monat/Jahr-Filter */}
+              {/* Jahr- und Monat-Filter */}
               {stunden.length > 0 && (() => {
-                const monate = [...new Map(stunden.map(st => {
-                  const d = new Date(st.beginn)
-                  const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-                  const label = d.toLocaleDateString('de-DE', { month:'long', year:'numeric' })
-                  return [key, { key, label }]
-                })).values()].sort((a, b) => b.key.localeCompare(a.key))
-                if (monate.length < 2) return null
+                const jahre  = [...new Set(stunden.map(st => new Date(st.beginn).getFullYear()))].sort((a,b) => b-a)
+                const monate = [
+                  { val:'1',  label:'Januar' }, { val:'2',  label:'Februar' }, { val:'3',  label:'März' },
+                  { val:'4',  label:'April' },  { val:'5',  label:'Mai' },     { val:'6',  label:'Juni' },
+                  { val:'7',  label:'Juli' },   { val:'8',  label:'August' },  { val:'9',  label:'September' },
+                  { val:'10', label:'Oktober' },{ val:'11', label:'November' },{ val:'12', label:'Dezember' },
+                ]
+                if (jahre.length < 2 && stunden.length < 6) return null
                 return (
-                  <select value={monatFilter} onChange={e => setMonatFilter(e.target.value)} style={{
-                    padding:'5px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)',
-                    background:'var(--bg)', color:'var(--text)', fontSize:12, fontFamily:'inherit',
-                    cursor:'pointer', outline:'none', maxWidth:200,
-                  }}>
-                    <option value=''>📅 {T('filter_all')} Monate</option>
-                    {monate.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
-                  </select>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <select value={jahrFilter} onChange={e => setJahrFilter(e.target.value)} style={selStyle}>
+                      <option value=''>Alle Jahre</option>
+                      {jahre.map(j => <option key={j} value={j}>{j}</option>)}
+                    </select>
+                    <select value={monatFilter} onChange={e => setMonatFilter(e.target.value)} style={selStyle}>
+                      <option value=''>Alle Monate</option>
+                      {monate.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
+                    </select>
+                  </div>
                 )
               })()}
             </div>
@@ -460,10 +464,8 @@ export default function KursDetail() {
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {(() => {
               let gefiltert = stundenFilter === 'alle' ? stunden : stunden.filter(st => st.status === stundenFilter)
-              if (monatFilter) gefiltert = gefiltert.filter(st => {
-                const d = new Date(st.beginn)
-                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` === monatFilter
-              })
+              if (jahrFilter)  gefiltert = gefiltert.filter(st => new Date(st.beginn).getFullYear()  === Number(jahrFilter))
+              if (monatFilter) gefiltert = gefiltert.filter(st => new Date(st.beginn).getMonth() + 1 === Number(monatFilter))
               if (gefiltert.length === 0) return <div style={s.leer}>{stunden.length === 0 ? T('kurs_no_lessons_found') : T('no_results')}</div>
               return gefiltert.map(st => {
             const beginn   = new Date(st.beginn)
@@ -617,4 +619,10 @@ const s = {
   iconBtn:{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4, lineHeight:1 },
   label:  { fontSize:13, fontWeight:600, color:'var(--text-2)' },
   input:  { padding:'9px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text)', fontSize:14, fontFamily:'inherit', outline:'none', width:'100%', boxSizing:'border-box' },
+}
+
+const selStyle = {
+  padding:'5px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)',
+  background:'var(--bg)', color:'var(--text)', fontSize:12, fontFamily:'inherit',
+  cursor:'pointer', outline:'none',
 }
