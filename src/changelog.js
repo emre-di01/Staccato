@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.2.0'
+export const CURRENT_VERSION = '1.3.0'
 
 export const CHANGELOG = [
+  {
+    version: '1.3.0',
+    date: '2026-05-03',
+    features: [
+      {
+        icon: '📱',
+        de: 'Datenladen nach Bildschirm-aus / Browser-Hintergrund zuverlässig behoben',
+        en: 'Data loading after screen-off / browser background reliably fixed',
+        tr: 'Ekran kapatma / tarayıcı arka planından sonra veri yükleme güvenilir şekilde düzeltildi',
+      },
+      {
+        icon: '🔒',
+        de: 'Live-Unterrichtssession bleibt beim Bildschirm-Einschalten aktiv',
+        en: 'Live teaching session stays active when screen is turned back on',
+        tr: 'Ekran açıldığında canlı ders oturumu aktif kalır',
+      },
+    ],
+  },
   {
     version: '1.2.0',
     date: '2026-05-03',
