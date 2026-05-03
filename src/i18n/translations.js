@@ -6,6 +6,11 @@ export const translations = {
     app_name: 'Staccato',
     app_tagline: 'Musikschule Management',
 
+    // What's New
+    whats_new_title: "Was ist neu?",
+    whats_new_ok: 'Alles klar!',
+    whats_new_login_label: 'Neuigkeiten',
+
     // Auth
     login: 'Anmelden',
     logout: 'Abmelden',
@@ -594,6 +599,12 @@ export const translations = {
   en: {
     app_name: 'Staccato',
     app_tagline: 'Music School Management',
+
+    // What's New
+    whats_new_title: "What's New?",
+    whats_new_ok: 'Got it!',
+    whats_new_login_label: "What's New",
+
     login: 'Sign In',
     logout: 'Sign Out',
     email: 'Email',
@@ -1163,6 +1174,12 @@ export const translations = {
   tr: {
     app_name: 'Staccato',
     app_tagline: 'Müzik Okulu Yönetimi',
+
+    // What's New
+    whats_new_title: 'Yenilikler',
+    whats_new_ok: 'Anladım!',
+    whats_new_login_label: 'Yenilikler',
+
     login: 'Giriş Yap',
     logout: 'Çıkış Yap',
     email: 'E-posta',

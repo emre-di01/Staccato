@@ -4,6 +4,23 @@ import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { startseiteNach } from '../components/ProtectedRoute'
 import { THEMES, THEME_KEYS } from '../themes/themes'
+import { CHANGELOG } from '../changelog'
+
+// Floating note definitions: [symbol, x%, duration, delay, size, opacity]
+const NOTES = [
+  ['♩',  8,  9, 0,   28, 0.18],
+  ['♪', 18, 12, 2,   18, 0.14],
+  ['♫', 30,  8, 5,   36, 0.16],
+  ['♬', 45, 11, 1,   22, 0.20],
+  ['𝄞', 58,  7, 3.5, 42, 0.12],
+  ['♩', 68, 10, 0.5, 16, 0.15],
+  ['♪', 78, 13, 4,   30, 0.13],
+  ['♫', 88, 9,  2.5, 20, 0.17],
+  ['♬', 52, 14, 7,   14, 0.12],
+  ['𝄢', 22,  8, 6,   38, 0.10],
+  ['♩', 92, 11, 1.5, 24, 0.14],
+  ['♪', 38, 10, 8,   18, 0.16],
+]
 
 export default function LoginPage() {
   const { session, rolle, laden, T, theme, darkMode, changeTheme, toggleDark, lang, setLang } = useApp()
@@ -39,29 +56,88 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
+    <div className="login-wrapper" style={{
       minHeight: '100vh', display: 'flex', background: 'var(--bg)',
       fontFamily: "'Outfit', 'DM Sans', sans-serif",
     }}>
-      {/* Left – Branding */}
-      <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        background: 'var(--primary)', color: 'var(--primary-fg)',
-        padding: 48, position: 'relative', overflow: 'hidden',
-      }} className="login-left">
-        {/* Dekorative Noten im Hintergrund */}
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.05, fontSize: 120, display: 'flex', flexWrap: 'wrap', gap: 40, padding: 40, lineHeight: 1 }}>
-          {'♩♪♫♬♩♪♫♬♩♪♫♬♩♪♫♬'.split('').map((n, i) => <span key={i}>{n}</span>)}
-        </div>
-        <div style={{ position: 'relative', textAlign: 'center' }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>♩</div>
-          <div style={{ fontSize: 42, fontWeight: 800, letterSpacing: '-1px', marginBottom: 8 }}>Staccato</div>
-          <div style={{ fontSize: 16, opacity: 0.7 }}>{T('app_tagline')}</div>
+
+      {/* ── Mobile-only header ── */}
+      <div className="login-mobile-header">
+        {NOTES.slice(0, 6).map(([sym, x, dur, delay, size, op], i) => (
+          <span key={i} className="float-note" style={{
+            left: `${x}%`, fontSize: size,
+            animationDuration: `${dur}s`, animationDelay: `${-delay}s`, opacity: op,
+          }}>{sym}</span>
+        ))}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="logo-pulse" style={{ fontSize: 36 }}>♩</div>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>Staccato</div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>{T('app_tagline')}</div>
+          </div>
         </div>
       </div>
 
-      {/* Right – Login Form */}
+      {/* ── Left – Branding ── */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        background: 'linear-gradient(150deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 65%, #000) 100%)',
+        color: 'var(--primary-fg)',
+        padding: 48, position: 'relative', overflow: 'hidden',
+      }} className="login-left">
+
+        {/* Floating animated notes */}
+        {NOTES.map(([sym, x, dur, delay, size, op], i) => (
+          <span key={i} className="float-note" style={{
+            left: `${x}%`, fontSize: size,
+            animationDuration: `${dur}s`, animationDelay: `${-delay}s`, opacity: op,
+          }}>{sym}</span>
+        ))}
+
+        {/* Orb glows */}
+        <div style={{
+          position: 'absolute', width: 400, height: 400, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.06)', top: -100, right: -100,
+          filter: 'blur(60px)', pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', width: 300, height: 300, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.04)', bottom: -80, left: -60,
+          filter: 'blur(50px)', pointerEvents: 'none',
+        }} />
+
+        <div style={{ position: 'relative', textAlign: 'center', width: '100%', maxWidth: 360 }}>
+          <div className="logo-pulse" style={{ fontSize: 72, marginBottom: 12 }}>♩</div>
+          <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-1.5px', marginBottom: 6 }}>Staccato</div>
+          <div style={{ fontSize: 15, opacity: 0.65, letterSpacing: '0.01em' }}>{T('app_tagline')}</div>
+
+          {/* What's New card */}
+          <div style={{
+            marginTop: 40, textAlign: 'left',
+            background: 'rgba(255,255,255,0.1)', borderRadius: 16,
+            padding: '20px 20px 16px', backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.18)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: 16 }}>✨</span>
+              <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {T('whats_new_login_label')} · v{CHANGELOG[0].version}
+              </span>
+            </div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {CHANGELOG[0].features.map((f, i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span style={{ fontSize: 15, lineHeight: 1.45, flexShrink: 0 }}>{f.icon}</span>
+                  <span style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.5 }}>{f[lang] ?? f.de}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right – Login Form ── */}
       <div style={{
         width: 420, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
@@ -154,6 +230,26 @@ export default function LoginPage() {
             </>
           )}
 
+          {/* What's New – nur auf Mobile sichtbar */}
+          <div className="login-whats-new" style={{ marginTop: 28 }}>
+            <div style={{ paddingTop: 24, borderTop: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                <span style={{ fontSize: 14 }}>✨</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {T('whats_new_login_label')} · v{CHANGELOG[0].version}
+                </span>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {CHANGELOG[0].features.map((f, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <span style={{ fontSize: 15, lineHeight: 1.4, flexShrink: 0 }}>{f.icon}</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{f[lang] ?? f.de}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
           {/* Theme-Auswahl */}
           <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
             <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{T('theme')}</div>
@@ -182,9 +278,64 @@ export default function LoginPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
+
+        /* Floating notes */
+        .float-note {
+          position: absolute;
+          bottom: -60px;
+          animation: floatUp linear infinite;
+          pointer-events: none;
+          user-select: none;
+          will-change: transform, opacity;
+        }
+        @keyframes floatUp {
+          0%   { transform: translateY(0)   rotate(0deg);   opacity: inherit; }
+          15%  { opacity: inherit; }
+          85%  { opacity: inherit; }
+          100% { transform: translateY(-110vh) rotate(20deg); opacity: 0; }
+        }
+
+        /* Logo pulse */
+        .logo-pulse {
+          display: inline-block;
+          animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+          0%, 100% { transform: scale(1);    }
+          50%       { transform: scale(1.08); }
+        }
+
+        /* Mobile header */
+        .login-mobile-header {
+          display: none;
+        }
+
+        .login-whats-new { display: none; }
+
         @media (max-width: 640px) {
-          .login-left { display: none !important; }
-          .login-right { width: 100% !important; }
+          .login-wrapper {
+            flex-direction: column;
+          }
+          .login-left  { display: none !important; }
+          .login-right {
+            width: 100% !important;
+            flex: 1;
+            justify-content: flex-start !important;
+            padding-top: 32px !important;
+          }
+          .login-whats-new { display: block; }
+          .login-mobile-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(150deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 65%, #000) 100%);
+            color: var(--primary-fg);
+            padding: 28px 24px;
+            width: 100%;
+            flex-shrink: 0;
+          }
         }
       `}</style>
     </div>

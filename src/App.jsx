@@ -32,6 +32,7 @@ import Repertoire from './pages/Repertoire'
 import Impressum from './pages/Impressum'
 import Datenschutz from './pages/Datenschutz'
 import ConsentBanner from './components/ConsentBanner'
+import WhatsNewModal from './components/WhatsNewModal'
 import VorstandDashboard from './pages/vorstand/Dashboard'
 import VorstandZiele from './pages/vorstand/Ziele'
 import VorstandProtokolle from './pages/vorstand/Protokolle'
@@ -167,6 +168,7 @@ export default function App() {
     <BrowserRouter>
       <AppProvider>
         <ConsentBanner />
+        <WhatsNewModal />
         <AppRoutes />
       </AppProvider>
     </BrowserRouter>
