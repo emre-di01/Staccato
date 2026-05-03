@@ -85,7 +85,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
       const [i, r, l] = await Promise.all([
         supabase.from('instrumente').select('id, name_de, icon').eq('aktiv', true).eq('schule_id', profil?.schule_id).order('name_de'),
         supabase.from('raeume').select('id, name').eq('aktiv', true).order('name'),
-        supabase.from('profiles').select('id, voller_name').eq('rolle', 'lehrer').eq('aktiv', true).order('voller_name'),
+        supabase.from('profiles').select('id, voller_name, rolle').in('rolle', ['lehrer', 'admin', 'superadmin']).eq('aktiv', true).order('voller_name'),
       ])
       setInstrumente(i.data ?? [])
       setRaeume(r.data ?? [])
