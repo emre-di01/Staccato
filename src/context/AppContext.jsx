@@ -118,22 +118,34 @@ export function AppProvider({ children }) {
         window.location.reload()
         return
       }
+      // Sofort remounten — nicht auf Netzwerk warten.
+      // ladeProfil läuft parallel; wenn es setProfil aufruft, feuert
+      // useEffect([profil]) in der neu gemounteten Seite nochmal als
+      // zweite Chance falls der erste Fetch noch fehlschlug.
+      bump()
       supabase.auth.getSession().then(({ data: { session: fresh } }) => {
         setSession(fresh)
-        if (fresh?.user) {
-          ladeProfil(fresh.user.id).then(bump)
-        } else {
-          setProfil(null)
-          setLaden(false)
-        }
+        if (fresh?.user) ladeProfil(fresh.user.id)
+        else { setProfil(null); setLaden(false) }
       })
     }
 
+    function handleOnline() {
+      if (isLiveSession()) return
+      // Netz kam zurück: Token auffrischen und Seite neu mounten
+      supabase.auth.getSession().then(({ data: { session: fresh } }) => {
+        setSession(fresh)
+        if (fresh?.user) ladeProfil(fresh.user.id)
+        else { setProfil(null); setLaden(false) }
+      })
+      bump()
+    }
+
     document.addEventListener('visibilitychange', handleVisibility)
-    window.addEventListener('online', bump)
+    window.addEventListener('online', handleOnline)
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility)
-      window.removeEventListener('online', bump)
+      window.removeEventListener('online', handleOnline)
     }
   }, [ladeProfil])
 
