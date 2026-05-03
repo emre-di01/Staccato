@@ -472,25 +472,29 @@ export default function KursDetail() {
             const istVorbei = beginn < jetzt
             const istHeute  = beginn.toDateString() === jetzt.toDateString()
             return (
-              <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:`1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', alignItems:'center', gap:14 }}>
-                <div style={{ textAlign:'center', minWidth:48 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
-                    {istHeute ? 'Heute' : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
+              <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'12px 16px', border:`1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', flexDirection:'column', gap:10 }}>
+                {/* Obere Zeile: Datum + Info */}
+                <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                  <div style={{ textAlign:'center', minWidth:48, flexShrink:0 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
+                      {istHeute ? 'Heute' : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
+                    </div>
+                    <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>
+                      {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
+                    </div>
+                    <div style={{ fontSize:11, color:'var(--text-3)' }}>
+                      {beginn.toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
+                    </div>
                   </div>
-                  <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>
-                    {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
-                  </div>
-                  <div style={{ fontSize:11, color:'var(--text-3)' }}>
-                    {beginn.toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, color:'var(--text-3)' }}>
+                      {st.status === 'stattgefunden' ? T('kurs_status_done') : st.status === 'abgesagt' ? T('kurs_status_cancelled') : T('kurs_status_planned')}
+                    </div>
+                    {st.hausaufgaben && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>📝 {st.hausaufgaben}</div>}
                   </div>
                 </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:12, color:'var(--text-3)' }}>
-                    {st.status === 'stattgefunden' ? T('kurs_status_done') : st.status === 'abgesagt' ? T('kurs_status_cancelled') : T('kurs_status_planned')}
-                  </div>
-                  {st.hausaufgaben && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>📝 {st.hausaufgaben}</div>}
-                </div>
-                <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                {/* Untere Zeile: Buttons */}
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
                   {!istVorbei && st.status === 'geplant' && (
                     <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
                       style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
