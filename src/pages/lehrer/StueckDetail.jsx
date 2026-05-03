@@ -308,25 +308,93 @@ function DateiUploadModal({ stueckId, onClose, onErfolg }) {
 }
 
 // ─── Liedtext Bearbeiten ─────────────────────────────────────
+const MD_CHEATSHEET = [
+  { syntax: '## Refrain',        desc: 'Abschnittstitel' },
+  { syntax: '### Strophe 1',     desc: 'Kleiner Abschnittstitel' },
+  { syntax: '**fett**',          desc: 'Fetter Text' },
+  { syntax: '*kursiv*',          desc: 'Kursiver Text' },
+  { syntax: '---',               desc: 'Trennlinie (zwischen Strophen)' },
+  { syntax: '> Text',            desc: 'Eingerückter Text' },
+  { syntax: 'Leerzeile',         desc: 'Neuer Absatz' },
+]
+
+const MD_BEISPIEL = `## Strophe 1
+Zeile eins des Liedtexts
+Zeile zwei des Liedtexts
+
+---
+
+## Refrain
+La la la, oh oh oh
+La la la, yeah yeah`
+
+function MarkdownTooltip() {
+  const [offen, setOffen] = useState(false)
+  return (
+    <div style={{ position:'relative', display:'inline-block' }}>
+      <button onClick={() => setOffen(o => !o)}
+        style={{ width:24, height:24, borderRadius:'50%', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-3)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', lineHeight:1, flexShrink:0 }}>
+        ?
+      </button>
+      {offen && (
+        <>
+          <div style={{ position:'fixed', inset:0, zIndex:199 }} onClick={() => setOffen(false)} />
+          <div style={{ position:'absolute', top:'calc(100% + 8px)', left:'50%', transform:'translateX(-50%)', zIndex:200, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', boxShadow:'var(--shadow-lg)', padding:'16px 18px', minWidth:300, maxWidth:380 }}>
+            <div style={{ fontSize:12, fontWeight:800, color:'var(--text)', marginBottom:10, textTransform:'uppercase', letterSpacing:'0.06em' }}>Markdown-Hilfe</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14 }}>
+              {MD_CHEATSHEET.map(({ syntax, desc }) => (
+                <div key={syntax} style={{ display:'flex', alignItems:'baseline', gap:10 }}>
+                  <code style={{ fontFamily:'monospace', fontSize:12, color:'var(--accent)', background:'var(--bg-2)', padding:'2px 6px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>{syntax}</code>
+                  <span style={{ fontSize:12, color:'var(--text-3)' }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize:11, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>Beispiel</div>
+            <pre style={{ fontFamily:'monospace', fontSize:11, color:'var(--text-2)', background:'var(--bg-2)', borderRadius:6, padding:'8px 10px', margin:0, whiteSpace:'pre-wrap', lineHeight:1.7 }}>{MD_BEISPIEL}</pre>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function LiedtextBearbeiten({ stueck, onSpeichern, onAbbrechen }) {
-  const [text,    setText]    = useState(stueck.liedtext ?? '')
-  const [akkorde, setAkkorde] = useState(stueck.notizen  ?? '')
-  const [tab,     setTab]     = useState('text')
+  const [text,       setText]       = useState(stueck.liedtext ?? '')
+  const [akkorde,    setAkkorde]    = useState(stueck.notizen  ?? '')
+  const [tab,        setTab]        = useState('text')
+  const [vorschau,   setVorschau]   = useState(false)
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ display:'flex', gap:4, borderBottom:'2px solid var(--border)', marginBottom:4 }}>
-        {[['text','📝 Liedtext'],['akkorde','🎸 Akkorde (ChordPro)']].map(([k,l]) => (
-          <button key={k} onClick={() => setTab(k)}
-            style={{ padding:'8px 14px', background:'none', border:'none', fontSize:13, cursor:'pointer', fontFamily:'inherit', color: tab===k ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===k ? 700 : 400, borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2 }}>
-            {l}
-          </button>
-        ))}
+      <div style={{ display:'flex', alignItems:'center', borderBottom:'2px solid var(--border)', marginBottom:4 }}>
+        <div style={{ display:'flex', gap:4, flex:1 }}>
+          {[['text','📝 Liedtext'],['akkorde','🎸 Akkorde (ChordPro)']].map(([k,l]) => (
+            <button key={k} onClick={() => { setTab(k); setVorschau(false) }}
+              style={{ padding:'8px 14px', background:'none', border:'none', fontSize:13, cursor:'pointer', fontFamily:'inherit', color: tab===k ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===k ? 700 : 400, borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2 }}>
+              {l}
+            </button>
+          ))}
+        </div>
+        {tab === 'text' && (
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <button onClick={() => setVorschau(v => !v)}
+              style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: vorschau ? 'var(--primary)' : 'var(--bg-2)', color: vorschau ? 'var(--primary-fg, #fff)' : 'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              {vorschau ? '✏️ Bearbeiten' : '👁 Vorschau'}
+            </button>
+            <MarkdownTooltip />
+          </div>
+        )}
       </div>
       {tab === 'text' ? (
-        <textarea value={text} onChange={e => setText(e.target.value)}
-          style={{ ...s.input, minHeight:300, fontFamily:'Georgia, serif', fontSize:15, lineHeight:1.9, resize:'vertical' }}
-          placeholder="Liedtext hier eingeben …" />
+        vorschau ? (
+          <div
+            dangerouslySetInnerHTML={{ __html: marked.parse(text || '*Kein Text vorhanden.*') }}
+            style={{ fontFamily:'Georgia, serif', fontSize:15, lineHeight:1.9, color:'var(--text)', minHeight:300, padding:'8px 0' }} />
+        ) : (
+          <textarea value={text} onChange={e => setText(e.target.value)}
+            style={{ ...s.input, minHeight:300, fontFamily:'Georgia, serif', fontSize:15, lineHeight:1.9, resize:'vertical' }}
+            placeholder="Liedtext hier eingeben …" />
+        )
       ) : (
         <>
           <textarea value={akkorde} onChange={e => setAkkorde(e.target.value)}
@@ -373,7 +441,7 @@ export default function StueckDetail() {
   const { kursId, stueckId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { rolle, T } = useApp()
+  const { rolle, T, schule } = useApp()
 
   const mob = window.innerWidth < 640
   const istEvent = location.pathname.includes('/events/')
@@ -398,6 +466,7 @@ export default function StueckDetail() {
   const [halbtoene,    setHalbtoene]    = useState(0)
   const [youtubeEdit,  setYoutubeEdit]  = useState(false)
   const [youtubeInput, setYoutubeInput] = useState('')
+  const [pdfModal,     setPdfModal]     = useState(false)
 
   const kannBearbeiten = rolle === 'admin' || rolle === 'superadmin' || rolle === 'lehrer'
 
@@ -429,27 +498,44 @@ export default function StueckDetail() {
     const win = window.open('', '_blank')
     const meta = [stueck.komponist, stueck.tonart, stueck.tempo].filter(Boolean).join(' · ')
     const html = marked.parse(stueck.liedtext ?? '')
+    const logoHtml = schule?.logo_url
+      ? `<img src="${schule.logo_url}" class="logo" alt="Logo" />`
+      : ''
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>${stueck.titel}</title>
 <style>
   body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; padding: 0 24px; color: #111; }
+  .header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 4px; }
+  .header-text { flex: 1; }
+  .logo { max-height: 64px; max-width: 160px; object-fit: contain; flex-shrink: 0; }
   h1 { font-size: 26px; margin: 0 0 4px; }
   .meta { font-size: 13px; color: #777; margin-bottom: 32px; border-bottom: 1px solid #ddd; padding-bottom: 12px; }
-  h2 { font-size: 17px; margin: 28px 0 6px; color: #222; }
-  h3 { font-size: 15px; margin: 20px 0 4px; color: #444; }
+  h2 { font-size: 17px; margin: 28px 0 6px; color: #222; page-break-after: avoid; }
+  h3 { font-size: 15px; margin: 20px 0 4px; color: #444; page-break-after: avoid; }
   p { margin: 0 0 8px; line-height: 1.9; }
   strong { font-weight: 700; }
   em { font-style: italic; }
   hr { border: none; border-top: 1px solid #ddd; margin: 24px 0; }
-  @media print { body { margin: 15mm 20mm; } }
+  blockquote { margin: 8px 0 8px 16px; padding-left: 12px; border-left: 3px solid #ccc; color: #555; font-style: italic; }
+  ul, ol { margin: 0 0 8px 20px; padding: 0; line-height: 1.9; }
+  li { margin-bottom: 2px; }
+  section { page-break-inside: avoid; }
+  @media print {
+    body { margin: 15mm 20mm; }
+    @page { margin: 15mm 20mm; }
+    .footer { position: fixed; bottom: 0; left: 0; right: 0; font-size: 10px; color: #aaa; text-align: center; padding-bottom: 8mm; }
+  }
 </style></head><body>
-<h1>${stueck.titel}</h1>
+<div class="header">
+  <div class="header-text"><h1>${stueck.titel}</h1></div>
+  ${logoHtml}
+</div>
 ${meta ? `<div class="meta">${meta}</div>` : ''}
 ${html}
+<div class="footer">${stueck.titel}${meta ? ' · ' + meta : ''}</div>
 </body></html>`)
     win.document.close()
-    win.focus()
-    setTimeout(() => win.print(), 300)
+    win.onload = () => { win.focus(); win.print() }
   }
 
   function metaBearbeitenStarten() {
@@ -606,7 +692,7 @@ ${html}
                   <button onClick={() => setTextGroesse(g => Math.min(56, g + 2))}
                     style={{ width:36, height:36, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit', fontWeight:700, flexShrink:0 }}>A+</button>
                   <div style={{ flex:1 }} />
-                  <button onClick={liedtextAlsPdf} style={s.btnSek} title="Als PDF drucken">📄 PDF</button>
+                  <button onClick={() => setPdfModal(true)} style={s.btnSek} title="Als PDF drucken">📄 PDF</button>
                   <button onClick={() => setVollbild(true)}
                     style={{ padding:'8px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                     {T('piece_fullscreen')}
@@ -615,9 +701,9 @@ ${html}
                     <button onClick={() => setBearbeiteText(true)} style={s.btnSek}>✏️</button>
                   )}
                 </div>
-                <pre style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', whiteSpace:'pre-wrap', margin:0, transition:'font-size 0.2s', wordBreak:'break-word' }}>
-                  {stueck.liedtext}
-                </pre>
+                <div
+                  dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }}
+                  style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', transition:'font-size 0.2s', wordBreak:'break-word' }} />
               </>
             ) : kannBearbeiten ? (
               <div style={{ textAlign:'center', padding:32 }}>
@@ -800,6 +886,35 @@ ${html}
         <DateiUploadModal stueckId={stueckId} onClose={() => setModal(null)} onErfolg={ladeData} />
       )}
 
+      {/* PDF Export Modal */}
+      {pdfModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e => { if (e.target === e.currentTarget) setPdfModal(false) }}>
+          <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:28, width:'100%', maxWidth:380, boxShadow:'var(--shadow-lg)' }}>
+            <div style={{ fontWeight:800, fontSize:16, marginBottom:16 }}>📄 PDF exportieren</div>
+            <div style={{ fontSize:14, color:'var(--text-2)', marginBottom:16 }}>
+              <strong style={{ color:'var(--text)' }}>{stueck?.titel}</strong>
+              {stueck?.komponist && <span style={{ color:'var(--text-3)' }}> · {stueck.komponist}</span>}
+            </div>
+            {schule?.logo_url ? (
+              <div style={{ display:'flex', alignItems:'center', gap:12, background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'10px 14px', marginBottom:20 }}>
+                <img src={schule.logo_url} alt="Logo" style={{ maxHeight:36, maxWidth:100, objectFit:'contain' }}
+                  onError={e => { e.target.style.display='none' }} />
+                <span style={{ fontSize:12, color:'var(--text-3)' }}>Schullogo wird eingebettet</span>
+              </div>
+            ) : (
+              <div style={{ fontSize:12, color:'var(--text-3)', marginBottom:20, padding:'10px 14px', background:'var(--bg-2)', borderRadius:'var(--radius)' }}>
+                Kein Logo hinterlegt — in den <strong>Schuleinstellungen</strong> konfigurierbar.
+              </div>
+            )}
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button onClick={() => setPdfModal(false)} style={s.btnSek}>Abbrechen</button>
+              <button onClick={() => { setPdfModal(false); liedtextAlsPdf() }} style={s.btnPri}>🖨️ Drucken</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Vollbild Modus */}
       {vollbild && stueck?.liedtext && (
         <div style={{ position:'fixed', inset:0, background:'#111', zIndex:2000, display:'flex', flexDirection:'column' }}>
@@ -814,9 +929,9 @@ ${html}
             </button>
           </div>
           <div style={{ flex:1, overflowY:'auto', padding: mob ? '24px 16px' : '40px 10vw', WebkitOverflowScrolling:'touch' }}>
-            <pre style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'#fff', whiteSpace:'pre-wrap', margin:'0 auto', maxWidth:700, transition:'font-size 0.15s', wordBreak:'break-word' }}>
-              {stueck.liedtext}
-            </pre>
+            <div
+              dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }}
+              style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'#fff', margin:'0 auto', maxWidth:700, transition:'font-size 0.15s', wordBreak:'break-word' }} />
           </div>
           <div style={{ padding:'12px 16px', background:'rgba(255,255,255,0.06)', borderTop:'1px solid rgba(255,255,255,0.1)', flexShrink:0 }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>

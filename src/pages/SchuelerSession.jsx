@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { marked } from 'marked'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { startseiteNach } from '../components/ProtectedRoute'
@@ -317,7 +318,7 @@ export default function SchuelerSession() {
                         </button>
                       ))}
                     </div>
-                    <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', whiteSpace: 'pre-wrap', fontSize: liedtextGroesse, lineHeight: 1.8, color: 'var(--text)' }}>{stueck.liedtext}</div>
+                    <div dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }} style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', fontSize: liedtextGroesse, lineHeight: 1.8, color: 'var(--text)' }} />
                   </>
                 : <PlatzhalterBox info={ansichtInfo} />
             )}

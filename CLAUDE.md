@@ -53,6 +53,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 
 All pages consume `AppContext` via the `useApp()` hook (`src/context/AppContext.jsx`). It provides:
 - `session`, `profil`, `rolle`, `laden` — auth state
+- `schule`, `setSchule` — current school object (`name`, `logo_url`, `website`, `email`, `telefon`, `adresse`, `zeitzone`); loaded on login
 - `T(key)` — translation function (see i18n below)
 - `theme`, `darkMode`, `changeTheme()`, `toggleDark()` — theme state
 - `lang`, `setLang()`, `zeitzone` — locale and school timezone
@@ -69,13 +70,13 @@ All pages consume `AppContext` via the `useApp()` hook (`src/context/AppContext.
 
 Staccato is a full music school management platform. Features by area:
 
-- **Admin Dashboard**: KPI overview cards (students, teachers, active courses, lessons today, attendance rate, monthly revenue, open prospects) via a Supabase RPC function `dashboard_stats`.
+- **Admin Dashboard**: KPI overview cards (students, teachers, active courses, lessons today, attendance rate, monthly revenue, open prospects) via a Supabase RPC function `dashboard_stats`. Has a second tab "Einstellungen" (`SchulEinstellungen` component) where admin can edit school name, logo URL, website, email, phone, and address — saved back to the `schulen` table and synced into the global `schule` context state.
 - **Member management** (`Mitgliederverwaltung`): Create/edit/delete members of all roles. Admin can set passwords directly for members (via `supabase.auth.admin`), upload typed documents (Aufnahmeformular, Vertrag, SEPA, Einverständnis) stored in the `mitglied-dateien` bucket, view current course assignments.
 - **Course management** (`Kursverwaltung`): Create/edit courses (`unterricht`) with type (einzel/gruppe/chor/ensemble), weekly schedule, room, instrument, billing model (einzeln/paket/pauschale), and teacher assignment. The detail view (`KursDetail`) has four tabs: Stunden (individual lessons with notes + homework), Anwesenheit (attendance matrix), Schüler (student list), and Repertoire (pieces linked to this course). Individual lessons can be deleted (cascades to `anwesenheit` and `stunden_lehrer`).
 - **Room management** (`Raumverwaltung`): CRUD for rooms with capacity and equipment. Rooms are referenced in courses, lessons, events, and the Interessenten pipeline.
 - **Schedule** (`Stundenplan`): Shared by admin, teacher, parent. Two views: week grid (7–22 Uhr, 60px/h, timezone-aware) and list view. Colour-coded by course type. Events also appear inline. Teachers can mark lessons done/cancelled directly from the schedule.
-- **Repertoire**: Global piece library (`Repertoire.jsx`) plus per-course and per-event repertoire (`KursRepertoire`, `EventRepertoire`). Pieces have: title, composer, key, tempo, YouTube link, lyrics (plain text), chords (ChordPro format), and files (`stueck_dateien` with types `noten`/`liedtext`/`audio` and optional `stimme` voice part: soprano/alto/tenor/bass). Piece status: `aktuell`, `geplant`, `abgeschlossen`, `archiviert`.
-- **Piece detail** (`StueckDetail`): Renders ChordPro chords with live transposition (semitone up/down using SHARP/FLAT arrays). Renders PDFs inline via signed URL iframe. Plays audio. Shows YouTube embed. Per-voice file filtering.
+- **Repertoire**: Global piece library (`Repertoire.jsx`) plus per-course and per-event repertoire (`KursRepertoire`, `EventRepertoire`). Pieces have: title, composer, key, tempo, YouTube link, lyrics (**Markdown** format, rendered via `marked`), chords (ChordPro format), and files (`stueck_dateien` with types `noten`/`liedtext`/`audio` and optional `stimme` voice part: soprano/alto/tenor/bass). Piece status: `aktuell`, `geplant`, `abgeschlossen`, `archiviert`.
+- **Piece detail** (`StueckDetail`): Renders ChordPro chords with live transposition (semitone up/down using SHARP/FLAT arrays). Renders PDFs inline via signed URL iframe. Plays audio. Shows YouTube embed. Per-voice file filtering. Liedtext is rendered as Markdown (`dangerouslySetInnerHTML` + `marked.parse`) in the detail view, fullscreen mode, Unterrichtsmodus, and SchuelerSession. The editor has a preview toggle and a `MarkdownTooltip` cheatsheet. PDF export opens a confirmation modal that shows the school logo (from `schule.logo_url`) and embeds it in the print layout.
 - **Events** (`Events`): Types: konzert, vorspiel, pruefung, veranstaltung, vorstandssitzung, sonstiges. Admin creates events, manages participant list (invites by profile), participants RSVP (yes/no). Events have optional end time, location, room, and public flag. Each event has its own repertoire (`EventRepertoire`). Vorstand users see all events of their school.
 - **Vorstandsmodul** (`src/pages/vorstand/`): Board-member module accessible to `vorstand`, `admin`, `superadmin`.
   - `Dashboard.jsx` — KPIs (open tasks, goals, protocols, next session) + student tiles (courses, upcoming lessons).
@@ -99,7 +100,7 @@ Helper functions: `meine_rolle()` SECURITY DEFINER — returns the calling user'
 
 ### Live Teaching Session
 
-Teacher opens `Unterrichtsmodus` (`/lehrer/kurse/:id/unterrichtsmodus`), which generates a 6-character uppercase code and QR code. Students join at `/session/:code` (`SchuelerSession.jsx`). Communication is bidirectional via Supabase realtime channels: teacher pushes the active piece/view, students send emoji reactions (👍👎✋❤️😕). Attendance is auto-recorded when the teacher ends the session.
+Teacher opens `Unterrichtsmodus` (`/lehrer/kurse/:id/unterrichtsmodus`), which generates a 6-character uppercase code and QR code. Students join at `/session/:code` (`SchuelerSession.jsx`). Communication is bidirectional via Supabase realtime channels: teacher pushes the active piece/view, students send emoji reactions (👍👎✋❤️😕). Attendance is auto-recorded when the teacher ends the session. Liedtext is rendered as Markdown in both views.
 
 ### Theming
 

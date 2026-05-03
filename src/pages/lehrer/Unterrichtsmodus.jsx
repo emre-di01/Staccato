@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { marked } from 'marked'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import QRCode from 'qrcode'
@@ -397,7 +398,7 @@ export default function Unterrichtsmodus() {
 
               {aktiveAnsicht === 'liedtext' && (
                 aktivStueck.liedtext
-                  ? <div style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.8, color: 'var(--text)' }}>{aktivStueck.liedtext}</div>
+                  ? <div dangerouslySetInnerHTML={{ __html: marked.parse(aktivStueck.liedtext) }} style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)' }} />
                   : <VorschauPlatzhalter ansicht={aktiveAnsicht} />
               )}
 

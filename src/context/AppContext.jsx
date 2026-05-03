@@ -16,6 +16,7 @@ function isLiveSession() {
 export function AppProvider({ children }) {
   const [session,    setSession]    = useState(undefined)
   const [profil,     setProfil]     = useState(null)
+  const [schule,     setSchule]     = useState(null)
   const [zeitzone,   setZeitzone]   = useState('Europe/Berlin')
   const [laden,      setLaden]      = useState(true)
   const [theme,      setThemeKey]   = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
@@ -46,8 +47,9 @@ export function AppProvider({ children }) {
         setProfil(data)
         if (data.sprache) setLang(data.sprache)
         if (data.schule_id) {
-          const { data: schule } = await supabase.from('schulen').select('zeitzone').eq('id', data.schule_id).single()
-          if (schule?.zeitzone) setZeitzone(schule.zeitzone)
+          const { data: schuleData } = await supabase.from('schulen').select('zeitzone, logo_url, name, website, email, telefon, adresse').eq('id', data.schule_id).single()
+          if (schuleData?.zeitzone) setZeitzone(schuleData.zeitzone)
+          setSchule(schuleData ?? null)
         }
       }
     } catch (e) {
@@ -131,6 +133,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       session, profil, rolle, laden,
       theme, darkMode, lang, zeitzone,
+      schule, setSchule,
       changeTheme, toggleDark, setLang,
       abmelden, T, ladeProfil,
     }}>
