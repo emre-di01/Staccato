@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { marked } from 'marked'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -424,6 +425,33 @@ export default function StueckDetail() {
     setBearbeiteText(false)
   }
 
+  function liedtextAlsPdf() {
+    const win = window.open('', '_blank')
+    const meta = [stueck.komponist, stueck.tonart, stueck.tempo].filter(Boolean).join(' · ')
+    const html = marked.parse(stueck.liedtext ?? '')
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${stueck.titel}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; padding: 0 24px; color: #111; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .meta { font-size: 13px; color: #777; margin-bottom: 32px; border-bottom: 1px solid #ddd; padding-bottom: 12px; }
+  h2 { font-size: 17px; margin: 28px 0 6px; color: #222; }
+  h3 { font-size: 15px; margin: 20px 0 4px; color: #444; }
+  p { margin: 0 0 8px; line-height: 1.9; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 24px 0; }
+  @media print { body { margin: 15mm 20mm; } }
+</style></head><body>
+<h1>${stueck.titel}</h1>
+${meta ? `<div class="meta">${meta}</div>` : ''}
+${html}
+</body></html>`)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 300)
+  }
+
   function metaBearbeitenStarten() {
     setMetaForm({ titel: stueck.titel ?? '', komponist: stueck.komponist ?? '', tonart: stueck.tonart ?? '', tempo: stueck.tempo ?? '' })
     setBearbeiteMeta(true)
@@ -578,6 +606,7 @@ export default function StueckDetail() {
                   <button onClick={() => setTextGroesse(g => Math.min(56, g + 2))}
                     style={{ width:36, height:36, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit', fontWeight:700, flexShrink:0 }}>A+</button>
                   <div style={{ flex:1 }} />
+                  <button onClick={liedtextAlsPdf} style={s.btnSek} title="Als PDF drucken">📄 PDF</button>
                   <button onClick={() => setVollbild(true)}
                     style={{ padding:'8px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                     {T('piece_fullscreen')}
