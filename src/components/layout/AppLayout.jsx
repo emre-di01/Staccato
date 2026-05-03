@@ -317,9 +317,11 @@ export default function AppLayout() {
           padding: '12px 16px', background: 'var(--surface)',
           borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 50,
         }} className="mobile-header">
-          <button onClick={() => setSidebarOffen(true)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text)' }}>☰</button>
+          <div style={{ flex: 1 }}>
+            <button onClick={() => setSidebarOffen(true)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text)' }}>☰</button>
+          </div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
             <button onClick={() => setSettingsOffen(true)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)' }}>⚙️</button>
             <button onClick={() => window.location.reload()} style={{ border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer', color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', padding: '7px 12px', borderRadius: 'var(--radius)', fontFamily: 'inherit', lineHeight: 1 }}>↻ Reload</button>
           </div>
