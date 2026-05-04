@@ -43,7 +43,7 @@ set -a && source supabase/.env && set +a && supabase start
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **1.4.1** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **1.5.1** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -202,46 +202,118 @@ Staccato is a full music school management platform. Features by area:
 ### Supabase tables
 
 **Core:**
-- `profiles` — all users; columns: `id`, `voller_name`, `rolle`, `schule_id`, `sprache`, `telefon`, `adresse`, `geburtsdatum`, `aktiv`
-- `schulen` — one row per school; columns: `id`, `name`, `adresse`, `telefon`, `email`, `website`, `logo_url`, `farbe`, `sprachen[]`, `aktiv`, `erstellt_am`, `zeitzone`
-  - RLS: SELECT open to all; UPDATE/INSERT/DELETE via "schulen: sadmin" (superadmin only) + "schulen: admin update" (admin/superadmin for their own school)
+- `profiles` — all users; columns: `id`, `voller_name`, `rolle`, `schule_id`, `sprache`, `telefon`, `adresse`, `geburtsdatum`, `aktiv`, `notizen`, `avatar_url`, `email_benachrichtigungen` (jsonb), `kalender_token` (uuid, unique), `erstellt_am`, `aktualisiert_am`
+- `schulen` — one row per school; columns: `id`, `name`, `adresse`, `telefon`, `email`, `website`, `logo_url`, `farbe`, `sprachen[]`, `aktiv`, `erstellt_am`, `zeitzone` (default `'Europe/Berlin'`)
+  - RLS: SELECT open to all authenticated; UPDATE via `schulen: sadmin` (superadmin, all ops) + `schulen: admin update` (admin/superadmin for own school)
+- `eltern_schueler` — parent↔student join (`eltern_id`, `schueler_id`)
 
 **Courses & Lessons:**
-- `unterricht` — courses; type enum: einzel/gruppe/chor/ensemble; billing enum: einzeln/paket/pauschale
-- `unterricht_lehrer` — teacher↔course join
-- `stunden` — individual lessons (datum, beginn, ende, status: geplant/stattgefunden/ausgefallen/verschoben, notizen, hausaufgaben)
+- `unterricht` — courses; `typ` enum: `einzel/gruppe/chor/ensemble`; `abrechnungs_typ`: `einzeln/paket/pauschale`; has `wochentag`, `uhrzeit_von/bis` (time without timezone — stored as local school time), `raum_id`, `instrument_id`, `farbe`
+- `unterricht_lehrer` — teacher↔course join (`lehrer_id`, `unterricht_id`, `rolle`)
+- `unterricht_schueler` — student↔course join (`schueler_id`, `unterricht_id`, `status`)
+- `stunden` — individual lessons; `beginn`/`ende` as `timestamptz` (UTC); `status` enum `termin_status`: `geplant/stattgefunden/abgesagt/verschoben`; `notizen`, `hausaufgaben`, `raum_id` (optional override)
 - `stunden_lehrer` — lesson↔teacher join (for co-teachers)
-- `anwesenheit` — per-student attendance; status: anwesend/abwesend/entschuldigt/zu_spaet
-- `instrumente` — per-school instruments with emoji and multilingual names
+- `anwesenheit` — per-student attendance; `status`: `anwesend/abwesend/entschuldigt/zu_spaet`
+- `instrumente` — per-school instruments with emoji and multilingual names (`name_de`, `name_en`, `name_tr`)
+- `lehrer_instrumente` — teacher↔instrument join
+- `pakete` — lesson packages per student/course
 
 **Repertoire:**
-- `stuecke` — pieces; columns: titel, komponist, tonart, tempo, youtube_url, liedtext (Markdown), notizen (ChordPro akkorde)
-- `unterricht_stuecke` — course↔piece join (has `status` and `reihenfolge` for ordering)
-- `stueck_dateien` — files per piece; typ: noten/liedtext/audio; stimme: sopran/alt/tenor/bass (nullable)
+- `stuecke` — pieces; `titel`, `komponist`, `tonart`, `tempo`, `youtube_url`, `liedtext` (Markdown), `notizen` (ChordPro akkorde), `erstellt_von`
+- `unterricht_stuecke` — course↔piece join (`status`, `reihenfolge`)
+- `event_stuecke` — event↔piece join
+- `stueck_dateien` — files per piece; `typ`: `noten/liedtext/audio`; `stimme`: `sopran/alt/tenor/bass` (nullable)
 
 **Events:**
-- `events` — typ: konzert/vorspiel/pruefung/veranstaltung/vorstandssitzung/sonstiges
-- `event_teilnehmer` — RSVP: status angenommen/abgelehnt/ausstehend
+- `events` — `typ` enum `event_typ`: `konzert/vorspiel/pruefung/veranstaltung/vorstandssitzung/sonstiges`; `oeffentlich` bool; `beginn`/`ende` as `timestamptz`
+- `event_teilnehmer` — RSVP; column `zusage` of type `zusage_status` enum: `offen/zugesagt/abgesagt`
 - `unterricht_sessions` / `session_teilnehmer` / `session_reaktionen` — live teaching session data
 
 **Misc:**
 - `raeume` — rooms with capacity and equipment
 - `interessenten` — prospect pipeline
 - `mitglied_dateien` — per-member documents (Aufnahmeformular, Vertrag, SEPA, Einverständnis)
-- `nachrichten` — messages (schema ready; UI not yet implemented); typ: direkt/broadcast
+- `dateien` — generic file attachments (schueler_id, typ, bucket_pfad)
+- `nachrichten` — messages (schema ready; UI not yet implemented); `typ`: `direkt/broadcast`
+- `nachricht_gelesen` — read receipts for messages
 - `rechnungen` — invoices (schema ready; UI not yet implemented)
+- `push_subscriptions` — Web Push subscription endpoints per user
+- `kalender_tokens` — legacy token table (token management now via `kalender_token` column in `profiles`)
 
 **Vorstand:**
-- `vorstand_ziele`, `vorstand_aufgaben`, `vorstand_protokolle`, `vorstand_protokoll_dateien`
+- `vorstand_ziele` — annual/quarterly goals; `status`: `offen/in_bearbeitung/erledigt`
+- `vorstand_aufgaben` — tasks linked to goals; `status`: `offen/in_bearbeitung/erledigt`
+- `vorstand_protokolle` — meeting protocols with `teilnehmer_ids[]`, `beschluesse`, `inhalt`, optional `event_id`
+- `vorstand_protokoll_dateien` — file attachments for protocols
 
-**Storage buckets:** `stueck-dateien` (piece PDFs/audio), `mitglied-dateien` (member documents), `vorstand-dateien` (protocol attachments)
+**View:**
+- `mitglieder_mit_email` — joins `profiles` with `auth.users` to expose `email`; used by `Mitgliederverwaltung`; defined in `seed.sql` (not in migrations — must stay in seed); `security_invoker = false` so `auth.users` is readable
 
-**RPC functions:** `dashboard_stats(p_schule_id)` — returns a single JSONB with all admin KPI values
+**Storage buckets:**
+| Bucket | Public | Zweck |
+|--------|--------|-------|
+| `avatare` | ✓ | Profile pictures |
+| `stueck-dateien` | ✗ | Piece PDFs and audio |
+| `kurs-dateien` | ✗ | Course files |
+| `schueler-dateien` | ✗ | Student files |
+| `mitglied-dateien` | ✗ | Member documents (Aufnahmeformular etc.) |
+| `vorstand-dateien` | ✗ | Board meeting protocol attachments |
 
-**Helper functions (SECURITY DEFINER):**
-- `meine_rolle()` — returns calling user's role; avoids RLS recursion in policies
-- `meine_schule_id()` — returns calling user's `schule_id`; used in RLS policies
-- `meine_schule()` — alias for `meine_schule_id()`; used in some older policies
+**Enum types:**
+| Enum | Values |
+|------|--------|
+| `user_rolle` | `superadmin, admin, lehrer, schueler, eltern, vorstand` |
+| `unterricht_typ` | `einzel, gruppe, chor, ensemble` |
+| `abrechnungs_typ` | `einzeln, paket, pauschale` |
+| `termin_status` | `geplant, stattgefunden, abgesagt, verschoben` |
+| `event_typ` | `konzert, vorspiel, pruefung, veranstaltung, sonstiges, vorstandssitzung` |
+| `zusage_status` | `offen, zugesagt, abgesagt` |
+| `sprache` | `de, en, tr` |
+
+**Database functions (all SECURITY DEFINER unless noted):**
+| Function | Returns | Purpose |
+|----------|---------|---------|
+| `meine_rolle()` | `user_rolle` | Calling user's role — used in RLS to avoid recursion |
+| `meine_schule_id()` | `uuid` | Calling user's `schule_id` — used in RLS policies |
+| `meine_schule()` | `uuid` | Alias for `meine_schule_id()` — older policies |
+| `create_user(email, passwort, name, rolle, schule_id)` | `uuid` | Creates auth.users row + profile in one transaction |
+| `delete_auth_user(user_id)` | `void` | Deletes from auth.users (cascades to profile) |
+| `admin_set_password(user_id, passwort)` | `void` | Sets password without confirmation email |
+| `admin_set_email(user_id, email)` | `void` | Sets email without confirmation email |
+| `dashboard_stats(schule_id)` | `jsonb` | All admin KPI values in one call |
+| `stunden_generieren(unterricht_id, von, bis)` | `integer` | Generates weekly lesson rows for a course; uses school `zeitzone` via `AT TIME ZONE` so times are stored correctly as UTC |
+| `create_unterricht(...)` | `uuid` | Creates course + generates initial lessons |
+| `anwesenheit_erfassen(schueler[], stunde_id)` | `void` | Bulk-records attendance |
+| `mein_stundenplan(von, bis)` | `TABLE` | Personal schedule RPC |
+| `raum_belegung(raum_id, von, bis)` | `TABLE` | Room occupancy check |
+| `ist_lehrer_von_schueler(schueler_id)` | `boolean` | RLS helper |
+| `ist_lehrer_von_unterricht(unterricht_id)` | `boolean` | RLS helper |
+| `ist_elternteil_von(schueler_id)` | `boolean` | RLS helper |
+| `paket_stunde_verbrauchen(schueler_id, unterricht_id)` | `boolean` | Deducts one from package |
+| `get_or_create_kalender_token(user_id)` | `text` | Gets or generates iCal token |
+| `session_starten(unterricht_id, stunde_id)` | `TABLE` | Starts live teaching session |
+| `session_beitreten(join_code)` | `uuid` | Student joins session by code |
+| `session_beenden(session_id)` | `void` | Ends session, auto-records attendance |
+| `session_praesentation_wechseln(session_id, ...)` | `void` | Changes active view in session |
+| `handle_new_user()` | `trigger` | Trigger: creates profile on auth.users insert |
+
+### Migrations
+
+Migration files in `supabase/migrations/` — applied in filename order by `supabase db reset`:
+
+| File | Inhalt |
+|------|--------|
+| `20240101000000_schema.sql` | Complete initial schema |
+| `20260428000000_email_benachrichtigungen.sql` | `email_benachrichtigungen` column on profiles |
+| `20260428000001_admin_set_email.sql` | `admin_set_email()` function |
+| `20260428000002_fix_stunden_colehrer_rls.sql` | Fix stunden RLS for co-teachers |
+| `20260428000003_vorstand_enums.sql` | Adds `vorstand` to `user_rolle`, `vorstandssitzung` to `event_typ` — **separate file** because PostgreSQL cannot use a new enum value in the same transaction it was added |
+| `20260428000004_vorstand_schema.sql` | Vorstand tables, `meine_schule_id()`, RLS policies, storage policies |
+| `20260503000000_schulen_admin_update_und_zeitzone.sql` | `zeitzone` column on schulen, `schulen: admin update` policy |
+| `20260503000001_ical_kalender.sql` | `kalender_token` column on profiles, RLS policies for public event RSVPs |
+| `20260504000000_fix_stunden_generieren_zeitzone.sql` | Fixes `stunden_generieren` to use school timezone via `AT TIME ZONE` — previously stored times as UTC causing a 2h display offset |
+
+**Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`).
 
 ### Live Teaching Session
 
