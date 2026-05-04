@@ -189,8 +189,47 @@ function zeitAgo(iso) {
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
 }
 
+function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarOffen }) {
+  return (
+    <div style={{ position: 'relative', ...(mobile ? { flex: 1, display: 'flex' } : {}) }}
+      onMouseEnter={e => {
+        if (!item.nachrichten || mobile || popupGesperrt.current) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        setPopupPos({ top: rect.top })
+      }}
+      onMouseLeave={() => item.nachrichten && setPopupPos(null)}
+    >
+      <NavLink
+        to={item.to}
+        end={item.to.split('/').length === 2}
+        onClick={() => setSidebarOffen(false)}
+        style={({ isActive }) => mobile ? {
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+          padding: '8px 4px', borderRadius: 10, textDecoration: 'none', flex: 1,
+          background: isActive ? 'var(--bg-2)' : 'transparent',
+          color: isActive ? 'var(--primary)' : 'var(--text-3)',
+          fontSize: 10, fontWeight: isActive ? 700 : 500,
+          transition: 'all 0.15s',
+        } : {
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 16px', borderRadius: 'var(--radius)',
+          textDecoration: 'none', fontSize: 14, fontWeight: 500,
+          color: isActive ? 'var(--primary-fg)' : 'var(--text-2)',
+          background: isActive ? 'var(--primary)' : 'transparent',
+          transition: 'all 0.15s',
+          marginBottom: 2,
+        }}
+      >
+        <span style={{ fontSize: mobile ? 20 : 16 }}>{item.icon}</span>
+        {!mobile && <span style={{ flex: 1 }}>{item.label}</span>}
+        {mobile && <span>{item.label}</span>}
+      </NavLink>
+    </div>
+  )
+}
+
 export default function AppLayout() {
-  const { profil, rolle, abmelden, T } = useApp()
+  const { profil, rolle, abmelden, T, refreshKey } = useApp()
   const navigate = useNavigate()
   const [sidebarOffen, setSidebarOffen]     = useState(false)
   const [settingsOffen, setSettingsOffen]   = useState(false)
@@ -228,45 +267,6 @@ export default function AppLayout() {
     window.location.href = '/login'
   }
 
-  const NavItem = ({ item, mobile = false }) => {
-    return (
-      <div style={{ position: 'relative', ...(mobile ? { flex: 1, display: 'flex' } : {}) }}
-        onMouseEnter={e => {
-          if (!item.nachrichten || mobile || popupGesperrt.current) return
-          const rect = e.currentTarget.getBoundingClientRect()
-          setPopupPos({ top: rect.top })
-        }}
-        onMouseLeave={() => item.nachrichten && setPopupPos(null)}
-      >
-        <NavLink
-          to={item.to}
-          end={item.to.split('/').length === 2}
-          onClick={() => setSidebarOffen(false)}
-          style={({ isActive }) => mobile ? {
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-            padding: '8px 4px', borderRadius: 10, textDecoration: 'none', flex: 1,
-            background: isActive ? 'var(--bg-2)' : 'transparent',
-            color: isActive ? 'var(--primary)' : 'var(--text-3)',
-            fontSize: 10, fontWeight: isActive ? 700 : 500,
-            transition: 'all 0.15s',
-          } : {
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 16px', borderRadius: 'var(--radius)',
-            textDecoration: 'none', fontSize: 14, fontWeight: 500,
-            color: isActive ? 'var(--primary-fg)' : 'var(--text-2)',
-            background: isActive ? 'var(--primary)' : 'transparent',
-            transition: 'all 0.15s',
-            marginBottom: 2,
-          }}
-        >
-          <span style={{ fontSize: mobile ? 20 : 16 }}>{item.icon}</span>
-          {!mobile && <span style={{ flex: 1 }}>{item.label}</span>}
-          {mobile && <span>{item.label}</span>}
-        </NavLink>
-      </div>
-    )
-  }
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
 
@@ -293,7 +293,7 @@ export default function AppLayout() {
 
         {/* Nav */}
         <nav style={{ flex: 1 }}>
-          {navItems.map(item => <NavItem key={item.to} item={item} />)}
+          {navItems.map(item => <NavItem key={item.to} item={item} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />)}
         </nav>
 
         {/* Session beitreten (Schüler + Vorstand) */}
@@ -332,7 +332,7 @@ export default function AppLayout() {
               <button onClick={() => setSidebarOffen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
             </div>
             <nav style={{ flex: 1 }}>
-              {navItems.map(item => <NavItem key={item.to} item={item} />)}
+              {navItems.map(item => <NavItem key={item.to} item={item} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />)}
             </nav>
             {(rolle === 'schueler' || rolle === 'vorstand') && (
               <button onClick={() => { setJoinSessionOffen(true); setSidebarOffen(false) }}
@@ -373,7 +373,7 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }} className="main-content">
+        <main key={refreshKey} style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }} className="main-content">
           <Outlet />
         </main>
 
@@ -384,7 +384,7 @@ export default function AppLayout() {
           borderTop: '1px solid var(--border)',
           position: 'sticky', bottom: 0,
         }} className="mobile-bottom-nav">
-          {navItems.slice(0, 5).map(item => <NavItem key={item.to} item={item} mobile />)}
+          {navItems.slice(0, 5).map(item => <NavItem key={item.to} item={item} mobile setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />)}
         </nav>
       </div>
 

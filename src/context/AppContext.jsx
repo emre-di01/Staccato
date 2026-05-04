@@ -34,6 +34,7 @@ export function AppProvider({ children }) {
     document.documentElement.lang = lang
   }, [lang])
 
+  const [refreshKey, setRefreshKey] = useState(0)
   const hiddenAt = useRef(0)
 
   const ladeProfil = useCallback(async (userId) => {
@@ -63,14 +64,22 @@ export function AppProvider({ children }) {
     // getSession() handles token refresh and is the authoritative initialization source.
     // onAuthStateChange fires INITIAL_SESSION immediately (possibly with null while token
     // is being refreshed), so we skip it here to avoid a race that redirects to /login.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session?.user) {
-        ladeProfil(session.user.id)
-      } else {
+    const sessionTimeout = new Promise(resolve =>
+      setTimeout(() => resolve({ data: { session: null } }), 10_000)
+    )
+    Promise.race([supabase.auth.getSession(), sessionTimeout])
+      .then(({ data: { session } }) => {
+        setSession(session)
+        if (session?.user) {
+          ladeProfil(session.user.id)
+        } else {
+          setLaden(false)
+        }
+      })
+      .catch(() => {
+        setSession(null)
         setLaden(false)
-      }
-    })
+      })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'INITIAL_SESSION') return
@@ -95,14 +104,16 @@ export function AppProvider({ children }) {
       if (document.visibilityState === 'hidden') { hiddenAt.current = Date.now(); return }
       const elapsed = hiddenAt.current > 0 ? Date.now() - hiddenAt.current : 0
       hiddenAt.current = 0
-      if (elapsed < 5_000) return
+      if (elapsed < 3 * 60 * 1000) return  // ignore if away less than 3 minutes
       if (isLiveSession()) return
-      window.location.reload()
+      setRefreshKey(k => k + 1)  // remount current page to re-fetch data, no full reload
     }
 
-    function handleOnline() {
+    async function handleOnline() {
       if (isLiveSession()) return
-      window.location.reload()
+      const { data: { session: current } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }))
+      if (!current) { window.location.reload(); return }
+      setRefreshKey(k => k + 1)
     }
 
     document.addEventListener('visibilitychange', handleVisibility)
@@ -111,7 +122,7 @@ export function AppProvider({ children }) {
       document.removeEventListener('visibilitychange', handleVisibility)
       window.removeEventListener('online', handleOnline)
     }
-  }, [ladeProfil])
+  }, [])
 
   async function abmelden() {
     await supabase.auth.signOut()
@@ -136,6 +147,7 @@ export function AppProvider({ children }) {
       schule, setSchule,
       changeTheme, toggleDark, setLang,
       abmelden, T, ladeProfil,
+      refreshKey,
     }}>
       {children}
     </AppContext.Provider>
