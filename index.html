@@ -25,6 +25,10 @@
       a { text-decoration: none; }
       button { font-family: inherit; }
       input, textarea, select { font-family: inherit; }
+      /* Prevent iOS Safari from auto-zooming on input focus */
+      @media (max-width: 768px) {
+        input, textarea, select { font-size: 16px !important; }
+      }
     </style>
   </head>
   <body>
