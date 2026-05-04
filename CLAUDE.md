@@ -43,7 +43,7 @@ set -a && source supabase/.env && set +a && supabase start
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **1.5.1** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **1.6.0** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -66,7 +66,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/admin/instrumente` | `Instrumente` | admin, superadmin |
 | `/admin/abrechnung` | *Platzhalter* | admin, superadmin |
 | `/admin/interessenten` | `Interessenten` | admin, superadmin |
-| `/admin/nachrichten` | *Platzhalter* | admin, superadmin |
+| `/admin/nachrichten` | `Nachrichten` | admin, superadmin |
 | `/lehrer` | `LehrerDashboard` | lehrer, admin, superadmin |
 | `/lehrer/kurse` | `LehrerKurse` | lehrer, admin, superadmin |
 | `/lehrer/kurse/:id` | `KursDetail` | lehrer, admin, superadmin |
@@ -77,7 +77,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/lehrer/anwesenheit` | `Stundenplan` | lehrer, admin, superadmin |
 | `/lehrer/repertoire` | `Repertoire` | lehrer, admin, superadmin |
 | `/lehrer/events` | `Events` (lehrer) | lehrer, admin, superadmin |
-| `/lehrer/nachrichten` | *Platzhalter* | lehrer, admin, superadmin |
+| `/lehrer/nachrichten` | `Nachrichten` | lehrer, admin, superadmin |
 | `/schueler` | `SchuelerDashboard` | schueler |
 | `/schueler/stundenplan` | `Stundenplan` | schueler |
 | `/schueler/kurse` | `SchuelerKurse` | schueler |
@@ -85,7 +85,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/schueler/kurse/:id/anwesenheit` | `SchuelerAnwesenheit` | schueler |
 | `/schueler/events` | `Events` (schueler) | schueler |
 | `/schueler/repertoire` | `Repertoire` | schueler |
-| `/schueler/nachrichten` | *Platzhalter* | schueler |
+| `/schueler/nachrichten` | `Nachrichten` | schueler |
 | `/vorstand` | `VorstandDashboard` | vorstand, admin, superadmin |
 | `/vorstand/ziele` | `VorstandZiele` | vorstand, admin, superadmin |
 | `/vorstand/protokolle` | `VorstandProtokolle` | vorstand, admin, superadmin |
@@ -97,13 +97,13 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/eltern/stundenplan` | `Stundenplan` | eltern |
 | `/eltern/dateien` | *Platzhalter* | eltern |
 | `/eltern/events` | *Platzhalter* | eltern |
-| `/eltern/nachrichten` | *Platzhalter* | eltern |
+| `/eltern/nachrichten` | `Nachrichten` | eltern |
 | `/session/:code` | `SchuelerSession` | public (no auth) |
 | `/profil` | `ProfilSeite` | all roles |
 | `/impressum` | `Impressum` | public |
 | `/datenschutz` | `Datenschutz` | public |
 
-**Placeholder routes**: Abrechnung, Nachrichten, Dateien, and the entire `eltern` subtree (except Stundenplan and Profil) render a `P(label, icon)` placeholder component — these features are in the schema but the UI is not yet implemented.
+**Placeholder routes**: Abrechnung, Dateien, and the `eltern` Dashboard render a `P(label, icon)` placeholder component — these features are in the schema but the UI is not yet implemented.
 
 ### Navigation menu items per role
 
@@ -195,9 +195,11 @@ Staccato is a full music school management platform. Features by area:
 
 - **Profile** (`ProfilSeite`): Any user can edit their name, phone, address, birthday, change password. Members see/download their documents (uploaded by admin).
 
+- **Nachrichten** (`src/pages/Nachrichten.jsx`): Messaging for all roles. Three message types: `direkt` (direct 1:1), `broadcast` (school-wide), `kurs` (course group). The same component serves admin, lehrer, schueler, and eltern routes. Features: unread badge in the sidebar nav, compose modal (select type → recipient/course → subject + body), message list with sender avatar/role chip, read-receipt tracking via `nachricht_gelesen`. Mobile-optimised: stack navigation (list → detail → compose), bottom-sheet compose. Desktop: persistent popup (bottom-right, hover). Admins and teachers can send all types; students and parents receive only.
+
 - **Impressum / Datenschutz**: Public static pages, no auth required.
 
-- **Not yet implemented** (placeholder routes, schema exists): Abrechnung (billing/invoices), Nachrichten (messaging), Dateien (parent file view), Eltern Dashboard.
+- **Not yet implemented** (placeholder routes, schema exists): Abrechnung (billing/invoices), Dateien (parent file view), Eltern Dashboard.
 
 ### Supabase tables
 
@@ -234,8 +236,8 @@ Staccato is a full music school management platform. Features by area:
 - `interessenten` — prospect pipeline
 - `mitglied_dateien` — per-member documents (Aufnahmeformular, Vertrag, SEPA, Einverständnis)
 - `dateien` — generic file attachments (schueler_id, typ, bucket_pfad)
-- `nachrichten` — messages (schema ready; UI not yet implemented); `typ`: `direkt/broadcast`
-- `nachricht_gelesen` — read receipts for messages
+- `nachrichten` — messages; `typ` (`nachricht_typ` enum): `direkt/broadcast/kurs`; `kurs_id` uuid (nullable, FK → `unterricht`, for `kurs`-type messages); `gesendet_von`, `empfaenger_id` (nullable for broadcast/kurs), `betreff`, `inhalt`, `schule_id`
+- `nachricht_gelesen` — read receipts for messages (`nachricht_id`, `user_id`, `gelesen_am`)
 - `rechnungen` — invoices (schema ready; UI not yet implemented)
 - `push_subscriptions` — Web Push subscription endpoints per user
 - `kalender_tokens` — legacy token table (token management now via `kalender_token` column in `profiles`)
@@ -269,6 +271,7 @@ Staccato is a full music school management platform. Features by area:
 | `event_typ` | `konzert, vorspiel, pruefung, veranstaltung, sonstiges, vorstandssitzung` |
 | `zusage_status` | `offen, zugesagt, abgesagt` |
 | `sprache` | `de, en, tr` |
+| `nachricht_typ` | `direkt, broadcast, kurs` |
 
 **Database functions (all SECURITY DEFINER unless noted):**
 | Function | Returns | Purpose |
@@ -312,6 +315,8 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20260503000000_schulen_admin_update_und_zeitzone.sql` | `zeitzone` column on schulen, `schulen: admin update` policy |
 | `20260503000001_ical_kalender.sql` | `kalender_token` column on profiles, RLS policies for public event RSVPs |
 | `20260504000000_fix_stunden_generieren_zeitzone.sql` | Fixes `stunden_generieren` to use school timezone via `AT TIME ZONE` — previously stored times as UTC causing a 2h display offset |
+| `20260505000000_nachrichten_kurs_enum.sql` | Adds `kurs` to `nachricht_typ` enum — **separate file** because PostgreSQL cannot use a new enum value in the same transaction it was added |
+| `20260505000001_nachrichten_kurs_schema.sql` | Adds `kurs_id` column + index to `nachrichten`; updates RLS read policy to include course participants (via `unterricht_schueler` + `unterricht_lehrer`) |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`).
 

@@ -13,6 +13,7 @@ Musikschul-Management-Plattform — von der Mitgliederverwaltung bis zum digital
 - **Veranstaltungen** (Konzerte, Vorspiele, Prüfungen, Vorstandssitzungen) mit RSVP-System
 - **Interessenten-Pipeline** für Neuanmeldungen und Schnupperstunden
 - **Mitgliederverwaltung** mit Dokumenten-Upload (SEPA, Verträge, etc.)
+- **Nachrichten** — Direkt-, Kurs- und Broadcast-Nachrichten für alle Rollen; Ungelesen-Badge, Mobile-optimiert
 
 ### Vorstandsmodul
 - **Ziele & Aufgaben** — Jahres-/Quartalsziele mit Aufgaben, Status-Tracking und Verantwortlichen
@@ -72,21 +73,26 @@ Alle Migrationen liegen in `supabase/migrations/`. Reihenfolge bei einem Neu-Set
 # 1. Schema + alle Migrationen einspielen
 supabase db reset
 
-# Oder manuell auf dem Produktionsserver:
-docker exec -i supabase_db_staccato psql -U postgres -d postgres \
-  < supabase/migrations/20240101000000_schema.sql
-docker exec -i supabase_db_staccato psql -U postgres -d postgres \
-  < supabase/migrations/20260428000000_email_benachrichtigungen.sql
-docker exec -i supabase_db_staccato psql -U postgres -d postgres \
-  < supabase/migrations/20260428000001_admin_set_email.sql
-docker exec -i supabase_db_staccato psql -U postgres -d postgres \
-  < supabase/migrations/20260428000002_fix_stunden_colehrer_rls.sql
-docker exec -i supabase_db_staccato psql -U postgres -d postgres \
-  < supabase/migrations/20260428000003_vorstand.sql
+# Oder manuell auf dem Produktionsserver (in dieser Reihenfolge):
+for f in \
+  20240101000000_schema.sql \
+  20260428000000_email_benachrichtigungen.sql \
+  20260428000001_admin_set_email.sql \
+  20260428000002_fix_stunden_colehrer_rls.sql \
+  20260428000003_vorstand_enums.sql \
+  20260428000004_vorstand_schema.sql \
+  20260503000000_schulen_admin_update_und_zeitzone.sql \
+  20260503000001_ical_kalender.sql \
+  20260504000000_fix_stunden_generieren_zeitzone.sql \
+  20260505000000_nachrichten_kurs_enum.sql \
+  20260505000001_nachrichten_kurs_schema.sql; do
+  docker exec -i supabase_db_staccato psql -U postgres -d postgres \
+    < supabase/migrations/$f
+done
 
-# 2. Seed-Daten (Schule, Storage-Buckets, Admin-User) – nur bei Ersteinrichtung:
+# 2. Seed-Daten (Schule, Storage-Buckets, Admin-User, mitglieder_mit_email-View) – nur bei Ersteinrichtung:
 docker exec -i supabase_db_staccato psql -U postgres -d postgres \
   < supabase/seed.sql
 ```
 
-> `supabase_vorstand_migration.sql` im Root ist veraltet und durch `20260428000003_vorstand.sql` ersetzt.
+> Die `seed.sql` ist idempotent und definiert u.a. die View `mitglieder_mit_email` (kann nicht in Migrationen sein, da sie `auth.users` joiniert).
