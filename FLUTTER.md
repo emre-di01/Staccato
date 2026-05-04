@@ -182,7 +182,7 @@ void main() async {
 Build-Befehl mit Env-Variablen:
 ```bash
 flutter run \
-  --dart-define=SUPABASE_URL=http://YOUR-IP:54321 \
+  --dart-define=SUPABASE_URL=https://api.401dev.de \
   --dart-define=SUPABASE_ANON_KEY=your-anon-key
 ```
 
