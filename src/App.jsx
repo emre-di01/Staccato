@@ -74,7 +74,6 @@ function AppRoutes() {
           <Route path="/admin/events/:id/repertoire"                         element={<EventRepertoire />} />
           <Route path="/admin/events/:kursId/repertoire/:stueckId"           element={<StueckDetail />} />
           <Route path="/admin/instrumente"      element={<Instrumente />} />
-          <Route path="/admin/abrechnung"       element={P('Abrechnung', '💰')} />
           <Route path="/admin/interessenten"    element={<Interessenten />} />
           <Route path="/admin/nachrichten"      element={<Nachrichten />} />
         </Route>

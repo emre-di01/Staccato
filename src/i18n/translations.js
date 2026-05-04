@@ -52,7 +52,6 @@ export const translations = {
     my_students: 'Meine Schüler',
     attendance: 'Anwesenheit',
     repertoire: 'Repertoire',
-    billing: 'Abrechnung',
     prospects: 'Interessenten',
 
     // Roles
@@ -669,7 +668,6 @@ export const translations = {
     my_students: 'My Students',
     attendance: 'Attendance',
     repertoire: 'Repertoire',
-    billing: 'Billing',
     prospects: 'Prospects',
     admin: 'Admin',
     lehrer: 'Teacher',
@@ -1270,7 +1268,6 @@ export const translations = {
     my_students: 'Öğrencilerim',
     attendance: 'Devam',
     repertoire: 'Repertuvar',
-    billing: 'Faturalama',
     prospects: 'İlgilenenler',
     admin: 'Yönetici',
     lehrer: 'Öğretmen',
