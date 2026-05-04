@@ -9,6 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^7.6.2",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
     "@supabase/supabase-js": "^2.43.0",
     "@tanstack/react-query": "^5.100.9",
     "marked": "^18.0.3",

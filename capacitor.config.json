@@ -1,0 +1,13 @@
+{
+  "appId": "de.dev401.staccato",
+  "appName": "Staccato",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

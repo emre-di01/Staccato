@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Staccato</string>
+    <string name="title_activity_main">Staccato</string>
+    <string name="package_name">de.dev401.staccato</string>
+    <string name="custom_url_scheme">de.dev401.staccato</string>
+</resources>
