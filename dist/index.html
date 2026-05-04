@@ -25,8 +25,12 @@
       a { text-decoration: none; }
       button { font-family: inherit; }
       input, textarea, select { font-family: inherit; }
+      /* Prevent iOS Safari from auto-zooming on input focus */
+      @media (max-width: 768px) {
+        input, textarea, select { font-size: 16px !important; }
+      }
     </style>
-    <script type="module" crossorigin src="/assets/index-DKbnLP4q.js"></script>
+    <script type="module" crossorigin src="/assets/index-BmpfrVbZ.js"></script>
   <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
   <body>
     <div id="root"></div>

@@ -12,26 +12,36 @@ npm run preview   # Preview production build
 
 No linting or test commands are configured.
 
+## Production URLs
+
+| Service | URL |
+|---------|-----|
+| Frontend | `https://401dev.de` |
+| Supabase API | `https://api.401dev.de` |
+| Supabase Studio | `http://127.0.0.1:54323` (nur lokal) |
+
 ## Environment Setup
 
 ### Frontend
-Copy `.env.example` to `.env` and fill in:
+`.env` (gitignored) — aktuell auf dem Server:
 ```
-VITE_SUPABASE_URL=http://YOUR-SERVER-IP:54321
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_URL=https://api.401dev.de
+VITE_SUPABASE_ANON_KEY=<anon-key aus supabase start>
 ```
 
 The app throws immediately at startup if these are missing (`src/lib/supabase.js`).
 
+Nach jeder Änderung an `.env` neu bauen: `npm run build` — `dist/` wird von Nginx direkt ausgeliefert.
+
 ### Supabase / Edge Functions
 `supabase/.env` (gitignored) holds SMTP credentials and app URL — these are injected into the edge runtime container via `[edge_runtime.secrets]` in `config.toml`:
 ```
-SMTP_HOST=smtp.example.com
+SMTP_HOST=smtp.1blu.de
 SMTP_PORT=465
-SMTP_USER=user@example.com
-SMTP_PASS=password
-SMTP_FROM=noreply@example.com
-APP_URL=http://YOUR-SERVER-IP:5173
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_FROM=staccato@401dev.de
+APP_URL=https://401dev.de
 ```
 
 Start Supabase so the `.env` is exported to the container environment:
@@ -40,6 +50,21 @@ set -a && source supabase/.env && set +a && supabase start
 ```
 
 `config.toml` already has `[edge_runtime.secrets]` wired to read these via `env()` substitution.
+
+### Nginx (Reverse Proxy)
+
+Config: `/etc/nginx/sites-available/staccato` (symlink in `sites-enabled/`)
+
+- `401dev.de` + `www.401dev.de` → `dist/` (Frontend, statisch)
+- `api.401dev.de` → `localhost:54321` (Supabase Kong), inkl. WebSocket-Headers für Realtime
+- HTTP → HTTPS Redirect für alle Domains
+
+TLS-Zertifikate via **Certbot / Let's Encrypt** (`/etc/letsencrypt/live/401dev.de/`), werden automatisch alle 90 Tage erneuert.
+
+Nginx nach Config-Änderungen neu laden:
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
 
 ## Architecture
 

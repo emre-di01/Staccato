@@ -41,7 +41,16 @@ Musikschul-Management-Plattform — von der Mitgliederverwaltung bis zum digital
 - Supabase (Auth, Datenbank, Realtime, Storage)
 - React Router v6
 
-## Setup
+## Produktion
+
+| Service | URL |
+|---------|-----|
+| App | https://401dev.de |
+| Supabase API | https://api.401dev.de |
+
+Nginx auf dem Server dient als Reverse Proxy mit Certbot/Let's Encrypt-Zertifikaten. Config: `/etc/nginx/sites-available/staccato`.
+
+## Setup (Entwicklung)
 
 ```bash
 # 1. Abhängigkeiten installieren
