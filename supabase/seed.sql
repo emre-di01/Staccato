@@ -1,6 +1,6 @@
 -- ─── Schule ───────────────────────────────────────────────────
-INSERT INTO public.schulen (id, name, sprachen, aktiv)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Musikschule', '{de}', true)
+INSERT INTO public.schulen (id, name, sprachen, aktiv, zeitzone)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Musikschule', '{de}', true, 'Europe/Berlin')
 ON CONFLICT (id) DO NOTHING;
 
 -- ─── Storage Buckets ──────────────────────────────────────────
