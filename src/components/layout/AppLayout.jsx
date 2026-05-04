@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { startseiteNach } from '../ProtectedRoute'
@@ -11,36 +11,34 @@ import { CHANGELOG } from '../../changelog'
 function getNavItems(rolle, T) {
   const items = {
     admin: [
-      { icon: '📊', label: T('dashboard'),             to: '/admin' },
-      { icon: '👥', label: T('members'),               to: '/admin/mitglieder' },
-      { icon: '🎵', label: 'Kurse',                    to: '/admin/kurse' },
-      { icon: '📅', label: T('schedule'),              to: '/admin/stundenplan' },
-      { icon: '🏫', label: T('rooms'),                 to: '/admin/raeume' },
-      { icon: '🎸', label: 'Instrumente',              to: '/admin/instrumente' },
-      { icon: '🎼', label: T('repertoire'),            to: '/admin/repertoire' },
-      { icon: '🎭', label: T('events'),                to: '/admin/events' },
-      { icon: '💰', label: T('billing'),               to: '/admin/abrechnung' },
-      { icon: '📋', label: T('prospects'),             to: '/admin/interessenten' },
-      { icon: '💬', label: T('messages'),              to: '/admin/nachrichten' },
-      { icon: '📂', label: 'Kurs-Ansicht',               to: '/lehrer/kurse' },
-      { icon: '🎯', label: T('vorstand_ziele'),        to: '/vorstand/ziele' },
-      { icon: '📝', label: T('vorstand_protokolle'),   to: '/vorstand/protokolle' },
+      { icon: '📊', label: T('dashboard'),           to: '/admin' },
+      { icon: '👥', label: T('members'),             to: '/admin/mitglieder' },
+      { icon: '🎵', label: 'Kurse',                  to: '/admin/kurse' },
+      { icon: '📅', label: T('schedule'),            to: '/admin/stundenplan' },
+      { icon: '🏫', label: T('rooms'),               to: '/admin/raeume' },
+      { icon: '🎸', label: 'Instrumente',            to: '/admin/instrumente' },
+      { icon: '🎼', label: T('repertoire'),          to: '/admin/repertoire' },
+      { icon: '🎭', label: T('events'),              to: '/admin/events' },
+      { icon: '📋', label: T('prospects'),           to: '/admin/interessenten' },
+      { icon: '💬', label: T('messages'),            to: '/admin/nachrichten', nachrichten: true },
+      { icon: '📂', label: 'Kurs-Ansicht',           to: '/lehrer/kurse' },
+      { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
+      { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
     ],
     superadmin: [
-      { icon: '📊', label: T('dashboard'),             to: '/admin' },
-      { icon: '👥', label: T('members'),               to: '/admin/mitglieder' },
-      { icon: '🎵', label: 'Kurse',                    to: '/admin/kurse' },
-      { icon: '📅', label: T('schedule'),              to: '/admin/stundenplan' },
-      { icon: '🏫', label: T('rooms'),                 to: '/admin/raeume' },
-      { icon: '🎸', label: 'Instrumente',              to: '/admin/instrumente' },
-      { icon: '🎼', label: T('repertoire'),            to: '/admin/repertoire' },
-      { icon: '🎭', label: T('events'),                to: '/admin/events' },
-      { icon: '💰', label: T('billing'),               to: '/admin/abrechnung' },
-      { icon: '📋', label: T('prospects'),             to: '/admin/interessenten' },
-      { icon: '💬', label: T('messages'),              to: '/admin/nachrichten' },
-      { icon: '📂', label: 'Kurs-Ansicht',               to: '/lehrer/kurse' },
-      { icon: '🎯', label: T('vorstand_ziele'),        to: '/vorstand/ziele' },
-      { icon: '📝', label: T('vorstand_protokolle'),   to: '/vorstand/protokolle' },
+      { icon: '📊', label: T('dashboard'),           to: '/admin' },
+      { icon: '👥', label: T('members'),             to: '/admin/mitglieder' },
+      { icon: '🎵', label: 'Kurse',                  to: '/admin/kurse' },
+      { icon: '📅', label: T('schedule'),            to: '/admin/stundenplan' },
+      { icon: '🏫', label: T('rooms'),               to: '/admin/raeume' },
+      { icon: '🎸', label: 'Instrumente',            to: '/admin/instrumente' },
+      { icon: '🎼', label: T('repertoire'),          to: '/admin/repertoire' },
+      { icon: '🎭', label: T('events'),              to: '/admin/events' },
+      { icon: '📋', label: T('prospects'),           to: '/admin/interessenten' },
+      { icon: '💬', label: T('messages'),            to: '/admin/nachrichten', nachrichten: true },
+      { icon: '📂', label: 'Kurs-Ansicht',           to: '/lehrer/kurse' },
+      { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
+      { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
     ],
     lehrer: [
       { icon: '📊', label: T('dashboard'),     to: '/lehrer' },
@@ -49,7 +47,7 @@ function getNavItems(rolle, T) {
       { icon: '👥', label: T('my_students'),   to: '/lehrer/schueler' },
       { icon: '🎼', label: T('repertoire'),    to: '/lehrer/repertoire' },
       { icon: '🎭', label: T('events'),        to: '/lehrer/events' },
-      { icon: '💬', label: T('messages'),      to: '/lehrer/nachrichten' },
+      { icon: '💬', label: T('messages'),      to: '/lehrer/nachrichten', nachrichten: true },
     ],
     schueler: [
       { icon: '📊', label: T('dashboard'),   to: '/schueler' },
@@ -57,14 +55,14 @@ function getNavItems(rolle, T) {
       { icon: '🎵', label: 'Meine Kurse',    to: '/schueler/kurse' },
       { icon: '🎼', label: T('repertoire'),  to: '/schueler/repertoire' },
       { icon: '🎭', label: T('events'),      to: '/schueler/events' },
-      { icon: '💬', label: T('messages'),    to: '/schueler/nachrichten' },
+      { icon: '💬', label: T('messages'),    to: '/schueler/nachrichten', nachrichten: true },
     ],
     eltern: [
       { icon: '📊', label: T('dashboard'),   to: '/eltern' },
       { icon: '📅', label: T('schedule'),    to: '/eltern/stundenplan' },
       { icon: '📁', label: T('files'),       to: '/eltern/dateien' },
       { icon: '🎭', label: T('events'),      to: '/eltern/events' },
-      { icon: '💬', label: T('messages'),    to: '/eltern/nachrichten' },
+      { icon: '💬', label: T('messages'),    to: '/eltern/nachrichten', nachrichten: true },
     ],
     vorstand: [
       { icon: '📊', label: T('dashboard'),           to: '/vorstand' },
@@ -183,46 +181,91 @@ const s = {
   settBtnAktiv: { background: 'var(--primary)', color: 'var(--primary-fg)', borderColor: 'var(--primary)' },
 }
 
+function zeitAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime()
+  if (diff < 60000)    return 'Gerade eben'
+  if (diff < 3600000)  return `${Math.floor(diff / 60000)} Min.`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} Std.`
+  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
+}
+
 export default function AppLayout() {
   const { profil, rolle, abmelden, T } = useApp()
   const navigate = useNavigate()
-  const [sidebarOffen, setSidebarOffen] = useState(false)
-  const [settingsOffen, setSettingsOffen] = useState(false)
+  const [sidebarOffen, setSidebarOffen]     = useState(false)
+  const [settingsOffen, setSettingsOffen]   = useState(false)
   const [joinSessionOffen, setJoinSessionOffen] = useState(false)
   const [changelogOffen, setChangelogOffen] = useState(false)
+  const [ungelesen, setUngelesen]           = useState([])
+  const [popupPos, setPopupPos]             = useState(null)
+  const popupGesperrt                       = useRef(false)
   const navItems = getNavItems(rolle, T)
+
+  const ladeUngelesen = useCallback(async () => {
+    if (!profil) return
+    const { data } = await supabase
+      .from('nachrichten')
+      .select('id, betreff, gesendet_am, typ, sender:profiles!nachrichten_gesendet_von_fkey(voller_name), gelesen:nachricht_gelesen(nachricht_id)')
+      .neq('gesendet_von', profil.id)
+      .order('gesendet_am', { ascending: false })
+      .limit(20)
+    setUngelesen((data ?? []).filter(n => !n.gelesen?.length))
+  }, [profil?.id])
+
+  useEffect(() => { ladeUngelesen() }, [ladeUngelesen])
+
+  useEffect(() => {
+    if (!profil) return
+    const ch = supabase.channel('nav_nachrichten')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'nachrichten' }, ladeUngelesen)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'nachricht_gelesen' }, ladeUngelesen)
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [ladeUngelesen, profil?.id])
 
   async function handleAbmelden() {
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
 
-  const NavItem = ({ item, mobile = false }) => (
-    <NavLink
-      to={item.to}
-      end={item.to.split('/').length === 2}
-      onClick={() => setSidebarOffen(false)}
-      style={({ isActive }) => mobile ? {
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-        padding: '8px 4px', borderRadius: 10, textDecoration: 'none', flex: 1,
-        background: isActive ? 'var(--bg-2)' : 'transparent',
-        color: isActive ? 'var(--primary)' : 'var(--text-3)',
-        fontSize: 10, fontWeight: isActive ? 700 : 500,
-        transition: 'all 0.15s',
-      } : {
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 16px', borderRadius: 'var(--radius)',
-        textDecoration: 'none', fontSize: 14, fontWeight: 500,
-        color: isActive ? 'var(--primary-fg)' : 'var(--text-2)',
-        background: isActive ? 'var(--primary)' : 'transparent',
-        transition: 'all 0.15s',
-        marginBottom: 2,
-      }}
-    >
-      <span style={{ fontSize: mobile ? 20 : 16 }}>{item.icon}</span>
-      <span>{item.label}</span>
-    </NavLink>
-  )
+  const NavItem = ({ item, mobile = false }) => {
+    return (
+      <div style={{ position: 'relative', ...(mobile ? { flex: 1, display: 'flex' } : {}) }}
+        onMouseEnter={e => {
+          if (!item.nachrichten || mobile || popupGesperrt.current) return
+          const rect = e.currentTarget.getBoundingClientRect()
+          setPopupPos({ top: rect.top })
+        }}
+        onMouseLeave={() => item.nachrichten && setPopupPos(null)}
+      >
+        <NavLink
+          to={item.to}
+          end={item.to.split('/').length === 2}
+          onClick={() => setSidebarOffen(false)}
+          style={({ isActive }) => mobile ? {
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            padding: '8px 4px', borderRadius: 10, textDecoration: 'none', flex: 1,
+            background: isActive ? 'var(--bg-2)' : 'transparent',
+            color: isActive ? 'var(--primary)' : 'var(--text-3)',
+            fontSize: 10, fontWeight: isActive ? 700 : 500,
+            transition: 'all 0.15s',
+          } : {
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 16px', borderRadius: 'var(--radius)',
+            textDecoration: 'none', fontSize: 14, fontWeight: 500,
+            color: isActive ? 'var(--primary-fg)' : 'var(--text-2)',
+            background: isActive ? 'var(--primary)' : 'transparent',
+            transition: 'all 0.15s',
+            marginBottom: 2,
+          }}
+        >
+          <span style={{ fontSize: mobile ? 20 : 16 }}>{item.icon}</span>
+          {!mobile && <span style={{ flex: 1 }}>{item.label}</span>}
+          {mobile && <span>{item.label}</span>}
+        </NavLink>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
@@ -348,6 +391,45 @@ export default function AppLayout() {
       {settingsOffen && <SettingsPanel onClose={() => setSettingsOffen(false)} />}
       {joinSessionOffen && <JoinSessionModal onClose={() => setJoinSessionOffen(false)} />}
 
+      {/* Nachrichten-Hover-Popup – unten rechts */}
+      {popupPos && ungelesen.length > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 500,
+          background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)',
+          width: 320, maxHeight: 400, display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+          animation: 'fadeSlideUp 0.18s ease',
+        }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>💬 {ungelesen.length} ungelesen</span>
+            <button onClick={() => { setPopupPos(null); popupGesperrt.current = true; setTimeout(() => { popupGesperrt.current = false }, 2000) }} style={{ background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--text-3)', lineHeight:1, padding:0 }}>✕</button>
+          </div>
+          <div style={{ overflowY: 'auto' }}>
+            {ungelesen.slice(0, 5).map(n => (
+              <div key={n.id} style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', cursor: 'default' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
+                    {n.betreff}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', flexShrink: 0, marginLeft: 8 }}>
+                    {(() => { const d = Date.now() - new Date(n.gesendet_am).getTime(); return d < 3600000 ? `${Math.floor(d/60000)} Min.` : d < 86400000 ? `${Math.floor(d/3600000)} Std.` : `${Math.floor(d/86400000)}d` })()}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  {n.typ === 'broadcast' ? '📢 Alle' : n.sender?.voller_name ?? '—'}
+                </div>
+              </div>
+            ))}
+            {ungelesen.length > 5 && (
+              <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
+                + {ungelesen.length - 5} weitere
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Changelog Modal */}
       {changelogOffen && (
         <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.45)', backdropFilter:'blur(3px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
@@ -389,6 +471,11 @@ export default function AppLayout() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: var(--bg); color: var(--text); }
         
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
         @media (max-width: 768px) {
           .desktop-sidebar { display: none !important; }
           .mobile-header { display: flex !important; }

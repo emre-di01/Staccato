@@ -40,6 +40,7 @@ import Instrumente from './pages/admin/Instrumente'
 import VorstandDashboard from './pages/vorstand/Dashboard'
 import VorstandZiele from './pages/vorstand/Ziele'
 import VorstandProtokolle from './pages/vorstand/Protokolle'
+import Nachrichten from './pages/Nachrichten'
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -75,7 +76,7 @@ function AppRoutes() {
           <Route path="/admin/instrumente"      element={<Instrumente />} />
           <Route path="/admin/abrechnung"       element={P('Abrechnung', '💰')} />
           <Route path="/admin/interessenten"    element={<Interessenten />} />
-          <Route path="/admin/nachrichten"      element={P('Nachrichten', '💬')} />
+          <Route path="/admin/nachrichten"      element={<Nachrichten />} />
         </Route>
       </Route>
 
@@ -95,7 +96,7 @@ function AppRoutes() {
           <Route path="/lehrer/events"                                         element={<LehrerEvents />} />
           <Route path="/lehrer/events/:id/repertoire"                        element={<EventRepertoire />} />
           <Route path="/lehrer/events/:kursId/repertoire/:stueckId"          element={<StueckDetail />} />
-          <Route path="/lehrer/nachrichten"     element={P('Nachrichten', '💬')} />
+          <Route path="/lehrer/nachrichten"     element={<Nachrichten />} />
           <Route path="/lehrer/profil"          element={<ProfilSeite />} />
         </Route>
       </Route>
@@ -114,7 +115,7 @@ function AppRoutes() {
           <Route path="/schueler/events/:kursId/repertoire/:stueckId"        element={<StueckDetail />} />
           <Route path="/schueler/repertoire"         element={<Repertoire />} />
           <Route path="/schueler/repertoire/:stueckId" element={<StueckDetail />} />
-          <Route path="/schueler/nachrichten"         element={P('Nachrichten', '💬')} />
+          <Route path="/schueler/nachrichten"         element={<Nachrichten />} />
           <Route path="/schueler/profil"              element={<ProfilSeite />} />
         </Route>
       </Route>
@@ -144,7 +145,7 @@ function AppRoutes() {
           <Route path="/eltern/stundenplan"     element={<Stundenplan />} />
           <Route path="/eltern/dateien"         element={P('Dateien', '📁')} />
           <Route path="/eltern/events"          element={P('Veranstaltungen', '🎭')} />
-          <Route path="/eltern/nachrichten"     element={P('Nachrichten', '💬')} />
+          <Route path="/eltern/nachrichten"     element={<Nachrichten />} />
           <Route path="/eltern/profil"          element={<ProfilSeite />} />
         </Route>
       </Route>

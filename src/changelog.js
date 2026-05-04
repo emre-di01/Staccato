@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.5.1'
+export const CURRENT_VERSION = '1.6.0'
 
 export const CHANGELOG = [
+  {
+    version: '1.6.0',
+    date: '2026-05-05',
+    features: [
+      {
+        icon: '💬',
+        de: 'Nachrichten-Modul: Broadcast, Kurs- und Direktnachrichten für alle Rollen',
+        en: 'Messages module: broadcast, course and direct messages for all roles',
+        tr: 'Mesaj modülü: tüm roller için yayın, kurs ve doğrudan mesajlar',
+      },
+      {
+        icon: '📱',
+        de: 'Nachrichten vollständig für Mobilgeräte optimiert',
+        en: 'Messages fully optimised for mobile devices',
+        tr: 'Mesajlar mobil cihazlar için tam olarak optimize edildi',
+      },
+    ],
+  },
   {
     version: '1.5.1',
     date: '2026-05-04',
