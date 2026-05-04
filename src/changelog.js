@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.5.0'
+export const CURRENT_VERSION = '1.5.1'
 
 export const CHANGELOG = [
+  {
+    version: '1.5.1',
+    date: '2026-05-04',
+    features: [
+      {
+        icon: '📅',
+        de: 'iCal-Kalenderabo: persönlichen Stundenplan und Events in Google, Apple & Outlook abonnieren',
+        en: 'iCal calendar subscription: subscribe to your personal schedule and events in Google, Apple & Outlook',
+        tr: 'iCal takvim aboneliği: kişisel ders programını ve etkinlikleri Google, Apple ve Outlook\'ta abone ol',
+      },
+    ],
+  },
   {
     version: '1.5.0',
     date: '2026-05-03',

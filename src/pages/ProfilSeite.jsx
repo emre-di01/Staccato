@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? ''
+
 const DOK_TYP_LABEL = {
   aufnahmeformular: 'Aufnahmeformular',
   vertrag:          'Vertrag',
@@ -59,12 +61,39 @@ export default function ProfilSeite() {
   const [notifLaden,  setNotifLaden]  = useState(false)
   const [notifErfolg, setNotifErfolg] = useState(false)
 
+  const [kalenderToken, setKalenderToken] = useState(null)
+  const [kalTokenLaden, setKalTokenLaden] = useState(true)
+  const [icalKopiert,   setIcalKopiert]   = useState(false)
+
   useEffect(() => {
     if (!profil?.id) return
     supabase.from('mitglied_dateien')
       .select('*').eq('profil_id', profil.id).order('hochgeladen_am', { ascending: false })
       .then(({ data }) => { setDateien(data ?? []); setDateiLaden(false) })
   }, [profil?.id])
+
+  useEffect(() => {
+    if (!profil?.id) return
+    supabase.from('profiles').select('kalender_token').eq('id', profil.id).single()
+      .then(({ data }) => { setKalenderToken(data?.kalender_token ?? null); setKalTokenLaden(false) })
+  }, [profil?.id])
+
+  const kalenderUrl = kalenderToken
+    ? `${SUPABASE_URL}/functions/v1/kalender?token=${kalenderToken}`
+    : ''
+
+  async function icalKopieren() {
+    if (!kalenderUrl) return
+    await navigator.clipboard.writeText(kalenderUrl)
+    setIcalKopiert(true)
+    setTimeout(() => setIcalKopiert(false), 2000)
+  }
+
+  async function kalenderTokenNeu() {
+    const neuToken = crypto.randomUUID()
+    await supabase.from('profiles').update({ kalender_token: neuToken }).eq('id', profil.id)
+    setKalenderToken(neuToken)
+  }
 
   async function profilSpeichern() {
     setLaden(true); setFehler(''); setErfolg('')
@@ -236,6 +265,39 @@ export default function ProfilSeite() {
             {notifLaden ? T('loading') : `💾 ${T('save')}`}
           </button>
         </div>
+      </div>
+
+      {/* Kalender-Abonnement */}
+      <div style={s.card}>
+        <h2 style={s.h2}>{T('ical_title')}</h2>
+        <p style={{ margin:'0 0 16px', fontSize:13, color:'var(--text-3)', lineHeight:1.5 }}>{T('ical_desc')}</p>
+        {kalTokenLaden ? (
+          <div style={{ color:'var(--text-3)', fontSize:13 }}>{T('ical_loading')}</div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            <Feld label={T('ical_url_label')}>
+              <div style={{ display:'flex', gap:8 }}>
+                <input
+                  readOnly
+                  value={kalenderUrl}
+                  style={{ ...s.input, color:'var(--text-3)', fontSize:12, flex:1 }}
+                  onFocus={e => e.target.select()}
+                />
+                <button onClick={icalKopieren} style={{ ...s.btnPri, whiteSpace:'nowrap', flexShrink:0 }}>
+                  {icalKopiert ? `✓ ${T('ical_copied')}` : T('ical_copy')}
+                </button>
+              </div>
+            </Feld>
+            <div style={{ display:'flex', justifyContent:'flex-end' }}>
+              <button
+                onClick={() => { if (window.confirm(T('ical_reset_confirm'))) kalenderTokenNeu() }}
+                style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}
+              >
+                🔄 {T('ical_reset')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Passwort */}
