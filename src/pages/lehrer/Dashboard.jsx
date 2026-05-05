@@ -126,7 +126,7 @@ export default function LehrerDashboard() {
                 const beginn = new Date(st.beginn)
                 const istHeute = beginn.toDateString() === jetzt.toDateString()
                 return (
-                  <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:`1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center' }}>
+                  <div key={st.id} onClick={() => navigate(`/lehrer/kurse/${st.unterricht_id}`)} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:`1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', gap:14, alignItems:'center', cursor:'pointer' }}>
                     <div style={{ textAlign:'center', minWidth:44 }}>
                       <div style={{ fontSize:11, fontWeight:700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
                         {istHeute ? T('dash_today') : beginn.toLocaleDateString('de-DE', { weekday:'short' })}

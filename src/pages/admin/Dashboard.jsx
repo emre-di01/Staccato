@@ -167,10 +167,10 @@ export default function AdminDashboard() {
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {stats.naechste_events.map(ev => (
-                  <div key={ev.id} style={{
+                  <div key={ev.id} onClick={() => navigate('/admin/events')} style={{
                     background: 'var(--surface)', borderRadius: 'var(--radius)',
                     padding: '14px 18px', border: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', gap: 14,
+                    display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
                   }}>
                     <div style={{ fontSize: 20 }}>
                       {ev.typ === 'konzert' ? '🎭' : ev.typ === 'vorspiel' ? '🎼' : ev.typ === 'pruefung' ? '📝' : '📅'}
@@ -240,7 +240,7 @@ export default function AdminDashboard() {
                     const beginn = new Date(st.beginn)
                     const istHeute = beginn.toDateString() === jetzt.toDateString()
                     return (
-                      <div key={st.id} style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '14px 16px', border: `1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <div key={st.id} onClick={() => navigate('/admin/stundenplan')} style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '14px 16px', border: `1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', gap: 12, alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ textAlign: 'center', minWidth: 44 }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform: 'uppercase' }}>
                             {istHeute ? T('dash_today') : beginn.toLocaleDateString('de-DE', { weekday: 'short' })}

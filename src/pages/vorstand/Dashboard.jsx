@@ -171,7 +171,7 @@ export default function VorstandDashboard() {
                   const beginn = new Date(st.beginn)
                   const istHeute = beginn.toDateString() === jetzt.toDateString()
                   return (
-                    <div key={st.id} style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '14px 16px', border: `1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div key={st.id} onClick={() => navigate('/vorstand/stundenplan')} style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '14px 16px', border: `1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', gap: 12, alignItems: 'center', cursor: 'pointer' }}>
                       <div style={{ textAlign: 'center', minWidth: 44 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform: 'uppercase' }}>
                           {istHeute ? T('dash_today') : beginn.toLocaleDateString('de-DE', { weekday: 'short' })}
@@ -198,7 +198,7 @@ export default function VorstandDashboard() {
             {laden ? (
               <div style={s.leer}>{T('loading')}</div>
             ) : vorstandStats.naechsteSitzung ? (
-              <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '16px', border: '1px solid var(--accent)', boxShadow: 'var(--shadow)' }}>
+              <div onClick={() => navigate('/vorstand/events')} style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '16px', border: '1px solid var(--accent)', boxShadow: 'var(--shadow)', cursor: 'pointer' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                   {TYP_LABEL[vorstandStats.naechsteSitzung.sitzungstyp]}
                 </div>

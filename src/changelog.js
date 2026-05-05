@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.6.1'
+export const CURRENT_VERSION = '1.6.2'
 
 export const CHANGELOG = [
+  {
+    version: '1.6.2',
+    date: '2026-05-05',
+    features: [
+      {
+        icon: '🖱️',
+        de: 'Dashboard: Veranstaltungs- und Stundenkarten sind jetzt anklickbar und führen direkt zur jeweiligen Seite',
+        en: 'Dashboard: event and lesson cards are now clickable and navigate directly to the relevant page',
+        tr: 'Gösterge paneli: etkinlik ve ders kartları artık tıklanabilir ve doğrudan ilgili sayfaya yönlendirir',
+      },
+    ],
+  },
   {
     version: '1.6.1',
     date: '2026-05-05',
