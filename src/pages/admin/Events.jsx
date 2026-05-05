@@ -136,7 +136,18 @@ export default function AdminEvents() {
     if (modal.event) {
       ;({ error } = await supabase.from('events').update(payload).eq('id', modal.event.id))
     } else {
-      ;({ error } = await supabase.from('events').insert(payload))
+      const { data: neu, error: insertErr } = await supabase.from('events').insert(payload).select('id').single()
+      error = insertErr
+      if (!error && payload.typ === 'vorstandssitzung' && neu?.id) {
+        const { data: vm } = await supabase.from('profiles')
+          .select('id')
+          .eq('schule_id', profil.schule_id)
+          .in('rolle', ['vorstand', 'admin', 'superadmin'])
+        if (vm?.length) {
+          await supabase.from('event_teilnehmer')
+            .insert(vm.map(m => ({ event_id: neu.id, profil_id: m.id })))
+        }
+      }
     }
     if (error) setFehler(error.message)
     else { setModal(null); await ladeEvents() }
