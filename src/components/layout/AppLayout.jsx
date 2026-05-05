@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { startseiteNach } from '../ProtectedRoute'
 import { THEMES, THEME_KEYS } from '../../themes/themes'
@@ -7,49 +7,59 @@ import { supabase } from '../../lib/supabase'
 import { version } from '../../../package.json'
 import { CHANGELOG } from '../../changelog'
 
-// Nav-Items je Rolle
-function getNavItems(rolle, T) {
-  const items = {
-    admin: [
-      { icon: '📊', label: T('dashboard'),           to: '/admin' },
-      { icon: '👥', label: T('members'),             to: '/admin/mitglieder' },
-      { icon: '🎵', label: 'Kurse',                  to: '/admin/kurse' },
-      { icon: '📅', label: T('schedule'),            to: '/admin/stundenplan' },
-      { icon: '🏫', label: T('rooms'),               to: '/admin/raeume' },
-      { icon: '🎸', label: 'Instrumente',            to: '/admin/instrumente' },
-      { icon: '📦', label: 'Inventar',               to: '/admin/inventar' },
-      { icon: '🎼', label: T('repertoire'),          to: '/admin/repertoire' },
-      { icon: '🎭', label: T('events'),              to: '/admin/events' },
-      { icon: '📋', label: T('prospects'),           to: '/admin/interessenten' },
-      { icon: '💬', label: T('messages'),            to: '/admin/nachrichten', nachrichten: true },
-      { icon: '📂', label: 'Kurs-Ansicht',           to: '/lehrer/kurse' },
-      { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
-      { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
-    ],
-    superadmin: [
-      { icon: '📊', label: T('dashboard'),           to: '/admin' },
-      { icon: '👥', label: T('members'),             to: '/admin/mitglieder' },
-      { icon: '🎵', label: 'Kurse',                  to: '/admin/kurse' },
-      { icon: '📅', label: T('schedule'),            to: '/admin/stundenplan' },
-      { icon: '🏫', label: T('rooms'),               to: '/admin/raeume' },
-      { icon: '🎸', label: 'Instrumente',            to: '/admin/instrumente' },
-      { icon: '📦', label: 'Inventar',               to: '/admin/inventar' },
-      { icon: '🎼', label: T('repertoire'),          to: '/admin/repertoire' },
-      { icon: '🎭', label: T('events'),              to: '/admin/events' },
-      { icon: '📋', label: T('prospects'),           to: '/admin/interessenten' },
-      { icon: '💬', label: T('messages'),            to: '/admin/nachrichten', nachrichten: true },
-      { icon: '📂', label: 'Kurs-Ansicht',           to: '/lehrer/kurse' },
-      { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
-      { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
-    ],
+// Nav-Konfiguration je Rolle — items können flach oder gruppiert sein
+function getNavConfig(rolle, T) {
+  if (rolle === 'admin' || rolle === 'superadmin') {
+    return [
+      { icon: '📊', label: T('dashboard'), to: '/admin' },
+      { gruppe: 'Unterricht', items: [
+        { icon: '🎵', label: 'Kurse',           to: '/admin/kurse' },
+        { icon: '📅', label: T('schedule'),      to: '/admin/stundenplan' },
+        { icon: '🎼', label: T('repertoire'),    to: '/admin/repertoire' },
+        { icon: '🎭', label: T('events'),        to: '/admin/events' },
+      ]},
+      { gruppe: 'Verwaltung', items: [
+        { icon: '👥', label: T('members'),       to: '/admin/mitglieder' },
+        { icon: '🏫', label: T('rooms'),         to: '/admin/raeume' },
+        { icon: '🎸', label: 'Instrumente',      to: '/admin/instrumente' },
+        { icon: '📦', label: 'Inventar',         to: '/admin/inventar' },
+        { icon: '📋', label: T('prospects'),     to: '/admin/interessenten' },
+      ]},
+      { gruppe: 'Kommunikation', items: [
+        { icon: '💬', label: T('messages'),      to: '/admin/nachrichten', nachrichten: true },
+        { icon: '📂', label: 'Kurs-Ansicht',     to: '/lehrer/kurse' },
+      ]},
+      { gruppe: 'Vorstand', items: [
+        { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
+        { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
+      ]},
+    ]
+  }
+  if (rolle === 'vorstand') {
+    return [
+      { icon: '📊', label: T('dashboard'), to: '/vorstand' },
+      { gruppe: 'Schüler-Bereich', items: [
+        { icon: '📅', label: 'Stundenplan',   to: '/vorstand/stundenplan' },
+        { icon: '🎵', label: 'Meine Kurse',   to: '/vorstand/kurse' },
+        { icon: '🎼', label: T('repertoire'), to: '/vorstand/repertoire' },
+        { icon: '🎭', label: T('events'),     to: '/vorstand/events' },
+      ]},
+      { gruppe: 'Vorstand', items: [
+        { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
+        { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
+        { icon: '📦', label: 'Inventar',               to: '/vorstand/inventar' },
+      ]},
+    ]
+  }
+  const flat = {
     lehrer: [
-      { icon: '📊', label: T('dashboard'),     to: '/lehrer' },
-      { icon: '🎵', label: T('my_classes'),    to: '/lehrer/kurse' },
-      { icon: '📅', label: 'Stundenplan',      to: '/lehrer/anwesenheit' },
-      { icon: '👥', label: T('my_students'),   to: '/lehrer/schueler' },
-      { icon: '🎼', label: T('repertoire'),    to: '/lehrer/repertoire' },
-      { icon: '🎭', label: T('events'),        to: '/lehrer/events' },
-      { icon: '💬', label: T('messages'),      to: '/lehrer/nachrichten', nachrichten: true },
+      { icon: '📊', label: T('dashboard'),    to: '/lehrer' },
+      { icon: '🎵', label: T('my_classes'),   to: '/lehrer/kurse' },
+      { icon: '📅', label: 'Stundenplan',     to: '/lehrer/anwesenheit' },
+      { icon: '👥', label: T('my_students'),  to: '/lehrer/schueler' },
+      { icon: '🎼', label: T('repertoire'),   to: '/lehrer/repertoire' },
+      { icon: '🎭', label: T('events'),       to: '/lehrer/events' },
+      { icon: '💬', label: T('messages'),     to: '/lehrer/nachrichten', nachrichten: true },
     ],
     schueler: [
       { icon: '📊', label: T('dashboard'),   to: '/schueler' },
@@ -60,24 +70,18 @@ function getNavItems(rolle, T) {
       { icon: '💬', label: T('messages'),    to: '/schueler/nachrichten', nachrichten: true },
     ],
     eltern: [
-      { icon: '📊', label: T('dashboard'),   to: '/eltern' },
-      { icon: '📅', label: T('schedule'),    to: '/eltern/stundenplan' },
-      { icon: '📁', label: T('files'),       to: '/eltern/dateien' },
-      { icon: '🎭', label: T('events'),      to: '/eltern/events' },
-      { icon: '💬', label: T('messages'),    to: '/eltern/nachrichten', nachrichten: true },
-    ],
-    vorstand: [
-      { icon: '📊', label: T('dashboard'),           to: '/vorstand' },
-      { icon: '📅', label: 'Stundenplan',            to: '/vorstand/stundenplan' },
-      { icon: '🎵', label: 'Meine Kurse',            to: '/vorstand/kurse' },
-      { icon: '🎼', label: T('repertoire'),          to: '/vorstand/repertoire' },
-      { icon: '🎭', label: T('events'),              to: '/vorstand/events' },
-      { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
-      { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
-      { icon: '📦', label: 'Inventar',               to: '/vorstand/inventar' },
+      { icon: '📊', label: T('dashboard'),  to: '/eltern' },
+      { icon: '📅', label: T('schedule'),   to: '/eltern/stundenplan' },
+      { icon: '📁', label: T('files'),      to: '/eltern/dateien' },
+      { icon: '🎭', label: T('events'),     to: '/eltern/events' },
+      { icon: '💬', label: T('messages'),   to: '/eltern/nachrichten', nachrichten: true },
     ],
   }
-  return items[rolle] ?? []
+  return flat[rolle] ?? []
+}
+
+function flattenNav(config) {
+  return config.flatMap(entry => entry.gruppe ? entry.items : [entry])
 }
 
 // Session beitreten Modal (für Schüler)
@@ -192,6 +196,35 @@ function zeitAgo(iso) {
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
 }
 
+function NavGroup({ gruppe, items, setPopupPos, popupGesperrt, setSidebarOffen }) {
+  const location = useLocation()
+  const hatAktive = items.some(item => location.pathname === item.to || location.pathname.startsWith(item.to + '/'))
+  const [offen, setOffen] = useState(hatAktive)
+
+  useEffect(() => { if (hatAktive) setOffen(true) }, [location.pathname])
+
+  return (
+    <div style={{ marginBottom: 2 }}>
+      <button onClick={() => setOffen(o => !o)} style={{
+        display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+        padding: '5px 16px 5px 12px', background: 'none', border: 'none',
+        cursor: 'pointer', fontFamily: 'inherit',
+        fontSize: 11, fontWeight: 700, color: 'var(--text-3)',
+        textTransform: 'uppercase', letterSpacing: '0.07em',
+        marginTop: 8,
+      }}>
+        <span style={{ flex: 1, textAlign: 'left' }}>{gruppe}</span>
+        <span style={{ fontSize: 9, opacity: 0.7 }}>{offen ? '▾' : '▸'}</span>
+      </button>
+      {offen && (
+        <div>
+          {items.map(item => <NavItem key={item.to} item={item} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarOffen }) {
   return (
     <div style={{ position: 'relative', ...(mobile ? { flex: 1, display: 'flex' } : {}) }}
@@ -241,7 +274,8 @@ export default function AppLayout() {
   const [ungelesen, setUngelesen]           = useState([])
   const [popupPos, setPopupPos]             = useState(null)
   const popupGesperrt                       = useRef(false)
-  const navItems = getNavItems(rolle, T)
+  const navConfig = getNavConfig(rolle, T)
+  const navItems  = flattenNav(navConfig)
 
   const ladeUngelesen = useCallback(async () => {
     if (!profil) return
@@ -296,7 +330,10 @@ export default function AppLayout() {
 
         {/* Nav */}
         <nav style={{ flex: 1 }}>
-          {navItems.map(item => <NavItem key={item.to} item={item} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />)}
+          {navConfig.map(entry => entry.gruppe
+            ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />
+            : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />
+          )}
         </nav>
 
         {/* Session beitreten (Schüler + Vorstand) */}
@@ -335,7 +372,10 @@ export default function AppLayout() {
               <button onClick={() => setSidebarOffen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
             </div>
             <nav style={{ flex: 1 }}>
-              {navItems.map(item => <NavItem key={item.to} item={item} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />)}
+              {navConfig.map(entry => entry.gruppe
+                ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />
+                : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />
+              )}
             </nav>
             {(rolle === 'schueler' || rolle === 'vorstand') && (
               <button onClick={() => { setJoinSessionOffen(true); setSidebarOffen(false) }}
