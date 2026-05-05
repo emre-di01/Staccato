@@ -296,7 +296,9 @@ export default function AdminEvents() {
                 </div>
               )}
               <div style={s.cardActions}>
-                <button onClick={() => navigate(`/admin/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 {T('repertoire')}</button>
+                {ev.typ !== 'vorstandssitzung' && (
+                  <button onClick={() => navigate(`/admin/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 {T('repertoire')}</button>
+                )}
                 <button onClick={() => oeffneTeilnehmer(ev)} style={s.btnSm}>👥 {T('manage_participants')}</button>
                 <button onClick={() => oeffneBearbeiten(ev)} style={s.btnSm}>{T('edit')}</button>
                 <button onClick={() => loeschen(ev.id)} style={{ ...s.btnSm, color: 'var(--danger)' }}>{T('delete')}</button>
