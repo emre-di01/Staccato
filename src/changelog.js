@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.6.0'
+export const CURRENT_VERSION = '1.6.1'
 
 export const CHANGELOG = [
+  {
+    version: '1.6.1',
+    date: '2026-05-05',
+    features: [
+      {
+        icon: '🔐',
+        de: 'Session-Stabilität: Login bleibt nach Browser-Neustart zuverlässig erhalten',
+        en: 'Session stability: login is reliably preserved after browser restart',
+        tr: 'Oturum kararlılığı: tarayıcı yeniden başlatıldıktan sonra giriş güvenilir biçimde korunur',
+      },
+      {
+        icon: '✅',
+        de: 'RSVP für Admins und bei öffentlichen Veranstaltungen für alle',
+        en: 'RSVP for admins and for all on public events',
+        tr: 'Yöneticiler için ve herkese açık etkinliklerde tüm kullanıcılar için RSVP',
+      },
+      {
+        icon: '⚡',
+        de: 'Schnellerer App-Start durch Code-Splitting aller Seiten',
+        en: 'Faster app start through code-splitting of all pages',
+        tr: 'Tüm sayfaların kod bölünmesiyle daha hızlı uygulama başlangıcı',
+      },
+    ],
+  },
   {
     version: '1.6.0',
     date: '2026-05-05',

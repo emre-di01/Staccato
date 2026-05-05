@@ -33,6 +33,7 @@ export default function SchuelerEvents() {
     const { data, error } = await supabase
       .from('events')
       .select(`*, meine_zusage:event_teilnehmer(zusage)`)
+      .eq('schule_id', profil.schule_id)
       .order('beginn', { ascending: true })
     if (error) setFehler(error.message)
     else setEvents(data || [])
@@ -132,7 +133,7 @@ export default function SchuelerEvents() {
                     </button>
                   </div>
 
-                  {eingeladen && !vergangen && (
+                  {(eingeladen || ev.oeffentlich) && !vergangen && (
                     <div style={s.rsvpRow}>
                       <span style={s.rsvpLabel}>{T('my_rsvp')}:</span>
                       <button

@@ -35,13 +35,14 @@ export default function LehrerEvents() {
   const [form,    setForm]    = useState(leerForm)
   const [senden,  setSenden]  = useState(false)
 
-  useEffect(() => { ladeEvents() }, [])
+  useEffect(() => { if (profil) ladeEvents() }, [profil?.id])
 
   async function ladeEvents() {
     setLaden(true)
     const { data, error } = await supabase
       .from('events')
       .select('*')
+      .eq('schule_id', profil.schule_id)
       .order('beginn', { ascending: true })
     if (error) setFehler(error.message)
     else setEvents(data || [])

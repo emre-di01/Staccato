@@ -61,30 +61,30 @@ export function AppProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    // getSession() handles token refresh and is the authoritative initialization source.
-    // onAuthStateChange fires INITIAL_SESSION immediately (possibly with null while token
-    // is being refreshed), so we skip it here to avoid a race that redirects to /login.
-    const sessionTimeout = new Promise(resolve =>
-      setTimeout(() => resolve({ data: { session: null } }), 10_000)
-    )
-    Promise.race([supabase.auth.getSession(), sessionTimeout])
-      .then(({ data: { session } }) => {
+    // Use onAuthStateChange as the single source of truth for session initialization.
+    // Calling getSession() concurrently with onAuthStateChange causes Web Lock conflicts
+    // ("lock was released because another request stole it"), which deletes the session
+    // from localStorage and logs the user out. INITIAL_SESSION fires after any pending
+    // token refresh is complete, so it is safe to use as the initial session source.
+    let initialized = false
+    const fallback = setTimeout(() => {
+      if (!initialized) { setSession(null); setLaden(false) }
+    }, 10_000)
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        window.location.href = '/passwort-zuruecksetzen'
+        return
+      }
+      if (event === 'INITIAL_SESSION') {
+        initialized = true
+        clearTimeout(fallback)
         setSession(session)
         if (session?.user) {
-          ladeProfil(session.user.id)
+          await ladeProfil(session.user.id)
         } else {
           setLaden(false)
         }
-      })
-      .catch(() => {
-        setSession(null)
-        setLaden(false)
-      })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'INITIAL_SESSION') return
-      if (event === 'PASSWORD_RECOVERY') {
-        window.location.href = '/passwort-zuruecksetzen'
         return
       }
       setSession(session)
@@ -96,7 +96,10 @@ export function AppProvider({ children }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(fallback)
+      subscription.unsubscribe()
+    }
   }, [ladeProfil])
 
   useEffect(() => {

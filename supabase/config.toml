@@ -228,8 +228,8 @@ otp_expiry = 3600
 enabled = true
 host = "smtp.1blu.de"
 port = 465
-user = "v372670_0-staccato"
-pass = "Iskenderun31!"
+user = "env(SMTP_USER)"
+pass = "env(SMTP_PASS)"
 admin_email = "staccato@401dev.de"
 sender_name = "Staccato"
 
@@ -364,6 +364,9 @@ enabled = false
 authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
+
+[functions.kalender]
+verify_jwt = false
 
 [edge_runtime]
 enabled = true

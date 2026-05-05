@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/queryClient'
@@ -5,42 +6,43 @@ import { AppProvider, useApp } from './context/AppContext'
 import PageErrorBoundary from './components/PageErrorBoundary'
 import ProtectedRoute, { startseiteNach } from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
-import LoginPage from './pages/LoginPage'
-import PasswortZuruecksetzen from './pages/PasswortZuruecksetzen'
-import AdminDashboard from './pages/admin/Dashboard'
-import Mitgliederverwaltung from './pages/admin/Mitgliederverwaltung'
-import Kursverwaltung from './pages/admin/Kursverwaltung'
-import Raumverwaltung from './pages/admin/Raumverwaltung'
-import LehrerDashboard from './pages/lehrer/Dashboard'
-import LehrerKurse from './pages/lehrer/Kurse'
-import KursDetail from './pages/lehrer/KursDetail'
-import KursRepertoire from './pages/lehrer/KursRepertoire'
-import StueckDetail from './pages/lehrer/StueckDetail'
-import SchuelerDashboard from './pages/schueler/Dashboard'
-import SchuelerKurse from './pages/schueler/Kurse'
-import SchuelerKursDetail from './pages/schueler/KursDetail'
-import SchuelerAnwesenheit from './pages/schueler/Anwesenheit'
-import AdminEvents from './pages/admin/Events'
-import Interessenten from './pages/admin/Interessenten'
-import LehrerEvents from './pages/lehrer/Events'
-import EventRepertoire from './pages/lehrer/EventRepertoire'
-import SchuelerEvents from './pages/schueler/Events'
-import ProfilSeite from './pages/ProfilSeite'
-import Stundenplan from './pages/Stundenplan'
-import Platzhalter from './pages/Platzhalter'
-import Unterrichtsmodus from './pages/lehrer/Unterrichtsmodus'
-import LehrerSchueler from './pages/lehrer/LehrerSchueler'
-import SchuelerSession from './pages/SchuelerSession'
-import Repertoire from './pages/Repertoire'
-import Impressum from './pages/Impressum'
-import Datenschutz from './pages/Datenschutz'
 import ConsentBanner from './components/ConsentBanner'
 import WhatsNewModal from './components/WhatsNewModal'
-import Instrumente from './pages/admin/Instrumente'
-import VorstandDashboard from './pages/vorstand/Dashboard'
-import VorstandZiele from './pages/vorstand/Ziele'
-import VorstandProtokolle from './pages/vorstand/Protokolle'
-import Nachrichten from './pages/Nachrichten'
+
+const LoginPage            = lazy(() => import('./pages/LoginPage'))
+const PasswortZuruecksetzen = lazy(() => import('./pages/PasswortZuruecksetzen'))
+const AdminDashboard       = lazy(() => import('./pages/admin/Dashboard'))
+const Mitgliederverwaltung = lazy(() => import('./pages/admin/Mitgliederverwaltung'))
+const Kursverwaltung       = lazy(() => import('./pages/admin/Kursverwaltung'))
+const Raumverwaltung       = lazy(() => import('./pages/admin/Raumverwaltung'))
+const Instrumente          = lazy(() => import('./pages/admin/Instrumente'))
+const AdminEvents          = lazy(() => import('./pages/admin/Events'))
+const Interessenten        = lazy(() => import('./pages/admin/Interessenten'))
+const LehrerDashboard      = lazy(() => import('./pages/lehrer/Dashboard'))
+const LehrerKurse          = lazy(() => import('./pages/lehrer/Kurse'))
+const KursDetail           = lazy(() => import('./pages/lehrer/KursDetail'))
+const KursRepertoire       = lazy(() => import('./pages/lehrer/KursRepertoire'))
+const StueckDetail         = lazy(() => import('./pages/lehrer/StueckDetail'))
+const LehrerEvents         = lazy(() => import('./pages/lehrer/Events'))
+const EventRepertoire      = lazy(() => import('./pages/lehrer/EventRepertoire'))
+const Unterrichtsmodus     = lazy(() => import('./pages/lehrer/Unterrichtsmodus'))
+const LehrerSchueler       = lazy(() => import('./pages/lehrer/LehrerSchueler'))
+const SchuelerDashboard    = lazy(() => import('./pages/schueler/Dashboard'))
+const SchuelerKurse        = lazy(() => import('./pages/schueler/Kurse'))
+const SchuelerKursDetail   = lazy(() => import('./pages/schueler/KursDetail'))
+const SchuelerAnwesenheit  = lazy(() => import('./pages/schueler/Anwesenheit'))
+const SchuelerEvents       = lazy(() => import('./pages/schueler/Events'))
+const VorstandDashboard    = lazy(() => import('./pages/vorstand/Dashboard'))
+const VorstandZiele        = lazy(() => import('./pages/vorstand/Ziele'))
+const VorstandProtokolle   = lazy(() => import('./pages/vorstand/Protokolle'))
+const ProfilSeite          = lazy(() => import('./pages/ProfilSeite'))
+const Stundenplan          = lazy(() => import('./pages/Stundenplan'))
+const Platzhalter          = lazy(() => import('./pages/Platzhalter'))
+const SchuelerSession      = lazy(() => import('./pages/SchuelerSession'))
+const Repertoire           = lazy(() => import('./pages/Repertoire'))
+const Nachrichten          = lazy(() => import('./pages/Nachrichten'))
+const Impressum            = lazy(() => import('./pages/Impressum'))
+const Datenschutz          = lazy(() => import('./pages/Datenschutz'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -176,7 +178,9 @@ export default function App() {
           <ConsentBanner />
           <WhatsNewModal />
           <PageErrorBoundary>
-            <AppRoutes />
+            <Suspense fallback={null}>
+              <AppRoutes />
+            </Suspense>
           </PageErrorBoundary>
         </AppProvider>
       </BrowserRouter>

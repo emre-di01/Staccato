@@ -138,7 +138,7 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right – Login Form ── */}
-      <div style={{
+      <main style={{
         width: 420, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         padding: 48, background: 'var(--surface)',
@@ -267,7 +267,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Footer */}
       <div style={{ position:'fixed', bottom:0, left:0, right:0, textAlign:'center', padding:'10px', fontSize:12, color:'var(--text-3)', display:'flex', justifyContent:'center', gap:16, zIndex:10 }}>

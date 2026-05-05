@@ -24,7 +24,7 @@ function toInputVal(ts) {
 const leerForm = { titel: '', typ: 'veranstaltung', beginn: '', ende: '', ort: '', raum_id: '', beschreibung: '', oeffentlich: false }
 
 export default function AdminEvents() {
-  const { T } = useApp()
+  const { profil, T } = useApp()
   const navigate = useNavigate()
   const [events,    setEvents]    = useState([])
   const [profiles,  setProfiles]  = useState([])
@@ -41,8 +41,9 @@ export default function AdminEvents() {
   const [fehlerTn,   setFehlerTn]   = useState(null)
   const [tnSuche,    setTnSuche]    = useState('')
   const [raeume,     setRaeume]     = useState([])
+  const [rsvpSenden, setRsvpSenden] = useState(null)
 
-  useEffect(() => { ladeEvents() }, [])
+  useEffect(() => { if (profil) ladeEvents() }, [profil?.id])
   useEffect(() => {
     supabase.from('raeume').select('id, name').eq('aktiv', true).order('name')
       .then(({ data }) => setRaeume(data ?? []))
@@ -52,11 +53,28 @@ export default function AdminEvents() {
     setLaden(true)
     const { data, error } = await supabase
       .from('events')
-      .select('*, raeume(name)')
+      .select('*, raeume(name), meine_zusage:event_teilnehmer(zusage)')
+      .eq('schule_id', profil.schule_id)
       .order('beginn', { ascending: true })
     if (error) setFehler(error.message)
     else setEvents(data || [])
     setLaden(false)
+  }
+
+  async function zusageAendern(eventId, status) {
+    setRsvpSenden(eventId)
+    const existing = events.find(e => e.id === eventId)?.meine_zusage?.[0]
+    if (existing) {
+      await supabase.from('event_teilnehmer')
+        .update({ zusage: status })
+        .eq('event_id', eventId)
+        .eq('profil_id', profil.id)
+    } else {
+      await supabase.from('event_teilnehmer')
+        .upsert({ event_id: eventId, profil_id: profil.id, zusage: status })
+    }
+    await ladeEvents()
+    setRsvpSenden(null)
   }
 
   async function ladeProfiles() {
@@ -227,16 +245,24 @@ export default function AdminEvents() {
         <div style={s.leer}>{T('event_no_results')}</div>
       ) : (
         <div style={s.grid}>
-          {gefiltert.map(ev => (
+          {gefiltert.map(ev => {
+            const zusage = ev.meine_zusage?.[0]?.zusage || null
+            const vergangen = new Date(ev.beginn) < jetzt
+            return (
             <div key={ev.id} style={s.card}>
               <div style={s.cardTop}>
                 <div style={s.typBadge}>
                   <span style={s.typIcon}>{TYP_ICON[ev.typ]}</span>
                   <span style={s.typLabel}>{T('event_' + ev.typ)}</span>
                 </div>
-                {ev.oeffentlich && (
-                  <span style={s.badge}>{T('event_public_badge')}</span>
-                )}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {ev.oeffentlich && <span style={s.badge}>{T('event_public_badge')}</span>}
+                  {zusage && (
+                    <span style={{ ...s.badge, background: 'color-mix(in srgb, ' + ZUSAGE_FARBE[zusage] + ' 15%, transparent)', color: ZUSAGE_FARBE[zusage] }}>
+                      {zusage === 'zugesagt' ? T('rsvp_accepted') : zusage === 'abgesagt' ? T('rsvp_declined') : T('rsvp_open')}
+                    </span>
+                  )}
+                </div>
               </div>
               <div style={s.cardTitel}>{ev.titel}</div>
               <div style={s.cardMeta}>
@@ -246,6 +272,23 @@ export default function AdminEvents() {
               {ev.raeume && <div style={s.cardMeta}>🏫 {ev.raeume.name}</div>}
               {ev.ort && <div style={s.cardMeta}>📍 {ev.ort}</div>}
               {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
+              {!vergangen && (
+                <div style={s.rsvpRow}>
+                  <span style={s.rsvpLabel}>{T('my_rsvp')}:</span>
+                  <button
+                    onClick={() => zusageAendern(ev.id, 'zugesagt')}
+                    disabled={rsvpSenden === ev.id}
+                    style={{ ...s.btnSm, ...(zusage === 'zugesagt' ? s.rsvpAktiv : {}) }}>
+                    ✓ {T('rsvp_yes')}
+                  </button>
+                  <button
+                    onClick={() => zusageAendern(ev.id, 'abgesagt')}
+                    disabled={rsvpSenden === ev.id}
+                    style={{ ...s.btnSm, ...(zusage === 'abgesagt' ? s.rsvpAktivNein : {}) }}>
+                    ✕ {T('rsvp_no')}
+                  </button>
+                </div>
+              )}
               <div style={s.cardActions}>
                 <button onClick={() => navigate(`/admin/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 {T('repertoire')}</button>
                 <button onClick={() => oeffneTeilnehmer(ev)} style={s.btnSm}>👥 {T('manage_participants')}</button>
@@ -253,7 +296,8 @@ export default function AdminEvents() {
                 <button onClick={() => loeschen(ev.id)} style={{ ...s.btnSm, color: 'var(--danger)' }}>{T('delete')}</button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -403,6 +447,10 @@ const s = {
   cardTitel: { fontSize: 17, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 },
   cardMeta: { fontSize: 13, color: 'var(--text-2)', display: 'flex', gap: 6, flexWrap: 'wrap' },
   cardBeschreibung: { fontSize: 13, color: 'var(--text-3)', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: 8 },
+  rsvpRow: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  rsvpLabel: { fontSize: 13, fontWeight: 600, color: 'var(--text-2)' },
+  rsvpAktiv: { background: 'color-mix(in srgb, var(--success) 15%, transparent)', borderColor: 'var(--success)', color: 'var(--success)' },
+  rsvpAktivNein: { background: 'color-mix(in srgb, var(--danger) 15%, transparent)', borderColor: 'var(--danger)', color: 'var(--danger)' },
   cardActions: { display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4, borderTop: '1px solid var(--border)', marginTop: 4 },
   leer: { textAlign: 'center', color: 'var(--text-3)', padding: '60px 0', fontSize: 14 },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
