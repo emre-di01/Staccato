@@ -68,13 +68,13 @@ function getNavItems(rolle, T) {
     ],
     vorstand: [
       { icon: '📊', label: T('dashboard'),           to: '/vorstand' },
-      { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
-      { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
-      { icon: '📦', label: 'Inventar',               to: '/vorstand/inventar' },
       { icon: '📅', label: 'Stundenplan',            to: '/vorstand/stundenplan' },
       { icon: '🎵', label: 'Meine Kurse',            to: '/vorstand/kurse' },
       { icon: '🎼', label: T('repertoire'),          to: '/vorstand/repertoire' },
       { icon: '🎭', label: T('events'),              to: '/vorstand/events' },
+      { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
+      { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
+      { icon: '📦', label: 'Inventar',               to: '/vorstand/inventar' },
     ],
   }
   return items[rolle] ?? []
