@@ -5,7 +5,15 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
-const WOCHENTAGE = ['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag']
+const WOCHENTAGE = [
+  { wert: 'mo', label: 'Montag' },
+  { wert: 'di', label: 'Dienstag' },
+  { wert: 'mi', label: 'Mittwoch' },
+  { wert: 'do', label: 'Donnerstag' },
+  { wert: 'fr', label: 'Freitag' },
+  { wert: 'sa', label: 'Samstag' },
+  { wert: 'so', label: 'Sonntag' },
+]
 
 function NeuerKursModal({ onClose, onErfolg }) {
   const { profil } = useApp()
@@ -93,7 +101,7 @@ function NeuerKursModal({ onClose, onErfolg }) {
               <label style={s.label}>Wochentag</label>
               <select style={s.input} value={form.wochentag} onChange={e => setForm(f => ({ ...f, wochentag: e.target.value }))}>
                 <option value="">– kein –</option>
-                {WOCHENTAGE.map(w => <option key={w} value={w}>{w.charAt(0).toUpperCase() + w.slice(1)}</option>)}
+                {WOCHENTAGE.map(w => <option key={w.wert} value={w.wert}>{w.label}</option>)}
               </select>
             </div>
             <div>
