@@ -123,6 +123,7 @@ export default function AdminEvents() {
     setSenden(true)
     setFehler(null)
     const payload = {
+      schule_id: profil.schule_id,
       titel: form.titel.trim(),
       typ: form.typ,
       beginn: new Date(form.beginn).toISOString(),
