@@ -125,7 +125,16 @@ function ProtokolModal({ protokoll, vorstandMitglieder, schuleId, profilId, onCl
         {vorstandsEvents.length > 0 && (
           <div>
             <label style={s.label}>🏛 Verknüpfte Vorstandssitzung</label>
-            <select value={form.event_id} onChange={e => setForm(f => ({ ...f, event_id: e.target.value }))} style={s.input}>
+            <select value={form.event_id} onChange={e => {
+              const id = e.target.value
+              setForm(f => ({
+                ...f,
+                event_id: id,
+                ...(id && f.teilnehmer_ids.length === 0
+                  ? { teilnehmer_ids: vorstandMitglieder.map(m => m.id) }
+                  : {}),
+              }))
+            }} style={s.input}>
               <option value="">– Keine –</option>
               {vorstandsEvents.map(ev => (
                 <option key={ev.id} value={ev.id}>
