@@ -126,8 +126,8 @@ export default function VorstandDashboard() {
       {/* Schüler KPIs */}
       <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Meine Kurse</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
-        <StatCard icon="🎵" label={T('dash_my_courses')}   wert={laden ? '…' : kurse.length}           farbe="var(--primary)" />
-        <StatCard icon="📅" label={T('dash_next_lessons')} wert={laden ? '…' : naechsteStunden.length}  farbe="var(--accent)" />
+        <StatCard icon="🎵" label={T('dash_my_courses')}   wert={laden ? '…' : kurse.length}           farbe="var(--primary)" onClick={() => navigate('/vorstand/kurse')} />
+        <StatCard icon="📅" label={T('dash_next_lessons')} wert={laden ? '…' : naechsteStunden.length}  farbe="var(--accent)"  onClick={() => navigate('/vorstand/stundenplan')} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }} className="dashboard-grid">

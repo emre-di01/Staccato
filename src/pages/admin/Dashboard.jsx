@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { supabase } from '../../lib/supabase'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
-function StatCard({ icon, label, value, color = 'var(--primary)', sub }) {
+function StatCard({ icon, label, value, color = 'var(--primary)', sub, onClick }) {
   return (
-    <div style={{
+    <div onClick={onClick} style={{
       background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
       padding: '20px 24px', border: '1px solid var(--border)',
-      boxShadow: 'var(--shadow)',
+      boxShadow: 'var(--shadow)', cursor: onClick ? 'pointer' : 'default',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
@@ -25,6 +26,7 @@ function StatCard({ icon, label, value, color = 'var(--primary)', sub }) {
 
 export default function AdminDashboard() {
   const { profil, schule, setSchule, T } = useApp()
+  const navigate = useNavigate()
   const [tab, setTab] = useState('uebersicht')
   const [stats, setStats] = useState(null)
   const [vorstandStats, setVorstandStats] = useState(null)
@@ -131,14 +133,14 @@ export default function AdminDashboard() {
       {tab === 'uebersicht' && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
-            <StatCard icon="🎓" label={T('students_total')}  value={laden ? '…' : stats?.schueler_gesamt}   color="var(--accent)" />
-            <StatCard icon="👨‍🏫" label={T('teachers_total')} value={laden ? '…' : stats?.lehrer_gesamt}    color="var(--primary)" />
-            <StatCard icon="🎵" label={T('classes_active')}  value={laden ? '…' : stats?.unterricht_aktiv}  color="var(--success)" />
-            <StatCard icon="📅" label={T('lessons_today')}   value={laden ? '…' : stats?.stunden_heute}     color="var(--warning)" />
-            <StatCard icon="📊" label={T('attendance_rate')} value={laden ? '…' : stats?.anwesenheit_quote ? `${stats.anwesenheit_quote}%` : '–'} color="var(--accent)" />
+            <StatCard icon="🎓" label={T('students_total')}  value={laden ? '…' : stats?.schueler_gesamt}   color="var(--accent)"   onClick={() => navigate('/admin/mitglieder')} />
+            <StatCard icon="👨‍🏫" label={T('teachers_total')} value={laden ? '…' : stats?.lehrer_gesamt}    color="var(--primary)"  onClick={() => navigate('/admin/mitglieder')} />
+            <StatCard icon="🎵" label={T('classes_active')}  value={laden ? '…' : stats?.unterricht_aktiv}  color="var(--success)"  onClick={() => navigate('/admin/kurse')} />
+            <StatCard icon="📅" label={T('lessons_today')}   value={laden ? '…' : stats?.stunden_heute}     color="var(--warning)"  onClick={() => navigate('/admin/stundenplan')} />
+            <StatCard icon="📊" label={T('attendance_rate')} value={laden ? '…' : stats?.anwesenheit_quote ? `${stats.anwesenheit_quote}%` : '–'} color="var(--accent)" onClick={() => navigate('/admin/stundenplan')} />
             <StatCard icon="💰" label={T('revenue_month')}   value={laden ? '…' : stats?.einnahmen_monat ? `€${stats.einnahmen_monat}` : '€0'} color="var(--success)" />
-            <StatCard icon="📋" label={T('prospects_open')}  value={laden ? '…' : stats?.interessenten}     color="var(--primary)" />
-            <StatCard icon="📅" label={T('lessons_week')}    value={laden ? '…' : stats?.stunden_woche}     color="var(--text-2)" />
+            <StatCard icon="📋" label={T('prospects_open')}  value={laden ? '…' : stats?.interessenten}     color="var(--primary)"  onClick={() => navigate('/admin/interessenten')} />
+            <StatCard icon="📅" label={T('lessons_week')}    value={laden ? '…' : stats?.stunden_woche}     color="var(--text-2)"   onClick={() => navigate('/admin/stundenplan')} />
           </div>
 
           <div style={{ marginBottom: 32 }}>
@@ -147,14 +149,14 @@ export default function AdminDashboard() {
               <span style={{ fontSize: 12, fontWeight: 600, color: '#7c3aed', background: '#7c3aed18', padding: '2px 10px', borderRadius: 99 }}>Vorstand</span>
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
-              <StatCard icon="🔴" label="Offene Aufgaben"    value={laden ? '…' : vorstandStats?.aufgabenOffen}    color="var(--warning)" />
-              <StatCard icon="🟡" label="In Bearbeitung"     value={laden ? '…' : vorstandStats?.aufgabenLaufend}  color="var(--accent)" />
-              <StatCard icon="✅" label="Erledigte Aufgaben" value={laden ? '…' : vorstandStats?.aufgabenErledigt} color="var(--success)" />
+              <StatCard icon="🔴" label="Offene Aufgaben"    value={laden ? '…' : vorstandStats?.aufgabenOffen}    color="var(--warning)" onClick={() => navigate('/vorstand/ziele')} />
+              <StatCard icon="🟡" label="In Bearbeitung"     value={laden ? '…' : vorstandStats?.aufgabenLaufend}  color="var(--accent)"  onClick={() => navigate('/vorstand/ziele')} />
+              <StatCard icon="✅" label="Erledigte Aufgaben" value={laden ? '…' : vorstandStats?.aufgabenErledigt} color="var(--success)" onClick={() => navigate('/vorstand/ziele')} />
               <StatCard icon="🎯" label="Ziele"
                 value={laden ? '…' : vorstandStats ? `${vorstandStats.zieleErledigt}/${vorstandStats.zieleGesamt}` : '–'}
                 sub={laden ? '' : vorstandStats?.zieleGesamt > 0 ? `${Math.round(vorstandStats.zieleErledigt / vorstandStats.zieleGesamt * 100)}% erledigt` : ''}
-                color="#7c3aed" />
-              <StatCard icon="📝" label="Protokolle" value={laden ? '…' : vorstandStats?.protokolle} color="#7c3aed" />
+                color="#7c3aed" onClick={() => navigate('/vorstand/ziele')} />
+              <StatCard icon="📝" label="Protokolle" value={laden ? '…' : vorstandStats?.protokolle} color="#7c3aed" onClick={() => navigate('/vorstand/protokolle')} />
             </div>
           </div>
 
@@ -194,8 +196,8 @@ export default function AdminDashboard() {
       {tab === 'meine_kurse' && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
-            <StatCard icon="🎵" label={T('dash_my_courses')}   value={!kurseGeladen ? '…' : kurse.length}           color="var(--primary)" />
-            <StatCard icon="📅" label={T('dash_next_lessons')} value={!kurseGeladen ? '…' : naechsteStunden.length}  color="var(--accent)" />
+            <StatCard icon="🎵" label={T('dash_my_courses')}   value={!kurseGeladen ? '…' : kurse.length}           color="var(--primary)" onClick={() => navigate('/lehrer/kurse')} />
+            <StatCard icon="📅" label={T('dash_next_lessons')} value={!kurseGeladen ? '…' : naechsteStunden.length}  color="var(--accent)"  onClick={() => navigate('/lehrer/anwesenheit')} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }} className="dashboard-grid">

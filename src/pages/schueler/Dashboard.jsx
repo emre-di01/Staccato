@@ -6,9 +6,9 @@ import { useApp } from '../../context/AppContext'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
-function StatCard({ icon, label, wert, farbe = 'var(--primary)' }) {
+function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
   return (
-    <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'20px 24px', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
+    <div onClick={onClick} style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'20px 24px', border:'1px solid var(--border)', boxShadow:'var(--shadow)', cursor: onClick ? 'pointer' : 'default' }}>
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
         <div>
           <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>{label}</div>
@@ -84,8 +84,8 @@ export default function SchuelerDashboard() {
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:16, marginBottom:32 }}>
-        <StatCard icon="🎵" label={T('dash_my_courses')}   wert={laden ? '…' : kurse.length}          farbe="var(--primary)" />
-        <StatCard icon="📅" label={T('dash_next_lessons')} wert={laden ? '…' : naechsteStunden.length} farbe="var(--accent)" />
+        <StatCard icon="🎵" label={T('dash_my_courses')}   wert={laden ? '…' : kurse.length}          farbe="var(--primary)" onClick={() => navigate('/schueler/kurse')} />
+        <StatCard icon="📅" label={T('dash_next_lessons')} wert={laden ? '…' : naechsteStunden.length} farbe="var(--accent)"  onClick={() => navigate('/schueler/stundenplan')} />
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24 }} className="dashboard-grid">
