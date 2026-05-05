@@ -51,28 +51,22 @@ export default function AdminEvents() {
 
   async function ladeEvents() {
     setLaden(true)
-    const { data, error } = await supabase
-      .from('events')
-      .select('*, raeume(name), meine_zusage:event_teilnehmer(zusage)')
-      .eq('schule_id', profil.schule_id)
-      .order('beginn', { ascending: true })
+    const [{ data, error }, { data: rsvps }] = await Promise.all([
+      supabase.from('events').select('*, raeume(name)').eq('schule_id', profil.schule_id).order('beginn', { ascending: true }),
+      supabase.from('event_teilnehmer').select('event_id, zusage').eq('profil_id', profil.id),
+    ])
     if (error) setFehler(error.message)
-    else setEvents(data || [])
+    else {
+      const rsvpMap = new Map((rsvps ?? []).map(r => [r.event_id, r.zusage]))
+      setEvents((data ?? []).map(ev => ({ ...ev, meine_zusage: rsvpMap.get(ev.id) ?? null })))
+    }
     setLaden(false)
   }
 
   async function zusageAendern(eventId, status) {
     setRsvpSenden(eventId)
-    const existing = events.find(e => e.id === eventId)?.meine_zusage?.[0]
-    if (existing) {
-      await supabase.from('event_teilnehmer')
-        .update({ zusage: status })
-        .eq('event_id', eventId)
-        .eq('profil_id', profil.id)
-    } else {
-      await supabase.from('event_teilnehmer')
-        .upsert({ event_id: eventId, profil_id: profil.id, zusage: status })
-    }
+    await supabase.from('event_teilnehmer')
+      .upsert({ event_id: eventId, profil_id: profil.id, zusage: status }, { onConflict: 'event_id,profil_id' })
     await ladeEvents()
     setRsvpSenden(null)
   }
@@ -246,7 +240,7 @@ export default function AdminEvents() {
       ) : (
         <div style={s.grid}>
           {gefiltert.map(ev => {
-            const zusage = ev.meine_zusage?.[0]?.zusage || null
+            const zusage = ev.meine_zusage || null
             const vergangen = new Date(ev.beginn) < jetzt
             return (
             <div key={ev.id} style={s.card}>
