@@ -158,13 +158,14 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
 
 function ProfilModal({ mitglied, onClose, onErfolg, T }) {
   const [form, setForm] = useState({
-    voller_name:  mitglied.voller_name ?? '',
-    rolle:        mitglied.rolle ?? 'schueler',
-    telefon:      mitglied.telefon ?? '',
-    adresse:      mitglied.adresse ?? '',
-    geburtsdatum: mitglied.geburtsdatum ?? '',
-    notizen:      mitglied.notizen ?? '',
-    aktiv:        mitglied.aktiv ?? true,
+    voller_name:         mitglied.voller_name ?? '',
+    rolle:               mitglied.rolle ?? 'schueler',
+    telefon:             mitglied.telefon ?? '',
+    adresse:             mitglied.adresse ?? '',
+    geburtsdatum:        mitglied.geburtsdatum ?? '',
+    notizen:             mitglied.notizen ?? '',
+    aktiv:               mitglied.aktiv ?? true,
+    kann_kurse_anlegen:  mitglied.kann_kurse_anlegen ?? false,
   })
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
@@ -211,6 +212,13 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
           <input type="checkbox" id="aktiv" checked={form.aktiv} onChange={e => setForm(f => ({ ...f, aktiv: e.target.checked }))} />
           <label htmlFor="aktiv" style={s.label}>{T('active')}</label>
         </div>
+        {form.rolle === 'lehrer' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="checkbox" id="kann_kurse_anlegen" checked={form.kann_kurse_anlegen}
+              onChange={e => setForm(f => ({ ...f, kann_kurse_anlegen: e.target.checked }))} />
+            <label htmlFor="kann_kurse_anlegen" style={s.label}>Darf eigene Kurse anlegen</label>
+          </div>
+        )}
         {fehler && <p style={s.fehler}>{fehler}</p>}
         <div style={s.btnRow}>
           <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
