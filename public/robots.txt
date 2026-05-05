@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /admin
+Disallow: /lehrer
+Disallow: /schueler
+Disallow: /vorstand
+Disallow: /eltern
+Disallow: /profil
+Disallow: /session
+Allow: /impressum
+Allow: /datenschutz

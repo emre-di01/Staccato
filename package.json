@@ -1,7 +1,7 @@
 {
   "name": "staccato",
   "private": true,
-  "version": "1.6.2",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,6 +11,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.43.0",
     "@tanstack/react-query": "^5.100.9",
+    "jsqr": "^1.4.0",
     "marked": "^18.0.3",
     "qrcode": "^1.5.3",
     "react": "^18.3.1",

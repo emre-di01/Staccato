@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.6.2'
+export const CURRENT_VERSION = '1.7.0'
 
 export const CHANGELOG = [
+  {
+    version: '1.7.0',
+    date: '2026-05-05',
+    features: [
+      {
+        icon: '📦',
+        de: 'Inventar-Verwaltung: Gegenstände erfassen, kategorisieren, Zustand verfolgen und per QR-Code scannen',
+        en: 'Inventory management: record items, categorise, track condition and scan via QR code',
+        tr: 'Envanter yönetimi: eşyaları kaydet, kategorilere ayır, durumu takip et ve QR kodu ile tara',
+      },
+      {
+        icon: '🔒',
+        de: 'Bugfix: Datei-Upload im Repertoire und anderen Bereichen funktioniert wieder zuverlässig',
+        en: 'Bugfix: file upload in repertoire and other areas works reliably again',
+        tr: 'Hata düzeltme: repertuarda ve diğer alanlarda dosya yükleme yeniden güvenilir şekilde çalışıyor',
+      },
+    ],
+  },
   {
     version: '1.6.2',
     date: '2026-05-05',

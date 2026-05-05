@@ -68,7 +68,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **1.6.0** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **1.7.0** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -89,7 +89,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/admin/events/:id/repertoire` | `EventRepertoire` | admin, superadmin |
 | `/admin/events/:kursId/repertoire/:stueckId` | `StueckDetail` | admin, superadmin |
 | `/admin/instrumente` | `Instrumente` | admin, superadmin |
-| `/admin/abrechnung` | *Platzhalter* | admin, superadmin |
+| `/admin/inventar` | `Inventar` | admin, superadmin |
 | `/admin/interessenten` | `Interessenten` | admin, superadmin |
 | `/admin/nachrichten` | `Nachrichten` | admin, superadmin |
 | `/lehrer` | `LehrerDashboard` | lehrer, admin, superadmin |
@@ -115,6 +115,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/vorstand/ziele` | `VorstandZiele` | vorstand, admin, superadmin |
 | `/vorstand/protokolle` | `VorstandProtokolle` | vorstand, admin, superadmin |
 | `/vorstand/stundenplan` | `Stundenplan` | vorstand, admin, superadmin |
+| `/vorstand/inventar` | `Inventar` | vorstand, admin, superadmin |
 | `/vorstand/kurse` | `SchuelerKurse` | vorstand, admin, superadmin |
 | `/vorstand/events` | `Events` (schueler) | vorstand, admin, superadmin |
 | `/vorstand/repertoire` | `Repertoire` | vorstand, admin, superadmin |
@@ -134,10 +135,10 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 
 Defined in `src/components/layout/AppLayout.jsx` (`getNavItems`):
 
-- **admin / superadmin**: Dashboard, Mitglieder, Kurse, Stundenplan, Räume, Instrumente, Repertoire, Events, Abrechnung, Interessenten, Nachrichten, Kurs-Ansicht (`/lehrer/kurse`), Ziele, Protokolle
+- **admin / superadmin**: Dashboard, Mitglieder, Kurse, Stundenplan, Räume, Instrumente, Inventar, Repertoire, Events, Interessenten, Nachrichten, Kurs-Ansicht (`/lehrer/kurse`), Ziele, Protokolle
 - **lehrer**: Dashboard, Meine Kurse, Stundenplan, Meine Schüler, Repertoire, Events, Nachrichten
 - **schueler**: Dashboard, Stundenplan, Meine Kurse, Repertoire, Events, Nachrichten
-- **vorstand**: Dashboard, Ziele, Protokolle, Stundenplan, Meine Kurse, Repertoire, Events
+- **vorstand**: Dashboard, Ziele, Protokolle, Inventar, Stundenplan, Meine Kurse, Repertoire, Events
 - **eltern**: Dashboard, Stundenplan, Dateien, Veranstaltungen, Nachrichten
 
 ### Global state — `useApp()`
@@ -273,6 +274,10 @@ Staccato is a full music school management platform. Features by area:
 - `vorstand_protokolle` — meeting protocols with `teilnehmer_ids[]`, `beschluesse`, `inhalt`, optional `event_id`
 - `vorstand_protokoll_dateien` — file attachments for protocols
 
+**Inventar:**
+- `inventar_kategorien` — per-school categories with `icon` and `name`; RLS: admin/superadmin/vorstand
+- `inventar` — inventory items; `zustand` enum `inventar_zustand`: `neu/gut/gebraucht/defekt`; `inventarnummer` auto-generated via trigger (`inventar_prefix` from `schulen` + zero-padded `laufnummer`)
+
 **View:**
 - `mitglieder_mit_email` — joins `profiles` with `auth.users` to expose `email`; used by `Mitgliederverwaltung`; defined in `seed.sql` (not in migrations — must stay in seed); `security_invoker = false` so `auth.users` is readable
 
@@ -342,6 +347,9 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20260504000000_fix_stunden_generieren_zeitzone.sql` | Fixes `stunden_generieren` to use school timezone via `AT TIME ZONE` — previously stored times as UTC causing a 2h display offset |
 | `20260505000000_nachrichten_kurs_enum.sql` | Adds `kurs` to `nachricht_typ` enum — **separate file** because PostgreSQL cannot use a new enum value in the same transaction it was added |
 | `20260505000001_nachrichten_kurs_schema.sql` | Adds `kurs_id` column + index to `nachrichten`; updates RLS read policy to include course participants (via `unterricht_schueler` + `unterricht_lehrer`) |
+| `20260505000002_inventar_prefix.sql` | Adds `inventar_prefix` column to `schulen` (default `'INV'`) |
+| `20260505000003_inventar_schema.sql` | Inventar-Modul: `inventar_zustand` enum, `inventar_kategorien` table, `inventar` table with auto-numbering trigger (`inventar_nummer_vergeben`), RLS policies |
+| `20260505000004_storage_policies.sql` | Storage-Policies für alle Buckets (avatare, stueck-dateien, kurs-dateien, schueler-dateien, mitglied-dateien) — idempotent via `DO $$ BEGIN … EXCEPTION WHEN duplicate_object THEN NULL; END $$` |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`).
 

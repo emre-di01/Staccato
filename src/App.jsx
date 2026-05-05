@@ -16,6 +16,7 @@ const Mitgliederverwaltung = lazy(() => import('./pages/admin/Mitgliederverwaltu
 const Kursverwaltung       = lazy(() => import('./pages/admin/Kursverwaltung'))
 const Raumverwaltung       = lazy(() => import('./pages/admin/Raumverwaltung'))
 const Instrumente          = lazy(() => import('./pages/admin/Instrumente'))
+const Inventar             = lazy(() => import('./pages/admin/Inventar'))
 const AdminEvents          = lazy(() => import('./pages/admin/Events'))
 const Interessenten        = lazy(() => import('./pages/admin/Interessenten'))
 const LehrerDashboard      = lazy(() => import('./pages/lehrer/Dashboard'))
@@ -76,6 +77,7 @@ function AppRoutes() {
           <Route path="/admin/events/:id/repertoire"                         element={<EventRepertoire />} />
           <Route path="/admin/events/:kursId/repertoire/:stueckId"           element={<StueckDetail />} />
           <Route path="/admin/instrumente"      element={<Instrumente />} />
+          <Route path="/admin/inventar"         element={<Inventar />} />
           <Route path="/admin/interessenten"    element={<Interessenten />} />
           <Route path="/admin/nachrichten"      element={<Nachrichten />} />
         </Route>
@@ -135,6 +137,7 @@ function AppRoutes() {
           <Route path="/vorstand/events/:kursId/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/vorstand/repertoire"            element={<Repertoire />} />
           <Route path="/vorstand/repertoire/:stueckId"  element={<StueckDetail />} />
+          <Route path="/vorstand/inventar"              element={<Inventar />} />
           <Route path="/vorstand/profil"                element={<ProfilSeite />} />
         </Route>
       </Route>

@@ -48,7 +48,7 @@ export function AppProvider({ children }) {
         setProfil(data)
         if (data.sprache) setLang(data.sprache)
         if (data.schule_id) {
-          const { data: schuleData } = await supabase.from('schulen').select('zeitzone, logo_url, name, website, email, telefon, adresse').eq('id', data.schule_id).single()
+          const { data: schuleData } = await supabase.from('schulen').select('zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix').eq('id', data.schule_id).single()
           if (schuleData?.zeitzone) setZeitzone(schuleData.zeitzone)
           setSchule(schuleData ?? null)
         }

@@ -281,12 +281,13 @@ export default function AdminDashboard() {
 
 function SchulEinstellungen({ schule, schuleId, onGespeichert }) {
   const [form, setForm] = useState({
-    name:     schule?.name     ?? '',
-    logo_url: schule?.logo_url ?? '',
-    website:  schule?.website  ?? '',
-    email:    schule?.email    ?? '',
-    telefon:  schule?.telefon  ?? '',
-    adresse:  schule?.adresse  ?? '',
+    name:             schule?.name             ?? '',
+    logo_url:         schule?.logo_url         ?? '',
+    website:          schule?.website          ?? '',
+    email:            schule?.email            ?? '',
+    telefon:          schule?.telefon          ?? '',
+    adresse:          schule?.adresse          ?? '',
+    inventar_prefix:  schule?.inventar_prefix  ?? '',
   })
   const [speichern, setSpeichern] = useState(false)
   const [erfolg,    setErfolg]    = useState(false)
@@ -294,12 +295,13 @@ function SchulEinstellungen({ schule, schuleId, onGespeichert }) {
   async function speichernFn() {
     setSpeichern(true)
     const payload = {
-      name:     form.name.trim()     || schule?.name,
-      logo_url: form.logo_url.trim() || null,
-      website:  form.website.trim()  || null,
-      email:    form.email.trim()    || null,
-      telefon:  form.telefon.trim()  || null,
-      adresse:  form.adresse.trim()  || null,
+      name:            form.name.trim()            || schule?.name,
+      logo_url:        form.logo_url.trim()        || null,
+      website:         form.website.trim()         || null,
+      email:           form.email.trim()           || null,
+      telefon:         form.telefon.trim()         || null,
+      adresse:         form.adresse.trim()         || null,
+      inventar_prefix: form.inventar_prefix.trim().toUpperCase() || 'INV',
     }
     await supabase.from('schulen').update(payload).eq('id', schuleId)
     onGespeichert(s => ({ ...s, ...payload }))
@@ -347,6 +349,15 @@ function SchulEinstellungen({ schule, schuleId, onGespeichert }) {
         {feld('E-Mail', 'email', 'email', 'info@musikschule.de')}
         {feld('Telefon', 'telefon', 'tel', '+49 ...')}
         {feld('Adresse', 'adresse', 'text', 'Musterstraße 1, 12345 Stadt')}
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>
+            Inventar-Präfix <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>(z.B. TMD → TMD001, TMD002 …)</span>
+          </label>
+          <input value={form.inventar_prefix} maxLength={8}
+            onChange={e => setForm(f => ({ ...f, inventar_prefix: e.target.value.toUpperCase() }))}
+            placeholder="INV"
+            style={{ width: 120, boxSizing: 'border-box', padding: '9px 12px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'monospace', outline: 'none', letterSpacing: '0.05em' }} />
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end', paddingTop: 4 }}>
           {erfolg && <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>✓ Gespeichert</span>}
           <button onClick={speichernFn} disabled={speichern}
