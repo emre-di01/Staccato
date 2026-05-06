@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState('uebersicht')
   const [stats, setStats] = useState(null)
   const [vorstandStats, setVorstandStats] = useState(null)
+  const [inventarWert, setInventarWert] = useState(null)
   const [kurse, setKurse] = useState([])
   const [naechsteStunden, setNaechsteStunden] = useState([])
   const [laden, setLaden] = useState(true)
@@ -37,13 +38,15 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function ladeStats() {
-      const [{ data }, aufgabenRes, zieleRes, protokolleRes] = await Promise.all([
+      const [{ data }, aufgabenRes, zieleRes, protokolleRes, inventarRes] = await Promise.all([
         supabase.rpc('dashboard_stats'),
         supabase.from('vorstand_aufgaben').select('status').eq('schule_id', profil?.schule_id ?? ''),
         supabase.from('vorstand_ziele').select('status').eq('schule_id', profil?.schule_id ?? ''),
         supabase.from('vorstand_protokolle').select('id', { count: 'exact', head: true }).eq('schule_id', profil?.schule_id ?? ''),
+        supabase.from('inventar').select('anschaffungswert').eq('schule_id', profil?.schule_id ?? ''),
       ])
       setStats(data)
+      setInventarWert((inventarRes.data ?? []).reduce((s, i) => s + (Number(i.anschaffungswert) || 0), 0))
       const aufgaben = aufgabenRes.data ?? []
       setVorstandStats({
         aufgabenOffen:    aufgaben.filter(a => a.status === 'offen').length,
@@ -141,6 +144,7 @@ export default function AdminDashboard() {
             <StatCard icon="💰" label={T('revenue_month')}   value={laden ? '…' : stats?.einnahmen_monat ? `€${stats.einnahmen_monat}` : '€0'} color="var(--success)" />
             <StatCard icon="📋" label={T('prospects_open')}  value={laden ? '…' : stats?.interessenten}     color="var(--primary)"  onClick={() => navigate('/admin/interessenten')} />
             <StatCard icon="📅" label={T('lessons_week')}    value={laden ? '…' : stats?.stunden_woche}     color="var(--text-2)"   onClick={() => navigate('/admin/stundenplan')} />
+            <StatCard icon="📦" label="Inventarwert"         value={laden || inventarWert === null ? '…' : inventarWert.toLocaleString('de-DE', { style:'currency', currency:'EUR', maximumFractionDigits:0 })} color="var(--text-2)" onClick={() => navigate('/admin/inventar')} />
           </div>
 
           <div style={{ marginBottom: 32 }}>

@@ -172,6 +172,108 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
   )
 }
 
+// ─── Barcode-Eingabe-Modal (Scan → Formularfeld) ──────────────
+function BarcodeEingabeModal({ onGescannt, onClose }) {
+  const videoRef  = useRef(null)
+  const canvasRef = useRef(null)
+  const streamRef = useRef(null)
+  const animRef   = useRef(null)
+  const aktiv     = useRef(true)
+  const [kameraErr, setKameraErr] = useState('')
+  const hatNativ = typeof BarcodeDetector !== 'undefined'
+
+  useEffect(() => {
+    aktiv.current = true
+    startKamera()
+    return () => { aktiv.current = false; stopKamera() }
+  }, [])
+
+  async function startKamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 } },
+      })
+      if (!aktiv.current) { stream.getTracks().forEach(t => t.stop()); return }
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+      scanLoop()
+    } catch (e) {
+      setKameraErr('Kamera nicht verfügbar: ' + (e.message ?? String(e)))
+    }
+  }
+
+  function stopKamera() {
+    cancelAnimationFrame(animRef.current)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+  }
+
+  function scanLoop() {
+    if (!aktiv.current) return
+    animRef.current = requestAnimationFrame(async () => {
+      if (!aktiv.current) return
+      const vid = videoRef.current
+      if (!vid || vid.readyState < 2 || vid.paused) { scanLoop(); return }
+      let erkannt = null
+      try {
+        if (hatNativ) {
+          const det = new BarcodeDetector({ formats: ['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e'] })
+          const codes = await det.detect(vid)
+          if (codes.length > 0) erkannt = codes[0].rawValue
+        } else {
+          const cvs = canvasRef.current
+          const w = vid.videoWidth, h = vid.videoHeight
+          if (w && h) {
+            cvs.width = w; cvs.height = h
+            const ctx = cvs.getContext('2d')
+            ctx.drawImage(vid, 0, 0, w, h)
+            const img = ctx.getImageData(0, 0, w, h)
+            const result = jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' })
+            if (result) erkannt = result.data
+          }
+        }
+      } catch {}
+      if (erkannt && aktiv.current) { stopKamera(); onGescannt(erkannt); return }
+      scanLoop()
+    })
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:1200, display:'flex', flexDirection:'column' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', background:'rgba(0,0,0,0.6)' }}>
+        <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>📷 Barcode / EAN scannen</span>
+        <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:4 }}>✕</button>
+      </div>
+      <div style={{ flex:1, position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <video ref={videoRef} playsInline muted autoPlay style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+        <canvas ref={canvasRef} style={{ display:'none' }} />
+        <div style={{ position:'absolute', width:280, height:110, border:'3px solid rgba(255,255,255,0.6)', borderRadius:12, boxShadow:'0 0 0 9999px rgba(0,0,0,0.45)', pointerEvents:'none' }}>
+          {[['top','left'],['top','right'],['bottom','left'],['bottom','right']].map(([v,h]) => (
+            <div key={v+h} style={{ position:'absolute', [v]:-3, [h]:-3, width:24, height:24,
+              borderTop:    v==='top'    ? '4px solid var(--primary)' : 'none',
+              borderBottom: v==='bottom' ? '4px solid var(--primary)' : 'none',
+              borderLeft:   h==='left'   ? '4px solid var(--primary)' : 'none',
+              borderRight:  h==='right'  ? '4px solid var(--primary)' : 'none',
+              borderRadius: v==='top'&&h==='left'?'6px 0 0 0':v==='top'&&h==='right'?'0 6px 0 0':v==='bottom'&&h==='left'?'0 0 0 6px':'0 0 6px 0',
+            }} />
+          ))}
+        </div>
+        <div style={{ position:'absolute', bottom:16, color:'rgba(255,255,255,0.75)', fontSize:13, textAlign:'center', padding:'0 20px' }}>
+          Barcode oder EAN in den Rahmen halten
+        </div>
+        {kameraErr && (
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+            <p style={{ color:'#fff', textAlign:'center', fontSize:14, background:'rgba(0,0,0,0.7)', padding:'16px 20px', borderRadius:12 }}>{kameraErr}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Inventar-Modal ───────────────────────────────────────────
 function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
   const istNeu = !item?.id
@@ -187,8 +289,9 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
     zustand:          item?.zustand                        ?? 'gut',
     notizen:          item?.notizen                        ?? '',
   })
-  const [laden,  setLaden]  = useState(false)
-  const [fehler, setFehler] = useState('')
+  const [laden,          setLaden]          = useState(false)
+  const [fehler,         setFehler]         = useState('')
+  const [barcodeScanner, setBarcodeScanner] = useState(false)
 
   async function speichern() {
     if (!form.name.trim()) { setFehler('Bezeichnung ist erforderlich.'); return }
@@ -213,7 +316,7 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
     setLaden(false)
   }
 
-  return (
+  return (<>
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', zIndex:1000,
       alignItems: mob ? 'flex-end' : 'center', justifyContent: mob ? 'stretch' : 'center', padding: mob ? 0 : 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
@@ -271,8 +374,13 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
             </div>
             <div>
               <label style={s.label}>Barcode / EAN</label>
-              <input style={{ ...s.input, marginTop:6 }} placeholder="4012345678901" value={form.barcode}
-                onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} />
+              <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                <input style={{ ...s.input, flex:1 }} placeholder="4012345678901" value={form.barcode}
+                  onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} />
+                <button type="button" onClick={() => setBarcodeScanner(true)}
+                  style={{ padding:'10px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:16, cursor:'pointer', flexShrink:0 }}
+                  title="Barcode scannen">📷</button>
+              </div>
             </div>
           </div>
 
@@ -321,7 +429,14 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+
+    {barcodeScanner && (
+      <BarcodeEingabeModal
+        onGescannt={code => { setForm(f => ({ ...f, barcode: code })); setBarcodeScanner(false) }}
+        onClose={() => setBarcodeScanner(false)}
+      />
+    )}
+  </>)
 }
 
 // ─── Label-Größen ─────────────────────────────────────────────

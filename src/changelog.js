@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.7.0'
+export const CURRENT_VERSION = '1.7.1'
 
 export const CHANGELOG = [
+  {
+    version: '1.7.1',
+    date: '2026-05-06',
+    features: [
+      {
+        icon: '📷',
+        de: 'Inventar: Barcode / EAN beim Anlegen direkt per Kamera scannen',
+        en: 'Inventory: scan barcode / EAN directly via camera when creating items',
+        tr: 'Envanter: eşya oluştururken barkod / EAN\'ı kamera ile doğrudan tara',
+      },
+      {
+        icon: '📦',
+        de: 'Dashboard (Admin & Vorstand): neue Kachel zeigt den Gesamtwert des Inventars',
+        en: 'Dashboard (admin & board): new tile shows the total value of the inventory',
+        tr: 'Dashboard (yönetici & yönetim kurulu): yeni kart envanter toplam değerini gösteriyor',
+      },
+    ],
+  },
   {
     version: '1.7.0',
     date: '2026-05-05',

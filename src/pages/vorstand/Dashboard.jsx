@@ -34,7 +34,7 @@ export default function VorstandDashboard() {
     queryKey: ['vorstand-dashboard', profil?.id],
     enabled: !!profil?.schule_id,
     queryFn: async () => {
-      const [aufgabenRes, zieleRes, protokolleRes, sitzungRes, usRes] = await Promise.all([
+      const [aufgabenRes, zieleRes, protokolleRes, sitzungRes, usRes, inventarRes] = await Promise.all([
         supabase.from('vorstand_aufgaben')
           .select('id', { count: 'exact', head: true })
           .eq('schule_id', profil.schule_id)
@@ -55,13 +55,16 @@ export default function VorstandDashboard() {
           .select('*, unterricht(*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id))')
           .eq('schueler_id', profil.id)
           .eq('status', 'aktiv'),
+        supabase.from('inventar').select('anschaffungswert').eq('schule_id', profil.schule_id),
       ])
 
+      const inventarWert = (inventarRes.data ?? []).reduce((s, i) => s + (Number(i.anschaffungswert) || 0), 0)
       const vorstandStats = {
         offeneAufgaben: aufgabenRes.count ?? 0,
         ziele: zieleRes.count ?? 0,
         protokolle: protokolleRes.count ?? 0,
         naechsteSitzung: sitzungRes.data?.[0] ?? null,
+        inventarWert,
       }
 
       const meineKurse = (usRes.data ?? []).map(u => u.unterricht).filter(Boolean)
@@ -93,7 +96,7 @@ export default function VorstandDashboard() {
     },
   })
 
-  const vorstandStats = data?.vorstandStats ?? { offeneAufgaben: 0, ziele: 0, protokolle: 0, naechsteSitzung: null }
+  const vorstandStats = data?.vorstandStats ?? { offeneAufgaben: 0, ziele: 0, protokolle: 0, naechsteSitzung: null, inventarWert: null }
   const kurse = data?.kurse ?? []
   const naechsteStunden = data?.naechsteStunden ?? []
 
@@ -121,6 +124,9 @@ export default function VorstandDashboard() {
           farbe="var(--primary)" onClick={() => navigate('/vorstand/ziele')} />
         <StatCard icon="📝" label={T('vorstand_protokolle')} wert={laden ? '…' : vorstandStats.protokolle}
           farbe="#7c3aed" onClick={() => navigate('/vorstand/protokolle')} />
+        <StatCard icon="📦" label="Inventarwert"
+          wert={laden ? '…' : vorstandStats.inventarWert !== null ? vorstandStats.inventarWert.toLocaleString('de-DE', { style:'currency', currency:'EUR', maximumFractionDigits:0 }) : '–'}
+          farbe="var(--text-2)" onClick={() => navigate('/vorstand/inventar')} />
       </div>
 
       {/* Schüler KPIs */}
