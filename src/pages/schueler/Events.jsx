@@ -18,8 +18,9 @@ const ZUSAGE_LABEL = { offen: 'rsvp_open', zugesagt: 'rsvp_accepted', abgesagt: 
 const ZUSAGE_FARBE = { offen: 'var(--text-3)', zugesagt: 'var(--success)', abgesagt: 'var(--danger)' }
 
 export default function SchuelerEvents() {
-  const { profil, T } = useApp()
+  const { profil, rolle, T } = useApp()
   const navigate = useNavigate()
+  const basePath = rolle === 'vorstand' ? '/vorstand' : '/schueler'
   const [events,  setEvents]  = useState([])
   const [laden,   setLaden]   = useState(true)
   const [fehler,  setFehler]  = useState(null)
@@ -132,7 +133,7 @@ export default function SchuelerEvents() {
                   {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
 
                   <div style={{ paddingTop: 8, borderTop: '1px solid var(--border)', marginTop: 4 }}>
-                    <button onClick={() => navigate(`/schueler/events/${ev.id}/repertoire`)}
+                    <button onClick={() => navigate(`${basePath}/events/${ev.id}/repertoire`)}
                       style={s.rsvpBtn}>
                       🎼 Programm ansehen
                     </button>
