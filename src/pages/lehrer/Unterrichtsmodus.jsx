@@ -82,7 +82,9 @@ export default function Unterrichtsmodus() {
   const [kurs, setKurs] = useState(null)
   const [stunden, setStunden] = useState([])
   const [gewaehlteStunde, setGewaehlteStunde] = useState('')
+  const [oeffentlich, setOeffentlich] = useState(false)
   const [session, setSession] = useState(null)
+  const [vorhandeneSession, setVorhandeneSession] = useState(null)
   const [qrUrl, setQrUrl] = useState('')
   const [teilnehmer, setTeilnehmer] = useState([])
   const [reaktionen, setReaktionen] = useState([])
@@ -90,10 +92,12 @@ export default function Unterrichtsmodus() {
   const [aktiveStueckId, setAktiveStueckId] = useState(null)
   const [aktiveAnsicht, setAktiveAnsicht] = useState('noten')
   const [laden, setLaden] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [fehler, setFehler] = useState('')
   const [mdModus, setMdModusState] = useState(() => localStorage.getItem('staccato_liedtext_md') !== 'false')
   function setMdModus(val) { localStorage.setItem('staccato_liedtext_md', String(val)); setMdModusState(val) }
   const channelRef = useRef(null)
+  const broadcastRef = useRef(null)
 
   useEffect(() => {
     async function init() {
@@ -120,6 +124,14 @@ export default function Unterrichtsmodus() {
         .select('stuecke(id, titel, komponist, youtube_url, liedtext, notizen, stueck_dateien(id, typ, name, bucket_pfad, stimme))')
         .eq('unterricht_id', kursId)
       setStuecke((us ?? []).map(u => u.stuecke).filter(Boolean))
+
+      const { data: aktiv } = await supabase
+        .from('unterricht_sessions')
+        .select('id, join_code, aktuelles_stueck, aktuelle_ansicht, gestartet_am, oeffentlich')
+        .eq('unterricht_id', kursId)
+        .eq('status', 'aktiv')
+        .maybeSingle()
+      if (aktiv) setVorhandeneSession(aktiv)
     }
     init()
   }, [kursId])
@@ -148,15 +160,26 @@ export default function Unterrichtsmodus() {
       }, payload => setReaktionen(prev => [payload.new, ...prev].slice(0, 100)))
       .subscribe()
     channelRef.current = ch
-    return () => ch.unsubscribe()
+
+    const bc = supabase.channel(`session-live-${session.id}`).subscribe()
+    broadcastRef.current = bc
+
+    return () => { ch.unsubscribe(); bc.unsubscribe() }
   }, [session])
 
   async function ladeTeilnehmer(sessionId) {
     const { data } = await supabase
       .from('session_teilnehmer')
-      .select('profil_id, beigetreten_am, profiles(voller_name)')
+      .select('id, profil_id, gast_name, beigetreten_am, profiles(voller_name)')
       .eq('session_id', sessionId)
     setTeilnehmer(data ?? [])
+  }
+
+  async function refresh() {
+    if (!session) return
+    setRefreshing(true)
+    await ladeTeilnehmer(session.id)
+    setRefreshing(false)
   }
 
   async function sessionStarten() {
@@ -164,6 +187,7 @@ export default function Unterrichtsmodus() {
     const { data, error } = await supabase.rpc('session_starten', {
       p_unterricht_id: kursId,
       p_stunde_id: gewaehlteStunde || null,
+      p_oeffentlich: oeffentlich,
     })
     if (error || !data?.[0]) {
       setFehler(error?.message ?? 'Fehler beim Starten'); setLaden(false); return
@@ -172,16 +196,32 @@ export default function Unterrichtsmodus() {
     const joinUrl = `${window.location.origin}/session/${join_code}`
     const qr = await QRCode.toDataURL(joinUrl, { width: 240, margin: 2 })
     setQrUrl(qr)
-    setSession({ id: session_id, join_code })
+    setSession({ id: session_id, join_code, oeffentlich })
     setPhase('lobby')
+    setLaden(false)
+  }
+
+  async function sessionFortsetzen() {
+    if (!vorhandeneSession) return
+    setLaden(true); setFehler('')
+    const joinUrl = `${window.location.origin}/session/${vorhandeneSession.join_code}`
+    const qr = await QRCode.toDataURL(joinUrl, { width: 240, margin: 2 })
+    setQrUrl(qr)
+    setSession({ id: vorhandeneSession.id, join_code: vorhandeneSession.join_code, oeffentlich: vorhandeneSession.oeffentlich ?? false })
+    if (vorhandeneSession.aktuelles_stueck) setAktiveStueckId(vorhandeneSession.aktuelles_stueck)
+    if (vorhandeneSession.aktuelle_ansicht) setAktiveAnsicht(vorhandeneSession.aktuelle_ansicht)
+    setVorhandeneSession(null)
+    setPhase('aktiv')
     setLaden(false)
   }
 
   async function sessionBeenden() {
     if (!session) return
     setLaden(true)
+    broadcastRef.current?.send({ type: 'broadcast', event: 'state', payload: { status: 'beendet' } })
     await supabase.rpc('session_beenden', { p_session_id: session.id })
     channelRef.current?.unsubscribe()
+    broadcastRef.current?.unsubscribe()
     setPhase('beendet')
     setLaden(false)
   }
@@ -193,6 +233,10 @@ export default function Unterrichtsmodus() {
       p_session_id: session.id,
       p_ansicht: ansicht,
       p_stueck_id: zielStueck ?? null,
+    })
+    broadcastRef.current?.send({
+      type: 'broadcast', event: 'state',
+      payload: { aktuelles_stueck: zielStueck ?? null, aktuelle_ansicht: ansicht },
     })
     setAktiveAnsicht(ansicht)
     if (stueckId) setAktiveStueckId(stueckId)
@@ -237,10 +281,54 @@ export default function Unterrichtsmodus() {
         </div>
       )}
 
+      <div style={s.card}>
+        <div style={s.label}>Sichtbarkeit</div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14, color: 'var(--text)' }}>
+          <div
+            onClick={() => setOeffentlich(v => !v)}
+            style={{
+              width: 40, height: 22, borderRadius: 11, background: oeffentlich ? 'var(--primary)' : 'var(--border)',
+              position: 'relative', transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: 3, left: oeffentlich ? 21 : 3,
+              width: 16, height: 16, borderRadius: '50%', background: '#fff',
+              transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }} />
+          </div>
+          <span>
+            {oeffentlich ? '🌐 Öffentlich – ohne Login beitreten' : '🔒 Privat – nur mit Staccato-Login'}
+          </span>
+        </label>
+        {oeffentlich && (
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-3)', paddingLeft: 50 }}>
+            Gäste können über den QR-Code / Link beitreten und ihren Namen eingeben.
+          </div>
+        )}
+      </div>
+
       {fehler && <div style={s.fehler}>{fehler}</div>}
 
-      <button onClick={sessionStarten} disabled={laden} style={{ ...s.btnPri, width: '100%', fontSize: 16, padding: 14 }}>
-        {laden ? T('session_starting') : T('session_starten_btn')}
+      {vorhandeneSession && (
+        <div style={{ ...s.card, border: '2px solid var(--primary)', marginBottom: 12 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--primary)', marginBottom: 6 }}>
+            ⚡ Aktive Session läuft noch
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12 }}>
+            Code: <strong style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}>{vorhandeneSession.join_code}</strong>
+            <span style={{ marginLeft: 10, color: 'var(--text-3)', fontSize: 12 }}>
+              (gestartet {new Date(vorhandeneSession.gestartet_am).toLocaleTimeString('de', { hour: '2-digit', minute: '2-digit' })} Uhr)
+            </span>
+          </div>
+          <button onClick={sessionFortsetzen} disabled={laden} style={{ ...s.btnPri, width: '100%' }}>
+            {laden ? '…' : 'Session fortsetzen'}
+          </button>
+        </div>
+      )}
+
+      <button onClick={sessionStarten} disabled={laden} style={{ ...s.btnPri, width: '100%', fontSize: 16, padding: 14, background: vorhandeneSession ? 'var(--surface)' : undefined, color: vorhandeneSession ? 'var(--text-2)' : undefined, border: vorhandeneSession ? '1.5px solid var(--border)' : 'none' }}>
+        {laden ? T('session_starting') : vorhandeneSession ? 'Neue Session starten (alte beenden)' : T('session_starten_btn')}
       </button>
     </div>
   )
@@ -270,7 +358,12 @@ export default function Unterrichtsmodus() {
     <div style={{ maxWidth: 640 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{T('session_lobby_title')}</h1>
-        <button onClick={sessionBeenden} style={s.btnDanger}>{T('session_cancel')}</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={refresh} disabled={refreshing} style={s.btnSek} title="Teilnehmerliste aktualisieren">
+            {refreshing ? '…' : '↻'}
+          </button>
+          <button onClick={sessionBeenden} style={s.btnDanger}>{T('session_cancel')}</button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
@@ -286,6 +379,11 @@ export default function Unterrichtsmodus() {
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
             {window.location.origin}/session/...
           </div>
+          {session?.oeffentlich && (
+            <div style={{ marginTop: 10, fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', borderRadius: 6, padding: '4px 8px', display: 'inline-block' }}>
+              🌐 Öffentlich – ohne Login
+            </div>
+          )}
         </div>
       </div>
 
@@ -299,7 +397,10 @@ export default function Unterrichtsmodus() {
         ) : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {teilnehmer.map(t => (
-              <span key={t.profil_id} style={s.chip}>{t.profiles?.voller_name ?? 'Gast'}</span>
+              <span key={t.id ?? t.profil_id} style={s.chip}>
+                {t.profiles?.voller_name ?? t.gast_name ?? 'Gast'}
+                {!t.profil_id && <span style={{ opacity: 0.6, fontSize: 10 }}> (Gast)</span>}
+              </span>
             ))}
           </div>
         )}
@@ -319,9 +420,9 @@ export default function Unterrichtsmodus() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid var(--border)' }}>
         <div>
           <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>🎬 {kurs?.name}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-            {teilnehmer.length} Schüler · Code:{' '}
-            <strong style={{ color: 'var(--primary)', fontFamily: 'monospace', fontSize: 13 }}>{session?.join_code}</strong>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>{teilnehmer.length} Schüler · Code: <strong style={{ color: 'var(--primary)', fontFamily: 'monospace', fontSize: 13 }}>{session?.join_code}</strong></span>
+            {session?.oeffentlich && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)' }}>🌐 Öffentlich</span>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -329,6 +430,9 @@ export default function Unterrichtsmodus() {
             const n = reaktionen.filter(r => r.typ === typ).length
             return n > 0 ? <span key={typ} style={{ fontSize: 13, fontWeight: 700 }}>{emoji} {n}</span> : null
           })}
+          <button onClick={refresh} disabled={refreshing} style={s.btnSek} title="Teilnehmerliste aktualisieren">
+            {refreshing ? '…' : '↻'}
+          </button>
           <button onClick={sessionBeenden} disabled={laden} style={s.btnDanger}>{T('session_end_btn')}</button>
         </div>
       </div>
@@ -494,6 +598,7 @@ const s = {
   label:    { fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, display: 'block' },
   input:    { padding: '10px 14px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', fontSize: 14, outline: 'none', fontFamily: 'inherit', background: 'var(--bg)', color: 'var(--text)', width: '100%', boxSizing: 'border-box', marginTop: 8 },
   btnPri:   { padding: '12px 24px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  btnSek:   { padding: '10px 14px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg-2)', color: 'var(--text-2)', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' },
   btnDanger:{ padding: '10px 18px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--danger)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   fehler:   { padding: '12px 16px', borderRadius: 'var(--radius)', background: '#fee2e2', color: 'var(--danger)', fontWeight: 600, fontSize: 14, marginBottom: 16 },
   chip:     { fontSize: 12, padding: '4px 10px', borderRadius: 99, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text-2)', fontWeight: 600 },

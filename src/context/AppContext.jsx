@@ -8,11 +8,6 @@ const AppContext = createContext(null)
 const DEFAULT_THEME = 'klassik'
 const DEFAULT_LANG  = 'de'
 
-function isLiveSession() {
-  const p = window.location.pathname
-  return p.includes('/unterrichtsmodus') || p.startsWith('/session/')
-}
-
 export function AppProvider({ children }) {
   const [session,    setSession]    = useState(undefined)
   const [profil,     setProfil]     = useState(null)
@@ -22,6 +17,12 @@ export function AppProvider({ children }) {
   const [theme,      setThemeKey]   = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
   const [darkMode,   setDarkMode]   = useState(() => localStorage.getItem('staccato_dark') === 'true')
   const [lang,       setLang]       = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
+
+  // Tracks which user ID has its profile loaded.
+  // Prevents calling ladeProfil() when SIGNED_IN fires from inside the processLock
+  // (e.g. on tab focus via _recoverAndRefresh), which would deadlock: the lock is
+  // already held, and getSession() inside supabase.from() also tries to acquire it.
+  const loadedUidRef = useRef(null)
 
   useEffect(() => {
     applyTheme(theme, darkMode)
@@ -34,9 +35,6 @@ export function AppProvider({ children }) {
     document.documentElement.lang = lang
   }, [lang])
 
-  const [refreshKey, setRefreshKey] = useState(0)
-  const hiddenAt = useRef(0)
-
   const ladeProfil = useCallback(async (userId) => {
     try {
       const { data } = await supabase
@@ -45,6 +43,7 @@ export function AppProvider({ children }) {
         .eq('id', userId)
         .single()
       if (data) {
+        loadedUidRef.current = userId
         setProfil(data)
         if (data.sprache) setLang(data.sprache)
         if (data.schule_id) {
@@ -87,12 +86,24 @@ export function AppProvider({ children }) {
         }
         return
       }
-      setSession(session)
-      if (session?.user) {
-        await ladeProfil(session.user.id)
-      } else {
+      if (event === 'TOKEN_REFRESHED') {
+        setSession(session)
+        return
+      }
+      if (!session) {
+        loadedUidRef.current = null
+        setSession(null)
         setProfil(null)
+        setSchule(null)
         setLaden(false)
+        return
+      }
+      setSession(session)
+      // Only fetch profile when not yet loaded for this user. SIGNED_IN can fire
+      // from inside the processLock (tab focus → _recoverAndRefresh). Calling
+      // supabase.from() there would re-acquire the lock → deadlock → all queries hang.
+      if (loadedUidRef.current !== session.user.id) {
+        await ladeProfil(session.user.id)
       }
     })
 
@@ -101,31 +112,6 @@ export function AppProvider({ children }) {
       subscription.unsubscribe()
     }
   }, [ladeProfil])
-
-  useEffect(() => {
-    function handleVisibility() {
-      if (document.visibilityState === 'hidden') { hiddenAt.current = Date.now(); return }
-      const elapsed = hiddenAt.current > 0 ? Date.now() - hiddenAt.current : 0
-      hiddenAt.current = 0
-      if (elapsed < 3 * 60 * 1000) return  // ignore if away less than 3 minutes
-      if (isLiveSession()) return
-      setRefreshKey(k => k + 1)  // remount current page to re-fetch data, no full reload
-    }
-
-    async function handleOnline() {
-      if (isLiveSession()) return
-      const { data: { session: current } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }))
-      if (!current) { window.location.reload(); return }
-      setRefreshKey(k => k + 1)
-    }
-
-    document.addEventListener('visibilitychange', handleVisibility)
-    window.addEventListener('online', handleOnline)
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility)
-      window.removeEventListener('online', handleOnline)
-    }
-  }, [])
 
   async function abmelden() {
     await supabase.auth.signOut()
@@ -150,7 +136,6 @@ export function AppProvider({ children }) {
       schule, setSchule,
       changeTheme, toggleDark, setLang,
       abmelden, T, ladeProfil,
-      refreshKey,
     }}>
       {children}
     </AppContext.Provider>

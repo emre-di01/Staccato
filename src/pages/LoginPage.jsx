@@ -32,7 +32,14 @@ export default function LoginPage() {
   const [resetEmail, setResetEmail] = useState('')
   const [resetOk,    setResetOk]    = useState(false)
 
-  if (!laden && session) return <Navigate to={startseiteNach(rolle)} replace />
+  if (!laden && session) {
+    const gespeichert = sessionStorage.getItem('staccato_nach_login')
+    if (gespeichert) {
+      sessionStorage.removeItem('staccato_nach_login')
+      return <Navigate to={gespeichert} replace />
+    }
+    return <Navigate to={startseiteNach(rolle)} replace />
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()

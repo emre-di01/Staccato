@@ -115,6 +115,7 @@ export default function SchuelerSession() {
 
   const [phase, setPhase] = useState('eingabe') // eingabe | verbinden | aktiv | beendet
   const [code, setCode] = useState((urlCode ?? '').toUpperCase())
+  const [gastName, setGastName] = useState('')
   const [sessionId, setSessionId] = useState(null)
   const [sessionState, setSessionState] = useState(null)
   const [stueck, setStueck] = useState(null)
@@ -125,11 +126,15 @@ export default function SchuelerSession() {
   const [frageText, setFrageText] = useState('')
   const [liedtextGroesse, setLiedtextGroesse] = useState(15)
   const [mdModus,         setMdModusState]    = useState(() => localStorage.getItem('staccato_liedtext_md') !== 'false')
+  const [refreshing,      setRefreshing]      = useState(false)
   function setMdModus(val) { localStorage.setItem('staccato_liedtext_md', String(val)); setMdModusState(val) }
   const channelRef = useRef(null)
 
+  const istGast = !authLaden && !authSession
+
   // Auto-join wenn Code in URL — nur im Eingabe-Zustand, damit ein
   // Token-Refresh in AppContext keinen laufenden Session-Screen abbricht.
+  // Für Gäste kein Auto-join – sie müssen erst ihren Namen eingeben.
   useEffect(() => {
     if (urlCode && authSession && !authLaden && phase === 'eingabe') beitreten(urlCode)
   }, [urlCode, authSession, authLaden])
@@ -153,19 +158,14 @@ export default function SchuelerSession() {
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [phase, sessionId])
 
-  // Realtime: Session-Updates verfolgen
+  // Realtime: Session-Updates verfolgen (Broadcast funktioniert auch für Gäste ohne Login)
   useEffect(() => {
     if (!sessionId) return
-    const ch = supabase.channel(`student-${sessionId}`)
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public',
-        table: 'unterricht_sessions',
-        filter: `id=eq.${sessionId}`,
-      }, async payload => {
-        const neu = payload.new
-        if (neu.status === 'beendet') { setPhase('beendet'); return }
-        setSessionState(neu)
-        if (neu.aktuelles_stueck) await ladeStueck(neu.aktuelles_stueck)
+    const ch = supabase.channel(`session-live-${sessionId}`)
+      .on('broadcast', { event: 'state' }, async ({ payload }) => {
+        if (payload.status === 'beendet') { setPhase('beendet'); return }
+        setSessionState(prev => prev ? { ...prev, aktuelles_stueck: payload.aktuelles_stueck, aktuelle_ansicht: payload.aktuelle_ansicht } : prev)
+        if (payload.aktuelles_stueck) await ladeStueck(payload.aktuelles_stueck)
         else setStueck(null)
       })
       .subscribe()
@@ -185,8 +185,12 @@ export default function SchuelerSession() {
   async function beitreten(joinCode) {
     const trimmed = (joinCode ?? code).trim().toUpperCase()
     if (!trimmed) { setFehler('Bitte Code eingeben.'); return }
+    if (istGast && !gastName.trim()) { setFehler('Bitte gib deinen Namen ein.'); return }
     setPhase('verbinden'); setFehler('')
-    const { data, error } = await supabase.rpc('session_beitreten', { p_join_code: trimmed })
+    const { data, error } = await supabase.rpc('session_beitreten', {
+      p_join_code: trimmed,
+      p_gast_name: istGast ? gastName.trim() : null,
+    })
     if (error || !data) {
       setFehler(error?.message ?? 'Session nicht gefunden oder bereits beendet.')
       setPhase('eingabe'); return
@@ -202,12 +206,26 @@ export default function SchuelerSession() {
     setPhase('aktiv')
   }
 
+  async function refresh() {
+    if (!sessionId) return
+    setRefreshing(true)
+    const { data: sess } = await supabase
+      .from('unterricht_sessions').select('*').eq('id', sessionId).single()
+    if (sess) {
+      if (sess.status === 'beendet') { setPhase('beendet'); setRefreshing(false); return }
+      setSessionState(sess)
+      if (sess.aktuelles_stueck) await ladeStueck(sess.aktuelles_stueck)
+      else setStueck(null)
+    }
+    setRefreshing(false)
+  }
+
   async function reaktionSenden(typ, frage) {
     if (!sessionId) return
     await supabase.from('session_reaktionen').insert({
       session_id: sessionId,
       profil_id: profil?.id ?? null,
-      gast_name: profil?.voller_name ?? null,
+      gast_name: profil?.voller_name ?? (gastName.trim() || null),
       typ,
       frage: frage || null,
     })
@@ -217,31 +235,36 @@ export default function SchuelerSession() {
     setTimeout(() => setReaktionGesendet(false), 2500)
   }
 
-  // ── KEIN LOGIN ─────────────────────────────────────────────────
-  if (!authLaden && !authSession) return (
-    <div style={s.center}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🎵</div>
-      <h2 style={s.h2}>{T('join_title')}</h2>
-      <p style={{ color: 'var(--text-3)', marginBottom: 24, textAlign: 'center' }}>
-        {T('join_login_required')}
-      </p>
-      <button onClick={() => navigate('/login')} style={s.btnPri}>{T('join_to_login')}</button>
-    </div>
-  )
-
   // ── EINGABE / VERBINDEN ────────────────────────────────────────
   if (phase === 'eingabe' || phase === 'verbinden') return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
-      <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
-        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+      <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+        </div>
+        {istGast && (
+          <button onClick={() => navigate('/login')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 12, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '6px 12px' }}>
+            Einloggen
+          </button>
+        )}
       </div>
       <div style={{ ...s.center, flex: 1 }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🎬</div>
         <h2 style={s.h2}>{T('join_title')}</h2>
         <p style={{ color: 'var(--text-3)', marginBottom: 24, textAlign: 'center', fontSize: 14 }}>
-          {T('join_sub')}
+          {istGast ? 'Gib den Session-Code und deinen Namen ein.' : T('join_sub')}
         </p>
+        {istGast && (
+          <input
+            value={gastName}
+            onChange={e => setGastName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && beitreten(code)}
+            placeholder="Dein Name"
+            maxLength={50}
+            style={{ ...s.input, marginBottom: 10 }}
+          />
+        )}
         <input
           value={code}
           onChange={e => setCode(e.target.value.toUpperCase())}
@@ -272,7 +295,10 @@ export default function SchuelerSession() {
         <p style={{ color: 'var(--text-3)', marginBottom: 24, textAlign: 'center' }}>
           {T('join_session_ended')}
         </p>
-        <button onClick={() => navigate('/')} style={s.btnPri}>→ {T('dashboard')}</button>
+        {istGast
+          ? <button onClick={() => navigate('/login')} style={s.btnPri}>→ Einloggen</button>
+          : <button onClick={() => navigate('/')} style={s.btnPri}>→ {T('dashboard')}</button>
+        }
       </div>
     </div>
   )
@@ -289,9 +315,14 @@ export default function SchuelerSession() {
           {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#16a34a', fontWeight: 700 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-          {T('join_live')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={refresh} disabled={refreshing} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-3)', padding: '4px 6px', lineHeight: 1 }} title="Aktualisieren">
+            {refreshing ? '…' : '↻'}
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#16a34a', fontWeight: 700 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+            {T('join_live')}
+          </div>
         </div>
       </div>
 
@@ -342,18 +373,24 @@ export default function SchuelerSession() {
             )}
 
             {ansicht === 'noten' && (
-              dateien.filter(d => d.typ === 'noten').length > 0
-                ? <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    {dateien.filter(d => d.typ === 'noten').map(d => (
-                      <div key={d.id}>
-                        {d.stimme && d.stimme !== 'keine' && (
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6, textTransform: 'capitalize' }}>Stimme: {d.stimme}</div>
-                        )}
-                        <PdfInline pfad={d.bucket_pfad} />
-                      </div>
-                    ))}
+              istGast
+                ? <div style={{ padding: '32px 24px', textAlign: 'center', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: 14 }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
+                    <div>Noten sind nur für eingeloggte Schüler verfügbar.</div>
+                    <button onClick={() => navigate('/login')} style={{ ...s.btnPri, marginTop: 16, fontSize: 13 }}>Einloggen</button>
                   </div>
-                : <PlatzhalterBox info={ansichtInfo} />
+                : dateien.filter(d => d.typ === 'noten').length > 0
+                  ? <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                      {dateien.filter(d => d.typ === 'noten').map(d => (
+                        <div key={d.id}>
+                          {d.stimme && d.stimme !== 'keine' && (
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6, textTransform: 'capitalize' }}>Stimme: {d.stimme}</div>
+                          )}
+                          <PdfInline pfad={d.bucket_pfad} />
+                        </div>
+                      ))}
+                    </div>
+                  : <PlatzhalterBox info={ansichtInfo} />
             )}
 
             {ansicht === 'youtube' && (
@@ -365,13 +402,19 @@ export default function SchuelerSession() {
             )}
 
             {ansicht === 'dateiverwaltung' && (
-              dateien.length > 0
-                ? <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {dateien.map(d => (
-                      <DateiZeile key={d.id} datei={d} />
-                    ))}
+              istGast
+                ? <div style={{ padding: '32px 24px', textAlign: 'center', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: 14 }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
+                    <div>Datei-Downloads sind nur für eingeloggte Schüler verfügbar.</div>
+                    <button onClick={() => navigate('/login')} style={{ ...s.btnPri, marginTop: 16, fontSize: 13 }}>Einloggen</button>
                   </div>
-                : <PlatzhalterBox info={ansichtInfo} />
+                : dateien.length > 0
+                  ? <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {dateien.map(d => (
+                        <DateiZeile key={d.id} datei={d} />
+                      ))}
+                    </div>
+                  : <PlatzhalterBox info={ansichtInfo} />
             )}
           </>
         ) : (

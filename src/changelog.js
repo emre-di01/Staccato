@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.7.1'
+export const CURRENT_VERSION = '1.8.0'
 
 export const CHANGELOG = [
+  {
+    version: '1.8.0',
+    date: '2026-05-08',
+    features: [
+      {
+        icon: '🌐',
+        de: 'Unterrichtsmodus: Öffentliche Sessions – Gäste können ohne Staccato-Login per Code/QR beitreten',
+        en: 'Teaching mode: public sessions – guests can join via code/QR without a Staccato login',
+        tr: 'Öğretim modu: herkese açık oturumlar – misafirler Staccato girişi olmadan kod/QR ile katılabilir',
+      },
+      {
+        icon: '⚡',
+        de: 'Unterrichtsmodus: Laufende Session nach Seitenreload automatisch erkennen und fortsetzen',
+        en: 'Teaching mode: automatically detect and resume an active session after page reload',
+        tr: 'Öğretim modu: sayfa yenilendikten sonra aktif oturumu otomatik olarak algıla ve devam et',
+      },
+      {
+        icon: '🔗',
+        de: 'Nach dem Login landet man wieder auf der ursprünglich aufgerufenen Seite',
+        en: 'After login, you are redirected back to the page you originally tried to open',
+        tr: 'Giriş yaptıktan sonra açmaya çalıştığınız sayfaya geri yönlendirilirsiniz',
+      },
+    ],
+  },
   {
     version: '1.7.1',
     date: '2026-05-06',

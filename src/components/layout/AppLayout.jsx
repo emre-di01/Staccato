@@ -265,7 +265,7 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
 }
 
 export default function AppLayout() {
-  const { profil, rolle, abmelden, T, refreshKey } = useApp()
+  const { profil, rolle, abmelden, T } = useApp()
   const navigate = useNavigate()
   const [sidebarOffen, setSidebarOffen]     = useState(false)
   const [settingsOffen, setSettingsOffen]   = useState(false)
@@ -416,7 +416,7 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main key={refreshKey} style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }} className="main-content">
+        <main style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }} className="main-content">
           <Outlet />
         </main>
 

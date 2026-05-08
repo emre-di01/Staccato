@@ -13,7 +13,11 @@ export default function ProtectedRoute({ erlaubteRollen = [] }) {
     </div>
   )
 
-  if (!session) return <Navigate to="/login" replace />
+  if (!session) {
+    const p = window.location.pathname
+    if (p && p !== '/' && p !== '/login') sessionStorage.setItem('staccato_nach_login', p)
+    return <Navigate to="/login" replace />
+  }
 
   if (erlaubteRollen.length > 0 && !erlaubteRollen.includes(rolle)) {
     return <Navigate to={startseiteNach(rolle)} replace />

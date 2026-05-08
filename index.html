@@ -33,6 +33,25 @@
         input, textarea, select { font-size: 16px !important; }
       }
     </style>
+    <!-- Apply background color from stored theme before React renders to avoid white flash -->
+    <script>
+      (function () {
+        try {
+          var BG = {
+            klassik: { light: '#faf8f4', dark: '#0f0d0a' },
+            modern:  { light: '#f0f7f7', dark: '#050f0f' },
+            bold:    { light: '#faf5f5', dark: '#0f0505' },
+            kreativ: { light: '#faf5ff', dark: '#0a0514' },
+            fresh:   { light: '#f0fdf4', dark: '#020f06' },
+          };
+          var theme = localStorage.getItem('staccato_theme') || 'klassik';
+          var dark  = localStorage.getItem('staccato_dark') === 'true';
+          var bg    = (BG[theme] || BG.klassik)[dark ? 'dark' : 'light'];
+          document.documentElement.style.backgroundColor = bg;
+          document.body.style.backgroundColor = bg;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
