@@ -164,7 +164,9 @@ export default function LehrerEvents() {
               )}
               {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
               <div style={s.cardActions}>
-                <button onClick={() => navigate(`/lehrer/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 Repertoire</button>
+                {ev.typ !== 'vorstandssitzung' && (
+                  <button onClick={() => navigate(`/lehrer/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 Repertoire</button>
+                )}
                 {kannBearbeiten(ev) && <>
                   <button onClick={() => oeffneBearbeiten(ev)} style={s.btnSm}>{T('edit')}</button>
                   <button onClick={() => loeschen(ev.id)} style={{ ...s.btnSm, color: 'var(--danger)' }}>{T('delete')}</button>

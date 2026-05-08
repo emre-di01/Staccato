@@ -132,12 +132,14 @@ export default function SchuelerEvents() {
                   )}
                   {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
 
-                  <div style={{ paddingTop: 8, borderTop: '1px solid var(--border)', marginTop: 4 }}>
-                    <button onClick={() => navigate(`${basePath}/events/${ev.id}/repertoire`)}
-                      style={s.rsvpBtn}>
-                      🎼 Programm ansehen
-                    </button>
-                  </div>
+                  {ev.typ !== 'vorstandssitzung' && (
+                    <div style={{ paddingTop: 8, borderTop: '1px solid var(--border)', marginTop: 4 }}>
+                      <button onClick={() => navigate(`${basePath}/events/${ev.id}/repertoire`)}
+                        style={s.rsvpBtn}>
+                        🎼 Programm ansehen
+                      </button>
+                    </div>
+                  )}
 
                   {(eingeladen || ev.oeffentlich) && !vergangen && (
                     <div style={s.rsvpRow}>
