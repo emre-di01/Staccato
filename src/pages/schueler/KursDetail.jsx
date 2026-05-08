@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Hinweis from '../../components/Hinweis'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -379,6 +380,7 @@ export default function SchuelerKursDetail() {
       {/* STUNDENPLAN */}
       {tab === 'stunden' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          <Hinweis text={T('hint_kurs_stunden')} />
           {stunden.length === 0 ? (
             <div style={s.leer}>{T('kurs_no_lessons_found')}</div>
           ) : stunden.map(st => {
@@ -424,12 +426,16 @@ export default function SchuelerKursDetail() {
 
       {/* ANWESENHEIT */}
       {tab === 'anwesenheit' && (
-        <SchuelerAnwesenheit profil={profil} kursId={id} stunden={stunden} />
+        <>
+          <Hinweis text={T('hint_kurs_anwesenheit')} style={{ marginBottom:16 }} />
+          <SchuelerAnwesenheit profil={profil} kursId={id} stunden={stunden} />
+        </>
       )}
 
       {/* REPERTOIRE */}
       {tab === 'repertoire' && (
         <div>
+          <Hinweis text={T('hint_kurs_repertoire')} style={{ marginBottom:16 }} />
           {stuecke.length === 0 ? (
             <div style={s.leer}>{T('repertoire_no_pieces')}</div>
           ) : (
@@ -464,6 +470,7 @@ export default function SchuelerKursDetail() {
       {/* DATEIEN */}
       {tab === 'dateien' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          <Hinweis text={T('hint_kurs_dateien')} />
           {dateien.length === 0 ? (
             <div style={s.leer}>{T('no_data')}</div>
           ) : dateien.map(d => (

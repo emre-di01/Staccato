@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
+import Hinweis from '../components/Hinweis'
 
 const STATUS_FARBE = { aktuell:'var(--accent)', geplant:'var(--primary)', abgeschlossen:'var(--text-3)', archiviert:'var(--text-3)' }
 const STATUS_LABEL = { aktuell:'Aktuell', geplant:'Geplant', abgeschlossen:'Abgeschlossen', archiviert:'Archiviert' }
@@ -223,6 +224,8 @@ export default function Repertoire() {
         <h1 style={{ margin:0, fontSize:26, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px' }}>🎼 {T('repertoire_title')}</h1>
         {!istSchueler && <button onClick={() => setModal(true)} style={s.btnPri}>{T('repertoire_new_piece')}</button>}
       </div>
+
+      {istSchueler && <Hinweis text={T('hint_repertoire')} style={{ marginBottom:20 }} />}
 
       {/* Tabs (nur für Admin/Lehrer) */}
       {!istSchueler && (

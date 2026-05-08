@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import { useIsMobile } from '../hooks/useWindowWidth'
+import Hinweis from '../components/Hinweis'
 
 function zeitInTZ(date, tz) {
   const fmt = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz })
@@ -385,6 +386,10 @@ export default function Stundenplan() {
           </button>
         </div>
       </div>
+
+      {(rolle === 'schueler' || rolle === 'eltern' || rolle === 'vorstand') && (
+        <Hinweis text={T('hint_stundenplan')} style={{ marginBottom:16 }} />
+      )}
 
       {/* Wochen-Navigation */}
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>

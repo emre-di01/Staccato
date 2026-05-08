@@ -1,0 +1,2 @@
+import{j as r}from"./vendor-misc-Cb0mqngK.js";function s({text:i,style:e}){return i?r.jsxs("div",{style:{fontSize:12,color:"var(--text-3)",background:"var(--bg-2)",borderRadius:"var(--radius)",padding:"7px 11px",lineHeight:1.5,display:"flex",gap:6,alignItems:"flex-start",...e},children:[r.jsx("span",{style:{flexShrink:0,fontSize:13},children:"💡"}),r.jsx("span",{children:i})]}):null}export{s as H};
+//# sourceMappingURL=Hinweis-B5Se-Ycd.js.map

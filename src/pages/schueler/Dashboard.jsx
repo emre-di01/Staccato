@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import OnboardingModal from '../../components/OnboardingModal'
+import Hinweis from '../../components/Hinweis'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -106,11 +107,12 @@ export default function SchuelerDashboard() {
   return (
     <div>
       <OnboardingModal />
-      <div style={{ marginBottom:32 }}>
+      <div style={{ marginBottom:20 }}>
         <div style={{ fontSize:13, color:'var(--text-3)', marginBottom:4 }}>{gruss}</div>
-        <h1 style={{ fontSize:28, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', margin:0 }}>
+        <h1 style={{ fontSize:28, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', margin:'0 0 12px' }}>
           {profil?.voller_name}
         </h1>
+        <Hinweis text={T('hint_dash')} />
       </div>
 
       {/* Hero: nächste Stunde */}
@@ -151,9 +153,10 @@ export default function SchuelerDashboard() {
                 </div>
                 <span style={{ fontSize:28 }}>📊</span>
               </div>
-              <div style={{ height:5, borderRadius:3, background:'var(--bg-2)', overflow:'hidden' }}>
+              <div style={{ height:5, borderRadius:3, background:'var(--bg-2)', overflow:'hidden', marginBottom:8 }}>
                 <div style={{ height:'100%', width:`${anwesenheitsRate}%`, borderRadius:3, background:farbe }} />
               </div>
+              <Hinweis text={T('hint_dash_attendance')} style={{ marginBottom:0 }} />
             </div>
           )
         })()}
@@ -162,7 +165,8 @@ export default function SchuelerDashboard() {
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24 }} className="dashboard-grid">
         {/* Kurse */}
         <div>
-          <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:14 }}>{T('dash_my_courses')}</h2>
+          <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:6 }}>{T('dash_my_courses')}</h2>
+          <Hinweis text={T('hint_dash_courses')} style={{ marginBottom:14 }} />
           {laden ? <div style={s.leer}>{T('loading')}</div> :
            kurse.length === 0 ? <div style={s.leer}>{T('dash_no_courses')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>

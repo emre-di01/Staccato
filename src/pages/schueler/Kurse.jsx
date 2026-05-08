@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Hinweis from '../../components/Hinweis'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -36,6 +37,7 @@ export default function SchuelerKurse() {
     <div>
       <h1 style={s.h1}>🎵 {T('kurs_my_courses')}</h1>
       <p style={s.sub}>{kurse.length} {T('kurs_lessons')}</p>
+      <Hinweis text={T('hint_kurse')} style={{ marginTop:12 }} />
 
       {kurse.length === 0 ? (
         <div style={s.leer}>{T('kurs_no_assigned')}</div>

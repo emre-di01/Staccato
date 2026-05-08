@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import { useIsMobile } from '../hooks/useWindowWidth'
+import Hinweis from '../components/Hinweis'
 
 function zeitAgo(iso) {
   const diff = Date.now() - new Date(iso).getTime()
@@ -242,6 +243,10 @@ export default function Nachrichten() {
           </button>
         )}
       </div>
+
+      {(rolle === 'schueler' || rolle === 'eltern') && !zeigeDetail && (
+        <Hinweis text={T('hint_nachrichten')} style={{ marginBottom:16 }} />
+      )}
 
       {/* Layout: Desktop = 2 Spalten, Mobil = Stack */}
       <div style={{ display: mob ? 'block' : 'grid', gridTemplateColumns: ausgewaehlt ? '340px 1fr' : '1fr', gap:16, alignItems:'start' }}>
