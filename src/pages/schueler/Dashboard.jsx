@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import OnboardingModal from '../../components/OnboardingModal'
 import Hinweis from '../../components/Hinweis'
+import { Skeleton, SkeletonStatCard, SkeletonList, SkeletonStyle } from '../../components/Skeleton'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -139,9 +140,11 @@ export default function SchuelerDashboard() {
         )
       })()}
 
+      <SkeletonStyle />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:16, marginBottom:32 }}>
-        <StatCard icon="🎵" label={T('dash_my_courses')}   wert={laden ? '…' : kurse.length}          farbe="var(--primary)" onClick={() => navigate('/schueler/kurse')} />
-        <StatCard icon="📅" label={T('dash_next_lessons')} wert={laden ? '…' : naechsteStunden.length} farbe="var(--accent)"  onClick={() => navigate('/schueler/stundenplan')} />
+        {laden ? <><SkeletonStatCard /><SkeletonStatCard /></> : <>
+        <StatCard icon="🎵" label={T('dash_my_courses')}   wert={kurse.length}          farbe="var(--primary)" onClick={() => navigate('/schueler/kurse')} />
+        <StatCard icon="📅" label={T('dash_next_lessons')} wert={naechsteStunden.length} farbe="var(--accent)"  onClick={() => navigate('/schueler/stundenplan')} />
         {anwesenheitsRate !== null && (() => {
           const farbe = anwesenheitsRate >= 80 ? 'var(--success)' : anwesenheitsRate >= 60 ? 'var(--warning)' : 'var(--danger)'
           return (
@@ -160,6 +163,7 @@ export default function SchuelerDashboard() {
             </div>
           )
         })()}
+        </>}
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24 }} className="dashboard-grid">
@@ -167,7 +171,7 @@ export default function SchuelerDashboard() {
         <div>
           <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:6 }}>{T('dash_my_courses')}</h2>
           <Hinweis text={T('hint_dash_courses')} style={{ marginBottom:14 }} />
-          {laden ? <div style={s.leer}>{T('loading')}</div> :
+          {laden ? <SkeletonList rows={3} /> :
            kurse.length === 0 ? <div style={s.leer}>{T('dash_no_courses')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {kurse.map(k => (
@@ -196,7 +200,7 @@ export default function SchuelerDashboard() {
         {/* Nächste Stunden */}
         <div>
           <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:14 }}>{T('dash_schedule')}</h2>
-          {laden ? <div style={s.leer}>{T('loading')}</div> :
+          {laden ? <SkeletonList rows={3} /> :
            naechsteStunden.length === 0 ? <div style={s.leer}>{T('dash_no_lessons')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {naechsteStunden.map(st => {

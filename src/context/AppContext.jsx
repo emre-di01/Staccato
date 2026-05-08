@@ -9,6 +9,30 @@ const DEFAULT_THEME = 'klassik'
 const DEFAULT_LANG  = 'de'
 
 export function AppProvider({ children }) {
+  const [toasts,     setToasts]     = useState([])
+  const [confirmState, setConfirmState] = useState(null) // { message, sub, confirmLabel, cancelLabel, dangerous, resolve }
+  const toastIdRef = useRef(0)
+
+  const toast = useCallback((message, type = 'info', duration) => {
+    const id = ++toastIdRef.current
+    setToasts(t => [...t, { id, message, type, duration }])
+  }, [])
+
+  const removeToast = useCallback((id) => {
+    setToasts(t => t.filter(x => x.id !== id))
+  }, [])
+
+  const confirm = useCallback((message, options = {}) => {
+    return new Promise(resolve => {
+      setConfirmState({ message, resolve, ...options })
+    })
+  }, [])
+
+  function resolveConfirm(result) {
+    confirmState?.resolve(result)
+    setConfirmState(null)
+  }
+
   const [session,    setSession]    = useState(undefined)
   const [profil,     setProfil]     = useState(null)
   const [schule,     setSchule]     = useState(null)
@@ -152,6 +176,8 @@ export function AppProvider({ children }) {
       schule, setSchule,
       changeTheme, toggleDark, setLang,
       abmelden, T, ladeProfil,
+      toast, toasts, removeToast,
+      confirm, confirmState, resolveConfirm,
     }}>
       {children}
     </AppContext.Provider>

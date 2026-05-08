@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { SkeletonStatCard, SkeletonList, SkeletonStyle } from '../../components/Skeleton'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -132,31 +133,36 @@ export default function VorstandDashboard() {
       </div>
 
       {/* Vorstandsmodul KPIs */}
+      <SkeletonStyle />
       <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Vorstandsmodul</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
-        <StatCard icon="✅" label={T('vorstand_offene_aufgaben')} wert={laden ? '…' : vorstandStats.offeneAufgaben}
+        {laden ? <><SkeletonStatCard /><SkeletonStatCard /><SkeletonStatCard /><SkeletonStatCard /></> : <>
+        <StatCard icon="✅" label={T('vorstand_offene_aufgaben')} wert={vorstandStats.offeneAufgaben}
           farbe="var(--accent)" onClick={() => navigate('/vorstand/ziele')} />
-        <StatCard icon="🎯" label={T('vorstand_ziele')} wert={laden ? '…' : vorstandStats.ziele}
+        <StatCard icon="🎯" label={T('vorstand_ziele')} wert={vorstandStats.ziele}
           farbe="var(--primary)" onClick={() => navigate('/vorstand/ziele')} />
-        <StatCard icon="📝" label={T('vorstand_protokolle')} wert={laden ? '…' : vorstandStats.protokolle}
+        <StatCard icon="📝" label={T('vorstand_protokolle')} wert={vorstandStats.protokolle}
           farbe="#7c3aed" onClick={() => navigate('/vorstand/protokolle')} />
         <StatCard icon="📦" label="Inventarwert"
-          wert={laden ? '…' : vorstandStats.inventarWert !== null ? vorstandStats.inventarWert.toLocaleString('de-DE', { style:'currency', currency:'EUR', maximumFractionDigits:0 }) : '–'}
+          wert={vorstandStats.inventarWert !== null ? vorstandStats.inventarWert.toLocaleString('de-DE', { style:'currency', currency:'EUR', maximumFractionDigits:0 }) : '–'}
           farbe="var(--text-2)" onClick={() => navigate('/vorstand/inventar')} />
+        </>}
       </div>
 
       {/* Schüler KPIs */}
       <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Meine Kurse</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
-        <StatCard icon="🎵" label={T('dash_my_courses')}   wert={laden ? '…' : kurse.length}           farbe="var(--primary)" onClick={() => navigate('/vorstand/kurse')} />
-        <StatCard icon="📅" label={T('dash_next_lessons')} wert={laden ? '…' : naechsteStunden.length}  farbe="var(--accent)"  onClick={() => navigate('/vorstand/stundenplan')} />
+        {laden ? <><SkeletonStatCard /><SkeletonStatCard /></> : <>
+        <StatCard icon="🎵" label={T('dash_my_courses')}   wert={kurse.length}           farbe="var(--primary)" onClick={() => navigate('/vorstand/kurse')} />
+        <StatCard icon="📅" label={T('dash_next_lessons')} wert={naechsteStunden.length}  farbe="var(--accent)"  onClick={() => navigate('/vorstand/stundenplan')} />
+        </>}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }} className="dashboard-grid">
         {/* Meine Kurse */}
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>{T('dash_my_courses')}</h2>
-          {laden ? <div style={s.leer}>{T('loading')}</div> :
+          {laden ? <SkeletonList rows={3} /> :
            kurse.length === 0 ? <div style={s.leer}>{T('dash_no_courses')}</div> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {kurse.map(k => (
@@ -186,7 +192,7 @@ export default function VorstandDashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div>
             <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>{T('dash_schedule')}</h2>
-            {laden ? <div style={s.leer}>{T('loading')}</div> :
+            {laden ? <SkeletonList rows={3} /> :
              naechsteStunden.length === 0 ? <div style={s.leer}>{T('dash_no_lessons')}</div> : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {naechsteStunden.map(st => {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { SkeletonStatCard, SkeletonList, SkeletonStyle } from '../../components/Skeleton'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -144,10 +145,13 @@ export default function LehrerDashboard() {
       )}
 
       {/* Stats */}
+      <SkeletonStyle />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:16, marginBottom:32 }}>
-        <StatCard icon="🎵" label={T('dash_my_courses')}      wert={laden ? '…' : kurse.length}          farbe="var(--primary)" onClick={() => navigate('/lehrer/kurse')} />
-        <StatCard icon="👥" label={T('dash_active_students')} wert={laden ? '…' : aktiveSchueler}         farbe="var(--accent)"  onClick={() => navigate('/lehrer/schueler')} />
-        <StatCard icon="📅" label={T('dash_next_lessons')}    wert={laden ? '…' : naechsteStunden.length} farbe="var(--success)" onClick={() => navigate('/lehrer/anwesenheit')} />
+        {laden ? <><SkeletonStatCard /><SkeletonStatCard /><SkeletonStatCard /></> : <>
+        <StatCard icon="🎵" label={T('dash_my_courses')}      wert={kurse.length}          farbe="var(--primary)" onClick={() => navigate('/lehrer/kurse')} />
+        <StatCard icon="👥" label={T('dash_active_students')} wert={aktiveSchueler}         farbe="var(--accent)"  onClick={() => navigate('/lehrer/schueler')} />
+        <StatCard icon="📅" label={T('dash_next_lessons')}    wert={naechsteStunden.length} farbe="var(--success)" onClick={() => navigate('/lehrer/anwesenheit')} />
+        </>}
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24 }} className="dashboard-grid">
@@ -157,7 +161,7 @@ export default function LehrerDashboard() {
             <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', margin:0 }}>{T('dash_my_courses')}</h2>
             <button onClick={() => navigate('/lehrer/kurse')} style={s.linkBtn}>{T('dash_all')}</button>
           </div>
-          {laden ? <div style={s.leer}>{T('loading')}</div> :
+          {laden ? <SkeletonList rows={3} /> :
            kurse.length === 0 ? <div style={s.leer}>{T('dash_no_courses')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {kurse.slice(0, 4).map(k => (
@@ -188,7 +192,7 @@ export default function LehrerDashboard() {
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
             <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', margin:0 }}>📅 {T('dash_next_lessons')}</h2>
           </div>
-          {laden ? <div style={s.leer}>{T('loading')}</div> :
+          {laden ? <SkeletonList rows={3} /> :
            naechsteStunden.length === 0 ? <div style={s.leer}>{T('dash_no_lessons')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {naechsteStunden.map(st => {

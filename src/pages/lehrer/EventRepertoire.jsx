@@ -143,7 +143,7 @@ function VorhandenesModal({ eventId, bereitsVerknuepft, onClose, onErfolg }) {
 export default function EventRepertoire() {
   const { id: eventId } = useParams()
   const navigate = useNavigate()
-  const { rolle } = useApp()
+  const { rolle, confirm } = useApp()
   const [event,   setEvent]   = useState(null)
   const [stuecke, setStuecke] = useState([])
   const [laden,   setLaden]   = useState(true)
@@ -171,7 +171,7 @@ export default function EventRepertoire() {
   }
 
   async function stueckEntfernen(stueckId) {
-    if (!confirm('Stück aus dieser Veranstaltung entfernen?')) return
+    if (!await confirm('Stück aus dieser Veranstaltung entfernen?', { confirmLabel: 'Entfernen' })) return
     await supabase.from('event_stuecke').delete().eq('event_id', eventId).eq('stueck_id', stueckId)
     setStuecke(prev => prev.filter(s => s.stueck_id !== stueckId))
   }

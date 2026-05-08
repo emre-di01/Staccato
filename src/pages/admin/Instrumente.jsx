@@ -107,7 +107,7 @@ function InstrumentModal({ instrument, onClose, onErfolg }) {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Instrumente() {
-  const { profil } = useApp()
+  const { profil, confirm } = useApp()
   const [instrumente, setInstrumente] = useState([])
   const [laden,       setLaden]       = useState(true)
   const [modal,       setModal]       = useState(null)
@@ -126,7 +126,7 @@ export default function Instrumente() {
   useEffect(() => { ladeInstrumente() }, [ladeInstrumente])
 
   async function loeschen(instr) {
-    if (!confirm(`„${instr.name_de}" wirklich löschen?\n\nKurse, die dieses Instrument verwenden, behalten die Zuweisung.`)) return
+    if (!await confirm(`„${instr.name_de}" wirklich löschen?`, { sub: 'Kurse, die dieses Instrument verwenden, behalten die Zuweisung.', confirmLabel: 'Löschen' })) return
     await supabase.from('instrumente').delete().eq('id', instr.id)
     ladeInstrumente()
   }

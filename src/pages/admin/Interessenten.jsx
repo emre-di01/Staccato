@@ -263,7 +263,7 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Interessenten() {
-  const { profil, T } = useApp()
+  const { profil, T, confirm } = useApp()
   const [liste,        setListe]        = useState([])
   const [laden,        setLaden]        = useState(true)
   const [filterStatus, setFilterStatus] = useState('alle')
@@ -283,7 +283,7 @@ export default function Interessenten() {
   useEffect(() => { ladeDaten() }, [ladeDaten])
 
   async function loeschen(item) {
-    if (!confirm(`„${item.voller_name}" wirklich löschen?`)) return
+    if (!await confirm(`„${item.voller_name}" wirklich löschen?`, { confirmLabel: 'Löschen' })) return
     await supabase.from('interessenten').delete().eq('id', item.id)
     ladeDaten()
   }

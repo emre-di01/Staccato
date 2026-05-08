@@ -257,7 +257,7 @@ function Belegungsplan({ raum, woche }) {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Raumverwaltung() {
-  const { T } = useApp()
+  const { T, confirm } = useApp()
   const [raeume,       setRaeume]       = useState([])
   const [laden,        setLaden]        = useState(true)
   const [modal,        setModal]        = useState(null)
@@ -276,7 +276,7 @@ export default function Raumverwaltung() {
   useEffect(() => { ladeRaeume() }, [ladeRaeume])
 
   async function loeschen(raum) {
-    if (!confirm(`„${raum.name}" wirklich löschen?`)) return
+    if (!await confirm(`„${raum.name}" wirklich löschen?`, { confirmLabel: 'Löschen' })) return
     await supabase.from('raeume').delete().eq('id', raum.id)
     ladeRaeume()
   }

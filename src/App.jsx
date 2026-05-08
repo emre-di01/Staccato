@@ -34,6 +34,7 @@ const SchuelerKursDetail   = lazy(() => import('./pages/schueler/KursDetail'))
 const SchuelerAnwesenheit  = lazy(() => import('./pages/schueler/Anwesenheit'))
 const SchuelerEvents       = lazy(() => import('./pages/schueler/Events'))
 const SchuelerFAQ          = lazy(() => import('./pages/schueler/FAQ'))
+const VorstandFAQ          = lazy(() => import('./pages/vorstand/FAQ'))
 const VorstandDashboard    = lazy(() => import('./pages/vorstand/Dashboard'))
 const VorstandZiele        = lazy(() => import('./pages/vorstand/Ziele'))
 const VorstandProtokolle   = lazy(() => import('./pages/vorstand/Protokolle'))
@@ -144,6 +145,7 @@ function AppRoutes() {
           <Route path="/vorstand/repertoire"            element={<Repertoire />} />
           <Route path="/vorstand/repertoire/:stueckId"  element={<StueckDetail />} />
           <Route path="/vorstand/inventar"              element={<Inventar />} />
+          <Route path="/vorstand/faq"                   element={<VorstandFAQ />} />
           <Route path="/vorstand/profil"                element={<ProfilSeite />} />
         </Route>
       </Route>

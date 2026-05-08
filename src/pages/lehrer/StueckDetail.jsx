@@ -445,7 +445,7 @@ export default function StueckDetail() {
   const { kursId, stueckId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { rolle, T, schule } = useApp()
+  const { rolle, T, schule, confirm } = useApp()
 
   const mob = useIsMobile()
   const istEvent = location.pathname.includes('/events/')
@@ -573,14 +573,14 @@ ${html}
   }
 
   async function dateiLoeschen(dateiId, pfad) {
-    if (!confirm('Datei wirklich löschen?')) return
+    if (!await confirm('Datei wirklich löschen?', { confirmLabel: 'Löschen' })) return
     await supabase.storage.from('stueck-dateien').remove([pfad])
     await supabase.from('stueck_dateien').delete().eq('id', dateiId)
     setDateien(prev => prev.filter(d => d.id !== dateiId))
   }
 
   async function stueckLoeschen() {
-    if (!confirm(`"${stueck.titel}" dauerhaft aus dem globalen Repertoire löschen?\n\nDas Stück wird aus allen Kursen entfernt und kann nicht wiederhergestellt werden.`)) return
+    if (!await confirm(`"${stueck.titel}" dauerhaft löschen?`, { sub: 'Das Stück wird aus allen Kursen entfernt und kann nicht wiederhergestellt werden.', confirmLabel: 'Löschen' })) return
     // Storage-Dateien zuerst entfernen
     const pfade = dateien.map(d => d.bucket_pfad)
     if (pfade.length > 0) await supabase.storage.from('stueck-dateien').remove(pfade)

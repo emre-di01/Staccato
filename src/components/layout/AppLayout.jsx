@@ -6,6 +6,8 @@ import { THEMES, THEME_KEYS } from '../../themes/themes'
 import { supabase } from '../../lib/supabase'
 import { version } from '../../../package.json'
 import { CHANGELOG } from '../../changelog'
+import { ToastContainer } from '../Toast'
+import { ConfirmModal } from '../ConfirmModal'
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(!navigator.onLine)
@@ -64,6 +66,7 @@ function getNavConfig(rolle, T) {
         { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
         { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
         { icon: '📦', label: 'Inventar',               to: '/vorstand/inventar' },
+        { icon: '❓', label: T('faq_title'),            to: '/vorstand/faq' },
       ]},
     ]
   }
@@ -303,8 +306,10 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
 }
 
 export default function AppLayout() {
-  const { profil, rolle, schule, abmelden, T } = useApp()
+  const { profil, rolle, schule, abmelden, T, toasts, removeToast, confirmState, resolveConfirm } = useApp()
   const navigate = useNavigate()
+  const location = useLocation()
+  const swipeStartX = useRef(null)
   const [sidebarOffen, setSidebarOffen]     = useState(false)
   const [settingsOffen, setSettingsOffen]   = useState(false)
   const [joinSessionOffen, setJoinSessionOffen] = useState(false)
@@ -360,6 +365,17 @@ export default function AppLayout() {
     const handler = () => setKeyboardOffen(window.innerHeight - window.visualViewport.height > 150)
     window.visualViewport.addEventListener('resize', handler)
     return () => window.visualViewport.removeEventListener('resize', handler)
+  }, [])
+
+  useEffect(() => {
+    const openSettings = () => setSettingsOffen(true)
+    const openJoin = () => setJoinSessionOffen(true)
+    window.addEventListener('staccato:open-settings', openSettings)
+    window.addEventListener('staccato:open-join-session', openJoin)
+    return () => {
+      window.removeEventListener('staccato:open-settings', openSettings)
+      window.removeEventListener('staccato:open-join-session', openJoin)
+    }
   }, [])
 
   async function handleAbmelden() {
@@ -516,8 +532,26 @@ export default function AppLayout() {
         <OfflineBanner />
 
         {/* Content */}
-        <main style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }} className="main-content">
-          <Outlet />
+        <main
+          style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }}
+          className="main-content"
+          onTouchStart={e => { swipeStartX.current = e.touches[0].clientX }}
+          onTouchEnd={e => {
+            if (swipeStartX.current === null) return
+            const delta = e.changedTouches[0].clientX - swipeStartX.current
+            if (delta > 72 && swipeStartX.current < 44) navigate(-1)
+            swipeStartX.current = null
+          }}
+        >
+          <style>{`
+            @keyframes pageFade {
+              from { opacity: 0; transform: translateY(5px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+          <div key={location.pathname} style={{ animation: 'pageFade 0.18s ease' }}>
+            <Outlet />
+          </div>
         </main>
 
         {/* Mobile Bottom Nav */}
@@ -564,6 +598,19 @@ export default function AppLayout() {
 
       {settingsOffen && <SettingsPanel onClose={() => setSettingsOffen(false)} />}
       {joinSessionOffen && <JoinSessionModal onClose={() => setJoinSessionOffen(false)} />}
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {confirmState && (
+        <ConfirmModal
+          message={confirmState.message}
+          sub={confirmState.sub}
+          confirmLabel={confirmState.confirmLabel}
+          cancelLabel={confirmState.cancelLabel}
+          dangerous={confirmState.dangerous ?? true}
+          onConfirm={() => resolveConfirm(true)}
+          onCancel={() => resolveConfirm(false)}
+        />
+      )}
 
       {/* Nachrichten-Hover-Popup – unten rechts */}
       {popupPos && ungelesen.length > 0 && (

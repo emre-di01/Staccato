@@ -440,7 +440,7 @@ const DOK_TYPEN = [
 ]
 
 function DokumenteModal({ mitglied, onClose }) {
-  const { T } = useApp()
+  const { T, confirm } = useApp()
   const fileRef = useRef()
   const [dateien,  setDateien]  = useState([])
   const [laden,    setLaden]    = useState(true)
@@ -475,7 +475,7 @@ function DokumenteModal({ mitglied, onClose }) {
   }
 
   async function loeschen(d) {
-    if (!confirm(`„${d.name}" wirklich löschen?`)) return
+    if (!await confirm(`„${d.name}" wirklich löschen?`, { confirmLabel: 'Löschen' })) return
     await supabase.storage.from('mitglied-dateien').remove([d.bucket_pfad])
     await supabase.from('mitglied_dateien').delete().eq('id', d.id)
     setDateien(prev => prev.filter(x => x.id !== d.id))

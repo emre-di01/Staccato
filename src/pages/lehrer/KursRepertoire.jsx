@@ -149,7 +149,7 @@ export default function KursRepertoire() {
   const navigate = useNavigate()
   const location = useLocation()
   const segment  = location.pathname.split('/')[1]
-  const { rolle, profil, T } = useApp()
+  const { rolle, profil, T, confirm } = useApp()
   const [kurs,      setKurs]      = useState(null)
   const [stuecke,   setStuecke]   = useState([])
   const [dateien,   setDateien]   = useState([])
@@ -183,7 +183,7 @@ export default function KursRepertoire() {
   }
 
   async function stueckEntfernen(unterrichtStueckId) {
-    if (!confirm(T('piece_remove_confirm'))) return
+    if (!await confirm(T('piece_remove_confirm'), { confirmLabel: 'Entfernen' })) return
     await supabase.from('unterricht_stuecke').delete().eq('unterricht_id', kursId).eq('stueck_id', unterrichtStueckId)
     setStuecke(prev => prev.filter(s => s.stueck_id !== unterrichtStueckId))
   }
@@ -194,7 +194,7 @@ export default function KursRepertoire() {
   }
 
   async function dateiLoeschen(datei) {
-    if (!confirm(T('file_delete_confirm'))) return
+    if (!await confirm(T('file_delete_confirm'), { confirmLabel: 'Löschen' })) return
     const bucket = datei.schueler_id ? 'schueler-dateien' : 'kurs-dateien'
     await supabase.storage.from(bucket).remove([datei.bucket_pfad])
     await supabase.from('dateien').delete().eq('id', datei.id)

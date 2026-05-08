@@ -313,7 +313,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
 // ─── Schüler verwalten Modal ──────────────────────────────────
 
 function SchuelerModal({ kurs, onClose, onErfolg }) {
-  const { T } = useApp()
+  const { T, confirm } = useApp()
   const [teilnehmer, setTeilnehmer] = useState([])
   const [alleSchueler, setAlleSchueler] = useState([])
   const [laden, setLaden] = useState(true)
@@ -342,7 +342,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
   }
 
   async function entfernen(schuelerId) {
-    if (!confirm(T('kurs_mgmt_confirm_remove'))) return
+    if (!await confirm(T('kurs_mgmt_confirm_remove'), { confirmLabel: 'Entfernen' })) return
     await supabase.from('unterricht_schueler').delete().eq('unterricht_id', kurs.id).eq('schueler_id', schuelerId)
     setTeilnehmer(prev => prev.filter(t => t.schueler_id !== schuelerId))
   }
@@ -427,7 +427,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
 // ─── Stunden generieren Modal ─────────────────────────────────
 
 function StundenModal({ kurs, onClose, onErfolg }) {
-  const { T } = useApp()
+  const { T, confirm } = useApp()
   const [von,         setVon]         = useState('')
   const [bis,         setBis]         = useState('')
   const [laden,       setLaden]       = useState(false)
@@ -452,7 +452,7 @@ function StundenModal({ kurs, onClose, onErfolg }) {
 
   async function loeschen() {
     if (!von || !bis) { setFehler(T('kurs_mgmt_err_dates')); return }
-    if (!confirm(`Alle Stunden von ${von} bis ${bis} für „${kurs.name}" löschen?`)) return
+    if (!await confirm(`Alle Stunden von ${von} bis ${bis} für „${kurs.name}" löschen?`, { confirmLabel: 'Löschen' })) return
     setLoeschLaden(true); setFehler(''); setResult(null)
     const { data, error } = await supabase
       .from('stunden')

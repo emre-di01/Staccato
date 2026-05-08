@@ -28,6 +28,7 @@ function useMobile() {
 
 // ─── Kategorien-Verwaltungs-Modal ─────────────────────────────
 function KategorienModal({ schuleId, onClose, onGeaendert }) {
+  const { confirm } = useApp()
   const mob = useMobile()
   const [kategorien, setKategorien] = useState([])
   const [counts,     setCounts]     = useState({})
@@ -75,7 +76,7 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
 
   async function loeschen(kat) {
     if ((counts[kat.id] ?? 0) > 0) return
-    if (!confirm(`Kategorie „${kat.name}" wirklich löschen?`)) return
+    if (!await confirm(`Kategorie „${kat.name}" wirklich löschen?`, { confirmLabel: 'Löschen' })) return
     await supabase.from('inventar_kategorien').delete().eq('id', kat.id)
     await ladeKategorien()
     onGeaendert()
@@ -822,7 +823,7 @@ const sScanner = {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Inventar() {
-  const { profil } = useApp()
+  const { profil, confirm } = useApp()
 
   const [items,         setItems]         = useState([])
   const [kategorien,    setKategorien]    = useState([])
@@ -854,7 +855,7 @@ export default function Inventar() {
   }, [ladeKategorien, ladeItems])
 
   async function loeschen(item) {
-    if (!confirm(`„${item.name}" (${item.inventarnummer}) wirklich löschen?`)) return
+    if (!await confirm(`„${item.name}" (${item.inventarnummer}) wirklich löschen?`, { confirmLabel: 'Löschen' })) return
     await supabase.from('inventar').delete().eq('id', item.id)
     ladeItems()
   }

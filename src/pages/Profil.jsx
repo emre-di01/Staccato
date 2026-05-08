@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext'
 
 // ─── Avatar Upload ────────────────────────────────────────────
 function AvatarBereich({ profil, onUpdate }) {
-  const { T } = useApp()
+  const { T, toast } = useApp()
   const fileRef = useRef()
   const [laden, setLaden] = useState(false)
 
@@ -15,7 +15,7 @@ function AvatarBereich({ profil, onUpdate }) {
     const pfad   = `${profil.id}/avatar_${Date.now()}_${sauber}`
 
     const { error: sErr } = await supabase.storage.from('avatare').upload(pfad, datei, { upsert: true })
-    if (sErr) { alert(T('upload_failed') + ': ' + sErr.message); setLaden(false); return }
+    if (sErr) { toast(T('upload_failed') + ': ' + sErr.message, 'error'); setLaden(false); return }
 
     const { data: urlData } = supabase.storage.from('avatare').getPublicUrl(pfad)
     const { error: pErr } = await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', profil.id)

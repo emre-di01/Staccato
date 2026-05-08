@@ -190,7 +190,7 @@ function AufgabeModal({ aufgabe, zielId, vorstandMitglieder, schuleId, profilId,
 }
 
 export default function VorstandZiele() {
-  const { profil, T } = useApp()
+  const { profil, T, confirm } = useApp()
   const [ziele, setZiele] = useState([])
   const [aufgaben, setAufgaben] = useState([])
   const [vorstandMitglieder, setVorstandMitglieder] = useState([])
@@ -216,13 +216,15 @@ export default function VorstandZiele() {
   useEffect(() => { ladeDaten() }, [profil])
 
   async function zielLoeschen(id) {
-    if (!window.confirm(T('confirm_delete'))) return
+    const ok = await confirm(T('confirm_delete'), { confirmLabel: T('delete') ?? 'Löschen' })
+    if (!ok) return
     await supabase.from('vorstand_ziele').delete().eq('id', id)
     await ladeDaten()
   }
 
   async function aufgabeLoeschen(id) {
-    if (!window.confirm(T('confirm_delete'))) return
+    const ok = await confirm(T('confirm_delete'), { confirmLabel: T('delete') ?? 'Löschen' })
+    if (!ok) return
     await supabase.from('vorstand_aufgaben').delete().eq('id', id)
     await ladeDaten()
   }

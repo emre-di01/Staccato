@@ -169,6 +169,7 @@ function ProtokolModal({ protokoll, vorstandMitglieder, schuleId, profilId, onCl
 }
 
 function ProtokollDetail({ protokoll, vorstandMitglieder, profilId, schuleId, onClose, T }) {
+  const { confirm } = useApp()
   const profileNamen = Object.fromEntries(vorstandMitglieder.map(m => [m.id, m.voller_name]))
   const [linkedEvent, setLinkedEvent] = useState(null)
   const [dateien, setDateien] = useState([])
@@ -215,7 +216,7 @@ function ProtokollDetail({ protokoll, vorstandMitglieder, profilId, schuleId, on
   }
 
   async function loeschen(d) {
-    if (!confirm(`„${d.name}" wirklich löschen?`)) return
+    if (!await confirm(`„${d.name}" wirklich löschen?`, { confirmLabel: 'Löschen' })) return
     await supabase.storage.from('vorstand-dateien').remove([d.bucket_pfad])
     await supabase.from('vorstand_protokoll_dateien').delete().eq('id', d.id)
     setDateien(prev => prev.filter(x => x.id !== d.id))
@@ -314,7 +315,7 @@ function ProtokollDetail({ protokoll, vorstandMitglieder, profilId, schuleId, on
 }
 
 export default function VorstandProtokolle() {
-  const { profil, T } = useApp()
+  const { profil, T, confirm } = useApp()
   const [protokolle, setProtokolle] = useState([])
   const [vorstandMitglieder, setVorstandMitglieder] = useState([])
   const [laden, setLaden] = useState(true)
@@ -337,7 +338,8 @@ export default function VorstandProtokolle() {
   useEffect(() => { ladeDaten() }, [profil])
 
   async function loeschen(id) {
-    if (!window.confirm(T('confirm_delete'))) return
+    const ok = await confirm(T('confirm_delete'), { confirmLabel: T('delete') ?? 'Löschen' })
+    if (!ok) return
     await supabase.from('vorstand_protokolle').delete().eq('id', id)
     setProtokolle(prev => prev.filter(p => p.id !== id))
   }

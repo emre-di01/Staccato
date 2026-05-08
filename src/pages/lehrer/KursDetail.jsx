@@ -347,6 +347,7 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
 }
 
 function StundenBulkModal({ kurs, onClose, onErfolg }) {
+  const { confirm } = useApp()
   const [von,         setVon]         = useState('')
   const [bis,         setBis]         = useState('')
   const [laden,       setLaden]       = useState(false)
@@ -367,7 +368,8 @@ function StundenBulkModal({ kurs, onClose, onErfolg }) {
 
   async function loeschen() {
     if (!von || !bis) { setFehler('Bitte Von- und Bis-Datum wählen.'); return }
-    if (!window.confirm(`Alle Stunden von ${von} bis ${bis} für „${kurs.name}" löschen?`)) return
+    const ok = await confirm(`Alle Stunden von ${von} bis ${bis} für „${kurs.name}" löschen?`, { confirmLabel: 'Löschen' })
+    if (!ok) return
     setLoeschLaden(true); setFehler(''); setResult(null)
     const { data, error } = await supabase.from('stunden').delete()
       .eq('unterricht_id', kurs.id)
@@ -520,7 +522,7 @@ export default function KursDetail() {
   const navigate   = useNavigate()
   const location   = useLocation()
   const segment    = location.pathname.split('/')[1]  // 'admin' | 'lehrer'
-  const { profil, T } = useApp()
+  const { profil, T, toast, confirm } = useApp()
   const [kurs,     setKurs]     = useState(null)
   const [schueler, setSchueler] = useState([])
   const [stunden,  setStunden]  = useState([])
@@ -553,7 +555,7 @@ export default function KursDetail() {
     const mitInhalt = stunden
       .filter(st => st.status === 'stattgefunden' && (st.notizen || st.hausaufgaben))
       .sort((a, b) => new Date(a.beginn) - new Date(b.beginn))
-    if (mitInhalt.length === 0) { alert('Keine Notizen oder Hausaufgaben vorhanden.'); return }
+    if (mitInhalt.length === 0) { toast('Keine Notizen oder Hausaufgaben vorhanden.', 'warning'); return }
     const farbe = kurs.farbe ?? '#6366f1'
     const html = `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
 <title>Unterrichtsnotizen – ${kurs.name}</title>
@@ -591,15 +593,16 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
     const { error } = await supabase.from('stunden')
       .update({ status: 'geplant' })
       .eq('id', stundeId)
-    if (error) { alert(error.message); return }
+    if (error) { toast(error.message, 'error'); return }
     setStunden(prev => prev.map(st => st.id === stundeId ? { ...st, status: 'geplant' } : st))
   }
 
   async function stundeLoeschen(stundeId, beginn) {
     const datum = new Date(beginn).toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })
-    if (!window.confirm(`Stunde vom ${datum} wirklich löschen? Alle Anwesenheiten werden ebenfalls gelöscht.`)) return
+    const ok = await confirm(`Stunde vom ${datum} löschen?`, { sub: 'Alle Anwesenheiten werden ebenfalls gelöscht.', confirmLabel: 'Löschen' })
+    if (!ok) return
     const { error } = await supabase.from('stunden').delete().eq('id', stundeId)
-    if (error) { alert(error.message); return }
+    if (error) { toast(error.message, 'error'); return }
     setStunden(prev => prev.filter(st => st.id !== stundeId))
   }
 
@@ -621,7 +624,8 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
   }
 
   async function schuelerEntfernen(schuelerId) {
-    if (!window.confirm('Schüler aus Kurs entfernen?')) return
+    const ok = await confirm('Schüler aus Kurs entfernen?', { confirmLabel: 'Entfernen' })
+    if (!ok) return
     await supabase.from('unterricht_schueler').delete().eq('unterricht_id', id).eq('schueler_id', schuelerId)
     setSchueler(prev => prev.filter(sc => sc.schueler_id !== schuelerId))
   }

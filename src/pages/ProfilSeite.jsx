@@ -41,7 +41,7 @@ function DokumentZeile({ datei, T }) {
 }
 
 export default function ProfilSeite() {
-  const { profil, ladeProfil, T, rolle } = useApp()
+  const { profil, ladeProfil, T, rolle, confirm, toast } = useApp()
   const navigate = useNavigate()
   const fileRef = useRef()
 
@@ -297,7 +297,7 @@ export default function ProfilSeite() {
             </Feld>
             <div style={{ display:'flex', justifyContent:'flex-end' }}>
               <button
-                onClick={() => { if (window.confirm(T('ical_reset_confirm'))) kalenderTokenNeu() }}
+                onClick={async () => { const ok = await confirm(T('ical_reset_confirm'), { confirmLabel: T('ical_reset') ?? 'Zurücksetzen', dangerous: false }); if (ok) kalenderTokenNeu() }}
                 style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}
               >
                 🔄 {T('ical_reset')}
