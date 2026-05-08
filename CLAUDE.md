@@ -350,6 +350,15 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20260505000002_inventar_prefix.sql` | Adds `inventar_prefix` column to `schulen` (default `'INV'`) |
 | `20260505000003_inventar_schema.sql` | Inventar-Modul: `inventar_zustand` enum, `inventar_kategorien` table, `inventar` table with auto-numbering trigger (`inventar_nummer_vergeben`), RLS policies |
 | `20260505000004_storage_policies.sql` | Storage-Policies für alle Buckets (avatare, stueck-dateien, kurs-dateien, schueler-dateien, mitglied-dateien) — idempotent via `DO $$ BEGIN … EXCEPTION WHEN duplicate_object THEN NULL; END $$` |
+| `20260505000005_lehrer_kurse_anlegen.sql` | `kann_kurse_anlegen` boolean column on `profiles` (default false) — controls whether a teacher can create courses |
+| `20260505000006_session_cleanup.sql` | `session_bereinigen()` function + `pg_cron` job (daily 03:00 UTC) — deletes ended sessions after 30 days, orphaned active sessions after 24h |
+| `20260505000007_anwesenheit_schueler_absagen.sql` | RLS policies allowing students to self-report excused absences (`INSERT`/`DELETE` own `anwesenheit` rows with `status = 'entschuldigt'`) |
+| `20260506000000_performance_indexes.sql` | Composite and single-column indexes on `nachrichten`, `nachricht_gelesen`, `stueck_dateien`, `unterricht_stuecke`, `stunden`, `mitglied_dateien`, `instrumente` |
+| `20260506000001_public_sessions.sql` | Public/guest teaching sessions: `oeffentlich` flag on `unterricht_sessions`, nullable `profil_id` + `gast_name` on `session_teilnehmer`, updated `session_starten` and `session_beitreten` RPCs, anon RLS policies |
+| `20260506000002_fix_anon_stuecke_policy.sql` | Fixes anon `stuecke` read policy — checks `unterricht_sessions.aktuelles_stueck` directly instead of via `unterricht_stuecke` (which has no anon policy) |
+| `20260508000000_profil_einstellungen.sql` | `thema` (text, default `'klassik'`) and `dark_mode` (boolean, default false) columns on `profiles` — persists UI settings across devices |
+| `20260508000001_fix_vorstand_events_rls.sql` | Fixes RLS so `vorstand` can read all events of their own school and manage their RSVP; also fixes `event_teilnehmer` read policy |
+| `20260508000002_nachricht_geloescht.sql` | `nachricht_geloescht` table — soft-delete per user for messages (`nachricht_id`, `user_id`, `geloescht_am`); RLS: only own rows |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`).
 
