@@ -32,6 +32,10 @@ export const translations = {
     hint_repertoire: 'Musikstücke die ihr gerade übt – mit Texten, Noten und mehr.',
     hint_nachrichten: 'Hier kommen Nachrichten von deiner Lehrkraft und der Musikschule an.',
 
+    // FAQ
+    faq_title: 'Häufige Fragen',
+    faq_subtitle: 'Antworten auf die wichtigsten Fragen rund um die App.',
+
     // Auth
     login: 'Anmelden',
     logout: 'Abmelden',
@@ -736,6 +740,10 @@ export const translations = {
     hint_repertoire: 'Pieces you are currently practising – with lyrics, sheet music and more.',
     hint_nachrichten: 'Messages from your teacher and the music school appear here.',
 
+    // FAQ
+    faq_title: 'FAQ',
+    faq_subtitle: 'Answers to the most important questions about the app.',
+
     login: 'Sign In',
     logout: 'Sign Out',
     email: 'Email',
@@ -1420,6 +1428,10 @@ export const translations = {
     hint_stundenplan: 'Detaylar için bir derse dokun. Kırmızı çizgi şu anki saati gösterir.',
     hint_repertoire: 'Şu an çalıştığın eserler – sözler, notalar ve daha fazlası.',
     hint_nachrichten: 'Öğretmeninden ve müzik okulundan gelen mesajlar burada görünür.',
+
+    // FAQ
+    faq_title: 'Sık Sorulan Sorular',
+    faq_subtitle: 'Uygulama hakkındaki en önemli soruların yanıtları.',
 
     login: 'Giriş Yap',
     logout: 'Çıkış Yap',

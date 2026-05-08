@@ -33,6 +33,7 @@ const SchuelerKurse        = lazy(() => import('./pages/schueler/Kurse'))
 const SchuelerKursDetail   = lazy(() => import('./pages/schueler/KursDetail'))
 const SchuelerAnwesenheit  = lazy(() => import('./pages/schueler/Anwesenheit'))
 const SchuelerEvents       = lazy(() => import('./pages/schueler/Events'))
+const SchuelerFAQ          = lazy(() => import('./pages/schueler/FAQ'))
 const VorstandDashboard    = lazy(() => import('./pages/vorstand/Dashboard'))
 const VorstandZiele        = lazy(() => import('./pages/vorstand/Ziele'))
 const VorstandProtokolle   = lazy(() => import('./pages/vorstand/Protokolle'))
@@ -123,6 +124,7 @@ function AppRoutes() {
           <Route path="/schueler/repertoire"         element={<Repertoire />} />
           <Route path="/schueler/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/schueler/nachrichten"         element={<Nachrichten />} />
+          <Route path="/schueler/faq"                element={<SchuelerFAQ />} />
           <Route path="/schueler/profil"              element={<ProfilSeite />} />
         </Route>
       </Route>

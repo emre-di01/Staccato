@@ -84,6 +84,7 @@ function getNavConfig(rolle, T) {
       { icon: '🎼', label: T('repertoire'),  to: '/schueler/repertoire' },
       { icon: '🎭', label: T('events'),      to: '/schueler/events' },
       { icon: '💬', label: T('messages'),    to: '/schueler/nachrichten', nachrichten: true },
+      { icon: '❓', label: T('faq_title'),   to: '/schueler/faq' },
     ],
     eltern: [
       { icon: '📊', label: T('dashboard'),  to: '/eltern' },
