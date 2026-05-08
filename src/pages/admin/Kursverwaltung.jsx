@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import Avatar from '../../components/Avatar'
@@ -521,13 +522,19 @@ function StundenModal({ kurs, onClose, onErfolg }) {
 
 // ─── Kurs Detail / Karte ──────────────────────────────────────
 
-function KursKarte({ kurs, onBearbeiten, onSchueler, onStunden, onLoeschen }) {
+function KursKarte({ kurs, onBearbeiten, onSchueler, onStunden, onLoeschen, onDetail }) {
   return (
-    <div style={{
-      background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-      border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
-      overflow: 'hidden',
-    }}>
+    <div
+      onClick={onDetail}
+      style={{
+        background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
+        overflow: 'hidden', cursor: 'pointer',
+        transition: 'box-shadow 0.15s, border-color 0.15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-lg)'; e.currentTarget.style.borderColor = 'var(--primary)' }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow)';    e.currentTarget.style.borderColor = 'var(--border)' }}
+    >
       {/* Farbstreifen */}
       <div style={{ height: 4, background: kurs.farbe ?? 'var(--primary)' }} />
 
@@ -557,13 +564,11 @@ function KursKarte({ kurs, onBearbeiten, onSchueler, onStunden, onLoeschen }) {
               🏫 {kurs.raeume.name}
             </div>
           )}
-          {/* Lehrer */}
           {kurs.unterricht_lehrer?.length > 0 && (
             <div style={{ fontSize:13, color:'var(--text-2)', display:'flex', alignItems:'center', gap:6 }}>
               👨‍🏫 {kurs.unterricht_lehrer.map(ul => ul.profiles?.voller_name).filter(Boolean).join(', ')}
             </div>
           )}
-          {/* Schüler-Anzahl */}
           <div style={{ fontSize:13, color:'var(--text-2)', display:'flex', alignItems:'center', gap:6 }}>
             👥 {kurs.unterricht_schueler?.length ?? 0} Schüler ·
             💰 {kurs.abrechnungs_typ === 'pauschale' ? `€${kurs.pauschale_monat}/Monat` : kurs.abrechnungs_typ === 'paket' ? `${kurs.paket_stunden}er Paket` : `€${kurs.preis_pro_stunde}/Std`}
@@ -571,7 +576,7 @@ function KursKarte({ kurs, onBearbeiten, onSchueler, onStunden, onLoeschen }) {
         </div>
 
         {/* Aktionen */}
-        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }} onClick={e => e.stopPropagation()}>
           <button onClick={onBearbeiten} style={s.btnKlein}>✏️ Bearbeiten</button>
           <button onClick={onSchueler}   style={s.btnKlein}>👥 Schüler</button>
           <button onClick={onStunden}    style={s.btnKlein}>⚡ Stunden</button>
@@ -652,6 +657,7 @@ function KursLoeschenModal({ kurs, onClose, onErfolg }) {
 
 export default function Kursverwaltung() {
   const { T } = useApp()
+  const navigate = useNavigate()
   const [kurse,       setKurse]       = useState([])
   const [laden,       setLaden]       = useState(true)
   const [suche,       setSuche]       = useState('')
@@ -725,6 +731,7 @@ export default function Kursverwaltung() {
             <KursKarte
               key={kurs.id}
               kurs={kurs}
+              onDetail={()     => navigate(`/admin/kurse/${kurs.id}`)}
               onBearbeiten={() => setModal({ typ:'kurs', kurs })}
               onSchueler={()   => setModal({ typ:'schueler', kurs })}
               onStunden={()    => setModal({ typ:'stunden', kurs })}

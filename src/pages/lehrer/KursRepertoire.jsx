@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -147,6 +147,8 @@ function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
 export default function KursRepertoire() {
   const { id: kursId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const segment  = location.pathname.split('/')[1]
   const { rolle, profil, T } = useApp()
   const [kurs,      setKurs]      = useState(null)
   const [stuecke,   setStuecke]   = useState([])
@@ -226,7 +228,7 @@ export default function KursRepertoire() {
   return (
     <div>
       {/* Header */}
-      <button onClick={() => navigate(`/lehrer/kurse/${kursId}`)}
+      <button onClick={() => navigate(`/${segment}/kurse/${kursId}`)}
         style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 16px' }}>
         ← {kurs?.name}
       </button>
@@ -272,7 +274,7 @@ export default function KursRepertoire() {
                 const sf = STATUS_FARBE[us.status] ?? STATUS_FARBE.aktuell
                 return (
                   <div key={us.stueck_id} style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', boxShadow:'var(--shadow)', overflow:'hidden', cursor:'pointer', transition:'box-shadow 0.15s' }}
-                    onClick={() => navigate(`/lehrer/kurse/${kursId}/repertoire/${us.stueck_id}`)}>
+                    onClick={() => navigate(`/${segment}/kurse/${kursId}/repertoire/${us.stueck_id}`)}>
                     <div style={{ height:3, background: kurs?.farbe ?? 'var(--primary)' }} />
                     <div style={{ padding:'16px 18px' }}>
                       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:10 }}>

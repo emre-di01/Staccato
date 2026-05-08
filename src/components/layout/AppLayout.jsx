@@ -27,7 +27,6 @@ function getNavConfig(rolle, T) {
       ]},
       { gruppe: 'Kommunikation', items: [
         { icon: '💬', label: T('messages'),      to: '/admin/nachrichten', nachrichten: true },
-        { icon: '📂', label: 'Kurs-Ansicht',     to: '/lehrer/kurse' },
       ]},
       { gruppe: 'Vorstand', items: [
         { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },

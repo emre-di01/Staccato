@@ -76,6 +76,9 @@ function AppRoutes() {
           <Route path="/admin/events"                                          element={<AdminEvents />} />
           <Route path="/admin/events/:id/repertoire"                         element={<EventRepertoire />} />
           <Route path="/admin/events/:kursId/repertoire/:stueckId"           element={<StueckDetail />} />
+          <Route path="/admin/kurse/:id"                                   element={<KursDetail />} />
+          <Route path="/admin/kurse/:id/repertoire"                      element={<KursRepertoire />} />
+          <Route path="/admin/kurse/:kursId/repertoire/:stueckId"        element={<StueckDetail />} />
           <Route path="/admin/instrumente"      element={<Instrumente />} />
           <Route path="/admin/inventar"         element={<Inventar />} />
           <Route path="/admin/interessenten"    element={<Interessenten />} />

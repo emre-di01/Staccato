@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import Avatar from '../../components/Avatar'
@@ -320,6 +320,8 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
 export default function KursDetail() {
   const { id }     = useParams()
   const navigate   = useNavigate()
+  const location   = useLocation()
+  const segment    = location.pathname.split('/')[1]  // 'admin' | 'lehrer'
   const { profil, T } = useApp()
   const [kurs,     setKurs]     = useState(null)
   const [schueler, setSchueler] = useState([])
@@ -371,7 +373,7 @@ export default function KursDetail() {
   return (
     <div>
       {/* Header */}
-      <button onClick={() => navigate('/lehrer/kurse')} style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 16px' }}>{T('kurs_back_to')}</button>
+      <button onClick={() => navigate(`/${segment}/kurse`)} style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 16px' }}>{T('kurs_back_to')}</button>
 
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', overflow:'hidden', marginBottom:24, boxShadow:'var(--shadow)' }}>
         <div style={{ height:6, background: kurs.farbe ?? 'var(--primary)' }} />
@@ -575,7 +577,7 @@ export default function KursDetail() {
         <div style={{ textAlign:'center', padding:32 }}>
           <div style={{ fontSize:40, marginBottom:12 }}>🎼</div>
           <p style={{ color:'var(--text-3)', marginBottom:16 }}>Zum vollständigen Repertoire & Dateien-Bereich</p>
-          <button onClick={() => navigate(`/lehrer/kurse/${id}/repertoire`)} style={s.btnPri}>
+          <button onClick={() => navigate(`/${segment}/kurse/${id}/repertoire`)} style={s.btnPri}>
             {T('kurs_open_repertoire')}
           </button>
         </div>
