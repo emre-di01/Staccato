@@ -2,12 +2,13 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Staccato – Musikschule</title>
     <meta name="description" content="Staccato – Digitale Verwaltung für Musikschulen. Kurse, Stundenplan, Repertoire und Kommunikation an einem Ort." />
 
     <!-- PWA -->
-    <meta name="theme-color" content="#1a1410" />
+    <meta name="theme-color" content="#faf8f4" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Staccato" />
@@ -24,7 +25,7 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; height: 100%; }
-      #root { min-height: 100vh; }
+      #root { min-height: 100dvh; min-height: -webkit-fill-available; }
       a { text-decoration: none; }
       button { font-family: inherit; }
       input, textarea, select { font-family: inherit; }
@@ -33,7 +34,7 @@
         input, textarea, select { font-size: 16px !important; }
       }
     </style>
-    <!-- Apply background color from stored theme before React renders to avoid white flash -->
+    <!-- Apply background color and theme-color before React renders to avoid flash -->
     <script>
       (function () {
         try {
@@ -42,6 +43,7 @@
             modern:  { light: '#f0f7f7', dark: '#050f0f' },
             bold:    { light: '#faf5f5', dark: '#0f0505' },
             kreativ: { light: '#faf5ff', dark: '#0a0514' },
+            liquid:  { light: '#C8D8F8', dark: '#0A1628' },
             fresh:   { light: '#f0fdf4', dark: '#020f06' },
           };
           var theme = localStorage.getItem('staccato_theme') || 'klassik';
@@ -49,6 +51,8 @@
           var bg    = (BG[theme] || BG.klassik)[dark ? 'dark' : 'light'];
           document.documentElement.style.backgroundColor = bg;
           document.body.style.backgroundColor = bg;
+          var metaTC = document.querySelector('meta[name="theme-color"]');
+          if (metaTC) metaTC.setAttribute('content', bg);
         } catch (e) {}
       })();
     </script>

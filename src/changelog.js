@@ -1,9 +1,39 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.8.2'
+export const CURRENT_VERSION = '1.8.3'
 
 export const CHANGELOG = [
+  {
+    version: '1.8.3',
+    date: '2026-05-08',
+    features: [
+      {
+        icon: '📲',
+        de: 'PWA-Installationshinweis – App direkt zum Homescreen hinzufügen (Android & iOS)',
+        en: 'PWA install prompt – add app directly to home screen (Android & iOS)',
+        tr: 'PWA kurulum bildirimi – uygulamayı doğrudan ana ekrana ekle (Android & iOS)',
+      },
+      {
+        icon: '🎨',
+        de: 'Dynamische Statusbar-Farbe – passt sich automatisch dem gewählten Theme an',
+        en: 'Dynamic status bar color – automatically adapts to the selected theme',
+        tr: 'Dinamik durum çubuğu rengi – seçilen temaya otomatik uyum sağlar',
+      },
+      {
+        icon: '⬆️',
+        de: 'Pull-to-Refresh: Seite durch Wischgeste nach unten aktualisieren',
+        en: 'Pull-to-refresh: reload page by swiping down',
+        tr: 'Aşağı kaydırarak yenile: aşağı çekerek sayfayı yenile',
+      },
+      {
+        icon: '⚙️',
+        de: 'Einstellungen als natives Bottom Sheet auf Mobilgeräten, Tab-Bar mit Aktiv-Indikator',
+        en: 'Settings as native bottom sheet on mobile, tab bar with active indicator',
+        tr: 'Mobilde ayarlar için yerel alt sayfa, aktif göstergeli sekme çubuğu',
+      },
+    ],
+  },
   {
     version: '1.8.2',
     date: '2026-05-08',

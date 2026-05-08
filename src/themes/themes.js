@@ -198,6 +198,89 @@ export const THEMES = {
     }
   },
 
+  liquid: {
+    name: { de: 'Liquid', en: 'Liquid', tr: 'Liquid' },
+    icon: '🫧',
+    light: {
+      '--bg':           'rgba(255,255,255,0.10)',
+      '--bg-2':         'rgba(255,255,255,0.22)',
+      '--bg-3':         'rgba(255,255,255,0.32)',
+      '--surface':      'rgba(255,255,255,0.82)',
+      '--surface-2':    'rgba(255,255,255,0.64)',
+      '--border':       'rgba(255,255,255,0.76)',
+      '--text':         '#1C1C1E',
+      '--text-2':       '#48484A',
+      '--text-3':       'rgba(60,60,67,0.55)',
+      '--primary':      '#007AFF',
+      '--primary-fg':   '#ffffff',
+      '--accent':       '#AF52DE',
+      '--accent-fg':    '#ffffff',
+      '--danger':       '#FF3B30',
+      '--success':      '#34C759',
+      '--warning':      '#FF9500',
+      '--shadow':       '0 8px 32px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)',
+      '--shadow-lg':    '0 20px 60px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.95)',
+      '--radius':       '16px',
+      '--radius-lg':    '26px',
+      globalCss: `
+        html[data-theme="liquid"] {
+          background: linear-gradient(145deg, #C8D8F8 0%, #E0D0F8 40%, #F8E8F0 100%);
+          background-attachment: fixed;
+          min-height: 100vh;
+        }
+        html[data-theme="liquid"] body { background: transparent; }
+        [data-theme="liquid"] .desktop-sidebar,
+        [data-theme="liquid"] .mobile-header,
+        [data-theme="liquid"] .mobile-bottom-nav {
+          backdrop-filter: blur(64px) saturate(160%);
+          -webkit-backdrop-filter: blur(64px) saturate(160%);
+        }
+        [data-theme="liquid"] ::-webkit-scrollbar { width: 4px; height: 4px; }
+        [data-theme="liquid"] ::-webkit-scrollbar-track { background: transparent; }
+        [data-theme="liquid"] ::-webkit-scrollbar-thumb { background: rgba(180,180,210,0.40); border-radius: 2px; }
+      `,
+    },
+    dark: {
+      '--bg':           'rgba(0,0,0,0.22)',
+      '--bg-2':         'rgba(255,255,255,0.05)',
+      '--bg-3':         'rgba(255,255,255,0.09)',
+      '--surface':      'rgba(28,28,42,0.72)',
+      '--surface-2':    'rgba(28,28,42,0.55)',
+      '--border':       'rgba(255,255,255,0.11)',
+      '--text':         '#F2F2F7',
+      '--text-2':       '#EBEBF5',
+      '--text-3':       'rgba(235,235,245,0.45)',
+      '--primary':      '#0A84FF',
+      '--primary-fg':   '#ffffff',
+      '--accent':       '#BF5AF2',
+      '--accent-fg':    '#ffffff',
+      '--danger':       '#FF453A',
+      '--success':      '#30D158',
+      '--warning':      '#FF9F0A',
+      '--shadow':       '0 4px 24px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.08)',
+      '--shadow-lg':    '0 12px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
+      '--radius':       '14px',
+      '--radius-lg':    '22px',
+      globalCss: `
+        html[data-theme="liquid"] {
+          background: linear-gradient(135deg, #0A1628 0%, #12093A 35%, #1E0A48 65%, #2A0A1E 100%);
+          background-attachment: fixed;
+          min-height: 100vh;
+        }
+        html[data-theme="liquid"] body { background: transparent; }
+        [data-theme="liquid"] .desktop-sidebar,
+        [data-theme="liquid"] .mobile-header,
+        [data-theme="liquid"] .mobile-bottom-nav {
+          backdrop-filter: blur(40px) saturate(200%);
+          -webkit-backdrop-filter: blur(40px) saturate(200%);
+        }
+        [data-theme="liquid"] ::-webkit-scrollbar { width: 4px; height: 4px; }
+        [data-theme="liquid"] ::-webkit-scrollbar-track { background: transparent; }
+        [data-theme="liquid"] ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
+      `,
+    },
+  },
+
   fresh: {
     name: { de: 'Fresh', en: 'Fresh', tr: 'Taze' },
     icon: '🎶',
@@ -250,12 +333,42 @@ export const THEMES = {
 
 export const THEME_KEYS = Object.keys(THEMES)
 
+const THEME_META_COLORS = {
+  klassik: { light: '#faf8f4', dark: '#0f0d0a' },
+  modern:  { light: '#f0f7f7', dark: '#050f0f' },
+  bold:    { light: '#faf5f5', dark: '#0f0505' },
+  kreativ: { light: '#faf5ff', dark: '#0a0514' },
+  liquid:  { light: '#C8D8F8', dark: '#0A1628' },
+  fresh:   { light: '#f0fdf4', dark: '#020f06' },
+}
+
 export function applyTheme(themeKey, darkMode) {
   const theme = THEMES[themeKey]
   if (!theme) return
   const vars = darkMode ? theme.dark : theme.light
   const root = document.documentElement
-  Object.entries(vars).forEach(([key, val]) => root.style.setProperty(key, val))
+  Object.entries(vars).forEach(([key, val]) => {
+    if (key !== 'globalCss') root.style.setProperty(key, val)
+  })
   root.setAttribute('data-theme', themeKey)
   root.setAttribute('data-mode', darkMode ? 'dark' : 'light')
+
+  const metaColor = THEME_META_COLORS[themeKey]?.[darkMode ? 'dark' : 'light']
+  if (metaColor) {
+    const metaEl = document.querySelector('meta[name="theme-color"]')
+    if (metaEl) metaEl.setAttribute('content', metaColor)
+  }
+
+  let styleEl = document.getElementById('staccato-theme-global')
+  const css = vars.globalCss ?? ''
+  if (css) {
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = 'staccato-theme-global'
+      document.head.appendChild(styleEl)
+    }
+    styleEl.textContent = css
+  } else if (styleEl) {
+    styleEl.remove()
+  }
 }

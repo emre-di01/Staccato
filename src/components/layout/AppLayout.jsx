@@ -127,17 +127,30 @@ function JoinSessionModal({ onClose }) {
 // Settings Panel
 function SettingsPanel({ onClose }) {
   const { theme, darkMode, lang, changeTheme, toggleDark, setLang, T } = useApp()
+  const isMobile = window.innerWidth < 769
+  const [show, setShow] = useState(false)
+  useEffect(() => { requestAnimationFrame(() => setShow(true)) }, [])
 
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end',
+      display: 'flex', alignItems: 'flex-end',
+      justifyContent: isMobile ? 'center' : 'flex-end',
+      background: 'rgba(0,0,0,0.35)',
     }} onClick={onClose}>
       <div style={{
-        background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-        padding: 24, margin: 16, width: 300,
-        boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)',
+        background: 'var(--surface)',
+        borderRadius: isMobile ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)',
+        padding: 24,
+        paddingBottom: isMobile ? 'max(24px, env(safe-area-inset-bottom, 0px))' : 24,
+        margin: isMobile ? 0 : 16,
+        width: isMobile ? '100%' : 300,
+        boxShadow: 'var(--shadow-lg)',
+        border: isMobile ? 'none' : '1px solid var(--border)',
+        transform: show ? 'translateY(0)' : 'translateY(100%)',
+        transition: 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
       }} onClick={e => e.stopPropagation()}>
+        {isMobile && <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 20px' }} />}
 
         {/* Sprache */}
         <div style={{ marginBottom: 20 }}>
@@ -238,13 +251,14 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
         to={item.to}
         end={item.to.split('/').length === 2}
         onClick={() => setSidebarOffen(false)}
+        className={mobile ? 'mobile-nav-link' : undefined}
         style={({ isActive }) => mobile ? {
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
           padding: '8px 4px', borderRadius: 10, textDecoration: 'none', flex: 1,
           background: isActive ? 'var(--bg-2)' : 'transparent',
           color: isActive ? 'var(--primary)' : 'var(--text-3)',
           fontSize: 10, fontWeight: isActive ? 700 : 500,
-          transition: 'all 0.15s',
+          transition: 'all 0.15s', position: 'relative',
         } : {
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '10px 16px', borderRadius: 'var(--radius)',
@@ -271,7 +285,7 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
 }
 
 export default function AppLayout() {
-  const { profil, rolle, abmelden, T } = useApp()
+  const { profil, rolle, schule, abmelden, T } = useApp()
   const navigate = useNavigate()
   const [sidebarOffen, setSidebarOffen]     = useState(false)
   const [settingsOffen, setSettingsOffen]   = useState(false)
@@ -280,6 +294,13 @@ export default function AppLayout() {
   const [ungelesen, setUngelesen]           = useState([])
   const [popupPos, setPopupPos]             = useState(null)
   const popupGesperrt                       = useRef(false)
+  const touchStartX                         = useRef(null)
+  const touchStartY                         = useRef(null)
+  const mainRef                             = useRef(null)
+  const [pullY, setPullY]                   = useState(0)
+  const [pulling, setPulling]               = useState(false)
+  const [installPrompt, setInstallPrompt]   = useState(null)
+  const [keyboardOffen, setKeyboardOffen]   = useState(false)
   const navConfig = getNavConfig(rolle, T)
   const navItems  = flattenNav(navConfig)
 
@@ -305,13 +326,68 @@ export default function AppLayout() {
     return () => supabase.removeChannel(ch)
   }, [ladeUngelesen, profil?.id])
 
+  useEffect(() => {
+    const handleBefore = e => {
+      e.preventDefault()
+      if (!localStorage.getItem('staccato_install_dismissed')) setInstallPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handleBefore)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
+    let t
+    if (isIOS && !isStandalone && !localStorage.getItem('staccato_install_dismissed')) {
+      t = setTimeout(() => setInstallPrompt('ios'), 4000)
+    }
+    return () => { window.removeEventListener('beforeinstallprompt', handleBefore); clearTimeout(t) }
+  }, [])
+
+  useEffect(() => {
+    if (!window.visualViewport) return
+    const handler = () => setKeyboardOffen(window.innerHeight - window.visualViewport.height > 150)
+    window.visualViewport.addEventListener('resize', handler)
+    return () => window.visualViewport.removeEventListener('resize', handler)
+  }, [])
+
   async function handleAbmelden() {
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
 
+  function handlePullTouchStart(e) {
+    if ((mainRef.current?.scrollTop ?? 1) !== 0) return
+    // Don't activate inside modals or scrollable overlays
+    let el = e.target
+    while (el && el !== mainRef.current) {
+      const style = getComputedStyle(el)
+      if (style.position === 'fixed') return
+      if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) return
+      el = el.parentElement
+    }
+    touchStartY.current = e.touches[0].clientY
+  }
+  function handlePullTouchMove(e) {
+    if (touchStartY.current === null || (mainRef.current?.scrollTop ?? 1) > 0) return
+    const dy = e.touches[0].clientY - touchStartY.current
+    if (dy > 0) { setPullY(Math.min(dy, 80)); setPulling(dy > 60) }
+  }
+  function handlePullTouchEnd() {
+    if (pulling) window.location.reload()
+    setPullY(0); setPulling(false); touchStartY.current = null
+  }
+  async function handleInstall() {
+    if (!installPrompt || installPrompt === 'ios') return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') localStorage.setItem('staccato_install_dismissed', '1')
+    setInstallPrompt(null)
+  }
+  function handleDismissInstall() {
+    localStorage.setItem('staccato_install_dismissed', '1')
+    setInstallPrompt(null)
+  }
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100dvh', background: 'var(--bg)', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
 
       {/* Desktop Sidebar */}
       <aside style={{
@@ -323,9 +399,10 @@ export default function AppLayout() {
 
         {/* Logo */}
         <div style={{ padding: '0 8px 20px', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.5px' }}>
-            ♩ Staccato
-          </div>
+          {schule?.logo_url
+            ? <img src={schule.logo_url} alt={schule.name ?? 'Logo'} style={{ maxHeight: 40, maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
+            : <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.5px' }}>♩ Staccato</div>
+          }
           {profil && (
             <div style={{ marginTop: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{profil.voller_name}</div>
@@ -366,38 +443,55 @@ export default function AppLayout() {
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOffen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setSidebarOffen(false)} />
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, display: 'flex' }}
+          onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
+          onTouchMove={e => {
+            if (touchStartX.current === null) return
+            if (e.touches[0].clientX - touchStartX.current < -50) { setSidebarOffen(false); touchStartX.current = null }
+          }}
+          onTouchEnd={() => { touchStartX.current = null }}
+        >
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setSidebarOffen(false)} />
           <aside style={{
-            width: 260, background: 'var(--surface)', borderRight: '1px solid var(--border)',
-            display: 'flex', flexDirection: 'column', padding: '20px 12px',
-            position: 'relative', zIndex: 1, overflowY: 'auto',
+            width: 'min(260px, calc(100vw - 48px))',
+            background: 'var(--surface)', borderRight: '1px solid var(--border)',
+            display: 'flex', flexDirection: 'column',
+            position: 'relative', zIndex: 1,
+            height: '100%', overflow: 'hidden',
           }}>
-            <div style={{ padding: '0 8px 20px', borderBottom: '1px solid var(--border)', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+            {/* Header */}
+            <div style={{ padding: 'calc(20px + env(safe-area-inset-top, 0px)) 12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              {schule?.logo_url
+                ? <img src={schule.logo_url} alt={schule.name ?? 'Logo'} style={{ maxHeight: 36, maxWidth: 140, objectFit: 'contain' }} />
+                : <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+              }
               <button onClick={() => setSidebarOffen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
             </div>
-            <nav style={{ flex: 1 }}>
+            {/* Scrollable Nav */}
+            <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
               {navConfig.map(entry => entry.gruppe
                 ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
                 : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
               )}
             </nav>
-            {(rolle === 'schueler' || rolle === 'vorstand') && (
-              <button onClick={() => { setJoinSessionOffen(true); setSidebarOffen(false) }}
-                style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginBottom:12, width:'100%' }}>
-                🎬 Session beitreten
-              </button>
-            )}
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <NavLink to={`/${rolle === 'superadmin' ? 'admin' : rolle}/profil`} onClick={() => setSidebarOffen(false)} style={{ ...btnStyle, textDecoration:'none', color:'var(--text-3)' }}>
-                👤 Mein Profil
-              </NavLink>
-              <button onClick={() => { setSettingsOffen(true); setSidebarOffen(false) }} style={btnStyle}>⚙️ {T('settings')}</button>
-              <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
-              <button onClick={() => { setChangelogOffen(true); setSidebarOffen(false) }} style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '2px 0' }}>
-                v{version} ✨
-              </button>
+            {/* Sticky Footer */}
+            <div style={{ flexShrink: 0, padding: '0 12px 12px' }}>
+              {(rolle === 'schueler' || rolle === 'vorstand') && (
+                <button onClick={() => { setJoinSessionOffen(true); setSidebarOffen(false) }}
+                  style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginBottom:8, width:'100%' }}>
+                  🎬 Session beitreten
+                </button>
+              )}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <NavLink to="/profil" onClick={() => setSidebarOffen(false)} style={({ isActive }) => ({ ...btnStyle, textDecoration:'none', color: isActive ? 'var(--primary)' : 'var(--text-3)' })}>
+                  👤 Mein Profil
+                </NavLink>
+                <button onClick={() => { setSettingsOffen(true); setSidebarOffen(false) }} style={btnStyle}>⚙️ {T('settings')}</button>
+                <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
+                <button onClick={() => { setChangelogOffen(true); setSidebarOffen(false) }} style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 6, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '2px 0' }}>
+                  v{version} ✨
+                </button>
+              </div>
             </div>
           </aside>
         </div>
@@ -408,13 +502,17 @@ export default function AppLayout() {
         {/* Mobile Header */}
         <header style={{
           display: 'none', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 16px', background: 'var(--surface)',
+          padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px',
+          background: 'var(--surface)',
           borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 50,
         }} className="mobile-header">
           <div style={{ flex: 1 }}>
             <button onClick={() => setSidebarOffen(true)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text)' }}>☰</button>
           </div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+          {schule?.logo_url
+            ? <img src={schule.logo_url} alt={schule.name ?? 'Logo'} style={{ maxHeight: 32, maxWidth: 120, objectFit: 'contain' }} />
+            : <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+          }
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
             <button onClick={() => setSettingsOffen(true)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)' }}>⚙️</button>
             <button onClick={() => window.location.reload()} style={{ border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer', color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', padding: '7px 12px', borderRadius: 'var(--radius)', fontFamily: 'inherit', lineHeight: 1 }}>↻ Reload</button>
@@ -422,20 +520,77 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }} className="main-content">
+        <main
+          ref={mainRef}
+          style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }}
+          className="main-content"
+          onTouchStart={handlePullTouchStart}
+          onTouchMove={handlePullTouchMove}
+          onTouchEnd={handlePullTouchEnd}
+        >
           <Outlet />
         </main>
+
+        {/* Pull-to-Refresh Indicator */}
+        {pullY > 5 && (
+          <div style={{
+            position: 'fixed',
+            top: `calc(env(safe-area-inset-top, 0px) + ${Math.min(pullY * 0.8 + 16, 88)}px)`,
+            left: '50%', transform: 'translateX(-50%)',
+            width: 34, height: 34, borderRadius: '50%',
+            background: 'var(--surface)', boxShadow: 'var(--shadow-lg)',
+            border: '1.5px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 14, zIndex: 200, pointerEvents: 'none',
+            opacity: Math.min(1, pullY / 40),
+          }} className="mobile-only">
+            <span style={{ display: 'block', lineHeight: 1, transform: `rotate(${pulling ? 180 : Math.round((pullY / 60) * 180)}deg)`, transition: 'transform 0.15s' }}>
+              {pulling ? '↺' : '↓'}
+            </span>
+          </div>
+        )}
 
         {/* Mobile Bottom Nav */}
         <nav style={{
           display: 'none', alignItems: 'center',
-          padding: '8px 12px', background: 'var(--surface)',
+          padding: '8px 12px',
+          paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+          background: 'var(--surface)',
           borderTop: '1px solid var(--border)',
           position: 'sticky', bottom: 0,
+          transform: keyboardOffen ? 'translateY(100%)' : 'translateY(0)',
+          transition: 'transform 0.2s ease',
         }} className="mobile-bottom-nav">
           {navItems.slice(0, 5).map(item => <NavItem key={item.to} item={item} mobile setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />)}
         </nav>
       </div>
+
+      {/* PWA Install Banner */}
+      {installPrompt && (
+        <div style={{
+          position: 'fixed',
+          bottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 10px)',
+          left: 12, right: 12, zIndex: 450,
+          background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)',
+          padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
+          animation: 'fadeSlideUp 0.22s ease',
+        }} className="mobile-only">
+          <span style={{ fontSize: 26, flexShrink: 0 }}>📲</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>App installieren</div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {installPrompt === 'ios' ? '⬆️ Teilen → „Zum Homescreen"' : 'Als App auf deinem Gerät speichern'}
+            </div>
+          </div>
+          {installPrompt !== 'ios' && (
+            <button onClick={handleInstall} style={{ background: 'var(--primary)', color: 'var(--primary-fg)', border: 'none', borderRadius: 'var(--radius)', padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              Installieren
+            </button>
+          )}
+          <button onClick={handleDismissInstall} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-3)', padding: '4px', lineHeight: 1, flexShrink: 0 }}>✕</button>
+        </div>
+      )}
 
       {settingsOffen && <SettingsPanel onClose={() => setSettingsOffen(false)} />}
       {joinSessionOffen && <JoinSessionModal onClose={() => setJoinSessionOffen(false)} />}
@@ -518,11 +673,19 @@ export default function AppLayout() {
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); }
+        html { height: -webkit-fill-available; }
+        body {
+          background: var(--bg);
+          color: var(--text);
+          min-height: 100dvh;
+          overscroll-behavior: none;
+          -webkit-tap-highlight-color: transparent;
+        }
 
         /* Inputs & Selects */
         input, textarea, select {
           transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          touch-action: manipulation;
         }
         input:focus, textarea:focus, select:focus {
           outline: none !important;
@@ -531,14 +694,20 @@ export default function AppLayout() {
         }
 
         /* Buttons */
-        button { transition: all 0.15s ease; }
+        button {
+          transition: all 0.15s ease;
+          touch-action: manipulation;
+          -webkit-tap-highlight-color: transparent;
+        }
         button:active:not(:disabled) { transform: scale(0.96); }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+        /* Scrollbar (nur Desktop) */
+        @media (hover: hover) {
+          ::-webkit-scrollbar { width: 5px; height: 5px; }
+          ::-webkit-scrollbar-track { background: transparent; }
+          ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+          ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+        }
 
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(10px); }
@@ -549,7 +718,27 @@ export default function AppLayout() {
           .desktop-sidebar { display: none !important; }
           .mobile-header { display: flex !important; }
           .mobile-bottom-nav { display: flex !important; }
-          .main-content { padding: 16px !important; padding-bottom: 80px !important; }
+          .main-content {
+            padding: 16px !important;
+            padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+
+          /* Active indicator pill on bottom nav items */
+          .mobile-nav-link[aria-current="page"]::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 3px;
+            border-radius: 99px;
+            background: var(--primary);
+          }
+        }
+
+        @media (min-width: 769px) {
+          .mobile-only { display: none !important; }
         }
       `}</style>
     </div>
