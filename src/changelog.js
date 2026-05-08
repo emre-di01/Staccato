@@ -1,9 +1,45 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.8.3'
+export const CURRENT_VERSION = '1.8.4'
 
 export const CHANGELOG = [
+  {
+    version: '1.8.4',
+    date: '2026-05-08',
+    features: [
+      {
+        icon: '📥',
+        de: 'Anwesenheitsübersicht als CSV exportieren – direkt aus dem Kurs-Detail',
+        en: 'Export attendance overview as CSV – directly from course detail',
+        tr: 'Devamsızlık özetini CSV olarak dışa aktar – kurs detayından doğrudan',
+      },
+      {
+        icon: '🗑️',
+        de: 'Nachrichten löschen – Nachrichten können jetzt einzeln entfernt werden',
+        en: 'Delete messages – messages can now be removed individually',
+        tr: 'Mesajları sil – mesajlar artık tek tek kaldırılabilir',
+      },
+      {
+        icon: '📵',
+        de: 'Offline-Banner – Hinweis wenn keine Internetverbindung besteht',
+        en: 'Offline banner – notification when there is no internet connection',
+        tr: 'Çevrimdışı banner – internet bağlantısı olmadığında bildirim',
+      },
+      {
+        icon: '🙋',
+        de: 'Schüler können sich für bevorstehende Stunden selbst entschuldigen',
+        en: 'Students can excuse themselves for upcoming lessons',
+        tr: 'Öğrenciler gelecek dersler için kendilerini mazur gösterebilir',
+      },
+      {
+        icon: '⚙️',
+        de: 'Theme & Sprache werden im Profil gespeichert – Einstellungen auf allen Geräten synchron',
+        en: 'Theme & language saved to profile – settings synced across all devices',
+        tr: 'Tema ve dil profile kaydedildi – ayarlar tüm cihazlarda senkronize',
+      },
+    ],
+  },
   {
     version: '1.8.3',
     date: '2026-05-08',

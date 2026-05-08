@@ -236,51 +236,62 @@ export default function SchuelerSession() {
   }
 
   // ── EINGABE / VERBINDEN ────────────────────────────────────────
-  if (phase === 'eingabe' || phase === 'verbinden') return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
-      <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
-        </div>
-        {istGast && (
-          <button onClick={() => navigate('/login')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 12, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '6px 12px' }}>
-            Einloggen
-          </button>
-        )}
-      </div>
-      <div style={{ ...s.center, flex: 1 }}>
+  if (phase === 'eingabe' || phase === 'verbinden') {
+    // Eingeloggte User mit URL-Code joinen automatisch — kein Formular zeigen
+    const autoJoining = !authLaden && !istGast && urlCode
+    if (authLaden || autoJoining) return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🎬</div>
-        <h2 style={s.h2}>{T('join_title')}</h2>
-        <p style={{ color: 'var(--text-3)', marginBottom: 24, textAlign: 'center', fontSize: 14 }}>
-          {istGast ? 'Gib den Session-Code und deinen Namen ein.' : T('join_sub')}
-        </p>
-        {istGast && (
-          <input
-            value={gastName}
-            onChange={e => setGastName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && beitreten(code)}
-            placeholder="Dein Name"
-            maxLength={50}
-            style={{ ...s.input, marginBottom: 10 }}
-          />
-        )}
-        <input
-          value={code}
-          onChange={e => setCode(e.target.value.toUpperCase())}
-          onKeyDown={e => e.key === 'Enter' && beitreten(code)}
-          placeholder="ABC123"
-          maxLength={6}
-          style={{ ...s.input, textAlign: 'center', fontSize: 32, fontFamily: 'monospace', fontWeight: 900, letterSpacing: '0.25em', marginBottom: 12 }}
-        />
-        {fehler && <div style={s.fehler}>{fehler}</div>}
-        <button onClick={() => beitreten(code)} disabled={phase === 'verbinden'} style={{ ...s.btnPri, width: '100%', fontSize: 16, padding: 14 }}>
-          {phase === 'verbinden' ? T('join_connecting') : T('join_btn')}
-        </button>
+        <div style={{ fontSize: 16, color: 'var(--text-3)', fontWeight: 600 }}>{T('join_connecting')}</div>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');`}</style>
       </div>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');`}</style>
-    </div>
-  )
+    )
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
+        <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
+          </div>
+          {istGast && (
+            <button onClick={() => navigate('/login')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 12, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '6px 12px' }}>
+              Einloggen
+            </button>
+          )}
+        </div>
+        <div style={{ ...s.center, flex: 1 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🎬</div>
+          <h2 style={s.h2}>{T('join_title')}</h2>
+          <p style={{ color: 'var(--text-3)', marginBottom: 24, textAlign: 'center', fontSize: 14 }}>
+            {istGast ? 'Gib den Session-Code und deinen Namen ein.' : T('join_sub')}
+          </p>
+          {istGast && (
+            <input
+              value={gastName}
+              onChange={e => setGastName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && beitreten(code)}
+              placeholder="Dein Name"
+              maxLength={50}
+              style={{ ...s.input, marginBottom: 10 }}
+            />
+          )}
+          <input
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === 'Enter' && beitreten(code)}
+            placeholder="ABC123"
+            maxLength={6}
+            style={{ ...s.input, textAlign: 'center', fontSize: 32, fontFamily: 'monospace', fontWeight: 900, letterSpacing: '0.25em', marginBottom: 12 }}
+          />
+          {fehler && <div style={s.fehler}>{fehler}</div>}
+          <button onClick={() => beitreten(code)} disabled={phase === 'verbinden'} style={{ ...s.btnPri, width: '100%', fontSize: 16, padding: 14 }}>
+            {phase === 'verbinden' ? T('join_connecting') : T('join_btn')}
+          </button>
+        </div>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');`}</style>
+      </div>
+    )
+  }
 
   // ── BEENDET ────────────────────────────────────────────────────
   if (phase === 'beendet') return (

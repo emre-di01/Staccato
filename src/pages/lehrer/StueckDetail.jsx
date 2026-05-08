@@ -507,6 +507,11 @@ export default function StueckDetail() {
     const logoHtml = schule?.logo_url
       ? `<img src="${schule.logo_url}" class="logo" alt="Logo" />`
       : ''
+    const schuleKontakt = [schule?.email, schule?.telefon, schule?.website].filter(Boolean)
+    const schuleInfoHtml = schule?.name ? `<div class="schule-info">
+      <span style="font-weight:600">${schule.name}</span>${schuleKontakt.length ? ' · ' + schuleKontakt.join(' · ') : ''}
+      ${schule?.adresse ? `<br/><span style="color:#bbb">${schule.adresse}</span>` : ''}
+    </div>` : ''
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>${stueck.titel}</title>
 <style>
@@ -516,6 +521,7 @@ export default function StueckDetail() {
   .logo { max-height: 64px; max-width: 160px; object-fit: contain; flex-shrink: 0; }
   h1 { font-size: 26px; margin: 0 0 4px; }
   .meta { font-size: 13px; color: #777; margin-bottom: 32px; border-bottom: 1px solid #ddd; padding-bottom: 12px; }
+  .schule-info { font-size: 11px; color: #999; margin-top: 2px; }
   h2 { font-size: 17px; margin: 28px 0 6px; color: #222; page-break-after: avoid; }
   h3 { font-size: 15px; margin: 20px 0 4px; color: #444; page-break-after: avoid; }
   p { margin: 0 0 8px; line-height: 1.9; }
@@ -533,7 +539,10 @@ export default function StueckDetail() {
   }
 </style></head><body>
 <div class="header">
-  <div class="header-text"><h1>${stueck.titel}</h1></div>
+  <div class="header-text">
+    <h1>${stueck.titel}</h1>
+    ${schuleInfoHtml}
+  </div>
   ${logoHtml}
 </div>
 ${meta ? `<div class="meta">${meta}</div>` : ''}

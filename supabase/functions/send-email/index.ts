@@ -40,9 +40,14 @@ serve(async (req) => {
 
   try {
     const { type } = body
-    if (type === 'welcome')           await sendWelcome(body, supabase)
-    else if (type === 'event_invite') await sendEventInvite(body, supabase)
-    else if (type === 'new_piece')    await sendNewPiece(body, supabase)
+    if (type === 'welcome')              await sendWelcome(body, supabase)
+    else if (type === 'event_invite')    await sendEventInvite(body, supabase)
+    else if (type === 'new_piece')       await sendNewPiece(body, supabase)
+    else if (type === 'stunde_abgesagt') await sendStundeAbgesagt(body, supabase)
+    else if (type === 'neue_nachricht')  await sendNeueNachricht(body, supabase)
+    else if (type === 'hausaufgaben')    await sendHausaufgaben(body, supabase)
+    else if (type === 'neues_dokument')  await sendNeuesDokument(body, supabase)
+    else if (type === 'rsvp_erinnerung') await sendRsvpErinnerung(body, supabase)
     else return new Response(JSON.stringify({ error: 'Unknown type' }), { status: 400, headers: CORS })
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -180,6 +185,252 @@ async function sendNewPiece(body: Record<string, unknown>, supabase: ReturnType<
       })
     })
   )
+}
+
+// ─── Stunde abgesagt ──────────────────────────────────────────
+
+async function sendStundeAbgesagt(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const { stunde_id } = body as { stunde_id: string }
+
+  const { data: stunde } = await supabase
+    .from('stunden')
+    .select('beginn, notizen, unterricht(id, name, unterricht_schueler(schueler_id, status))')
+    .eq('id', stunde_id)
+    .single()
+
+  if (!stunde) return
+  const kurs = stunde.unterricht as { id: string; name: string; unterricht_schueler: { schueler_id: string; status: string }[] } | null
+  if (!kurs) return
+
+  const beginn  = new Date(stunde.beginn as string)
+  const datum   = beginn.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
+  const uhrzeit = beginn.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  const ids     = (kurs.unterricht_schueler ?? []).filter(us => us.status === 'aktiv').map(us => us.schueler_id)
+  if (!ids.length) return
+
+  await Promise.allSettled(ids.map(async (sid) => {
+    const [{ data: profil }, { data: { user } }] = await Promise.all([
+      supabase.from('profiles').select('voller_name, email_benachrichtigungen').eq('id', sid).single(),
+      supabase.auth.admin.getUserById(sid),
+    ])
+    if (!user?.email) return
+    if (profil?.email_benachrichtigungen?.stunde_abgesagt === false) return
+
+    await transport.sendMail({
+      from: SMTP_FROM, to: user.email,
+      subject: `Stunde abgesagt: ${kurs.name} am ${datum}`,
+      html: html(`
+        <h2 style="margin:0 0 8px;color:#1e293b">Hallo ${esc(profil?.voller_name ?? '')},</h2>
+        <p style="margin:0 0 20px;color:#475569">eine Stunde in deinem Kurs wurde abgesagt:</p>
+        <table style="background:#f8fafc;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:120px">Kurs</td>
+              <td style="padding:6px 0;font-weight:700;color:#1e293b">${esc(kurs.name)}</td></tr>
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Datum</td>
+              <td style="padding:6px 0;color:#1e293b">${datum}</td></tr>
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Uhrzeit</td>
+              <td style="padding:6px 0;color:#1e293b">${uhrzeit} Uhr</td></tr>
+          ${stunde.notizen ? `<tr><td style="padding:6px 0;color:#64748b;font-size:14px;vertical-align:top">Grund</td>
+              <td style="padding:6px 0;color:#475569;font-size:14px">${esc(stunde.notizen as string)}</td></tr>` : ''}
+        </table>
+        <a href="${APP_URL}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+      `),
+    })
+  }))
+}
+
+// ─── Neue Nachricht ───────────────────────────────────────────
+
+async function sendNeueNachricht(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const { typ, empfaenger_id, kurs_id, betreff, inhalt, absender_id } = body as {
+    typ: string; empfaenger_id?: string; kurs_id?: string
+    betreff: string; inhalt: string; absender_id: string
+  }
+
+  const { data: absender } = await supabase.from('profiles').select('voller_name').eq('id', absender_id).single()
+  const absenderName = absender?.voller_name ?? 'Jemand'
+
+  let empfaengerIds: string[] = []
+  let kontextLabel = ''
+
+  if (typ === 'direkt' && empfaenger_id) {
+    empfaengerIds = [empfaenger_id]
+    kontextLabel  = 'eine direkte Nachricht'
+  } else if (typ === 'kurs' && kurs_id) {
+    const { data: kurs } = await supabase
+      .from('unterricht')
+      .select('name, unterricht_schueler(schueler_id, status), unterricht_lehrer(lehrer_id)')
+      .eq('id', kurs_id).single()
+    if (kurs) {
+      kontextLabel = `den Kurs „${(kurs as { name: string }).name}"`
+      const sIds = ((kurs as { unterricht_schueler: { schueler_id: string; status: string }[] }).unterricht_schueler ?? [])
+        .filter(us => us.status === 'aktiv').map(us => us.schueler_id)
+      const lIds = ((kurs as { unterricht_lehrer: { lehrer_id: string }[] }).unterricht_lehrer ?? []).map(ul => ul.lehrer_id)
+      empfaengerIds = [...new Set([...sIds, ...lIds])].filter(id => id !== absender_id)
+    }
+  }
+
+  if (!empfaengerIds.length) return
+
+  await Promise.allSettled(empfaengerIds.map(async (eid) => {
+    const [{ data: profil }, { data: { user } }] = await Promise.all([
+      supabase.from('profiles').select('voller_name, email_benachrichtigungen').eq('id', eid).single(),
+      supabase.auth.admin.getUserById(eid),
+    ])
+    if (!user?.email) return
+    if (profil?.email_benachrichtigungen?.neue_nachricht === false) return
+
+    await transport.sendMail({
+      from: SMTP_FROM, to: user.email,
+      subject: `Neue Nachricht von ${absenderName}: ${betreff}`,
+      html: html(`
+        <h2 style="margin:0 0 8px;color:#1e293b">Hallo ${esc(profil?.voller_name ?? '')},</h2>
+        <p style="margin:0 0 20px;color:#475569">
+          <strong>${esc(absenderName)}</strong> hat dir eine Nachricht in ${esc(kontextLabel)} geschickt:
+        </p>
+        <table style="background:#f8fafc;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:80px">Betreff</td>
+              <td style="padding:6px 0;font-weight:700;color:#1e293b">${esc(betreff)}</td></tr>
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px;vertical-align:top">Nachricht</td>
+              <td style="padding:6px 0;color:#475569;font-size:14px;line-height:1.6;white-space:pre-wrap">${esc(inhalt)}</td></tr>
+        </table>
+        <a href="${APP_URL}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+      `),
+    })
+  }))
+}
+
+// ─── Hausaufgaben ─────────────────────────────────────────────
+
+async function sendHausaufgaben(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const { stunde_id, hausaufgaben } = body as { stunde_id: string; hausaufgaben: string }
+
+  const { data: stunde } = await supabase
+    .from('stunden')
+    .select('beginn, unterricht(id, name, unterricht_schueler(schueler_id, status))')
+    .eq('id', stunde_id)
+    .single()
+
+  if (!stunde) return
+  const kurs = stunde.unterricht as { id: string; name: string; unterricht_schueler: { schueler_id: string; status: string }[] } | null
+  if (!kurs) return
+
+  const beginn = new Date(stunde.beginn as string)
+  const datum  = beginn.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
+  const ids    = (kurs.unterricht_schueler ?? []).filter(us => us.status === 'aktiv').map(us => us.schueler_id)
+  if (!ids.length) return
+
+  await Promise.allSettled(ids.map(async (sid) => {
+    const [{ data: profil }, { data: { user } }] = await Promise.all([
+      supabase.from('profiles').select('voller_name, email_benachrichtigungen').eq('id', sid).single(),
+      supabase.auth.admin.getUserById(sid),
+    ])
+    if (!user?.email) return
+    if (profil?.email_benachrichtigungen?.hausaufgaben === false) return
+
+    await transport.sendMail({
+      from: SMTP_FROM, to: user.email,
+      subject: `Hausaufgaben: ${kurs.name}`,
+      html: html(`
+        <h2 style="margin:0 0 8px;color:#1e293b">Hallo ${esc(profil?.voller_name ?? '')},</h2>
+        <p style="margin:0 0 20px;color:#475569">für die Stunde vom <strong>${datum}</strong> gibt es Hausaufgaben:</p>
+        <table style="background:#f8fafc;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:120px">Kurs</td>
+              <td style="padding:6px 0;font-weight:700;color:#1e293b">${esc(kurs.name)}</td></tr>
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px;vertical-align:top">Aufgabe</td>
+              <td style="padding:6px 0;color:#1e293b;font-size:14px;line-height:1.6;white-space:pre-wrap">${esc(hausaufgaben)}</td></tr>
+        </table>
+        <a href="${APP_URL}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+      `),
+    })
+  }))
+}
+
+// ─── Neues Dokument ───────────────────────────────────────────
+
+async function sendNeuesDokument(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const { profil_id, name, typ: dokTyp } = body as { profil_id: string; name: string; typ: string }
+
+  const [{ data: profil }, { data: { user } }] = await Promise.all([
+    supabase.from('profiles').select('voller_name, email_benachrichtigungen').eq('id', profil_id).single(),
+    supabase.auth.admin.getUserById(profil_id),
+  ])
+  if (!user?.email) return
+  if (profil?.email_benachrichtigungen?.neues_dokument === false) return
+
+  const typLabel: Record<string, string> = {
+    aufnahmeformular: 'Aufnahmeformular', vertrag: 'Vertrag',
+    sepa: 'SEPA-Mandat', einverstaendnis: 'Einverständnis', sonstiges: 'Dokument',
+  }
+
+  await transport.sendMail({
+    from: SMTP_FROM, to: user.email,
+    subject: `Neues Dokument: ${name}`,
+    html: html(`
+      <h2 style="margin:0 0 8px;color:#1e293b">Hallo ${esc(profil?.voller_name ?? '')},</h2>
+      <p style="margin:0 0 20px;color:#475569">ein neues Dokument wurde in dein Profil hochgeladen:</p>
+      <table style="background:#f8fafc;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:80px">Name</td>
+            <td style="padding:6px 0;font-weight:700;color:#1e293b">${esc(name)}</td></tr>
+        <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Typ</td>
+            <td style="padding:6px 0;color:#1e293b">${esc(typLabel[dokTyp] ?? dokTyp)}</td></tr>
+      </table>
+      <p style="margin:20px 0 8px;color:#475569">Du kannst das Dokument in der App unter <em>Profil → Dokumente</em> abrufen.</p>
+      <a href="${APP_URL}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+    `),
+  })
+}
+
+// ─── RSVP-Erinnerung ─────────────────────────────────────────
+
+async function sendRsvpErinnerung(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const { event_id } = body as { event_id: string }
+
+  const { data: event } = await supabase
+    .from('events')
+    .select('titel, beginn, ort, beschreibung, typ')
+    .eq('id', event_id).single()
+
+  const { data: offene } = await supabase
+    .from('event_teilnehmer')
+    .select('profil_id')
+    .eq('event_id', event_id)
+    .eq('zusage', 'offen')
+
+  if (!event || !offene?.length) return
+
+  const beginn  = new Date(event.beginn as string)
+  const datum   = beginn.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const uhrzeit = beginn.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+
+  await Promise.allSettled(offene.map(async ({ profil_id }) => {
+    const [{ data: profil }, { data: { user } }] = await Promise.all([
+      supabase.from('profiles').select('voller_name').eq('id', profil_id).single(),
+      supabase.auth.admin.getUserById(profil_id),
+    ])
+    if (!user?.email) return
+
+    await transport.sendMail({
+      from: SMTP_FROM, to: user.email,
+      subject: `Erinnerung: Bitte zusagen oder absagen – ${event.titel}`,
+      html: html(`
+        <h2 style="margin:0 0 8px;color:#1e293b">Hallo ${esc(profil?.voller_name ?? '')},</h2>
+        <p style="margin:0 0 20px;color:#475569">
+          Du hast noch nicht auf folgende Einladung geantwortet. Bitte sage zu oder ab:
+        </p>
+        <table style="background:#f8fafc;border-radius:10px;padding:20px;width:100%;border-collapse:collapse">
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:100px">Veranstaltung</td>
+              <td style="padding:6px 0;font-weight:700;color:#1e293b;font-size:16px">${esc(event.titel as string)}</td></tr>
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Datum</td>
+              <td style="padding:6px 0;color:#1e293b">${datum}</td></tr>
+          <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Uhrzeit</td>
+              <td style="padding:6px 0;color:#1e293b">${uhrzeit} Uhr</td></tr>
+          ${event.ort ? `<tr><td style="padding:6px 0;color:#64748b;font-size:14px">Ort</td>
+              <td style="padding:6px 0;color:#1e293b">${esc(event.ort as string)}</td></tr>` : ''}
+        </table>
+        <a href="${APP_URL}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Jetzt antworten</a>
+      `),
+    })
+  }))
 }
 
 // ─── Helpers ──────────────────────────────────────────────────

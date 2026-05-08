@@ -44,6 +44,7 @@ const Repertoire           = lazy(() => import('./pages/Repertoire'))
 const Nachrichten          = lazy(() => import('./pages/Nachrichten'))
 const Impressum            = lazy(() => import('./pages/Impressum'))
 const Datenschutz          = lazy(() => import('./pages/Datenschutz'))
+const Lizenzen             = lazy(() => import('./pages/Lizenzen'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -163,6 +164,7 @@ function AppRoutes() {
       {/* Öffentliche Seiten */}
       <Route path="/impressum"   element={<Impressum />} />
       <Route path="/datenschutz" element={<Datenschutz />} />
+      <Route path="/lizenzen"    element={<Lizenzen />} />
 
       {/* Profil - für alle Rollen */}
       <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern','vorstand']} />}>

@@ -33,6 +33,20 @@ export default function LoginPage() {
   const [resetOk,    setResetOk]    = useState(false)
 
   if (!laden && session) {
+    if (!rolle) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+          <div style={{ textAlign: 'center', maxWidth: 360, padding: 32 }}>
+            <div style={{ fontSize: 36, marginBottom: 16 }}>⚠️</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Profil nicht gefunden</div>
+            <div style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 24 }}>Für diesen Account existiert kein Benutzerprofil. Bitte den Administrator kontaktieren.</div>
+            <button onClick={() => supabase.auth.signOut()} style={{ padding: '10px 20px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Abmelden
+            </button>
+          </div>
+        </div>
+      )
+    }
     const gespeichert = sessionStorage.getItem('staccato_nach_login')
     if (gespeichert) {
       sessionStorage.removeItem('staccato_nach_login')

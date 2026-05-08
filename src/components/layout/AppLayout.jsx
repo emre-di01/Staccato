@@ -7,6 +7,23 @@ import { supabase } from '../../lib/supabase'
 import { version } from '../../../package.json'
 import { CHANGELOG } from '../../changelog'
 
+function OfflineBanner() {
+  const [offline, setOffline] = useState(!navigator.onLine)
+  useEffect(() => {
+    const on  = () => setOffline(false)
+    const off = () => setOffline(true)
+    window.addEventListener('online',  on)
+    window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+  }, [])
+  if (!offline) return null
+  return (
+    <div style={{ background:'#92400e', color:'#fef3c7', fontSize:13, fontWeight:600, textAlign:'center', padding:'8px 16px', flexShrink:0 }}>
+      📵 Offline – Inhalte werden aus dem Cache geladen
+    </div>
+  )
+}
+
 // Nav-Konfiguration je Rolle — items können flach oder gruppiert sein
 function getNavConfig(rolle, T) {
   if (rolle === 'admin' || rolle === 'superadmin') {
@@ -493,6 +510,9 @@ export default function AppLayout() {
             <button onClick={() => window.location.reload()} style={{ border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer', color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', padding: '7px 12px', borderRadius: 'var(--radius)', fontFamily: 'inherit', lineHeight: 1 }}>↻ Reload</button>
           </div>
         </header>
+
+        {/* Offline-Banner */}
+        <OfflineBanner />
 
         {/* Content */}
         <main style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }} className="main-content">

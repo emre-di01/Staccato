@@ -208,7 +208,8 @@ function DetailPanel({ eintrag, onClose }) {
 // ─── Hauptseite ────────────────────────────────────────────────
 export default function LehrerSchueler() {
   const { profil, T } = useApp()
-  const [schueler,  setSchueler]  = useState([])
+  const [schueler,         setSchueler]         = useState([])
+  const [anwesenheitsStats, setAnwesenheitsStats] = useState({})
   const [laden,     setLaden]     = useState(true)
   const [suche,       setSuche]       = useState('')
   const [typFilter,   setTypFilter]   = useState('alle')
@@ -249,8 +250,30 @@ export default function LehrerSchueler() {
         map[pid].kurse.push({ ...row.kurs, stimmgruppe: row.stimmgruppe })
       }
 
+      const alleSchuelerIds = Object.keys(map)
+      const alleKursIds     = [...new Set(Object.values(map).flatMap(s => s.kurse.map(k => k.id)))]
+
       setSchueler(Object.values(map).sort((a, b) => a.profile.voller_name.localeCompare(b.profile.voller_name)))
       setLaden(false)
+
+      if (alleKursIds.length > 0 && alleSchuelerIds.length > 0) {
+        const [stundenRes, anwRes] = await Promise.all([
+          supabase.from('stunden').select('id, unterricht_id').in('unterricht_id', alleKursIds).eq('status', 'stattgefunden'),
+          supabase.from('anwesenheit').select('schueler_id, stunde_id, status').in('schueler_id', alleSchuelerIds),
+        ])
+        const stunden      = stundenRes.data ?? []
+        const anwesenheiten = anwRes.data ?? []
+        const awMap = {}
+        anwesenheiten.forEach(a => { if (!awMap[a.schueler_id]) awMap[a.schueler_id] = {}; awMap[a.schueler_id][a.stunde_id] = a.status })
+        const stats = {}
+        for (const sid of alleSchuelerIds) {
+          const kursIds   = new Set(map[sid].kurse.map(k => k.id))
+          const relevant  = stunden.filter(st => kursIds.has(st.unterricht_id))
+          const anwesend  = relevant.filter(st => ['anwesend','zu_spaet'].includes(awMap[sid]?.[st.id])).length
+          stats[sid] = relevant.length > 0 ? Math.round(100 * anwesend / relevant.length) : null
+        }
+        setAnwesenheitsStats(stats)
+      }
     }
     ladeSchueler()
   }, [profil])
@@ -312,7 +335,17 @@ export default function LehrerSchueler() {
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize:16, color:'var(--text-3)', flexShrink:0 }}>›</span>
+                  {(() => {
+                    const q = anwesenheitsStats[profile.id]
+                    if (q === null || q === undefined) return <span style={{ fontSize:16, color:'var(--text-3)', flexShrink:0 }}>›</span>
+                    const farbe = q >= 80 ? 'var(--success)' : q >= 60 ? 'var(--warning)' : 'var(--danger)'
+                    return (
+                      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flexShrink:0 }}>
+                        <span style={{ fontSize:14, fontWeight:800, color: farbe }}>{q}%</span>
+                        <span style={{ fontSize:10, color:'var(--text-3)' }}>Anw.</span>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 <div style={{ display:'flex', flexDirection:'column', gap:6 }}>

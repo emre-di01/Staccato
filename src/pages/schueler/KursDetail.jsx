@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -255,6 +255,8 @@ function SchuelerAnwesenheit({ profil, kursId, stunden }) {
 export default function SchuelerKursDetail() {
   const { id }     = useParams()
   const navigate   = useNavigate()
+  const location   = useLocation()
+  const segment    = location.pathname.split('/')[1]
   const { profil, T } = useApp()
   const [kurs,     setKurs]     = useState(null)
   const [stuecke,  setStuecke]  = useState([])
@@ -329,7 +331,7 @@ export default function SchuelerKursDetail() {
 
   return (
     <div>
-      <button onClick={() => navigate('/schueler/stundenplan')}
+      <button onClick={() => navigate(`/${segment}/kurse`)}
         style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 16px' }}>
         ← {T('back')}
       </button>

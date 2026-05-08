@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -8,6 +8,8 @@ const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻
 export default function SchuelerKurse() {
   const { profil, T } = useApp()
   const navigate   = useNavigate()
+  const location   = useLocation()
+  const segment    = location.pathname.split('/')[1]  // 'schueler' | 'vorstand'
   const { data: kurse = [], isLoading: laden } = useQuery({
     queryKey: ['schueler-kurse', profil?.id],
     enabled: !!profil?.id,
@@ -41,7 +43,7 @@ export default function SchuelerKurse() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:16, marginTop:24 }}>
           {kurse.map(k => (
             <div key={k.id} style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', boxShadow:'var(--shadow)', overflow:'hidden', cursor:'pointer' }}
-              onClick={() => navigate(`/schueler/kurse/${k.id}`)}>
+              onClick={() => navigate(`/${segment}/kurse/${k.id}`)}>
               <div style={{ height:4, background: k.farbe ?? 'var(--primary)' }} />
               <div style={{ padding:'16px 20px' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>

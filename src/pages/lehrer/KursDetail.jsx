@@ -121,7 +121,7 @@ function EinzelStundeModal({ kursId, raumId, onClose, onErfolg }) {
 }
 
 // ─── Anwesenheits-Übersicht pro Schüler ───────────────────────
-function AnwesenheitUebersicht({ schueler, stunden }) {
+function AnwesenheitUebersicht({ schueler, stunden, kursName }) {
   const [anwesenheiten, setAnwesenheiten] = useState({})
   const [laden, setLaden] = useState(true)
 
@@ -144,57 +144,86 @@ function AnwesenheitUebersicht({ schueler, stunden }) {
 
   const stattgefunden = stunden.filter(s => s.status === 'stattgefunden')
 
+  function csvExportieren() {
+    const header = ['Schüler', ...stattgefunden.map(st => new Date(st.beginn).toLocaleDateString('de-DE')), 'Quote (%)']
+    const zeilen = [
+      header.join(';'),
+      ...schueler.map(sc => {
+        const scAnw = anwesenheiten[sc.schueler_id] ?? {}
+        const anwesend = stattgefunden.filter(st => ['anwesend','zu_spaet'].includes(scAnw[st.id])).length
+        const quote = stattgefunden.length > 0 ? Math.round(100 * anwesend / stattgefunden.length) : ''
+        const symbole = stattgefunden.map(st => {
+          const v = scAnw[st.id]
+          return v === 'anwesend' ? '✓' : v === 'abwesend' ? '✗' : v === 'entschuldigt' ? 'E' : v === 'zu_spaet' ? 'S' : '-'
+        })
+        return [`"${sc.profiles?.voller_name ?? ''}"`, ...symbole, quote].join(';')
+      }),
+    ]
+    const blob = new Blob(['﻿' + zeilen.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `anwesenheit_${(kursName ?? 'kurs').replace(/[^a-z0-9]/gi,'_')}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (laden) return <div style={{ color:'var(--text-3)', fontSize:13, padding:16 }}>Lade Anwesenheiten …</div>
   if (stattgefunden.length === 0) return <div style={s.leer}>Noch keine Stunden abgehalten.</div>
 
   return (
-    <div style={{ overflowX:'auto' }}>
-      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
-        <thead>
-          <tr style={{ background:'var(--bg-2)' }}>
-            <th style={{ padding:'10px 14px', textAlign:'left', fontWeight:700, color:'var(--text-3)', fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--border)', whiteSpace:'nowrap' }}>Schüler</th>
-            {stattgefunden.map(st => (
-              <th key={st.id} style={{ padding:'8px 6px', textAlign:'center', fontWeight:700, color:'var(--text-3)', fontSize:10, textTransform:'uppercase', borderBottom:'1px solid var(--border)', minWidth:44 }}>
-                {new Date(st.beginn).toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
-              </th>
-            ))}
-            <th style={{ padding:'10px 14px', textAlign:'center', fontWeight:700, color:'var(--text-3)', fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--border)' }}>Quote</th>
-          </tr>
-        </thead>
-        <tbody>
-          {schueler.map((sc, i) => {
-            const scAnw = anwesenheiten[sc.schueler_id] ?? {}
-            const anwesend = Object.values(scAnw).filter(v => v === 'anwesend' || v === 'zu_spaet').length
-            const gesamt   = stattgefunden.length
-            const quote    = gesamt > 0 ? Math.round(100 * anwesend / gesamt) : null
-            return (
-              <tr key={sc.schueler_id} style={{ background: i%2===0 ? 'var(--surface)' : 'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                <td style={{ padding:'10px 14px', fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>
-                  {sc.profiles?.voller_name}
-                </td>
-                {stattgefunden.map(st => {
-                  const status = scAnw[st.id]
-                  const f = STATUS_FARBE[status]
-                  return (
-                    <td key={st.id} style={{ padding:'6px', textAlign:'center' }}>
-                      <span title={status ?? 'nicht erfasst'} style={{ display:'inline-block', width:24, height:24, borderRadius:'50%', background: f ? f.bg : 'var(--bg-3)', fontSize:12, lineHeight:'24px', textAlign:'center' }}>
-                        {status === 'anwesend' ? '✓' : status === 'abwesend' ? '✗' : status === 'entschuldigt' ? 'E' : status === 'zu_spaet' ? 'S' : '·'}
+    <div>
+      <div style={{ display:'flex', justifyContent:'flex-end', padding:'10px 16px', borderBottom:'1px solid var(--border)' }}>
+        <button onClick={csvExportieren} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+          📥 CSV exportieren
+        </button>
+      </div>
+      <div style={{ overflowX:'auto' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+          <thead>
+            <tr style={{ background:'var(--bg-2)' }}>
+              <th style={{ padding:'10px 14px', textAlign:'left', fontWeight:700, color:'var(--text-3)', fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--border)', whiteSpace:'nowrap' }}>Schüler</th>
+              {stattgefunden.map(st => (
+                <th key={st.id} style={{ padding:'8px 6px', textAlign:'center', fontWeight:700, color:'var(--text-3)', fontSize:10, textTransform:'uppercase', borderBottom:'1px solid var(--border)', minWidth:44 }}>
+                  {new Date(st.beginn).toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
+                </th>
+              ))}
+              <th style={{ padding:'10px 14px', textAlign:'center', fontWeight:700, color:'var(--text-3)', fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--border)' }}>Quote</th>
+            </tr>
+          </thead>
+          <tbody>
+            {schueler.map((sc, i) => {
+              const scAnw = anwesenheiten[sc.schueler_id] ?? {}
+              const anwesend = Object.values(scAnw).filter(v => v === 'anwesend' || v === 'zu_spaet').length
+              const gesamt   = stattgefunden.length
+              const quote    = gesamt > 0 ? Math.round(100 * anwesend / gesamt) : null
+              return (
+                <tr key={sc.schueler_id} style={{ background: i%2===0 ? 'var(--surface)' : 'var(--bg)', borderBottom:'1px solid var(--border)' }}>
+                  <td style={{ padding:'10px 14px', fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>
+                    {sc.profiles?.voller_name}
+                  </td>
+                  {stattgefunden.map(st => {
+                    const status = scAnw[st.id]
+                    const f = STATUS_FARBE[status]
+                    return (
+                      <td key={st.id} style={{ padding:'6px', textAlign:'center' }}>
+                        <span title={status ?? 'nicht erfasst'} style={{ display:'inline-block', width:24, height:24, borderRadius:'50%', background: f ? f.bg : 'var(--bg-3)', fontSize:12, lineHeight:'24px', textAlign:'center' }}>
+                          {status === 'anwesend' ? '✓' : status === 'abwesend' ? '✗' : status === 'entschuldigt' ? 'E' : status === 'zu_spaet' ? 'S' : '·'}
+                        </span>
+                      </td>
+                    )
+                  })}
+                  <td style={{ padding:'10px 14px', textAlign:'center' }}>
+                    {quote !== null ? (
+                      <span style={{ fontWeight:800, color: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' }}>
+                        {quote}%
                       </span>
-                    </td>
-                  )
-                })}
-                <td style={{ padding:'10px 14px', textAlign:'center' }}>
-                  {quote !== null ? (
-                    <span style={{ fontWeight:800, color: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' }}>
-                      {quote}%
-                    </span>
-                  ) : '–'}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+                    ) : '–'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -520,6 +549,44 @@ export default function KursDetail() {
     ladeData()
   }, [id])
 
+  function notizenDrucken() {
+    const mitInhalt = stunden
+      .filter(st => st.status === 'stattgefunden' && (st.notizen || st.hausaufgaben))
+      .sort((a, b) => new Date(a.beginn) - new Date(b.beginn))
+    if (mitInhalt.length === 0) { alert('Keine Notizen oder Hausaufgaben vorhanden.'); return }
+    const farbe = kurs.farbe ?? '#6366f1'
+    const html = `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
+<title>Unterrichtsnotizen – ${kurs.name}</title>
+<style>
+  body{font-family:Georgia,serif;max-width:800px;margin:40px auto;color:#222;padding:0 24px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:#666;font-size:13px;margin:0 0 32px}
+  .stunde{margin-bottom:24px;border-left:3px solid ${farbe};padding-left:16px}
+  .datum{font-weight:700;font-size:15px;color:#333;margin-bottom:8px}
+  .label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:3px}
+  .inhalt{font-size:13px;white-space:pre-wrap;color:#444;margin:0}
+  .block{margin-bottom:10px}
+  @media print{body{margin:20px}}
+</style></head><body>
+<h1>${kurs.name} – Unterrichtsnotizen</h1>
+<p class="sub">Erstellt am ${new Date().toLocaleDateString('de-DE')} · ${mitInhalt.length} Einträge</p>
+${mitInhalt.map(st => {
+  const d = new Date(st.beginn)
+  const datum = d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+  const uhrzeit = d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })
+  return `<div class="stunde">
+<div class="datum">${datum} · ${uhrzeit} Uhr</div>
+${st.notizen ? `<div class="block"><div class="label">📝 Notizen</div><p class="inhalt">${st.notizen.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
+${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</div><p class="inhalt">${st.hausaufgaben.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
+</div>`
+}).join('')}
+</body></html>`
+    const w = window.open('', '_blank')
+    w.document.write(html)
+    w.document.close()
+    w.print()
+  }
+
   async function stundeWiederherstellen(stundeId) {
     const { error } = await supabase.from('stunden')
       .update({ status: 'geplant' })
@@ -656,6 +723,9 @@ export default function KursDetail() {
               })()}
             </div>
             <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+              <button onClick={notizenDrucken} style={s.btnSek} title="Notizen und Hausaufgaben drucken / als PDF">
+                🖨 Notizen
+              </button>
               <button onClick={() => setModal({ typ:'stunden_bulk' })} style={s.btnSek} title="Wochentermine für einen Zeitraum generieren oder löschen">
                 ⚡ Generieren
               </button>
@@ -693,7 +763,8 @@ export default function KursDetail() {
                     <div style={{ fontSize:12, color:'var(--text-3)' }}>
                       {st.status === 'stattgefunden' ? T('kurs_status_done') : st.status === 'abgesagt' ? T('kurs_status_cancelled') : T('kurs_status_planned')}
                     </div>
-                    {st.hausaufgaben && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>📝 {st.hausaufgaben}</div>}
+                    {st.notizen && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:4 }}>📝 {st.notizen}</div>}
+                    {st.hausaufgaben && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>📚 {st.hausaufgaben}</div>}
                   </div>
                 </div>
                 {/* Untere Zeile: Buttons */}
@@ -749,7 +820,7 @@ export default function KursDetail() {
       {/* Tab: Anwesenheit */}
       {aktiveTab === 'anwesenheit' && (
         <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', overflow:'hidden', boxShadow:'var(--shadow)' }}>
-          <AnwesenheitUebersicht schueler={schueler} stunden={stunden} />
+          <AnwesenheitUebersicht schueler={schueler} stunden={stunden} kursName={kurs?.name} />
         </div>
       )}
 

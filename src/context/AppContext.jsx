@@ -16,13 +16,14 @@ export function AppProvider({ children }) {
   const [laden,      setLaden]      = useState(true)
   const [theme,      setThemeKey]   = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
   const [darkMode,   setDarkMode]   = useState(() => localStorage.getItem('staccato_dark') === 'true')
-  const [lang,       setLang]       = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
+  const [lang,       setLangState]  = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
 
   // Tracks which user ID has its profile loaded.
   // Prevents calling ladeProfil() when SIGNED_IN fires from inside the processLock
   // (e.g. on tab focus via _recoverAndRefresh), which would deadlock: the lock is
   // already held, and getSession() inside supabase.from() also tries to acquire it.
   const loadedUidRef = useRef(null)
+  const profilIdRef  = useRef(null)
 
   useEffect(() => {
     applyTheme(theme, darkMode)
@@ -44,8 +45,11 @@ export function AppProvider({ children }) {
         .single()
       if (data) {
         loadedUidRef.current = userId
+        profilIdRef.current  = userId
         setProfil(data)
-        if (data.sprache) setLang(data.sprache)
+        if (data.sprache)   setLangState(data.sprache)
+        if (data.thema)     setThemeKey(data.thema)
+        if (data.dark_mode != null) setDarkMode(data.dark_mode)
         if (data.schule_id) {
           const { data: schuleData } = await supabase.from('schulen').select('zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix').eq('id', data.schule_id).single()
           if (schuleData?.zeitzone) setZeitzone(schuleData.zeitzone)
@@ -103,6 +107,7 @@ export function AppProvider({ children }) {
       // from inside the processLock (tab focus → _recoverAndRefresh). Calling
       // supabase.from() there would re-acquire the lock → deadlock → all queries hang.
       if (loadedUidRef.current !== session.user.id) {
+        setLaden(true)
         await ladeProfil(session.user.id)
       }
     })
@@ -117,12 +122,23 @@ export function AppProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  function saveToProfile(patch) {
+    if (profilIdRef.current) {
+      supabase.from('profiles').update(patch).eq('id', profilIdRef.current)
+        .then(({ error }) => { if (error) console.warn('Profil speichern fehlgeschlagen:', error) })
+    }
+  }
+
   function changeTheme(key) {
-    if (THEMES[key]) setThemeKey(key)
+    if (THEMES[key]) { setThemeKey(key); saveToProfile({ thema: key }) }
   }
 
   function toggleDark() {
-    setDarkMode(d => !d)
+    setDarkMode(d => { const next = !d; saveToProfile({ dark_mode: next }); return next })
+  }
+
+  function setLang(l) {
+    setLangState(l); saveToProfile({ sprache: l })
   }
 
   const T = useCallback((key) => translate(lang, key), [lang])

@@ -119,12 +119,40 @@ function EventBlock({ event, onClick, tz }) {
 
 // ─── Detail Modal ─────────────────────────────────────────────
 function DetailModal({ stunde, onClose, tz }) {
-  const { T, rolle } = useApp()
+  const { T, rolle, profil } = useApp()
   const navigate = useNavigate()
-  const kannAktionen = rolle === 'lehrer' || rolle === 'admin' || rolle === 'superadmin'
+  const kannAktionen   = rolle === 'lehrer' || rolle === 'admin' || rolle === 'superadmin'
+  const kannEntschuldigen = (rolle === 'schueler' || rolle === 'vorstand') && stunde.status === 'geplant' && new Date(stunde.beginn) > new Date()
+  const [entschuldigt, setEntschuldigt] = useState(null)
+  const [laden,        setLaden]        = useState(false)
   const beginn = new Date(stunde.beginn)
   const ende   = stunde.ende ? new Date(stunde.ende) : null
   const farbe  = stunde.unterricht?.farbe ?? TYP_FARBE[stunde.unterricht?.typ] ?? 'var(--primary)'
+
+  useEffect(() => {
+    if (!kannEntschuldigen || !profil) return
+    supabase.from('anwesenheit')
+      .select('id, status')
+      .eq('stunde_id', stunde.id)
+      .eq('schueler_id', profil.id)
+      .maybeSingle()
+      .then(({ data }) => setEntschuldigt(data ?? null))
+  }, [stunde.id, profil, kannEntschuldigen])
+
+  async function toggleEntschuldigung() {
+    if (!profil || laden) return
+    setLaden(true)
+    if (entschuldigt) {
+      await supabase.from('anwesenheit').delete().eq('id', entschuldigt.id)
+      setEntschuldigt(null)
+    } else {
+      const { data } = await supabase.from('anwesenheit')
+        .insert({ stunde_id: stunde.id, schueler_id: profil.id, status: 'entschuldigt' })
+        .select('id, status').single()
+      if (data) setEntschuldigt(data)
+    }
+    setLaden(false)
+  }
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000, padding:'0' }}
@@ -158,8 +186,8 @@ function DetailModal({ stunde, onClose, tz }) {
                 <span>{stunde.unterricht.raeume.name}</span>
               </div>
             )}
-            <div style={{ fontSize:14, fontWeight:700, color: stunde.status === 'abgesagt' ? 'var(--danger)' : stunde.status === 'stattgefunden' ? 'var(--success)' : 'var(--text-3)' }}>
-              {stunde.status === 'stattgefunden' ? T('schedule_status_done') : stunde.status === 'abgesagt' ? T('schedule_status_cancelled') : T('schedule_status_planned')}
+            <div style={{ fontSize:14, fontWeight:700, color: stunde.status === 'abgesagt' ? 'var(--danger)' : stunde.status === 'stattgefunden' ? 'var(--success)' : entschuldigt ? 'var(--warning)' : 'var(--text-3)' }}>
+              {stunde.status === 'stattgefunden' ? T('schedule_status_done') : stunde.status === 'abgesagt' ? T('schedule_status_cancelled') : entschuldigt ? `🟡 ${T('excused')}` : T('schedule_status_planned')}
             </div>
             {stunde.notizen && (
               <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'10px 14px', fontSize:13, color:'var(--text-2)' }}>
@@ -171,12 +199,20 @@ function DetailModal({ stunde, onClose, tz }) {
                 📚 <strong>{T('schedule_homework')}</strong> {stunde.hausaufgaben}
               </div>
             )}
-            {kannAktionen && stunde.unterricht?.id && (
-              <div style={{ paddingTop:12, borderTop:'1px solid var(--border)', marginTop:4 }}>
-                <button onClick={() => { navigate(`/${rolle === 'lehrer' ? 'lehrer' : 'admin'}/kurse/${stunde.unterricht.id}`); onClose() }}
-                  style={{ width:'100%', padding:'9px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                  📂 Kurs öffnen
-                </button>
+            {(kannAktionen || kannEntschuldigen) && (
+              <div style={{ paddingTop:12, borderTop:'1px solid var(--border)', marginTop:4, display:'flex', flexDirection:'column', gap:8 }}>
+                {kannAktionen && stunde.unterricht?.id && (
+                  <button onClick={() => { navigate(`/${rolle === 'lehrer' ? 'lehrer' : 'admin'}/kurse/${stunde.unterricht.id}`); onClose() }}
+                    style={{ width:'100%', padding:'9px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    📂 Kurs öffnen
+                  </button>
+                )}
+                {kannEntschuldigen && (
+                  <button onClick={toggleEntschuldigung} disabled={laden}
+                    style={{ width:'100%', padding:'9px 14px', borderRadius:'var(--radius)', border:`1.5px solid ${entschuldigt ? 'var(--warning)' : 'var(--border)'}`, background: entschuldigt ? 'var(--warning)' : 'var(--bg-2)', color: entschuldigt ? '#fff' : 'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    {laden ? '…' : entschuldigt ? T('lesson_excuse_undo') : T('lesson_excuse')}
+                  </button>
+                )}
               </div>
             )}
           </div>

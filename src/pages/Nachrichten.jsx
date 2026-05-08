@@ -166,9 +166,9 @@ export default function Nachrichten() {
     setLaden(true)
     const { data } = await supabase
       .from('nachrichten')
-      .select('*, sender:profiles!nachrichten_gesendet_von_fkey(id, voller_name, rolle), empfaenger:profiles!nachrichten_empfaenger_id_fkey(id, voller_name, rolle), gelesen:nachricht_gelesen(nachricht_id), kurs:unterricht(id, name)')
+      .select('*, sender:profiles!nachrichten_gesendet_von_fkey(id, voller_name, rolle), empfaenger:profiles!nachrichten_empfaenger_id_fkey(id, voller_name, rolle), gelesen:nachricht_gelesen(nachricht_id), geloescht:nachricht_geloescht(nachricht_id), kurs:unterricht(id, name)')
       .order('gesendet_am', { ascending: false })
-    setNachrichten(data ?? [])
+    setNachrichten((data ?? []).filter(n => !n.geloescht?.length))
     setLaden(false)
   }, [])
 
@@ -191,6 +191,12 @@ export default function Nachrichten() {
   function waehleNachricht(n) {
     setAusgewaehlt(n)
     markierenGelesen(n)
+  }
+
+  async function loescheNachricht(n) {
+    await supabase.from('nachricht_geloescht').insert({ nachricht_id: n.id, user_id: profil.id })
+    setNachrichten(prev => prev.filter(m => m.id !== n.id))
+    setAusgewaehlt(null)
   }
 
   const eingang  = nachrichten.filter(n => n.gesendet_von !== profil.id || n.empfaenger_id === profil.id)
@@ -269,7 +275,7 @@ export default function Nachrichten() {
               const hauptLabel = empfaengerLabel(n, tab === 'gesendet')
               return (
                 <div key={n.id} onClick={() => waehleNachricht(n)}
-                  style={{ padding:'14px 16px', borderBottom:'1px solid var(--border)', cursor:'pointer', background: istAktiv ? 'color-mix(in srgb, var(--primary) 8%, transparent)' : istGelesen ? 'transparent' : 'color-mix(in srgb, var(--primary) 4%, transparent)', borderLeft: istAktiv ? '3px solid var(--primary)' : '3px solid transparent', transition:'background 0.15s' }}>
+                  style={{ padding:'14px 16px', borderBottom:'1px solid var(--border)', cursor:'pointer', background: istAktiv ? 'color-mix(in srgb, var(--primary) 8%, transparent)' : istGelesen ? 'transparent' : 'color-mix(in srgb, var(--primary) 4%, transparent)', borderLeft: istAktiv ? '3px solid var(--primary)' : '3px solid transparent', transition:'background 0.15s', position:'relative' }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
                       {!istGelesen && <div style={{ width:7, height:7, borderRadius:'50%', background:'var(--primary)', flexShrink:0 }} />}
@@ -282,6 +288,11 @@ export default function Nachrichten() {
                     </div>
                     <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0, marginLeft:8 }}>
                       <span style={{ fontSize:11, color:'var(--text-3)' }}>{zeitAgo(n.gesendet_am)}</span>
+                      <button onClick={e => { e.stopPropagation(); loescheNachricht(n) }}
+                        title="Löschen"
+                        style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-3)', fontSize:13, padding:'2px 4px', borderRadius:4, lineHeight:1, flexShrink:0 }}>
+                        🗑️
+                      </button>
                       {mob && <span style={{ fontSize:12, color:'var(--text-3)' }}>›</span>}
                     </div>
                   </div>
@@ -319,10 +330,17 @@ export default function Nachrichten() {
                   </span>
                 </div>
               </div>
-              {!mob && (
-                <button onClick={() => setAusgewaehlt(null)}
-                  style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', flexShrink:0, marginLeft:16 }}>✕</button>
-              )}
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0, marginLeft:16 }}>
+                <button onClick={() => loescheNachricht(ausgewaehlt)}
+                  title="Löschen"
+                  style={{ background:'none', border:'1.5px solid var(--border)', borderRadius:'var(--radius)', padding:'6px 10px', fontSize:14, cursor:'pointer', color:'var(--danger)', fontFamily:'inherit', lineHeight:1 }}>
+                  🗑️
+                </button>
+                {!mob && (
+                  <button onClick={() => setAusgewaehlt(null)}
+                    style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)' }}>✕</button>
+                )}
+              </div>
             </div>
             <div style={{ borderTop:'1px solid var(--border)', paddingTop:16 }}>
               <p style={{ margin:0, fontSize:15, color:'var(--text)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>{ausgewaehlt.inhalt}</p>
