@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
@@ -6,18 +7,33 @@ import { useApp } from '../../context/AppContext'
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
 function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
+  const [hovered, setHovered] = useState(false)
   return (
-    <div onClick={onClick} style={{
-      background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-      padding: '20px 24px', border: '1px solid var(--border)',
-      boxShadow: 'var(--shadow)', cursor: onClick ? 'pointer' : 'default',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background:'var(--surface)', borderRadius:'var(--radius-lg)',
+        padding:'20px 24px', border:'1px solid var(--border)',
+        boxShadow: hovered ? 'var(--shadow-lg)' : 'var(--shadow)',
+        cursor: onClick ? 'pointer' : 'default',
+        transform: hovered && onClick ? 'translateY(-2px)' : 'none',
+        transition:'transform 0.18s ease, box-shadow 0.18s ease',
+        position:'relative', overflow:'hidden',
+      }}
+    >
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:farbe, borderRadius:'var(--radius-lg) var(--radius-lg) 0 0' }} />
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
         <div>
-          <div style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 500, marginBottom: 8 }}>{label}</div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: farbe, letterSpacing: '-1px' }}>{wert ?? '–'}</div>
+          <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>{label}</div>
+          <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{wert ?? '–'}</div>
         </div>
-        <div style={{ fontSize: 28 }}>{icon}</div>
+        <div style={{
+          fontSize:22, width:46, height:46, display:'flex', alignItems:'center', justifyContent:'center',
+          borderRadius:'var(--radius)', background:`color-mix(in srgb, ${farbe} 15%, var(--bg))`,
+          flexShrink:0,
+        }}>{icon}</div>
       </div>
     </div>
   )

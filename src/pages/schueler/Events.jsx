@@ -123,7 +123,12 @@ export default function SchuelerEvents() {
                     📅 {formatDatum(ev.beginn)}, {formatZeit(ev.beginn)}
                     {ev.ende && ` – ${formatZeit(ev.ende)}`}
                   </div>
-                  {ev.ort && <div style={s.cardMeta}>📍 {ev.ort}</div>}
+                  {ev.ort && (
+                    <a href={`https://maps.google.com/?q=${encodeURIComponent(ev.ort)}`} target="_blank" rel="noopener noreferrer"
+                      style={{ ...s.cardMeta, color:'var(--text-2)', textDecoration:'none', cursor:'pointer' }}>
+                      📍 {ev.ort} <span style={{ fontSize:11, opacity:0.7 }}>↗</span>
+                    </a>
+                  )}
                   {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
 
                   <div style={{ paddingTop: 8, borderTop: '1px solid var(--border)', marginTop: 4 }}>

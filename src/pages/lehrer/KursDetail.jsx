@@ -317,6 +317,175 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
   )
 }
 
+function StundenBulkModal({ kurs, onClose, onErfolg }) {
+  const [von,         setVon]         = useState('')
+  const [bis,         setBis]         = useState('')
+  const [laden,       setLaden]       = useState(false)
+  const [loeschLaden, setLoeschLaden] = useState(false)
+  const [result,      setResult]      = useState(null)
+  const [geloescht,   setGeloescht]   = useState(null)
+  const [fehler,      setFehler]      = useState('')
+
+  async function generieren() {
+    if (!von || !bis) { setFehler('Bitte Von- und Bis-Datum wählen.'); return }
+    if (!kurs.wochentag) { setFehler('Kurs hat keinen Wochentag definiert.'); return }
+    setLaden(true); setFehler(''); setGeloescht(null)
+    const { data, error } = await supabase.rpc('stunden_generieren', { p_unterricht_id: kurs.id, p_von: von, p_bis: bis })
+    if (error) setFehler(error.message)
+    else { setResult(data); onErfolg() }
+    setLaden(false)
+  }
+
+  async function loeschen() {
+    if (!von || !bis) { setFehler('Bitte Von- und Bis-Datum wählen.'); return }
+    if (!window.confirm(`Alle Stunden von ${von} bis ${bis} für „${kurs.name}" löschen?`)) return
+    setLoeschLaden(true); setFehler(''); setResult(null)
+    const { data, error } = await supabase.from('stunden').delete()
+      .eq('unterricht_id', kurs.id)
+      .gte('beginn', `${von}T00:00:00`).lte('beginn', `${bis}T23:59:59`).select('id')
+    if (error) setFehler(error.message)
+    else { setGeloescht(data?.length ?? 0); onErfolg() }
+    setLoeschLaden(false)
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+          <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>⚡ Stunden – {kurs.name}</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 }}>✕</button>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          {kurs.wochentag ? (
+            <div style={{ padding:'10px 14px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)', fontSize:14, color:'var(--text-2)' }}>
+              📅 Jede Woche am <strong>{kurs.wochentag.toUpperCase()}</strong> von <strong>{kurs.uhrzeit_von}</strong> bis <strong>{kurs.uhrzeit_bis}</strong>
+            </div>
+          ) : (
+            <div style={{ padding:'10px 14px', borderRadius:'var(--radius)', background:'#fee2e2', border:'1px solid #fecaca', fontSize:13, color:'var(--danger)' }}>
+              ⚠️ Kein Wochentag/Uhrzeit definiert. Bitte erst im Kurs eintragen.
+            </div>
+          )}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>Von</label>
+              <input type="date" style={bulkInput} value={von} onChange={e => setVon(e.target.value)} />
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>Bis</label>
+              <input type="date" style={bulkInput} value={bis} onChange={e => setBis(e.target.value)} />
+            </div>
+          </div>
+          {result !== null && (
+            <div style={{ padding:'12px 16px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--success)', color:'var(--success)', fontWeight:700, fontSize:14 }}>
+              ✅ {result} Stunden generiert!
+            </div>
+          )}
+          {geloescht !== null && (
+            <div style={{ padding:'12px 16px', borderRadius:'var(--radius)', background:'#fee2e2', border:'1px solid #fecaca', color:'var(--danger)', fontWeight:700, fontSize:14 }}>
+              🗑 {geloescht} Stunden gelöscht.
+            </div>
+          )}
+          {fehler && <p style={{ margin:0, color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
+          <div style={{ display:'flex', gap:10, justifyContent:'space-between', marginTop:4 }}>
+            <button onClick={loeschen} disabled={loeschLaden || !von || !bis}
+              style={{ padding:'10px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              {loeschLaden ? 'Lösche …' : '🗑 Löschen'}
+            </button>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={onClose} style={{ padding:'10px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>Schließen</button>
+              <button onClick={generieren} disabled={laden || !kurs.wochentag} style={{ padding:'10px 20px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                {laden ? 'Generiere …' : '⚡ Generieren'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const bulkInput = { padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, outline:'none', fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', width:'100%', boxSizing:'border-box' }
+
+function SchuelerProfilModal({ profil: p, onClose }) {
+  const alter = p?.geburtsdatum
+    ? Math.floor((new Date() - new Date(p.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000))
+    : null
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1100, padding:16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:340, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+          <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>Schüler-Profil</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 }}>✕</button>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
+          <Avatar name={p?.voller_name} avatarUrl={p?.avatar_url} size={72} />
+          <div style={{ fontWeight:800, fontSize:18, color:'var(--text)', textAlign:'center' }}>{p?.voller_name}</div>
+          {p?.geburtsdatum && (
+            <div style={{ width:'100%', padding:'12px 16px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)', fontSize:14, color:'var(--text-2)', display:'flex', gap:10, alignItems:'center' }}>
+              <span style={{ fontSize:18 }}>🎂</span>
+              <div>
+                <div>{new Date(p.geburtsdatum).toLocaleDateString('de-DE', { day:'numeric', month:'long', year:'numeric' })}</div>
+                {alter !== null && <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>{alter} Jahre alt</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NotizModal({ stunde, onClose, onErfolg }) {
+  const [notizen,      setNotizen]      = useState(stunde.notizen ?? '')
+  const [hausaufgaben, setHausaufgaben] = useState(stunde.hausaufgaben ?? '')
+  const [laden,        setLaden]        = useState(false)
+
+  async function speichern() {
+    setLaden(true)
+    await supabase.from('stunden').update({
+      notizen:      notizen.trim()      || null,
+      hausaufgaben: hausaufgaben.trim() || null,
+    }).eq('id', stunde.id)
+    onErfolg({ notizen: notizen.trim() || null, hausaufgaben: hausaufgaben.trim() || null })
+    onClose()
+  }
+
+  const beginn = new Date(stunde.beginn)
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'24px 28px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+          <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:'var(--text)' }}>
+            📝 {beginn.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}
+          </h3>
+          <button onClick={onClose} style={s.iconBtn}>✕</button>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <label style={s.label}>Notizen</label>
+            <textarea style={{ ...s.input, minHeight:60, resize:'vertical' }} value={notizen}
+              onChange={e => setNotizen(e.target.value)} placeholder="z.B. Atemtechnik besprochen …" />
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <label style={s.label}>Hausaufgaben</label>
+            <textarea style={{ ...s.input, minHeight:60, resize:'vertical' }} value={hausaufgaben}
+              onChange={e => setHausaufgaben(e.target.value)} placeholder="z.B. Takt 1–8 üben …" />
+          </div>
+          <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+            <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+            <button onClick={speichern} disabled={laden} style={s.btnPri}>
+              {laden ? 'Speichere …' : '💾 Speichern'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function KursDetail() {
   const { id }     = useParams()
   const navigate   = useNavigate()
@@ -332,6 +501,9 @@ export default function KursDetail() {
   const [stundenFilter, setStundenFilter] = useState('alle')
   const [jahrFilter,   setJahrFilter]   = useState('')
   const [monatFilter,  setMonatFilter]  = useState('')
+  const [alleSchueler,      setAlleSchueler]      = useState([])
+  const [schuelerSuche,     setSchuelerSuche]     = useState('')
+  const [schuelerProfilModal, setSchuelerProfilModal] = useState(null)
 
   useEffect(() => {
     async function ladeData() {
@@ -362,6 +534,29 @@ export default function KursDetail() {
     const { error } = await supabase.from('stunden').delete().eq('id', stundeId)
     if (error) { alert(error.message); return }
     setStunden(prev => prev.filter(st => st.id !== stundeId))
+  }
+
+  useEffect(() => {
+    if (aktiveTab !== 'schueler' || alleSchueler.length > 0) return
+    supabase.from('profiles')
+      .select('id, voller_name, rolle')
+      .in('rolle', ['schueler', 'vorstand', 'admin', 'superadmin'])
+      .eq('aktiv', true).order('voller_name')
+      .then(({ data }) => setAlleSchueler(data ?? []))
+  }, [aktiveTab])
+
+  async function schuelerHinzufuegen(schuelerId) {
+    await supabase.from('unterricht_schueler').upsert({ unterricht_id: id, schueler_id: schuelerId, status: 'aktiv' })
+    const { data } = await supabase.from('unterricht_schueler')
+      .select('*, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, avatar_url)')
+      .eq('unterricht_id', id).eq('status', 'aktiv')
+    setSchueler(data ?? [])
+  }
+
+  async function schuelerEntfernen(schuelerId) {
+    if (!window.confirm('Schüler aus Kurs entfernen?')) return
+    await supabase.from('unterricht_schueler').delete().eq('unterricht_id', id).eq('schueler_id', schuelerId)
+    setSchueler(prev => prev.filter(sc => sc.schueler_id !== schuelerId))
   }
 
   if (laden) return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
@@ -411,7 +606,8 @@ export default function KursDetail() {
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:20, borderBottom:'2px solid var(--border)' }}>
         {[['stunden', T('kurs_tab_lessons')],['anwesenheit', T('kurs_tab_attendance')],['schueler', T('kurs_tab_students')],['repertoire', T('kurs_tab_repertoire')]].map(([key, label]) => (
-          <button key={key} onClick={() => setAktiveTab(key)}
+          <button key={key}
+            onClick={() => key === 'repertoire' ? navigate(`/${segment}/kurse/${id}/repertoire`) : setAktiveTab(key)}
             style={{ padding:'10px 18px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: aktiveTab===key ? 'var(--text)' : 'var(--text-3)', fontWeight: aktiveTab===key ? 800 : 500, borderBottom:`2px solid ${aktiveTab===key ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, transition:'all 0.15s' }}>
             {label}
           </button>
@@ -422,7 +618,7 @@ export default function KursDetail() {
       {aktiveTab === 'stunden' && (
         <div>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:14 }}>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:8, flex:1 }}>
               {/* Status-Filter */}
               <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                 {[['alle', T('filter_all')], ['geplant', T('kurs_status_planned')], ['stattgefunden', T('kurs_status_done')], ['abgesagt', T('kurs_status_cancelled')]].map(([val, label]) => (
@@ -459,9 +655,14 @@ export default function KursDetail() {
                 )
               })()}
             </div>
-            <button onClick={() => setModal({ typ:'einzelstunde' })} style={s.btnPri}>
-              {T('kurs_create_lesson')}
-            </button>
+            <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+              <button onClick={() => setModal({ typ:'stunden_bulk' })} style={s.btnSek} title="Wochentermine für einen Zeitraum generieren oder löschen">
+                ⚡ Generieren
+              </button>
+              <button onClick={() => setModal({ typ:'einzelstunde' })} style={s.btnPri}>
+                {T('kurs_create_lesson')}
+              </button>
+            </div>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {(() => {
@@ -527,6 +728,11 @@ export default function KursDetail() {
                       {T('kurs_restore')}
                     </button>
                   )}
+                  <button onClick={() => setModal({ typ:'notiz', stunde: st })}
+                    style={{ padding:'6px 10px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}
+                    title="Notizen bearbeiten">
+                    📝
+                  </button>
                   <button onClick={() => stundeLoeschen(st.id, st.beginn)}
                     style={{ padding:'6px 10px', borderRadius:'var(--radius)', border:'1px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
                     🗑
@@ -548,40 +754,79 @@ export default function KursDetail() {
       )}
 
       {/* Tab: Schüler */}
-      {aktiveTab === 'schueler' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {schueler.length === 0 ? <div style={s.leer}>{T('kurs_no_active')}</div> :
-           schueler.map(sc => (
-            <div key={sc.schueler_id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 18px', border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:14 }}>
-              <Avatar name={sc.profiles?.voller_name} avatarUrl={sc.profiles?.avatar_url} size={40} />
-              <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{sc.profiles?.voller_name}</div>
-                {sc.profiles?.geburtsdatum && (
-                  <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>
-                    🎂 {new Date(sc.profiles.geburtsdatum).toLocaleDateString('de-DE')}
+      {aktiveTab === 'schueler' && (() => {
+        const teilnehmerIds = new Set(schueler.map(sc => sc.schueler_id))
+        const verfuegbar = alleSchueler.filter(s =>
+          !teilnehmerIds.has(s.id) &&
+          (!schuelerSuche || s.voller_name.toLowerCase().includes(schuelerSuche.toLowerCase()))
+        )
+        return (
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            {/* Aktuelle Teilnehmer */}
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                Teilnehmer ({schueler.length})
+              </div>
+              {schueler.length === 0
+                ? <div style={s.leer}>{T('kurs_no_active')}</div>
+                : schueler.map(sc => (
+                  <div key={sc.schueler_id} onClick={() => setSchuelerProfilModal(sc.profiles)} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'12px 16px', border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
+                    <Avatar name={sc.profiles?.voller_name} avatarUrl={sc.profiles?.avatar_url} size={36} />
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{sc.profiles?.voller_name}</div>
+                      {sc.profiles?.geburtsdatum && (
+                        <div style={{ fontSize:12, color:'var(--text-3)', marginTop:1 }}>
+                          🎂 {new Date(sc.profiles.geburtsdatum).toLocaleDateString('de-DE')}
+                        </div>
+                      )}
+                    </div>
+                    {sc.stimmgruppe && sc.stimmgruppe !== 'keine' && (
+                      <span style={{ fontSize:12, padding:'3px 10px', borderRadius:99, background:'var(--bg-2)', border:'1px solid var(--border)', color:'var(--text-2)', textTransform:'capitalize' }}>
+                        {sc.stimmgruppe}
+                      </span>
+                    )}
+                    <button onClick={e => { e.stopPropagation(); schuelerEntfernen(sc.schueler_id) }}
+                      style={{ background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--danger)', padding:'4px 6px', lineHeight:1 }}
+                      title="Aus Kurs entfernen">🗑</button>
+                  </div>
+                ))
+              }
+            </div>
+
+            {/* Schüler hinzufügen */}
+            {alleSchueler.length > 0 && (
+              <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', padding:'16px 20px' }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:10 }}>
+                  Schüler hinzufügen
+                </div>
+                <input
+                  value={schuelerSuche}
+                  onChange={e => setSchuelerSuche(e.target.value)}
+                  placeholder="Name suchen …"
+                  style={s.input}
+                />
+                {schuelerSuche && (
+                  <div style={{ marginTop:8, display:'flex', flexWrap:'wrap', gap:8 }}>
+                    {verfuegbar.length === 0
+                      ? <span style={{ fontSize:13, color:'var(--text-3)' }}>Keine Treffer</span>
+                      : verfuegbar.map(sc => (
+                        <button key={sc.id} onClick={() => { schuelerHinzufuegen(sc.id); setSchuelerSuche('') }}
+                          style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                          + {sc.voller_name}
+                          {(sc.rolle === 'admin' || sc.rolle === 'superadmin') && <span style={{ opacity:0.6, fontSize:11 }}> (Admin)</span>}
+                        </button>
+                      ))
+                    }
                   </div>
                 )}
               </div>
-              {sc.stimmgruppe && sc.stimmgruppe !== 'keine' && (
-                <span style={{ fontSize:12, padding:'3px 10px', borderRadius:99, background:'var(--bg-2)', border:'1px solid var(--border)', color:'var(--text-2)', textTransform:'capitalize' }}>
-                  {sc.stimmgruppe}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        )
+      })()}
 
-      {/* Tab: Repertoire */}
-      {aktiveTab === 'repertoire' && (
-        <div style={{ textAlign:'center', padding:32 }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>🎼</div>
-          <p style={{ color:'var(--text-3)', marginBottom:16 }}>Zum vollständigen Repertoire & Dateien-Bereich</p>
-          <button onClick={() => navigate(`/${segment}/kurse/${id}/repertoire`)} style={s.btnPri}>
-            {T('kurs_open_repertoire')}
-          </button>
-        </div>
-      )}
 
       {modal?.typ === 'anwesenheit' && (
         <AnwesenheitModal
@@ -611,6 +856,28 @@ export default function KursDetail() {
           onErfolg={async () => {
             const { data } = await supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn', { ascending: false })
             setStunden(data ?? [])
+          }}
+        />
+      )}
+      {modal?.typ === 'stunden_bulk' && (
+        <StundenBulkModal
+          kurs={kurs}
+          onClose={() => setModal(null)}
+          onErfolg={async () => {
+            const { data } = await supabase.from('stunden').select('*').eq('unterricht_id', id).order('beginn', { ascending: false })
+            setStunden(data ?? [])
+          }}
+        />
+      )}
+      {schuelerProfilModal && (
+        <SchuelerProfilModal profil={schuelerProfilModal} onClose={() => setSchuelerProfilModal(null)} />
+      )}
+      {modal?.typ === 'notiz' && (
+        <NotizModal
+          stunde={modal.stunde}
+          onClose={() => setModal(null)}
+          onErfolg={({ notizen, hausaufgaben }) => {
+            setStunden(prev => prev.map(st => st.id === modal.stunde.id ? { ...st, notizen, hausaufgaben } : st))
           }}
         />
       )}

@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.8.1'
+export const CURRENT_VERSION = '1.8.2'
 
 export const CHANGELOG = [
+  {
+    version: '1.8.2',
+    date: '2026-05-08',
+    features: [
+      {
+        icon: '🗺️',
+        de: 'Veranstaltungsorte direkt in Google Maps öffnen – klickbarer Link in Karten & Stundenplan',
+        en: 'Open event locations directly in Google Maps – clickable link in cards & schedule',
+        tr: 'Etkinlik konumlarını doğrudan Google Maps\'te aç – kartlarda ve ders programında tıklanabilir bağlantı',
+      },
+      {
+        icon: '📍',
+        de: 'Strukturierte Adresseingabe (Straße, PLZ, Ort, Land) mit OpenStreetMap-Autocomplete',
+        en: 'Structured address input (street, ZIP, city, country) with OpenStreetMap autocomplete',
+        tr: 'Yapılandırılmış adres girişi (sokak, posta kodu, şehir, ülke) OpenStreetMap otomatik tamamlama ile',
+      },
+      {
+        icon: '✨',
+        de: 'UI-Aufwertung: Moderne StatCards mit Farbakzenten & Hover-Animationen, schlanke Scrollbar, Fokus-Ringe für Eingabefelder',
+        en: 'UI upgrade: modern StatCards with color accents & hover animations, slim scrollbar, focus rings for inputs',
+        tr: 'Arayüz güncellemesi: renk vurgulu & hover animasyonlu modern StatCard\'lar, ince kaydırma çubuğu, giriş alanları için odak halkaları',
+      },
+    ],
+  },
   {
     version: '1.8.1',
     date: '2026-05-08',

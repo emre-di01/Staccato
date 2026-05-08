@@ -7,14 +7,33 @@ import { useApp } from '../../context/AppContext'
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
 function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
+  const [hovered, setHovered] = useState(false)
   return (
-    <div onClick={onClick} style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'20px 24px', border:'1px solid var(--border)', boxShadow:'var(--shadow)', cursor: onClick ? 'pointer' : 'default' }}>
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background:'var(--surface)', borderRadius:'var(--radius-lg)',
+        padding:'20px 24px', border:'1px solid var(--border)',
+        boxShadow: hovered ? 'var(--shadow-lg)' : 'var(--shadow)',
+        cursor: onClick ? 'pointer' : 'default',
+        transform: hovered && onClick ? 'translateY(-2px)' : 'none',
+        transition:'transform 0.18s ease, box-shadow 0.18s ease',
+        position:'relative', overflow:'hidden',
+      }}
+    >
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:farbe, borderRadius:'var(--radius-lg) var(--radius-lg) 0 0' }} />
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
         <div>
           <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>{label}</div>
           <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{wert ?? '–'}</div>
         </div>
-        <div style={{ fontSize:28 }}>{icon}</div>
+        <div style={{
+          fontSize:22, width:46, height:46, display:'flex', alignItems:'center', justifyContent:'center',
+          borderRadius:'var(--radius)', background:`color-mix(in srgb, ${farbe} 15%, var(--bg))`,
+          flexShrink:0,
+        }}>{icon}</div>
       </div>
     </div>
   )
@@ -67,12 +86,21 @@ export default function SchuelerDashboard() {
         naechsteStunden = st ?? []
       }
 
-      return { kurse: meineKurse, naechsteStunden }
+      const { data: anwData } = await supabase
+        .from('anwesenheit')
+        .select('status')
+        .eq('schueler_id', profil.id)
+      const anwGesamt = anwData?.length ?? 0
+      const anwOk    = (anwData ?? []).filter(a => a.status === 'anwesend' || a.status === 'zu_spaet').length
+      const anwesenheitsRate = anwGesamt >= 3 ? Math.round(100 * anwOk / anwGesamt) : null
+
+      return { kurse: meineKurse, naechsteStunden, anwesenheitsRate }
     },
   })
 
-  const kurse          = data?.kurse          ?? []
+  const kurse           = data?.kurse           ?? []
   const naechsteStunden = data?.naechsteStunden ?? []
+  const anwesenheitsRate = data?.anwesenheitsRate ?? null
 
   return (
     <div>
@@ -83,9 +111,50 @@ export default function SchuelerDashboard() {
         </h1>
       </div>
 
+      {/* Hero: nächste Stunde */}
+      {!laden && naechsteStunden[0] && (() => {
+        const st = naechsteStunden[0]
+        const beginn = new Date(st.beginn)
+        const morgen = new Date(jetzt); morgen.setDate(jetzt.getDate() + 1)
+        const istHeute  = beginn.toDateString() === jetzt.toDateString()
+        const istMorgen = beginn.toDateString() === morgen.toDateString()
+        return (
+          <div onClick={() => navigate('/schueler/stundenplan')} style={{
+            background:'var(--primary)', borderRadius:'var(--radius-lg)',
+            padding:'20px 24px', marginBottom:20, cursor:'pointer',
+            boxShadow:'var(--shadow-lg)', position:'relative', overflow:'hidden',
+          }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.75)', textTransform:'uppercase', letterSpacing:'0.09em', marginBottom:6 }}>
+              {istHeute ? '🟢 Nächste Stunde – Heute' : istMorgen ? '📅 Nächste Stunde – Morgen' : `📅 ${beginn.toLocaleDateString('de-DE', { weekday:'long' })}`}
+            </div>
+            <div style={{ fontSize:22, fontWeight:800, color:'var(--primary-fg)', marginBottom:4 }}>{st.unterricht?.name}</div>
+            <div style={{ fontSize:14, color:'rgba(255,255,255,0.85)' }}>
+              {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr · {beginn.toLocaleDateString('de-DE', { day:'numeric', month:'long' })}
+            </div>
+          </div>
+        )
+      })()}
+
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:16, marginBottom:32 }}>
         <StatCard icon="🎵" label={T('dash_my_courses')}   wert={laden ? '…' : kurse.length}          farbe="var(--primary)" onClick={() => navigate('/schueler/kurse')} />
         <StatCard icon="📅" label={T('dash_next_lessons')} wert={laden ? '…' : naechsteStunden.length} farbe="var(--accent)"  onClick={() => navigate('/schueler/stundenplan')} />
+        {anwesenheitsRate !== null && (() => {
+          const farbe = anwesenheitsRate >= 80 ? 'var(--success)' : anwesenheitsRate >= 60 ? 'var(--warning)' : 'var(--danger)'
+          return (
+            <div onClick={() => navigate('/schueler/kurse')} style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'20px 24px', border:'1px solid var(--border)', boxShadow:'var(--shadow)', cursor:'pointer' }}>
+              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>Anwesenheit</div>
+                  <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{anwesenheitsRate}%</div>
+                </div>
+                <span style={{ fontSize:28 }}>📊</span>
+              </div>
+              <div style={{ height:5, borderRadius:3, background:'var(--bg-2)', overflow:'hidden' }}>
+                <div style={{ height:'100%', width:`${anwesenheitsRate}%`, borderRadius:3, background:farbe }} />
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24 }} className="dashboard-grid">

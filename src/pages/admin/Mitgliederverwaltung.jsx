@@ -651,6 +651,24 @@ export default function Mitgliederverwaltung() {
     eltern:   mitglieder.filter(m => m.rolle === 'eltern').length,
   }
 
+  function csvExportieren() {
+    const zeilen = [
+      ['Name', 'E-Mail', 'Rolle', 'Telefon', 'Geburtsdatum', 'Aktiv'].join(';'),
+      ...gefiltert.map(m => [
+        m.voller_name ?? '',
+        m.email ?? '',
+        m.rolle ?? '',
+        m.telefon ?? '',
+        m.geburtsdatum ?? '',
+        m.aktiv ? 'ja' : 'nein',
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')),
+    ]
+    const blob = new Blob(['﻿' + zeilen.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'mitglieder.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div>
       {/* Header */}
@@ -659,9 +677,12 @@ export default function Mitgliederverwaltung() {
           <h1 style={s.h1}>👥 {T('members')}</h1>
           <p style={s.sub}>{stats.gesamt} {T('members')} · {stats.lehrer} {T('lehrer')} · {stats.schueler} {T('schueler')}</p>
         </div>
-        <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>
-          {T('member_create')}
-        </button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={csvExportieren} style={s.btnSek} title="Als CSV exportieren">📥 CSV</button>
+          <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>
+            {T('member_create')}
+          </button>
+        </div>
       </div>
 
       {/* Stats Chips */}
@@ -706,7 +727,12 @@ export default function Mitgliederverwaltung() {
       {laden ? (
         <div style={s.leer}>{T('member_loading')}</div>
       ) : gefiltert.length === 0 ? (
-        <div style={s.leer}>{T('member_none_found')}</div>
+        <div style={s.leer}>
+          <div style={{ marginBottom: 12 }}>{T('member_none_found')}</div>
+          {suche === '' && filterRolle === 'alle' && filterAktiv === 'alle' && (
+            <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>{T('member_create')}</button>
+          )}
+        </div>
       ) : (
         <>
           {/* Desktop Tabelle */}
@@ -721,7 +747,10 @@ export default function Mitgliederverwaltung() {
               </thead>
               <tbody>
                 {gefiltert.map((m, i) => (
-                  <tr key={m.id} style={{ background: i % 2 === 0 ? 'var(--surface)' : 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+                  <tr key={m.id}
+                    className="mitglied-row"
+                    onClick={() => setModal({ typ: 'profil', mitglied: m })}
+                    style={{ background: i % 2 === 0 ? 'var(--surface)' : 'var(--bg)', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar name={m.voller_name} avatarUrl={m.avatar_url} />
@@ -742,13 +771,13 @@ export default function Mitgliederverwaltung() {
                         {m.aktiv ? `● ${T('active')}` : `○ ${T('inactive')}`}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px' }}>
+                    <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={s.btnKlein} title="Bearbeiten">✏️</button>
+                        <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={s.btnKlein} title={T('edit')}>✏️</button>
                         <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={s.btnKlein} title="E-Mail">📧</button>
                         <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={s.btnKlein} title="Passwort">🔑</button>
                         {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
-                          <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Zuordnungen">🔗</button>
+                          <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Kurszuordnungen">🔗</button>
                         )}
                         <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={s.btnKlein} title="Dokumente">📁</button>
                         <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnKlein, color:'var(--danger)' }} title="Löschen">🗑</button>
@@ -830,6 +859,7 @@ export default function Mitgliederverwaltung() {
       )}
 
       <style>{`
+        .mitglied-row:hover td { background: color-mix(in srgb, var(--primary) 6%, var(--surface)) !important; }
         @media (max-width: 768px) {
           .desktop-table { display: none !important; }
           .mobile-cards { display: flex !important; }

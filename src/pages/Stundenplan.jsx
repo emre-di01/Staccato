@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import { useIsMobile } from '../hooks/useWindowWidth'
@@ -119,7 +119,9 @@ function EventBlock({ event, onClick, tz }) {
 
 // ─── Detail Modal ─────────────────────────────────────────────
 function DetailModal({ stunde, onClose, tz }) {
-  const { T } = useApp()
+  const { T, rolle } = useApp()
+  const navigate = useNavigate()
+  const kannAktionen = rolle === 'lehrer' || rolle === 'admin' || rolle === 'superadmin'
   const beginn = new Date(stunde.beginn)
   const ende   = stunde.ende ? new Date(stunde.ende) : null
   const farbe  = stunde.unterricht?.farbe ?? TYP_FARBE[stunde.unterricht?.typ] ?? 'var(--primary)'
@@ -169,6 +171,14 @@ function DetailModal({ stunde, onClose, tz }) {
                 📚 <strong>{T('schedule_homework')}</strong> {stunde.hausaufgaben}
               </div>
             )}
+            {kannAktionen && stunde.unterricht?.id && (
+              <div style={{ paddingTop:12, borderTop:'1px solid var(--border)', marginTop:4 }}>
+                <button onClick={() => { navigate(`/${rolle === 'lehrer' ? 'lehrer' : 'admin'}/kurse/${stunde.unterricht.id}`); onClose() }}
+                  style={{ width:'100%', padding:'9px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                  📂 Kurs öffnen
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -202,7 +212,12 @@ function EventDetailModal({ event, onClose, tz }) {
           <div>🕐 {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} Uhr
             {ende && ` – ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} Uhr`}
           </div>
-          {event.ort && <div>📍 {event.ort}</div>}
+          {event.ort && (
+            <a href={`https://maps.google.com/?q=${encodeURIComponent(event.ort)}`} target="_blank" rel="noopener noreferrer"
+              style={{ color:'var(--text-2)', textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>
+              📍 {event.ort} <span style={{ fontSize:11, opacity:0.7 }}>↗</span>
+            </a>
+          )}
           {event.beschreibung && <div style={{ marginTop:4, color:'var(--text-3)', lineHeight:1.5 }}>{event.beschreibung}</div>}
           {event.oeffentlich && <div style={{ fontSize:12, color:'var(--accent)', fontWeight:600 }}>🌐 Öffentliche Veranstaltung</div>}
         </div>
@@ -215,6 +230,7 @@ function EventDetailModal({ event, onClose, tz }) {
 export default function Stundenplan() {
   const { profil, rolle, T, zeitzone } = useApp()
   const location = useLocation()
+  const navigate = useNavigate()
   const tz = zeitzone || 'Europe/Berlin'
   const mob = useIsMobile()
   // Admin unter /lehrer/* → eigene Kurse wie ein Lehrer anzeigen
@@ -437,7 +453,23 @@ export default function Stundenplan() {
             ...events.map(ev => ({ ...ev, _typ:'event' })),
           ].sort((a, b) => new Date(a.beginn) - new Date(b.beginn))
 
-          if (alleTermine.length === 0) return <div style={s.leer}>{T('schedule_no_events')}</div>
+          if (alleTermine.length === 0) return (
+            <div style={s.leer}>
+              <div>{T('schedule_no_events')}</div>
+              {(rolle === 'admin' || rolle === 'superadmin') && (
+                <button onClick={() => navigate('/admin/kurse')}
+                  style={{ marginTop:14, padding:'9px 20px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  + Kurs anlegen
+                </button>
+              )}
+              {rolle === 'lehrer' && (
+                <button onClick={() => navigate('/lehrer/kurse')}
+                  style={{ marginTop:14, padding:'9px 20px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  Zu meinen Kursen
+                </button>
+              )}
+            </div>
+          )
 
           let letzterTag = null
           return (
@@ -471,7 +503,12 @@ export default function Stundenplan() {
                         <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                           {EVENT_TYP_ICON[item.typ]} {item.titel}
                         </div>
-                        {item.ort && <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>📍 {item.ort}</div>}
+                        {item.ort && (
+                          <a href={`https://maps.google.com/?q=${encodeURIComponent(item.ort)}`} target="_blank" rel="noopener noreferrer"
+                            style={{ fontSize:12, color:'var(--text-3)', marginTop:2, textDecoration:'none', display:'flex', alignItems:'center', gap:3 }}>
+                            📍 {item.ort} <span style={{ fontSize:10, opacity:0.7 }}>↗</span>
+                          </a>
+                        )}
                       </div>
                       {item.oeffentlich && <span style={{ fontSize:11, color:'var(--accent)', fontWeight:700, flexShrink:0 }}>🌐</span>}
                     </div>

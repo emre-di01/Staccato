@@ -195,7 +195,7 @@ function zeitAgo(iso) {
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
 }
 
-function NavGroup({ gruppe, items, setPopupPos, popupGesperrt, setSidebarOffen }) {
+function NavGroup({ gruppe, items, setPopupPos, popupGesperrt, setSidebarOffen, ungelesen = 0 }) {
   const location = useLocation()
   const hatAktive = items.some(item => location.pathname === item.to || location.pathname.startsWith(item.to + '/'))
   const [offen, setOffen] = useState(hatAktive)
@@ -217,14 +217,14 @@ function NavGroup({ gruppe, items, setPopupPos, popupGesperrt, setSidebarOffen }
       </button>
       {offen && (
         <div>
-          {items.map(item => <NavItem key={item.to} item={item} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />)}
+          {items.map(item => <NavItem key={item.to} item={item} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen} />)}
         </div>
       )}
     </div>
   )
 }
 
-function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarOffen }) {
+function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarOffen, ungelesen = 0 }) {
   return (
     <div style={{ position: 'relative', ...(mobile ? { flex: 1, display: 'flex' } : {}) }}
       onMouseEnter={e => {
@@ -255,7 +255,14 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
           marginBottom: 2,
         }}
       >
-        <span style={{ fontSize: mobile ? 20 : 16 }}>{item.icon}</span>
+        <span style={{ position:'relative', display:'inline-flex', lineHeight:1 }}>
+          <span style={{ fontSize: mobile ? 20 : 16 }}>{item.icon}</span>
+          {item.nachrichten && ungelesen > 0 && (
+            <span style={{ position:'absolute', top:-4, right:-7, minWidth:14, height:14, borderRadius:7, background:'var(--danger)', color:'#fff', fontSize:9, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1, padding:'0 3px', zIndex:1 }}>
+              {ungelesen > 9 ? '9+' : ungelesen}
+            </span>
+          )}
+        </span>
         {!mobile && <span style={{ flex: 1 }}>{item.label}</span>}
         {mobile && <span>{item.label}</span>}
       </NavLink>
@@ -330,8 +337,8 @@ export default function AppLayout() {
         {/* Nav */}
         <nav style={{ flex: 1 }}>
           {navConfig.map(entry => entry.gruppe
-            ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />
-            : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />
+            ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
+            : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
           )}
         </nav>
 
@@ -372,8 +379,8 @@ export default function AppLayout() {
             </div>
             <nav style={{ flex: 1 }}>
               {navConfig.map(entry => entry.gruppe
-                ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />
-                : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />
+                ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
+                : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
               )}
             </nav>
             {(rolle === 'schueler' || rolle === 'vorstand') && (
@@ -426,7 +433,7 @@ export default function AppLayout() {
           borderTop: '1px solid var(--border)',
           position: 'sticky', bottom: 0,
         }} className="mobile-bottom-nav">
-          {navItems.slice(0, 5).map(item => <NavItem key={item.to} item={item} mobile setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} />)}
+          {navItems.slice(0, 5).map(item => <NavItem key={item.to} item={item} mobile setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />)}
         </nav>
       </div>
 
@@ -509,10 +516,30 @@ export default function AppLayout() {
       {/* Responsive CSS */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
-        
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: var(--bg); color: var(--text); }
-        
+
+        /* Inputs & Selects */
+        input, textarea, select {
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        input:focus, textarea:focus, select:focus {
+          outline: none !important;
+          border-color: var(--primary) !important;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent) !important;
+        }
+
+        /* Buttons */
+        button { transition: all 0.15s ease; }
+        button:active:not(:disabled) { transform: scale(0.96); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }

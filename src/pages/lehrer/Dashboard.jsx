@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
@@ -6,14 +7,33 @@ import { useApp } from '../../context/AppContext'
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
 function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
+  const [hovered, setHovered] = useState(false)
   return (
-    <div onClick={onClick} style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'20px 24px', border:'1px solid var(--border)', boxShadow:'var(--shadow)', cursor: onClick ? 'pointer' : 'default' }}>
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background:'var(--surface)', borderRadius:'var(--radius-lg)',
+        padding:'20px 24px', border:'1px solid var(--border)',
+        boxShadow: hovered ? 'var(--shadow-lg)' : 'var(--shadow)',
+        cursor: onClick ? 'pointer' : 'default',
+        transform: hovered && onClick ? 'translateY(-2px)' : 'none',
+        transition:'transform 0.18s ease, box-shadow 0.18s ease',
+        position:'relative', overflow:'hidden',
+      }}
+    >
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:farbe, borderRadius:'var(--radius-lg) var(--radius-lg) 0 0' }} />
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
         <div>
           <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>{label}</div>
           <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{wert ?? '–'}</div>
         </div>
-        <div style={{ fontSize:28 }}>{icon}</div>
+        <div style={{
+          fontSize:22, width:46, height:46, display:'flex', alignItems:'center', justifyContent:'center',
+          borderRadius:'var(--radius)', background:`color-mix(in srgb, ${farbe} 15%, var(--bg))`,
+          flexShrink:0,
+        }}>{icon}</div>
       </div>
     </div>
   )
@@ -41,25 +61,35 @@ export default function LehrerDashboard() {
 
       // Nächste Stunden laden
       let naechsteStunden = []
+      let heuteStunden = []
       const unterrichtIds = meineKurse.map(k => k.id)
       if (unterrichtIds.length > 0) {
-        const { data: stunden } = await supabase
-          .from('stunden')
-          .select('*, unterricht(name, typ)')
-          .in('unterricht_id', unterrichtIds)
-          .gte('beginn', new Date().toISOString())
-          .eq('status', 'geplant')
-          .order('beginn')
-          .limit(5)
+        const heute0 = new Date(); heute0.setHours(0,0,0,0)
+        const heute24 = new Date(); heute24.setHours(23,59,59,999)
+        const [{ data: stunden }, { data: heute }] = await Promise.all([
+          supabase.from('stunden').select('*, unterricht(name, typ)')
+            .in('unterricht_id', unterrichtIds)
+            .gte('beginn', new Date().toISOString())
+            .eq('status', 'geplant')
+            .order('beginn').limit(5),
+          supabase.from('stunden').select('*, unterricht(name, typ)')
+            .in('unterricht_id', unterrichtIds)
+            .gte('beginn', heute0.toISOString())
+            .lte('beginn', heute24.toISOString())
+            .in('status', ['geplant', 'stattgefunden'])
+            .order('beginn'),
+        ])
         naechsteStunden = stunden ?? []
+        heuteStunden = heute ?? []
       }
 
-      return { kurse: meineKurse, naechsteStunden }
+      return { kurse: meineKurse, naechsteStunden, heuteStunden }
     },
   })
 
   const kurse = data?.kurse ?? []
   const naechsteStunden = data?.naechsteStunden ?? []
+  const heuteStunden = data?.heuteStunden ?? []
 
   const aktiveSchueler = new Set(
     kurse.flatMap(k => (k.unterricht_schueler ?? []).filter(s => s.status === 'aktiv').map(s => s.schueler_id))
@@ -73,6 +103,45 @@ export default function LehrerDashboard() {
           {profil?.voller_name}
         </h1>
       </div>
+
+      {/* Heute */}
+      {!laden && heuteStunden.length > 0 && (
+        <div style={{ marginBottom:28 }}>
+          <h2 style={{ fontSize:15, fontWeight:800, color:'var(--text)', marginBottom:12 }}>🟢 Heute</h2>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {heuteStunden.map(st => {
+              const beginn = new Date(st.beginn)
+              const ende   = st.ende ? new Date(st.ende) : null
+              const istErledigt = st.status === 'stattgefunden'
+              return (
+                <div key={st.id} onClick={() => navigate(`/lehrer/kurse/${st.unterricht_id}`)}
+                  style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'12px 16px', border:`1px solid ${istErledigt ? 'var(--border)' : 'var(--accent)'}`, display:'flex', alignItems:'center', gap:14, cursor:'pointer', opacity: istErledigt ? 0.65 : 1 }}>
+                  <div style={{ textAlign:'center', minWidth:44 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color: istErledigt ? 'var(--text-3)' : 'var(--accent)', textTransform:'uppercase' }}>
+                      {istErledigt ? '✓ Done' : 'Heute'}
+                    </div>
+                    <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>
+                      {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}
+                    </div>
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>{st.unterricht?.name}</div>
+                    {ende && <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>
+                      bis {ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} Uhr
+                    </div>}
+                  </div>
+                  {!istErledigt && (
+                    <button onClick={e => { e.stopPropagation(); navigate(`/lehrer/kurse/${st.unterricht_id}/unterrichtsmodus`) }}
+                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      Starten
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:16, marginBottom:32 }}>

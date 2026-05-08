@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import OrtAutocomplete from '../../components/OrtAutocomplete'
 
 const TYP_ICON = { konzert: '🎵', vorspiel: '🎤', pruefung: '📝', veranstaltung: '🎭', vorstandssitzung: '🏛', sonstiges: '📅' }
 const TYPEN = ['konzert', 'vorspiel', 'pruefung', 'veranstaltung', 'vorstandssitzung', 'sonstiges']
@@ -276,7 +277,12 @@ export default function AdminEvents() {
                 {ev.ende && <span>– {formatZeit(ev.ende)}</span>}
               </div>
               {ev.raeume && <div style={s.cardMeta}>🏫 {ev.raeume.name}</div>}
-              {ev.ort && <div style={s.cardMeta}>📍 {ev.ort}</div>}
+              {ev.ort && (
+                <a href={`https://maps.google.com/?q=${encodeURIComponent(ev.ort)}`} target="_blank" rel="noopener noreferrer"
+                  style={{ ...s.cardMeta, color:'var(--text-2)', textDecoration:'none', cursor:'pointer' }}>
+                  📍 {ev.ort} <span style={{ fontSize:11, opacity:0.7 }}>↗</span>
+                </a>
+              )}
               {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
               {!vergangen && (
                 <div style={s.rsvpRow}>
@@ -347,7 +353,12 @@ export default function AdminEvents() {
               </div>
               <div style={s.formRow}>
                 <label style={s.lbl}>{T('event_location')}</label>
-                <input value={form.ort} onChange={e => setForm(f => ({...f, ort: e.target.value}))} style={s.inp} placeholder={T('event_location_placeholder')} />
+                <OrtAutocomplete
+                  value={form.ort}
+                  onChange={v => setForm(f => ({...f, ort: v}))}
+                  inputStyle={s.inp}
+                  showMap={true}
+                />
               </div>
               <div style={s.formRow}>
                 <label style={s.lbl}>{T('event_description')}</label>

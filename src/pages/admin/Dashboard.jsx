@@ -3,22 +3,38 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { supabase } from '../../lib/supabase'
 
-const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
+const TYP_ICON    = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
+const ROLLE_LABEL = { schueler: 'Schüler', lehrer: 'Lehrer', admin: 'Admin', superadmin: 'Superadmin', eltern: 'Eltern', vorstand: 'Vorstand' }
 
 function StatCard({ icon, label, value, color = 'var(--primary)', sub, onClick }) {
+  const [hovered, setHovered] = useState(false)
   return (
-    <div onClick={onClick} style={{
-      background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-      padding: '20px 24px', border: '1px solid var(--border)',
-      boxShadow: 'var(--shadow)', cursor: onClick ? 'pointer' : 'default',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
+        padding: '20px 24px', border: '1px solid var(--border)',
+        boxShadow: hovered ? 'var(--shadow-lg)' : 'var(--shadow)',
+        cursor: onClick ? 'pointer' : 'default',
+        transform: hovered && onClick ? 'translateY(-2px)' : 'none',
+        transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+        position: 'relative', overflow: 'hidden',
+      }}
+    >
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:color, borderRadius:'var(--radius-lg) var(--radius-lg) 0 0' }} />
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <div style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 500, marginBottom: 8 }}>{label}</div>
           <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: '-1px' }}>{value ?? '–'}</div>
           {sub && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{sub}</div>}
         </div>
-        <div style={{ fontSize: 28 }}>{icon}</div>
+        <div style={{
+          fontSize: 22, width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: 'var(--radius)', background: `color-mix(in srgb, ${color} 15%, var(--bg))`,
+          flexShrink: 0,
+        }}>{icon}</div>
       </div>
     </div>
   )
@@ -34,16 +50,18 @@ export default function AdminDashboard() {
   const [kurse, setKurse] = useState([])
   const [naechsteStunden, setNaechsteStunden] = useState([])
   const [laden, setLaden] = useState(true)
-  const [kurseGeladen, setKurseGeladen] = useState(false)
+  const [kurseGeladen,  setKurseGeladen]  = useState(false)
+  const [geburtstage,   setGeburtstage]   = useState([])
 
   useEffect(() => {
     async function ladeStats() {
-      const [{ data }, aufgabenRes, zieleRes, protokolleRes, inventarRes] = await Promise.all([
+      const [{ data }, aufgabenRes, zieleRes, protokolleRes, inventarRes, gebRes] = await Promise.all([
         supabase.rpc('dashboard_stats'),
         supabase.from('vorstand_aufgaben').select('status').eq('schule_id', profil?.schule_id ?? ''),
         supabase.from('vorstand_ziele').select('status').eq('schule_id', profil?.schule_id ?? ''),
         supabase.from('vorstand_protokolle').select('id', { count: 'exact', head: true }).eq('schule_id', profil?.schule_id ?? ''),
         supabase.from('inventar').select('anschaffungswert').eq('schule_id', profil?.schule_id ?? ''),
+        supabase.from('profiles').select('id, voller_name, geburtsdatum, rolle').eq('schule_id', profil?.schule_id ?? '').eq('aktiv', true).not('geburtsdatum', 'is', null),
       ])
       setStats(data)
       setInventarWert((inventarRes.data ?? []).reduce((s, i) => s + (Number(i.anschaffungswert) || 0), 0))
@@ -56,6 +74,21 @@ export default function AdminDashboard() {
         zieleErledigt:    (zieleRes.data ?? []).filter(z => z.status === 'erledigt').length,
         protokolle:       protokolleRes.count ?? 0,
       })
+      const heute0 = new Date(); heute0.setHours(0, 0, 0, 0)
+      const baldig = (gebRes.data ?? []).filter(p => {
+        const geb = new Date(p.geburtsdatum)
+        let diesJahr = new Date(heute0.getFullYear(), geb.getMonth(), geb.getDate())
+        if (diesJahr < heute0) diesJahr.setFullYear(diesJahr.getFullYear() + 1)
+        return Math.round((diesJahr - heute0) / 86400000) <= 7
+      }).sort((a, b) => {
+        const gebA = new Date(a.geburtsdatum), gebB = new Date(b.geburtsdatum)
+        let dA = new Date(heute0.getFullYear(), gebA.getMonth(), gebA.getDate())
+        let dB = new Date(heute0.getFullYear(), gebB.getMonth(), gebB.getDate())
+        if (dA < heute0) dA.setFullYear(dA.getFullYear() + 1)
+        if (dB < heute0) dB.setFullYear(dB.getFullYear() + 1)
+        return dA - dB
+      })
+      setGeburtstage(baldig)
       setLaden(false)
     }
     if (profil?.schule_id) ladeStats()
@@ -158,11 +191,41 @@ export default function AdminDashboard() {
               <StatCard icon="✅" label="Erledigte Aufgaben" value={laden ? '…' : vorstandStats?.aufgabenErledigt} color="var(--success)" onClick={() => navigate('/vorstand/ziele')} />
               <StatCard icon="🎯" label="Ziele"
                 value={laden ? '…' : vorstandStats ? `${vorstandStats.zieleErledigt}/${vorstandStats.zieleGesamt}` : '–'}
-                sub={laden ? '' : vorstandStats?.zieleGesamt > 0 ? `${Math.round(vorstandStats.zieleErledigt / vorstandStats.zieleGesamt * 100)}% erledigt` : ''}
+                sub={laden ? '' : (() => { const total = (vorstandStats?.aufgabenOffen ?? 0) + (vorstandStats?.aufgabenLaufend ?? 0) + (vorstandStats?.aufgabenErledigt ?? 0); return total > 0 ? `${Math.round((vorstandStats?.aufgabenErledigt ?? 0) / total * 100)}% Aufgaben erledigt` : '' })()}
                 color="#7c3aed" onClick={() => navigate('/vorstand/ziele')} />
               <StatCard icon="📝" label="Protokolle" value={laden ? '…' : vorstandStats?.protokolle} color="#7c3aed" onClick={() => navigate('/vorstand/protokolle')} />
             </div>
           </div>
+
+          {geburtstage.length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>🎂 Anstehende Geburtstage</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {geburtstage.map(p => {
+                  const geb = new Date(p.geburtsdatum)
+                  const heute0 = new Date(); heute0.setHours(0, 0, 0, 0)
+                  let diesJahr = new Date(heute0.getFullYear(), geb.getMonth(), geb.getDate())
+                  if (diesJahr < heute0) diesJahr.setFullYear(diesJahr.getFullYear() + 1)
+                  const diffTage = Math.round((diesJahr - heute0) / 86400000)
+                  const alter    = diesJahr.getFullYear() - geb.getFullYear()
+                  return (
+                    <div key={p.id} style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '12px 16px', border: `1px solid ${diffTage === 0 ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 22 }}>{diffTage === 0 ? '🥳' : '🎂'}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{p.voller_name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                          {diffTage === 0 ? 'Heute' : diffTage === 1 ? 'Morgen' : `In ${diffTage} Tagen`} · wird {alter}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: 'var(--bg-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+                        {ROLLE_LABEL[p.rolle] ?? p.rolle}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {stats?.naechste_events?.length > 0 && (
             <div>

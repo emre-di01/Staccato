@@ -116,7 +116,8 @@ export default function Repertoire() {
   const [tab,        setTab]        = useState(istSchueler ? 'meine' : 'bibliothek')
   const [suche,      setSuche]      = useState('')
   const [filter,     setFilter]     = useState('alle')  // alle | noten | audio | video | text
-  const [kursFilter, setKursFilter] = useState('alle')
+  const [kursFilter,   setKursFilter]   = useState('alle')
+  const [statusFilter, setStatusFilter] = useState('alle')
   const [modal,      setModal]      = useState(false)
 
   const queryClient = useQueryClient()
@@ -210,8 +211,9 @@ export default function Repertoire() {
     const trifftSuche = !suche ||
       stueck.titel?.toLowerCase().includes(suche.toLowerCase()) ||
       stueck.komponist?.toLowerCase().includes(suche.toLowerCase())
-    const trifftKurs = kursFilter === 'alle' || kurse.some(k => k.id === kursFilter)
-    return trifftSuche && trifftKurs
+    const trifftKurs   = kursFilter   === 'alle' || kurse.some(k => k.id === kursFilter)
+    const trifftStatus = statusFilter === 'alle' || kurse.some(k => k.status === statusFilter)
+    return trifftSuche && trifftKurs && trifftStatus
   })
 
   return (
@@ -229,7 +231,7 @@ export default function Repertoire() {
             ['bibliothek', `${T('repertoire_library')} (${bibliothek.length})`],
             ['meine',      `${T('repertoire_mine')} (${meineStuecke.length})`],
           ].map(([k, l]) => (
-            <button key={k} onClick={() => setTab(k)}
+            <button key={k} onClick={() => { setTab(k); setStatusFilter('alle') }}
               style={{ padding:'10px 20px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: tab===k ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===k ? 800 : 500, borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, whiteSpace:'nowrap' }}>
               {l}
             </button>
@@ -253,6 +255,21 @@ export default function Repertoire() {
               <button key={k.id} onClick={() => setKursFilter(k.id)}
                 style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: kursFilter===k.id ? 'var(--primary)' : 'var(--surface)', color: kursFilter===k.id ? 'var(--primary-fg)' : 'var(--text-2)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
                 {k.name}
+              </button>
+            ))}
+          </div>
+        )}
+        {!istSchueler && tab === 'meine' && (
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {[
+              ['alle',          'Alle'],
+              ['aktuell',       '🎵 Aktuell'],
+              ['geplant',       '📅 Geplant'],
+              ['abgeschlossen', '✅ Abgeschlossen'],
+            ].map(([k, l]) => (
+              <button key={k} onClick={() => setStatusFilter(k)}
+                style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: statusFilter===k ? 'var(--primary)' : 'var(--surface)', color: statusFilter===k ? 'var(--primary-fg)' : 'var(--text-2)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                {l}
               </button>
             ))}
           </div>

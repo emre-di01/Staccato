@@ -288,6 +288,11 @@ export default function Interessenten() {
     ladeDaten()
   }
 
+  async function statusAendern(item, neuerStatus) {
+    await supabase.from('interessenten').update({ status: neuerStatus }).eq('id', item.id)
+    setListe(prev => prev.map(i => i.id === item.id ? { ...i, status: neuerStatus } : i))
+  }
+
   const gefiltert = liste.filter(item => {
     if (filterStatus !== 'alle' && item.status !== filterStatus) return false
     if (suche && !item.voller_name.toLowerCase().includes(suche.toLowerCase()) &&
@@ -327,7 +332,12 @@ export default function Interessenten() {
       {laden ? (
         <div style={s.leer}>{T('loading')}</div>
       ) : gefiltert.length === 0 ? (
-        <div style={s.leer}>{T('interessent_none_found')}</div>
+        <div style={s.leer}>
+          <div style={{ marginBottom: 12 }}>{T('interessent_none_found')}</div>
+          {suche === '' && filterStatus === 'alle' && (
+            <button onClick={() => setModal({ typ:'interessent' })} style={s.btnPri}>{T('interessent_new')}</button>
+          )}
+        </div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {gefiltert.map(item => {
@@ -343,9 +353,12 @@ export default function Interessenten() {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4, flexWrap:'wrap' }}>
                     <span style={{ fontWeight:700, fontSize:15, color:'var(--text)' }}>{item.voller_name}</span>
-                    <span style={{ fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99, background: sf.bg, color: sf.text }}>
-                      {T(STATUS_LABEL_KEYS[item.status]) ?? item.status}
-                    </span>
+                    <button
+                      onClick={() => statusAendern(item, item.status === 'interessent' ? 'probe' : 'interessent')}
+                      title={`Status wechseln zu: ${item.status === 'interessent' ? 'Probe' : 'Interessent'}`}
+                      style={{ fontSize:11, fontWeight:700, padding:'2px 9px', borderRadius:99, background: sf.bg, color: sf.text, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                      {T(STATUS_LABEL_KEYS[item.status]) ?? item.status} ↕
+                    </button>
                   </div>
                   <div style={{ display:'flex', gap:14, flexWrap:'wrap', fontSize:12, color:'var(--text-3)' }}>
                     {item.email    && <span>✉️ {item.email}</span>}

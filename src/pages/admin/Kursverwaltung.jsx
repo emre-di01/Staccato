@@ -522,7 +522,7 @@ function StundenModal({ kurs, onClose, onErfolg }) {
 
 // ─── Kurs Detail / Karte ──────────────────────────────────────
 
-function KursKarte({ kurs, onBearbeiten, onSchueler, onStunden, onLoeschen, onDetail }) {
+function KursKarte({ kurs, onBearbeiten, onLoeschen, onDetail }) {
   return (
     <div
       onClick={onDetail}
@@ -578,8 +578,6 @@ function KursKarte({ kurs, onBearbeiten, onSchueler, onStunden, onLoeschen, onDe
         {/* Aktionen */}
         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }} onClick={e => e.stopPropagation()}>
           <button onClick={onBearbeiten} style={s.btnKlein}>✏️ Bearbeiten</button>
-          <button onClick={onSchueler}   style={s.btnKlein}>👥 Schüler</button>
-          <button onClick={onStunden}    style={s.btnKlein}>⚡ Stunden</button>
           <button onClick={onLoeschen}   style={{ ...s.btnKlein, color:'var(--danger)' }}>🗑 Löschen</button>
         </div>
       </div>
@@ -724,7 +722,12 @@ export default function Kursverwaltung() {
       {laden ? (
         <div style={s.leer}>{T('kurs_loading')}</div>
       ) : gefiltert.length === 0 ? (
-        <div style={s.leer}>{T('kurs_none_found')}</div>
+        <div style={s.leer}>
+          <div style={{ marginBottom: 12 }}>{T('kurs_none_found')}</div>
+          {suche === '' && filterTyp === 'alle' && filterAktiv !== 'inaktiv' && (
+            <button onClick={() => setModal({ typ:'kurs' })} style={s.btnPri}>+ Neuer Kurs</button>
+          )}
+        </div>
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:16 }}>
           {gefiltert.map(kurs => (
@@ -733,8 +736,6 @@ export default function Kursverwaltung() {
               kurs={kurs}
               onDetail={()     => navigate(`/admin/kurse/${kurs.id}`)}
               onBearbeiten={() => setModal({ typ:'kurs', kurs })}
-              onSchueler={()   => setModal({ typ:'schueler', kurs })}
-              onStunden={()    => setModal({ typ:'stunden', kurs })}
               onLoeschen={()   => setModal({ typ:'loeschen', kurs })}
             />
           ))}

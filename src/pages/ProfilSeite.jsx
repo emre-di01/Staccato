@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
+import OrtAutocomplete from '../components/OrtAutocomplete'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? ''
 
@@ -209,11 +210,14 @@ export default function ProfilSeite() {
               <input type="date" style={s.input} value={form.geburtsdatum}
                 onChange={e => setForm(f => ({ ...f, geburtsdatum: e.target.value }))} />
             </Feld>
-            <Feld label={T('profile_address')}>
-              <input style={s.input} value={form.adresse}
-                onChange={e => setForm(f => ({ ...f, adresse: e.target.value }))} />
-            </Feld>
           </div>
+          <Feld label={T('profile_address')}>
+            <OrtAutocomplete
+              value={form.adresse}
+              onChange={v => setForm(f => ({ ...f, adresse: v }))}
+              inputStyle={s.input}
+            />
+          </Feld>
           <div style={{ display:'flex', justifyContent:'flex-end' }}>
             <button onClick={profilSpeichern} disabled={laden} style={s.btnPri}>
               {laden ? T('loading') : `💾 ${T('save')}`}

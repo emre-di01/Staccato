@@ -156,7 +156,12 @@ export default function LehrerEvents() {
                 <span>📅 {formatDatum(ev.beginn)}, {formatZeit(ev.beginn)}</span>
                 {ev.ende && <span>– {formatZeit(ev.ende)}</span>}
               </div>
-              {ev.ort && <div style={s.cardMeta}>📍 {ev.ort}</div>}
+              {ev.ort && (
+                <a href={`https://maps.google.com/?q=${encodeURIComponent(ev.ort)}`} target="_blank" rel="noopener noreferrer"
+                  style={{ ...s.cardMeta, color:'var(--text-2)', textDecoration:'none', cursor:'pointer' }}>
+                  📍 {ev.ort} <span style={{ fontSize:11, opacity:0.7 }}>↗</span>
+                </a>
+              )}
               {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
               <div style={s.cardActions}>
                 <button onClick={() => navigate(`/lehrer/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 Repertoire</button>
