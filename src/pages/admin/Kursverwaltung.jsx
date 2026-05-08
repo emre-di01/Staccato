@@ -106,8 +106,8 @@ function KursModal({ kurs, onClose, onErfolg }) {
   }
 
   async function speichern() {
-    if (!form.name) { setFehler('Name ist erforderlich.'); return }
-    if (lehrer_ids.length === 0) { setFehler('Mindestens ein Lehrer erforderlich.'); return }
+    if (!form.name) { setFehler(T('kurs_mgmt_err_name')); return }
+    if (lehrer_ids.length === 0) { setFehler(T('kurs_mgmt_err_teacher')); return }
     setLaden(true)
     setFehler('')
 
@@ -156,7 +156,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
   }
 
   return (
-    <Modal titel={istNeu ? '+ Neuer Kurs' : `Kurs bearbeiten`} onClose={onClose} breit>
+    <Modal titel={istNeu ? T('kurs_mgmt_modal_new') : T('kurs_mgmt_modal_edit')} onClose={onClose} breit>
       <style>{`
         @media (max-width: 600px) {
           .kurs-modal-inner { padding: 20px 16px !important; }
@@ -172,13 +172,13 @@ function KursModal({ kurs, onClose, onErfolg }) {
       <div className="kurs-form-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
 
         {/* Name */}
-        <Feld label="Kursname *">
+        <Feld label={T('kurs_mgmt_name')}>
           <input style={s.input} placeholder="z.B. Klavierunterricht Max" value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
         </Feld>
 
         {/* Typ */}
-        <Feld label="Kurstyp" halb>
+        <Feld label={T('kurs_mgmt_type')} halb>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {['einzel','gruppe','chor','ensemble'].map(t => (
               <button key={t} onClick={() => setForm(f => ({ ...f, typ: t }))}
@@ -190,23 +190,23 @@ function KursModal({ kurs, onClose, onErfolg }) {
         </Feld>
 
         {/* Instrument */}
-        <Feld label="Instrument" halb>
+        <Feld label={T('kurs_mgmt_instrument')} halb>
           <select style={s.input} value={form.instrument_id} onChange={e => setForm(f => ({ ...f, instrument_id: e.target.value }))}>
-            <option value="">– Kein Instrument –</option>
+            <option value="">{T('kurs_mgmt_no_instrument')}</option>
             {instrumente.map(i => <option key={i.id} value={i.id}>{i.icon} {i.name_de}</option>)}
           </select>
         </Feld>
 
         {/* Raum */}
-        <Feld label="Raum" halb>
+        <Feld label={T('kurs_mgmt_room')} halb>
           <select style={s.input} value={form.raum_id} onChange={e => setForm(f => ({ ...f, raum_id: e.target.value }))}>
-            <option value="">– Kein Raum –</option>
+            <option value="">{T('kurs_mgmt_no_room')}</option>
             {raeume.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         </Feld>
 
         {/* Wochentag */}
-        <Feld label="Wochentag" halb>
+        <Feld label={T('kurs_mgmt_weekday')} halb>
           <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
             {WOCHENTAGE.map(w => (
               <button key={w.key} onClick={() => setForm(f => ({ ...f, wochentag: f.wochentag === w.key ? '' : w.key }))}
@@ -218,18 +218,18 @@ function KursModal({ kurs, onClose, onErfolg }) {
         </Feld>
 
         {/* Uhrzeit */}
-        <Feld label="Uhrzeit" halb>
+        <Feld label={T('kurs_mgmt_time')} halb>
           <div className="kurs-zeit-row" style={{ display:'flex', gap:8, alignItems:'center' }}>
             <input type="time" style={{ ...s.input, flex:1 }} value={form.uhrzeit_von}
               onChange={e => setForm(f => ({ ...f, uhrzeit_von: e.target.value }))} />
-            <span className="kurs-zeit-sep" style={{ color:'var(--text-3)', fontSize:13 }}>bis</span>
+            <span className="kurs-zeit-sep" style={{ color:'var(--text-3)', fontSize:13 }}>{T('kurs_mgmt_time_to')}</span>
             <input type="time" style={{ ...s.input, flex:1 }} value={form.uhrzeit_bis}
               onChange={e => setForm(f => ({ ...f, uhrzeit_bis: e.target.value }))} />
           </div>
         </Feld>
 
         {/* Abrechnung */}
-        <Feld label="Abrechnung" halb>
+        <Feld label={T('kurs_mgmt_billing')} halb>
           <div className="kurs-abrechnung-row" style={{ display:'flex', gap:6 }}>
             {['einzeln','paket','pauschale'].map(a => (
               <button key={a} onClick={() => setForm(f => ({ ...f, abrechnungs_typ: a }))}
@@ -241,7 +241,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
         </Feld>
 
         {/* Preis */}
-        <Feld label={form.abrechnungs_typ === 'pauschale' ? 'Monatspauschale (€)' : 'Preis pro Stunde (€)'} halb>
+        <Feld label={form.abrechnungs_typ === 'pauschale' ? T('kurs_mgmt_monthly') : T('kurs_mgmt_hourly')} halb>
           <input type="number" style={s.input} placeholder="0.00"
             value={form.abrechnungs_typ === 'pauschale' ? form.pauschale_monat : form.preis_pro_stunde}
             onChange={e => setForm(f => form.abrechnungs_typ === 'pauschale'
@@ -250,14 +250,14 @@ function KursModal({ kurs, onClose, onErfolg }) {
         </Feld>
 
         {form.abrechnungs_typ === 'paket' && (
-          <Feld label="Stunden im Paket" halb>
+          <Feld label={T('kurs_mgmt_package_hours')} halb>
             <input type="number" style={s.input} placeholder="10" value={form.paket_stunden}
               onChange={e => setForm(f => ({ ...f, paket_stunden: e.target.value }))} />
           </Feld>
         )}
 
         {/* Lehrer */}
-        <Feld label={`Lehrer * (${lehrer_ids.length} ausgewählt)`}>
+        <Feld label={`${T('kurs_mgmt_teacher')} * (${lehrer_ids.length} ${T('kurs_mgmt_selected')})`}>
           <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:160, overflowY:'auto', padding:4 }}>
             {alleLehrer.map((l, idx) => {
               const aktiv = lehrer_ids.includes(l.id)
@@ -275,7 +275,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
                     </span>
                   )}
                   {istErster && aktiv && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--accent)', fontWeight:700 }}>{T('kurs_head_teacher')}</span>}
-                  {aktiv && !istErster && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--text-3)', fontWeight:700 }}>CO-LEHRER</span>}
+                  {aktiv && !istErster && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--text-3)', fontWeight:700 }}>{T('kurs_mgmt_co_teacher')}</span>}
                 </div>
               )
             })}
@@ -283,7 +283,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
         </Feld>
 
         {/* Notizen */}
-        <Feld label="Notizen">
+        <Feld label={T('kurs_mgmt_notes')}>
           <textarea style={{ ...s.input, minHeight:60, resize:'vertical' }} value={form.notizen}
             onChange={e => setForm(f => ({ ...f, notizen: e.target.value }))} />
         </Feld>
@@ -302,7 +302,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
         <div className="kurs-modal-btnrow kurs-feld-voll" style={{ gridColumn:'span 2', display:'flex', gap:10, justifyContent:'flex-end', marginTop:8 }}>
           <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
           <button onClick={speichern} disabled={laden} style={s.btnPri}>
-            {laden ? '…' : istNeu ? '+ Kurs erstellen' : `💾 ${T('save')}`}
+            {laden ? '…' : istNeu ? T('kurs_mgmt_create') : `💾 ${T('save')}`}
           </button>
         </div>
       </div>
@@ -342,7 +342,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
   }
 
   async function entfernen(schuelerId) {
-    if (!confirm('Schüler aus Kurs entfernen?')) return
+    if (!confirm(T('kurs_mgmt_confirm_remove'))) return
     await supabase.from('unterricht_schueler').delete().eq('unterricht_id', kurs.id).eq('schueler_id', schuelerId)
     setTeilnehmer(prev => prev.filter(t => t.schueler_id !== schuelerId))
   }
@@ -360,12 +360,12 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
   )
 
   return (
-    <Modal titel={`Schüler – ${kurs.name}`} onClose={onClose} breit>
+    <Modal titel={`${T('kurs_mgmt_students_title')} – ${kurs.name}`} onClose={onClose} breit>
       <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
         {/* Aktuelle Teilnehmer */}
         <div>
-          <div style={s.sectionLabel}>Aktuelle Teilnehmer ({teilnehmer.length})</div>
+          <div style={s.sectionLabel}>{T('kurs_mgmt_current_students')} ({teilnehmer.length})</div>
           {laden ? <p style={{ color:'var(--text-3)', fontSize:13 }}>{T('loading')}</p> :
           teilnehmer.length === 0 ? <p style={{ color:'var(--text-3)', fontSize:13 }}>{T('kurs_no_students_yet')}</p> : (
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -378,10 +378,10 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
                   )}
                   <select value={t.status} onChange={e => statusAendern(t.schueler_id, e.target.value)}
                     style={{ ...s.input, width:'auto', fontSize:12, padding:'4px 8px' }}>
-                    <option value="aktiv">Aktiv</option>
-                    <option value="probe">Probe</option>
-                    <option value="pausiert">Pausiert</option>
-                    <option value="abgemeldet">Abgemeldet</option>
+                    <option value="aktiv">{T('kurs_mgmt_status_active')}</option>
+                    <option value="probe">{T('kurs_mgmt_status_trial')}</option>
+                    <option value="pausiert">{T('kurs_mgmt_status_paused')}</option>
+                    <option value="abgemeldet">{T('kurs_mgmt_status_resigned')}</option>
                   </select>
                   <button onClick={() => entfernen(t.schueler_id)} style={{ ...s.iconBtn, color:'var(--danger)' }}>🗑</button>
                 </div>
@@ -398,11 +398,11 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
               type="text"
               value={suche}
               onChange={e => setSuche(e.target.value)}
-              placeholder="Name suchen …"
+              placeholder={T('kurs_mgmt_search_name')}
               style={{ ...s.input, marginTop:8, marginBottom:8, width:'100%', boxSizing:'border-box' }}
             />
             {verfuegbar.length === 0 ? (
-              <p style={{ fontSize:13, color:'var(--text-3)', margin:0 }}>Keine Treffer.</p>
+              <p style={{ fontSize:13, color:'var(--text-3)', margin:0 }}>{T('kurs_mgmt_no_matches')}</p>
             ) : (
               <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
                 {verfuegbar.map(sc => (
@@ -417,7 +417,7 @@ function SchuelerModal({ kurs, onClose, onErfolg }) {
         )}
 
         <div style={{ display:'flex', justifyContent:'flex-end' }}>
-          <button onClick={() => { onErfolg(); onClose() }} style={s.btnPri}>Fertig</button>
+          <button onClick={() => { onErfolg(); onClose() }} style={s.btnPri}>{T('kurs_mgmt_done')}</button>
         </div>
       </div>
     </Modal>
@@ -437,7 +437,7 @@ function StundenModal({ kurs, onClose, onErfolg }) {
   const [fehler,      setFehler]      = useState('')
 
   async function generieren() {
-    if (!von || !bis) { setFehler('Bitte Von- und Bis-Datum wählen.'); return }
+    if (!von || !bis) { setFehler(T('kurs_mgmt_err_dates')); return }
     if (!kurs.wochentag) { setFehler('Kurs hat keinen Wochentag definiert.'); return }
     setLaden(true); setFehler(''); setGeloescht(null)
     const { data, error } = await supabase.rpc('stunden_generieren', {
@@ -451,7 +451,7 @@ function StundenModal({ kurs, onClose, onErfolg }) {
   }
 
   async function loeschen() {
-    if (!von || !bis) { setFehler('Bitte Von- und Bis-Datum wählen.'); return }
+    if (!von || !bis) { setFehler(T('kurs_mgmt_err_dates')); return }
     if (!confirm(`Alle Stunden von ${von} bis ${bis} für „${kurs.name}" löschen?`)) return
     setLoeschLaden(true); setFehler(''); setResult(null)
     const { data, error } = await supabase
@@ -467,37 +467,37 @@ function StundenModal({ kurs, onClose, onErfolg }) {
   }
 
   return (
-    <Modal titel={`Stunden – ${kurs.name}`} onClose={onClose}>
+    <Modal titel={`${T('kurs_mgmt_lessons_title')} – ${kurs.name}`} onClose={onClose}>
       <div style={s.formGrid}>
         {kurs.wochentag ? (
           <div style={{ padding:'10px 14px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)', fontSize:14, color:'var(--text-2)' }}>
-            📅 Jede Woche am <strong>{kurs.wochentag?.toUpperCase()}</strong> von <strong>{kurs.uhrzeit_von}</strong> bis <strong>{kurs.uhrzeit_bis}</strong>
+            📅 {T('kurs_mgmt_weekly')} <strong>{kurs.wochentag?.toUpperCase()}</strong> {T('kurs_mgmt_weekly_from')} <strong>{kurs.uhrzeit_von}</strong> {T('kurs_mgmt_time_to')} <strong>{kurs.uhrzeit_bis}</strong>
           </div>
         ) : (
           <div style={{ padding:'10px 14px', borderRadius:'var(--radius)', background:'#fee2e2', border:'1px solid #fecaca', fontSize:13, color:'var(--danger)' }}>
-            ⚠️ Kein Wochentag/Uhrzeit definiert. Bitte erst im Kurs eintragen.
+            {T('kurs_mgmt_no_weekday')}
           </div>
         )}
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Von</label>
+            <label style={s.label}>{T('kurs_mgmt_date_from')}</label>
             <input type="date" style={s.input} value={von} onChange={e => setVon(e.target.value)} />
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Bis</label>
+            <label style={s.label}>{T('kurs_mgmt_date_to')}</label>
             <input type="date" style={s.input} value={bis} onChange={e => setBis(e.target.value)} />
           </div>
         </div>
 
         {result !== null && (
           <div style={{ padding:'12px 16px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--success)', color:'var(--success)', fontWeight:700, fontSize:14 }}>
-            ✅ {result} Stunden wurden generiert!
+            ✅ {result} {T('kurs_mgmt_lessons_generated')}
           </div>
         )}
         {geloescht !== null && (
           <div style={{ padding:'12px 16px', borderRadius:'var(--radius)', background:'#fee2e2', border:'1px solid #fecaca', color:'var(--danger)', fontWeight:700, fontSize:14 }}>
-            🗑 {geloescht} Stunden wurden gelöscht.
+            🗑 {geloescht} {T('kurs_mgmt_lessons_removed')}
           </div>
         )}
 
@@ -506,12 +506,12 @@ function StundenModal({ kurs, onClose, onErfolg }) {
         <div style={{ display:'flex', gap:10, justifyContent:'space-between', marginTop:8 }}>
           <button onClick={loeschen} disabled={loeschLaden || !von || !bis}
             style={{ ...s.btnSek, color:'var(--danger)', borderColor:'var(--danger)' }}>
-            {loeschLaden ? 'Lösche …' : '🗑 Stunden löschen'}
+            {loeschLaden ? T('kurs_mgmt_deleting') : T('kurs_mgmt_delete_lessons')}
           </button>
           <div style={{ display:'flex', gap:10 }}>
             <button onClick={onClose} style={s.btnSek}>{T('close')}</button>
             <button onClick={generieren} disabled={laden || !kurs.wochentag} style={s.btnPri}>
-              {laden ? 'Generiere …' : '⚡ Generieren'}
+              {laden ? T('kurs_mgmt_generating') : T('kurs_mgmt_generate')}
             </button>
           </div>
         </div>
@@ -522,7 +522,7 @@ function StundenModal({ kurs, onClose, onErfolg }) {
 
 // ─── Kurs Detail / Karte ──────────────────────────────────────
 
-function KursKarte({ kurs, onBearbeiten, onLoeschen, onDetail }) {
+function KursKarte({ kurs, onBearbeiten, onLoeschen, onDetail, T }) {
   return (
     <div
       onClick={onDetail}
@@ -548,7 +548,7 @@ function KursKarte({ kurs, onBearbeiten, onLoeschen, onDetail }) {
             </div>
           </div>
           <span style={{ fontSize:11, fontWeight:700, color: kurs.aktiv ? 'var(--success)' : 'var(--danger)', whiteSpace:'nowrap' }}>
-            {kurs.aktiv ? '● Aktiv' : '○ Inaktiv'}
+            {kurs.aktiv ? T('kurs_mgmt_badge_active') : T('kurs_mgmt_badge_inactive')}
           </span>
         </div>
 
@@ -570,15 +570,15 @@ function KursKarte({ kurs, onBearbeiten, onLoeschen, onDetail }) {
             </div>
           )}
           <div style={{ fontSize:13, color:'var(--text-2)', display:'flex', alignItems:'center', gap:6 }}>
-            👥 {kurs.unterricht_schueler?.length ?? 0} Schüler ·
-            💰 {kurs.abrechnungs_typ === 'pauschale' ? `€${kurs.pauschale_monat}/Monat` : kurs.abrechnungs_typ === 'paket' ? `${kurs.paket_stunden}er Paket` : `€${kurs.preis_pro_stunde}/Std`}
+            👥 {kurs.unterricht_schueler?.length ?? 0} {T('kurs_mgmt_card_students')} ·
+            💰 {kurs.abrechnungs_typ === 'pauschale' ? `€${kurs.pauschale_monat}${T('kurs_mgmt_per_month')}` : kurs.abrechnungs_typ === 'paket' ? `${kurs.paket_stunden}er Paket` : `€${kurs.preis_pro_stunde}${T('kurs_mgmt_per_hour')}`}
           </div>
         </div>
 
         {/* Aktionen */}
         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }} onClick={e => e.stopPropagation()}>
-          <button onClick={onBearbeiten} style={s.btnKlein}>✏️ Bearbeiten</button>
-          <button onClick={onLoeschen}   style={{ ...s.btnKlein, color:'var(--danger)' }}>🗑 Löschen</button>
+          <button onClick={onBearbeiten} style={s.btnKlein}>{T('kurs_mgmt_edit')}</button>
+          <button onClick={onLoeschen}   style={{ ...s.btnKlein, color:'var(--danger)' }}>{T('kurs_mgmt_delete')}</button>
         </div>
       </div>
     </div>
@@ -632,18 +632,18 @@ function KursLoeschenModal({ kurs, onClose, onErfolg }) {
   }
 
   return (
-    <Modal titel="Kurs löschen" onClose={onClose}>
+    <Modal titel={T('kurs_mgmt_delete_title')} onClose={onClose}>
       <div style={s.formGrid}>
         <div style={{ padding:'16px', borderRadius:'var(--radius)', background:'#fee2e2', border:'1px solid #fecaca', color:'var(--danger)', fontSize:14, lineHeight:1.6 }}>
           ⚠️ Bist du sicher, dass du <strong>„{kurs.name}"</strong> löschen möchtest?<br/>
-          <span style={{ fontSize:12, opacity:0.8 }}>Alle Stunden, Anwesenheiten und Schüler-Zuordnungen werden ebenfalls gelöscht.</span>
+          <span style={{ fontSize:12, opacity:0.8 }}>{T('kurs_mgmt_delete_warning')}</span>
         </div>
         {fehler && <p style={s.fehler}>{fehler}</p>}
         <div style={s.btnRow}>
           <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
           <button onClick={loeschen} disabled={laden}
             style={{ ...s.btnPri, background:'var(--danger)' }}>
-            {laden ? 'Lösche …' : '🗑 Endgültig löschen'}
+            {laden ? T('kurs_mgmt_deleting') : T('kurs_mgmt_delete_btn')}
           </button>
         </div>
       </div>
@@ -693,10 +693,10 @@ export default function Kursverwaltung() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
         <div>
-          <h1 style={s.h1}>🎵 Kursverwaltung</h1>
-          <p style={s.sub}>{kurse.length} Kurse · {kurse.filter(k=>k.aktiv).length} aktiv</p>
+          <h1 style={s.h1}>{T('kurs_mgmt_title')}</h1>
+          <p style={s.sub}>{kurse.length} {T('kurs_mgmt_courses')} · {kurse.filter(k=>k.aktiv).length} {T('kurs_mgmt_active')}</p>
         </div>
-        <button onClick={() => setModal({ typ:'kurs' })} style={s.btnPri}>+ Neuer Kurs</button>
+        <button onClick={() => setModal({ typ:'kurs' })} style={s.btnPri}>{T('kurs_mgmt_new')}</button>
       </div>
 
       {/* Filter */}
@@ -707,14 +707,14 @@ export default function Kursverwaltung() {
           {['alle','einzel','gruppe','chor','ensemble'].map(t => (
             <button key={t} onClick={() => setFilterTyp(t)}
               style={{ padding:'6px 14px', borderRadius:99, border:'1.5px solid var(--border)', background: filterTyp===t ? 'var(--primary)' : 'var(--surface)', color: filterTyp===t ? 'var(--primary-fg)' : 'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }}>
-              {t === 'alle' ? 'Alle' : `${TYP_ICON[t]} ${t}`}
+              {t === 'alle' ? T('kurs_mgmt_filter_all') : `${TYP_ICON[t]} ${t}`}
             </button>
           ))}
         </div>
         <select style={{ ...s.input, width:'auto' }} value={filterAktiv} onChange={e => setFilterAktiv(e.target.value)}>
-          <option value="alle">Alle</option>
-          <option value="aktiv">Aktiv</option>
-          <option value="inaktiv">Inaktiv</option>
+          <option value="alle">{T('kurs_mgmt_filter_all')}</option>
+          <option value="aktiv">{T('kurs_mgmt_filter_active')}</option>
+          <option value="inaktiv">{T('kurs_mgmt_filter_inactive')}</option>
         </select>
       </div>
 
@@ -725,7 +725,7 @@ export default function Kursverwaltung() {
         <div style={s.leer}>
           <div style={{ marginBottom: 12 }}>{T('kurs_none_found')}</div>
           {suche === '' && filterTyp === 'alle' && filterAktiv !== 'inaktiv' && (
-            <button onClick={() => setModal({ typ:'kurs' })} style={s.btnPri}>+ Neuer Kurs</button>
+            <button onClick={() => setModal({ typ:'kurs' })} style={s.btnPri}>{T('kurs_mgmt_new')}</button>
           )}
         </div>
       ) : (
@@ -734,6 +734,7 @@ export default function Kursverwaltung() {
             <KursKarte
               key={kurs.id}
               kurs={kurs}
+              T={T}
               onDetail={()     => navigate(`/admin/kurse/${kurs.id}`)}
               onBearbeiten={() => setModal({ typ:'kurs', kurs })}
               onLoeschen={()   => setModal({ typ:'loeschen', kurs })}

@@ -51,6 +51,7 @@ function istHeute(datum) {
 
 // ─── Termin Block ─────────────────────────────────────────────
 function TerminBlock({ stunde, onClick, tz }) {
+  const { T } = useApp()
   const beginn = new Date(stunde.beginn)
   const ende   = stunde.ende ? new Date(stunde.ende) : new Date(beginn.getTime() + 60 * 60 * 1000)
 
@@ -72,7 +73,7 @@ function TerminBlock({ stunde, onClick, tz }) {
         boxShadow:'0 1px 4px rgba(0,0,0,0.15)', userSelect:'none',
       }}>
       <div style={{ fontSize:11, fontWeight:700, color:'#fff', lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-        {stunde.unterricht?.name ?? 'Stunde'}
+        {stunde.unterricht?.name ?? T('schedule_lesson')}
       </div>
       {hoehe > 32 && (
         <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:2 }}>
@@ -175,8 +176,8 @@ function DetailModal({ stunde, onClose, tz }) {
               <div>
                 <div style={{ fontWeight:600 }}>{beginn.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}</div>
                 <div style={{ fontSize:13, color:'var(--text-3)' }}>
-                  {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} Uhr
-                  {ende && ` – ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} Uhr`}
+                  {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} {T('schedule_lesson_at')}
+                  {ende && ` – ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} ${T('schedule_lesson_at')}`}
                 </div>
               </div>
             </div>
@@ -204,7 +205,7 @@ function DetailModal({ stunde, onClose, tz }) {
                 {kannAktionen && stunde.unterricht?.id && (
                   <button onClick={() => { navigate(`/${rolle === 'lehrer' ? 'lehrer' : 'admin'}/kurse/${stunde.unterricht.id}`); onClose() }}
                     style={{ width:'100%', padding:'9px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                    📂 Kurs öffnen
+                    {T('schedule_open_course')}
                   </button>
                 )}
                 {kannEntschuldigen && (
@@ -224,6 +225,7 @@ function DetailModal({ stunde, onClose, tz }) {
 
 // ─── Event Detail Modal ───────────────────────────────────────
 function EventDetailModal({ event, onClose, tz }) {
+  const { T } = useApp()
   const beginn = new Date(event.beginn)
   const ende   = event.ende ? new Date(event.ende) : null
   const farbe  = EVENT_TYP_FARBE[event.typ] ?? '#6b7280'
@@ -245,8 +247,8 @@ function EventDetailModal({ event, onClose, tz }) {
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:8, fontSize:14, color:'var(--text-2)' }}>
           <div>📅 {beginn.toLocaleDateString('de-DE', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</div>
-          <div>🕐 {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} Uhr
-            {ende && ` – ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} Uhr`}
+          <div>🕐 {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} {T('schedule_lesson_at')}
+            {ende && ` – ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} ${T('schedule_lesson_at')}`}
           </div>
           {event.ort && (
             <a href={`https://maps.google.com/?q=${encodeURIComponent(event.ort)}`} target="_blank" rel="noopener noreferrer"
@@ -255,7 +257,7 @@ function EventDetailModal({ event, onClose, tz }) {
             </a>
           )}
           {event.beschreibung && <div style={{ marginTop:4, color:'var(--text-3)', lineHeight:1.5 }}>{event.beschreibung}</div>}
-          {event.oeffentlich && <div style={{ fontSize:12, color:'var(--accent)', fontWeight:600 }}>🌐 Öffentliche Veranstaltung</div>}
+          {event.oeffentlich && <div style={{ fontSize:12, color:'var(--accent)', fontWeight:600 }}>{T('schedule_public_event')}</div>}
         </div>
       </div>
     </div>
@@ -495,13 +497,13 @@ export default function Stundenplan() {
               {(rolle === 'admin' || rolle === 'superadmin') && (
                 <button onClick={() => navigate('/admin/kurse')}
                   style={{ marginTop:14, padding:'9px 20px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  + Kurs anlegen
+                  {T('schedule_create_course')}
                 </button>
               )}
               {rolle === 'lehrer' && (
                 <button onClick={() => navigate('/lehrer/kurse')}
                   style={{ marginTop:14, padding:'9px 20px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  Zu meinen Kursen
+                  {T('schedule_to_courses')}
                 </button>
               )}
             </div>

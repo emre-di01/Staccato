@@ -1,9 +1,39 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.8.4'
+export const CURRENT_VERSION = '1.9.0'
 
 export const CHANGELOG = [
+  {
+    version: '1.9.0',
+    date: '2026-05-08',
+    features: [
+      {
+        icon: '👋',
+        de: 'Willkommens-Tour für neue Schüler – 6-schrittiger Onboarding-Guide beim ersten Login',
+        en: 'Welcome tour for new students – 6-step onboarding guide on first login',
+        tr: 'Yeni öğrenciler için karşılama turu – ilk girişte 6 adımlı rehber',
+      },
+      {
+        icon: '🗺️',
+        de: 'Tour jederzeit neu starten – Button im Profil unter „Tour erneut starten"',
+        en: 'Restart tour anytime – button in profile under "Restart tour"',
+        tr: 'Turu istediğin zaman yeniden başlat – profilde "Turu yeniden başlat" butonu',
+      },
+      {
+        icon: '🌍',
+        de: 'Kursverwaltung vollständig übersetzt – alle Labels, Buttons und Meldungen in DE/EN/TR',
+        en: 'Course management fully translated – all labels, buttons and messages in DE/EN/TR',
+        tr: 'Ders yönetimi tam çeviri – tüm etiketler, butonlar ve mesajlar DE/EN/TR dilinde',
+      },
+      {
+        icon: '📅',
+        de: 'Stundenplan vollständig übersetzt – alle Texte und Aktionen in DE/EN/TR verfügbar',
+        en: 'Schedule fully translated – all texts and actions available in DE/EN/TR',
+        tr: 'Ders programı tam çeviri – tüm metinler ve işlemler DE/EN/TR dilinde mevcut',
+      },
+    ],
+  },
   {
     version: '1.8.4',
     date: '2026-05-08',

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import OrtAutocomplete from '../components/OrtAutocomplete'
+import { ONBOARDING_LS_KEY } from '../components/OnboardingModal'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? ''
 
@@ -40,6 +42,7 @@ function DokumentZeile({ datei, T }) {
 
 export default function ProfilSeite() {
   const { profil, ladeProfil, T, rolle } = useApp()
+  const navigate = useNavigate()
   const fileRef = useRef()
 
   const [form, setForm] = useState({
@@ -303,6 +306,22 @@ export default function ProfilSeite() {
           </div>
         )}
       </div>
+
+      {/* Onboarding-Tour (nur Schüler) */}
+      {rolle === 'schueler' && (
+        <div style={s.card}>
+          <h2 style={s.h2}>🗺️ {T('onb_restart')}</h2>
+          <p style={{ margin:'0 0 16px', fontSize:13, color:'var(--text-3)', lineHeight:1.5 }}>
+            {T('onb_restart_desc')}
+          </p>
+          <button
+            onClick={() => { localStorage.removeItem(ONBOARDING_LS_KEY); navigate('/schueler') }}
+            style={{ padding:'10px 20px', borderRadius:'var(--radius)', border:'1.5px solid var(--primary)', background:'var(--bg)', color:'var(--primary)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}
+          >
+            {T('onb_restart')}
+          </button>
+        </div>
+      )}
 
       {/* Passwort */}
       <div style={s.card}>

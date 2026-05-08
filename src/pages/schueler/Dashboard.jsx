@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import OnboardingModal from '../../components/OnboardingModal'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -104,6 +105,7 @@ export default function SchuelerDashboard() {
 
   return (
     <div>
+      <OnboardingModal />
       <div style={{ marginBottom:32 }}>
         <div style={{ fontSize:13, color:'var(--text-3)', marginBottom:4 }}>{gruss}</div>
         <h1 style={{ fontSize:28, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', margin:0 }}>
