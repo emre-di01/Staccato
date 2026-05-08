@@ -28,7 +28,33 @@ function OfflineBanner() {
 
 // Nav-Konfiguration je Rolle — items können flach oder gruppiert sein
 function getNavConfig(rolle, T) {
-  if (rolle === 'admin' || rolle === 'superadmin') {
+  if (rolle === 'superadmin') {
+    return [
+      { icon: '🏫', label: T('all_schools'), to: '/superadmin' },
+      { icon: '📊', label: T('dashboard'),   to: '/admin' },
+      { gruppe: 'Unterricht', items: [
+        { icon: '🎵', label: 'Kurse',           to: '/admin/kurse' },
+        { icon: '📅', label: T('schedule'),      to: '/admin/stundenplan' },
+        { icon: '🎼', label: T('repertoire'),    to: '/admin/repertoire' },
+        { icon: '🎭', label: T('events'),        to: '/admin/events' },
+      ]},
+      { gruppe: 'Verwaltung', items: [
+        { icon: '👥', label: T('members'),       to: '/admin/mitglieder' },
+        { icon: '🏫', label: T('rooms'),         to: '/admin/raeume' },
+        { icon: '🎸', label: 'Instrumente',      to: '/admin/instrumente' },
+        { icon: '📦', label: 'Inventar',         to: '/admin/inventar' },
+        { icon: '📋', label: T('prospects'),     to: '/admin/interessenten' },
+      ]},
+      { gruppe: 'Kommunikation', items: [
+        { icon: '💬', label: T('messages'),      to: '/admin/nachrichten', nachrichten: true },
+      ]},
+      { gruppe: 'Vorstand', items: [
+        { icon: '🎯', label: T('vorstand_ziele'),      to: '/vorstand/ziele' },
+        { icon: '📝', label: T('vorstand_protokolle'), to: '/vorstand/protokolle' },
+      ]},
+    ]
+  }
+  if (rolle === 'admin') {
     return [
       { icon: '📊', label: T('dashboard'), to: '/admin' },
       { gruppe: 'Unterricht', items: [
@@ -306,7 +332,7 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
 }
 
 export default function AppLayout() {
-  const { profil, rolle, schule, abmelden, T, toasts, removeToast, confirmState, resolveConfirm } = useApp()
+  const { profil, rolle, schule, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const swipeStartX = useRef(null)
@@ -436,6 +462,14 @@ export default function AppLayout() {
           </button>
         )}
 
+        {/* Schul-Wechsler */}
+        {schulenListe.length > 1 && rolle !== 'superadmin' && (
+          <NavLink to="/schulen"
+            style={({ isActive }) => ({ ...btnStyle, textDecoration: 'none', color: isActive ? 'var(--primary)' : 'var(--text-3)', marginBottom: 4 })}>
+            🏫 {schule?.name ?? T('school_switcher')} ▾
+          </NavLink>
+        )}
+
         {/* Bottom */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
           <NavLink to="/profil" style={({ isActive }) => ({ ...btnStyle, color: isActive ? 'var(--primary)' : 'var(--text-3)', textDecoration:'none' })}>
@@ -490,6 +524,12 @@ export default function AppLayout() {
                   style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginBottom:8, width:'100%' }}>
                   🎬 Session beitreten
                 </button>
+              )}
+              {schulenListe.length > 1 && rolle !== 'superadmin' && (
+                <NavLink to="/schulen" onClick={() => setSidebarOffen(false)}
+                  style={({ isActive }) => ({ ...btnStyle, textDecoration: 'none', color: isActive ? 'var(--primary)' : 'var(--text-3)', marginBottom: 4 })}>
+                  🏫 {schule?.name ?? T('school_switcher')} ▾
+                </NavLink>
               )}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <NavLink to="/profil" onClick={() => setSidebarOffen(false)} style={({ isActive }) => ({ ...btnStyle, textDecoration:'none', color: isActive ? 'var(--primary)' : 'var(--text-3)' })}>

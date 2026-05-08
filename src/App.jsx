@@ -47,6 +47,9 @@ const Nachrichten          = lazy(() => import('./pages/Nachrichten'))
 const Impressum            = lazy(() => import('./pages/Impressum'))
 const Datenschutz          = lazy(() => import('./pages/Datenschutz'))
 const Lizenzen             = lazy(() => import('./pages/Lizenzen'))
+const SchulWaehler         = lazy(() => import('./pages/SchulWaehler'))
+const Einladung            = lazy(() => import('./pages/Einladung'))
+const SuperadminDashboard  = lazy(() => import('./pages/superadmin/Dashboard'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -162,8 +165,23 @@ function AppRoutes() {
         </Route>
       </Route>
 
+      {/* ── Superadmin ── */}
+      <Route element={<ProtectedRoute erlaubteRollen={['superadmin']} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/superadmin" element={<SuperadminDashboard />} />
+        </Route>
+      </Route>
+
+      {/* ── Schul-Wähler (multi-tenant) ── */}
+      <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern','vorstand']} />}>
+        <Route path="/schulen" element={<SchulWaehler />} />
+      </Route>
+
       {/* Session beitreten */}
       <Route path="/session/:code" element={<SchuelerSession />} />
+
+      {/* Einladungslink */}
+      <Route path="/einladung/:token" element={<Einladung />} />
 
       {/* Öffentliche Seiten */}
       <Route path="/impressum"   element={<Impressum />} />

@@ -47,7 +47,8 @@ serve(async (req) => {
     else if (type === 'neue_nachricht')  await sendNeueNachricht(body, supabase)
     else if (type === 'hausaufgaben')    await sendHausaufgaben(body, supabase)
     else if (type === 'neues_dokument')  await sendNeuesDokument(body, supabase)
-    else if (type === 'rsvp_erinnerung') await sendRsvpErinnerung(body, supabase)
+    else if (type === 'rsvp_erinnerung')  await sendRsvpErinnerung(body, supabase)
+    else if (type === 'schuleinladung')   await sendSchuleinladung(body)
     else return new Response(JSON.stringify({ error: 'Unknown type' }), { status: 400, headers: CORS })
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -431,6 +432,54 @@ async function sendRsvpErinnerung(body: Record<string, unknown>, supabase: Retur
       `),
     })
   }))
+}
+
+// ─── Schuleinladung ───────────────────────────────────────────
+
+async function sendSchuleinladung(body: Record<string, unknown>) {
+  const { email, voller_name, token, schule_name, rolle, eingeladen_von_name } = body as {
+    email: string; voller_name?: string; token: string
+    schule_name: string; rolle: string; eingeladen_von_name?: string
+  }
+
+  const rollenText: Record<string, string> = {
+    schueler: 'Schüler/in', lehrer: 'Lehrer/in',
+    eltern: 'Elternteil', admin: 'Administrator/in',
+    superadmin: 'Administrator/in', vorstand: 'Vorstandsmitglied',
+  }
+
+  const inviteUrl = `${APP_URL}/einladung/${token}`
+  const anrede    = voller_name ? `Hallo ${esc(voller_name)},` : 'Hallo,'
+  const vonText   = eingeladen_von_name ? ` von <strong>${esc(eingeladen_von_name)}</strong>` : ''
+
+  await transport.sendMail({
+    from: SMTP_FROM,
+    to: email,
+    subject: `Einladung zu Staccato – ${schule_name}`,
+    html: html(`
+      <h2 style="margin:0 0 8px;color:#1e293b">${anrede}</h2>
+      <p style="margin:0 0 20px;color:#475569">
+        Du hast eine Einladung${vonText} erhalten,
+        der Musikschule <strong>${esc(schule_name)}</strong> bei <strong>Staccato</strong>
+        als <strong>${esc(rollenText[rolle] ?? rolle)}</strong> beizutreten.
+      </p>
+
+      <p style="margin:0 0 24px;color:#475569">
+        Klicke auf den Button, um dein Konto einzurichten und beizutreten:
+      </p>
+
+      <a href="${inviteUrl}" style="display:inline-block;background:#6366f1;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+        Einladung annehmen →
+      </a>
+
+      <p style="margin:24px 0 8px;color:#94a3b8;font-size:12px">
+        Oder kopiere diesen Link: <a href="${inviteUrl}" style="color:#6366f1">${inviteUrl}</a>
+      </p>
+      <p style="margin:0;color:#94a3b8;font-size:12px">
+        Der Link ist 7 Tage gültig.
+      </p>
+    `),
+  })
 }
 
 // ─── Helpers ──────────────────────────────────────────────────

@@ -28,12 +28,12 @@ export default function ProtectedRoute({ erlaubteRollen = [] }) {
 
 export function startseiteNach(rolle) {
   switch (rolle) {
-    case 'superadmin':
-    case 'admin':    return '/admin'
-    case 'lehrer':   return '/lehrer'
-    case 'schueler': return '/schueler'
-    case 'eltern':   return '/eltern'
-    case 'vorstand': return '/vorstand'
-    default:         return '/login'
+    case 'superadmin': return '/superadmin'
+    case 'admin':      return '/admin'
+    case 'lehrer':     return '/lehrer'
+    case 'schueler':   return '/schueler'
+    case 'eltern':     return '/eltern'
+    case 'vorstand':   return '/vorstand'
+    default:           return '/login'
   }
 }

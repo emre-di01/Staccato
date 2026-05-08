@@ -1,9 +1,39 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '1.9.0'
+export const CURRENT_VERSION = '2.0.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.0.0',
+    date: '2026-05-09',
+    features: [
+      {
+        icon: '🏫',
+        de: 'Multi-Tenancy – mehrere Musikschulen auf einer Plattform, sauber voneinander getrennt',
+        en: 'Multi-tenancy – multiple music schools on one platform, cleanly separated',
+        tr: 'Çok kiracılı yapı – tek platformda birden fazla müzik okulu, tamamen ayrı',
+      },
+      {
+        icon: '📧',
+        de: 'Einladungssystem – Mitglieder per E-Mail einladen oder direkt hinzufügen',
+        en: 'Invitation system – invite members via email or add them directly',
+        tr: 'Davet sistemi – üyeleri e-posta ile davet et veya doğrudan ekle',
+      },
+      {
+        icon: '🔄',
+        de: 'Schul-Wechsler – nahtlos zwischen Schulen wechseln (für Mitglieder in mehreren Schulen)',
+        en: 'School switcher – seamlessly switch between schools (for members in multiple schools)',
+        tr: 'Okul değiştirici – okullar arasında sorunsuz geçiş (birden fazla okuldaki üyeler için)',
+      },
+      {
+        icon: '🛡️',
+        de: 'Superadmin-Dashboard – alle Schulen verwalten, neue Schulen anlegen, Kontext wechseln',
+        en: 'Superadmin dashboard – manage all schools, create new schools, switch context',
+        tr: 'Süper yönetici paneli – tüm okulları yönet, yeni okul oluştur, bağlam değiştir',
+      },
+    ],
+  },
   {
     version: '1.9.0',
     date: '2026-05-08',

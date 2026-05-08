@@ -42,7 +42,7 @@ function Modal({ titel, onClose, children }) {
 }
 
 // ─── Raum anlegen / bearbeiten ────────────────────────────────
-function RaumModal({ raum, onClose, onErfolg }) {
+function RaumModal({ raum, schule_id, onClose, onErfolg }) {
   const istNeu = !raum?.id
   const [form, setForm] = useState({
     name:        raum?.name        ?? '',
@@ -64,6 +64,7 @@ function RaumModal({ raum, onClose, onErfolg }) {
       ...form,
       ausstattung: form.ausstattung ? form.ausstattung.split(',').map(s => s.trim()).filter(Boolean) : [],
       kapazitaet: parseInt(form.kapazitaet) || 1,
+      ...(istNeu && { schule_id }),
     }
     const { error } = istNeu
       ? await supabase.from('raeume').insert(payload)
@@ -257,7 +258,7 @@ function Belegungsplan({ raum, woche }) {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Raumverwaltung() {
-  const { T, confirm } = useApp()
+  const { profil, T, confirm } = useApp()
   const [raeume,       setRaeume]       = useState([])
   const [laden,        setLaden]        = useState(true)
   const [modal,        setModal]        = useState(null)
@@ -266,12 +267,13 @@ export default function Raumverwaltung() {
   const [ansicht,      setAnsicht]      = useState('liste') // 'liste' | 'belegung'
 
   const ladeRaeume = useCallback(async () => {
+    if (!profil?.schule_id) return
     setLaden(true)
-    const { data } = await supabase.from('raeume').select('*').order('name')
+    const { data } = await supabase.from('raeume').select('*').eq('schule_id', profil.schule_id).order('name')
     setRaeume(data ?? [])
     if (data?.length > 0 && !aktiverRaum) setAktiverRaum(data[0])
     setLaden(false)
-  }, [])
+  }, [profil?.schule_id])
 
   useEffect(() => { ladeRaeume() }, [ladeRaeume])
 
@@ -411,7 +413,7 @@ export default function Raumverwaltung() {
       )}
 
       {modal?.typ === 'raum' && (
-        <RaumModal raum={modal.raum} onClose={() => setModal(null)} onErfolg={ladeRaeume} />
+        <RaumModal raum={modal.raum} schule_id={profil?.schule_id} onClose={() => setModal(null)} onErfolg={ladeRaeume} />
       )}
     </div>
   )

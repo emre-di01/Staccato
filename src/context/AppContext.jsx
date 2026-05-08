@@ -10,7 +10,7 @@ const DEFAULT_LANG  = 'de'
 
 export function AppProvider({ children }) {
   const [toasts,     setToasts]     = useState([])
-  const [confirmState, setConfirmState] = useState(null) // { message, sub, confirmLabel, cancelLabel, dangerous, resolve }
+  const [confirmState, setConfirmState] = useState(null)
   const toastIdRef = useRef(0)
 
   const toast = useCallback((message, type = 'info', duration) => {
@@ -33,27 +33,30 @@ export function AppProvider({ children }) {
     setConfirmState(null)
   }
 
-  const [session,    setSession]    = useState(undefined)
-  const [profil,     setProfil]     = useState(null)
-  const [schule,     setSchule]     = useState(null)
-  const [zeitzone,   setZeitzone]   = useState('Europe/Berlin')
-  const [laden,      setLaden]      = useState(true)
-  const [theme,      setThemeKey]   = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
-  const [darkMode,   setDarkMode]   = useState(() => localStorage.getItem('staccato_dark') === 'true')
-  const [lang,       setLangState]  = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
+  const [session,      setSession]      = useState(undefined)
+  const [profil,       setProfil]       = useState(null)
+  const [schule,       setSchule]       = useState(null)
+  const [schulenListe, setSchulenListe] = useState([])
+  const [zeitzone,     setZeitzone]     = useState('Europe/Berlin')
+  const [laden,        setLaden]        = useState(true)
+  const [theme,        setThemeKey]     = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
+  const [darkMode,     setDarkMode]     = useState(() => localStorage.getItem('staccato_dark') === 'true')
+  const [lang,         setLangState]    = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
 
-  // Tracks which user ID has its profile loaded.
-  // Prevents calling ladeProfil() when SIGNED_IN fires from inside the processLock
-  // (e.g. on tab focus via _recoverAndRefresh), which would deadlock: the lock is
-  // already held, and getSession() inside supabase.from() also tries to acquire it.
   const loadedUidRef = useRef(null)
   const profilIdRef  = useRef(null)
 
   useEffect(() => {
     applyTheme(theme, darkMode)
+    if (schule?.farbe) document.documentElement.style.setProperty('--primary', schule.farbe)
     localStorage.setItem('staccato_theme', theme)
     localStorage.setItem('staccato_dark', darkMode)
-  }, [theme, darkMode])
+  }, [theme, darkMode, schule?.farbe])
+
+  useEffect(() => {
+    if (schule?.name) document.title = `Staccato – ${schule.name}`
+    else document.title = 'Staccato'
+  }, [schule?.name])
 
   useEffect(() => {
     localStorage.setItem('staccato_lang', lang)
@@ -74,11 +77,21 @@ export function AppProvider({ children }) {
         if (data.sprache)   setLangState(data.sprache)
         if (data.thema)     setThemeKey(data.thema)
         if (data.dark_mode != null) setDarkMode(data.dark_mode)
-        if (data.schule_id) {
-          const { data: schuleData } = await supabase.from('schulen').select('zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix').eq('id', data.schule_id).single()
+
+        const activeSchuleId = data.letzte_schule_id ?? data.schule_id
+        if (activeSchuleId) {
+          const { data: schuleData } = await supabase
+            .from('schulen')
+            .select('id, zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix, farbe')
+            .eq('id', activeSchuleId)
+            .single()
           if (schuleData?.zeitzone) setZeitzone(schuleData.zeitzone)
           setSchule(schuleData ?? null)
         }
+
+        // Schulen-Liste für Multi-Tenant Switcher
+        const { data: liste } = await supabase.rpc('meine_schulen')
+        setSchulenListe(liste ?? [])
       }
     } catch (e) {
       console.warn('Profil nicht geladen:', e)
@@ -88,11 +101,6 @@ export function AppProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    // Use onAuthStateChange as the single source of truth for session initialization.
-    // Calling getSession() concurrently with onAuthStateChange causes Web Lock conflicts
-    // ("lock was released because another request stole it"), which deletes the session
-    // from localStorage and logs the user out. INITIAL_SESSION fires after any pending
-    // token refresh is complete, so it is safe to use as the initial session source.
     let initialized = false
     const fallback = setTimeout(() => {
       if (!initialized) { setSession(null); setLaden(false) }
@@ -123,13 +131,11 @@ export function AppProvider({ children }) {
         setSession(null)
         setProfil(null)
         setSchule(null)
+        setSchulenListe([])
         setLaden(false)
         return
       }
       setSession(session)
-      // Only fetch profile when not yet loaded for this user. SIGNED_IN can fire
-      // from inside the processLock (tab focus → _recoverAndRefresh). Calling
-      // supabase.from() there would re-acquire the lock → deadlock → all queries hang.
       if (loadedUidRef.current !== session.user.id) {
         setLaden(true)
         await ladeProfil(session.user.id)
@@ -165,6 +171,12 @@ export function AppProvider({ children }) {
     setLangState(l); saveToProfile({ sprache: l })
   }
 
+  const schuleWechseln = useCallback(async (schule_id) => {
+    const { error } = await supabase.rpc('schule_wechseln', { p_schule_id: schule_id })
+    if (error) throw error
+    await ladeProfil(session?.user?.id)
+  }, [session, ladeProfil])
+
   const T = useCallback((key) => translate(lang, key), [lang])
 
   const rolle = profil?.rolle ?? null
@@ -174,6 +186,8 @@ export function AppProvider({ children }) {
       session, profil, rolle, laden,
       theme, darkMode, lang, zeitzone,
       schule, setSchule,
+      schulenListe,
+      schuleWechseln,
       changeTheme, toggleDark, setLang,
       abmelden, T, ladeProfil,
       toast, toasts, removeToast,

@@ -3,7 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import Avatar from '../../components/Avatar'
 
-const ROLLEN = ['admin', 'lehrer', 'schueler', 'eltern', 'vorstand']
+const ROLLEN      = ['lehrer', 'schueler', 'eltern', 'vorstand']
+const ALLE_ROLLEN = ['admin', 'lehrer', 'schueler', 'eltern', 'vorstand']
 const ROLLEN_FARBE = {
   admin:     { bg: 'var(--accent)',   text: 'var(--accent-fg)' },
   lehrer:    { bg: 'var(--primary)',  text: 'var(--primary-fg)' },
@@ -62,6 +63,7 @@ function Feld({ label, children }) {
 // ─── Nutzer anlegen Modal ─────────────────────────────────────
 
 function NutzerAnlegenModal({ onClose, onErfolg, T }) {
+  const { profil, rolle: currentRolle } = useApp()
   const [form, setForm] = useState({ email: '', voller_name: '', passwort: '', rolle: 'schueler', telefon: '', geburtsdatum: '' })
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
@@ -80,6 +82,7 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
       p_passwort:    form.passwort,
       p_voller_name: form.voller_name,
       p_rolle:       form.rolle,
+      p_schule_id:   profil?.schule_id,
     })
 
     if (error) {
@@ -118,7 +121,7 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
               </Feld>
               <Feld label={T('role')}>
                 <select style={s.input} value={form.rolle} onChange={e => setForm(f => ({ ...f, rolle: e.target.value }))}>
-                  {ROLLEN.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                  {(currentRolle === 'superadmin' ? ALLE_ROLLEN : ROLLEN).map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
                 </select>
               </Feld>
             </div>
@@ -154,9 +157,108 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
   )
 }
 
+// ─── Einladung senden Modal ───────────────────────────────────
+
+function EinladungModal({ onClose, T }) {
+  const { schule, profil } = useApp()
+  const [form,   setForm]   = useState({ email: '', rolle: 'schueler' })
+  const [laden,  setLaden]  = useState(false)
+  const [fehler, setFehler] = useState('')
+  const [erfolg, setErfolg] = useState(null) // { action, message }
+
+  async function senden() {
+    if (!form.email) { setFehler(T('all_fields_required')); return }
+    setLaden(true)
+    setFehler('')
+
+    const { data, error } = await supabase.rpc('einladung_versenden', {
+      p_email: form.email,
+      p_rolle: form.rolle,
+    })
+
+    if (error) { setFehler(error.message); setLaden(false); return }
+
+    const action = data?.action
+
+    if (action === 'already_member') {
+      setFehler(T('invitation_already_member'))
+      setLaden(false)
+      return
+    }
+
+    if (action === 'einladung_erstellt') {
+      // Einladungs-E-Mail versenden
+      await supabase.functions.invoke('send-email', {
+        body: {
+          type:       'schuleinladung',
+          email:      data.email,
+          token:      data.token,
+          schule_name:          schule?.name ?? 'Staccato',
+          eingeladen_von_name:  profil?.voller_name,
+          rolle:                form.rolle,
+        },
+      }).catch(console.error)
+      setErfolg({ action, message: T('invitation_sent') })
+    } else if (action === 'mitgliedschaft_erstellt') {
+      setErfolg({ action, message: T('invitation_direct') })
+    }
+
+    setLaden(false)
+  }
+
+  return (
+    <Modal titel={`📧 ${T('invite_member')}`} onClose={onClose}>
+      <div style={s.formGrid}>
+        {erfolg ? (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>
+              {erfolg.action === 'einladung_erstellt' ? '📧' : '✅'}
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
+              {erfolg.message}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
+              {erfolg.action === 'einladung_erstellt'
+                ? 'Der Einladungslink wurde per E-Mail versendet. Er ist 7 Tage gültig.'
+                : 'Die Person wurde direkt als Mitglied hinzugefügt.'
+              }
+            </div>
+            <button onClick={onClose} style={{ ...s.btnPri, marginTop: 20, width: '100%' }}>
+              {T('close')}
+            </button>
+          </div>
+        ) : (
+          <>
+            <Feld label={`${T('email')} *`}>
+              <input type="email" style={s.input} placeholder="name@beispiel.de" value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))} autoFocus />
+            </Feld>
+            <Feld label={T('role')}>
+              <select style={s.input} value={form.rolle} onChange={e => setForm(f => ({ ...f, rolle: e.target.value }))}>
+                {ROLLEN.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+              </select>
+            </Feld>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', background: 'var(--bg)', borderRadius: 'var(--radius)', padding: '10px 12px', lineHeight: 1.5 }}>
+              💡 Hat die Person bereits ein Konto, wird sie direkt hinzugefügt. Andernfalls erhält sie einen Einladungslink per E-Mail.
+            </div>
+            {fehler && <p style={s.fehler}>{fehler}</p>}
+            <div style={s.btnRow}>
+              <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
+              <button onClick={senden} disabled={laden} style={s.btnPri}>
+                {laden ? T('sending') : `📧 ${T('invitation_send')}`}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Profil bearbeiten Modal ──────────────────────────────────
 
 function ProfilModal({ mitglied, onClose, onErfolg, T }) {
+  const { rolle: currentRolle } = useApp()
   const [form, setForm] = useState({
     voller_name:         mitglied.voller_name ?? '',
     rolle:               mitglied.rolle ?? 'schueler',
@@ -188,7 +290,7 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
           </Feld>
           <Feld label={T('role')}>
             <select style={s.input} value={form.rolle} onChange={e => setForm(f => ({ ...f, rolle: e.target.value }))}>
-              {ROLLEN.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+              {(currentRolle === 'superadmin' ? ALLE_ROLLEN : ROLLEN).map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
             </select>
           </Feld>
         </div>
@@ -613,10 +715,125 @@ function LoeschenModal({ mitglied, onClose, onErfolg }) {
   )
 }
 
+// ─── Schulen Modal (Superadmin) ───────────────────────────────
+
+function SchulenModal({ mitglied, onClose }) {
+  const [allSchulen,       setAllSchulen]       = useState([])
+  const [mitgliedschaften, setMitgliedschaften] = useState([])
+  const [laden,            setLaden]            = useState(true)
+  const [hinzufuegen,      setHinzufuegen]      = useState(null)
+  const [neuRolle,         setNeuRolle]         = useState('schueler')
+  const [saving,           setSaving]           = useState(null)
+
+  async function ladeDaten() {
+    const [{ data: schulen }, { data: mships }] = await Promise.all([
+      supabase.rpc('alle_schulen_stats'),
+      supabase.rpc('nutzer_schulen', { p_user_id: mitglied.id }),
+    ])
+    setAllSchulen(schulen ?? [])
+    setMitgliedschaften(mships ?? [])
+    setLaden(false)
+  }
+
+  useEffect(() => { ladeDaten() }, [mitglied.id])
+
+  async function mitgliedMachen(schule_id, rolle) {
+    setSaving(schule_id)
+    await supabase.rpc('mitgliedschaft_setzen', { p_user_id: mitglied.id, p_schule_id: schule_id, p_rolle: rolle })
+    const { data } = await supabase.rpc('nutzer_schulen', { p_user_id: mitglied.id })
+    setMitgliedschaften(data ?? [])
+    setSaving(null)
+    setHinzufuegen(null)
+  }
+
+  async function entfernen(schule_id) {
+    setSaving(schule_id)
+    await supabase.rpc('mitgliedschaft_entfernen', { p_user_id: mitglied.id, p_schule_id: schule_id })
+    const { data } = await supabase.rpc('nutzer_schulen', { p_user_id: mitglied.id })
+    setMitgliedschaften(data ?? [])
+    setSaving(null)
+  }
+
+  return (
+    <Modal titel={`🏫 Schulen – ${mitglied.voller_name}`} onClose={onClose} breit>
+      {laden ? (
+        <div style={{ color: 'var(--text-3)', textAlign: 'center', padding: 32 }}>Lade…</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {allSchulen.map(schul => {
+            const ship = mitgliedschaften.find(m => m.schule_id === schul.schule_id)
+            const isBusy   = saving === schul.schule_id
+            const isAdding = hinzufuegen === schul.schule_id
+            return (
+              <div key={schul.schule_id} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px', borderRadius: 'var(--radius)',
+                border: `1.5px solid ${ship ? 'var(--primary)' : 'var(--border)'}`,
+                background: ship ? 'color-mix(in srgb, var(--primary) 6%, var(--surface))' : 'var(--surface)',
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                  background: schul.farbe ?? 'var(--primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, color: '#fff', fontWeight: 700, overflow: 'hidden',
+                }}>
+                  {schul.logo_url
+                    ? <img src={schul.logo_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover' }} />
+                    : schul.name.charAt(0)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{schul.name}</div>
+                  {ship && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'capitalize' }}>{ship.rolle}</span>}
+                </div>
+                {ship ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                    <select
+                      value={ship.rolle}
+                      onChange={e => mitgliedMachen(schul.schule_id, e.target.value)}
+                      disabled={isBusy}
+                      style={{ ...s.input, fontSize: 12, padding: '4px 8px', width: 'auto' }}
+                    >
+                      {ALLE_ROLLEN.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    <button onClick={() => entfernen(schul.schule_id)} disabled={isBusy}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {isBusy ? '…' : '✕'}
+                    </button>
+                  </div>
+                ) : isAdding ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                    <select value={neuRolle} onChange={e => setNeuRolle(e.target.value)}
+                      style={{ ...s.input, fontSize: 12, padding: '4px 8px', width: 'auto' }}>
+                      {ALLE_ROLLEN.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    <button onClick={() => mitgliedMachen(schul.schule_id, neuRolle)} disabled={isBusy}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {isBusy ? '…' : '✓'}
+                    </button>
+                    <button onClick={() => setHinzufuegen(null)}
+                      style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => { setHinzufuegen(schul.schule_id); setNeuRolle('schueler') }}
+                    style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                    + Hinzufügen
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Modal>
+  )
+}
+
 // ─── Hauptkomponente ──────────────────────────────────────────
 
 export default function Mitgliederverwaltung() {
-  const { T } = useApp()
+  const { T, rolle } = useApp()
   const [mitglieder,  setMitglieder]  = useState([])
   const [laden,       setLaden]       = useState(true)
   const [suche,       setSuche]       = useState('')
@@ -679,6 +896,9 @@ export default function Mitgliederverwaltung() {
         </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={csvExportieren} style={s.btnSek} title="Als CSV exportieren">📥 CSV</button>
+          <button onClick={() => setModal({ typ: 'einladung' })} style={s.btnSek}>
+            📧 {T('invite_member')}
+          </button>
           <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>
             {T('member_create')}
           </button>
@@ -746,11 +966,13 @@ export default function Mitgliederverwaltung() {
                 </tr>
               </thead>
               <tbody>
-                {gefiltert.map((m, i) => (
+                {gefiltert.map((m, i) => {
+                  const kannBearbeiten = m.rolle !== 'admin' || rolle === 'superadmin'
+                  return (
                   <tr key={m.id}
-                    className="mitglied-row"
-                    onClick={() => setModal({ typ: 'profil', mitglied: m })}
-                    style={{ background: i % 2 === 0 ? 'var(--surface)' : 'var(--bg)', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                    className={kannBearbeiten ? 'mitglied-row' : ''}
+                    onClick={() => kannBearbeiten && setModal({ typ: 'profil', mitglied: m })}
+                    style={{ background: i % 2 === 0 ? 'var(--surface)' : 'var(--bg)', borderBottom: '1px solid var(--border)', cursor: kannBearbeiten ? 'pointer' : 'default' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar name={m.voller_name} avatarUrl={m.avatar_url} />
@@ -772,26 +994,36 @@ export default function Mitgliederverwaltung() {
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={s.btnKlein} title={T('edit')}>✏️</button>
-                        <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={s.btnKlein} title="E-Mail">📧</button>
-                        <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={s.btnKlein} title="Passwort">🔑</button>
-                        {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
-                          <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Kurszuordnungen">🔗</button>
-                        )}
-                        <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={s.btnKlein} title="Dokumente">📁</button>
-                        <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnKlein, color:'var(--danger)' }} title="Löschen">🗑</button>
-                      </div>
+                      {kannBearbeiten ? (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={s.btnKlein} title={T('edit')}>✏️</button>
+                          <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={s.btnKlein} title="E-Mail">📧</button>
+                          <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={s.btnKlein} title="Passwort">🔑</button>
+                          {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
+                            <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Kurszuordnungen">🔗</button>
+                          )}
+                          <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={s.btnKlein} title="Dokumente">📁</button>
+                          <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnKlein, color:'var(--danger)' }} title="Löschen">🗑</button>
+                          {rolle === 'superadmin' && (
+                            <button onClick={() => setModal({ typ: 'schulen', mitglied: m })} style={s.btnKlein} title="Schulen verwalten">🏫</button>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-3)', paddingLeft: 4 }}>–</span>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Mobile Karten */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} className="mobile-cards">
-            {gefiltert.map(m => (
+            {gefiltert.map(m => {
+              const kannBearbeiten = m.rolle !== 'admin' || rolle === 'superadmin'
+              return (
               <div key={m.id} style={{
                 background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
                 padding: '16px', border: '1px solid var(--border)',
@@ -811,45 +1043,47 @@ export default function Mitgliederverwaltung() {
                   </div>
                 </div>
                 {m.telefon && <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 8 }}>📞 {m.telefon}</div>}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                      ✏️ {T('edit')}
-                    </button>
-                    {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
-                      <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                        🔗 {T('member_assignments')}
+                {kannBearbeiten ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
+                        ✏️ {T('edit')}
                       </button>
-                    )}
+                      {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
+                        <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
+                          🔗 {T('member_assignments')}
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📧</button>
+                      <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>🔑</button>
+                      <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📁</button>
+                      <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>🗑</button>
+                      {rolle === 'superadmin' && (
+                        <button onClick={() => setModal({ typ: 'schulen', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>🏫</button>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                      📧
-                    </button>
-                    <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                      🔑
-                    </button>
-                    <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                      📁
-                    </button>
-                    <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>
-                      🗑
-                    </button>
-                  </div>
-                </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', padding: '8px 0' }}>Nur Superadmin kann Admins bearbeiten</div>
+                )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}
 
       {/* Modals */}
+      {modal?.typ === 'einladung' && <EinladungModal onClose={() => setModal(null)} T={T} />}
       {modal?.typ === 'anlegen'   && <NutzerAnlegenModal onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
       {modal?.typ === 'profil'    && <ProfilModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
       {modal?.typ === 'email'     && <EmailModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} />}
       {modal?.typ === 'passwort'  && <PasswortModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'zuordnung' && <ZuordnungModal mitglied={modal.mitglied} onClose={() => setModal(null)} T={T} />}
       {modal?.typ === 'dokumente' && <DokumenteModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
+      {modal?.typ === 'schulen'   && <SchulenModal   mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'loeschen'  && (
         <LoeschenModal
           mitglied={modal.mitglied}

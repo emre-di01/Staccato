@@ -85,7 +85,7 @@ function KursModal({ kurs, onClose, onErfolg }) {
     async function ladeOptionen() {
       const [i, r, l] = await Promise.all([
         supabase.from('instrumente').select('id, name_de, icon').eq('aktiv', true).eq('schule_id', profil?.schule_id).order('name_de'),
-        supabase.from('raeume').select('id, name').eq('aktiv', true).order('name'),
+        supabase.from('raeume').select('id, name').eq('schule_id', profil?.schule_id).eq('aktiv', true).order('name'),
         supabase.from('profiles').select('id, voller_name, rolle').in('rolle', ['lehrer', 'admin', 'superadmin']).eq('aktiv', true).order('voller_name'),
       ])
       setInstrumente(i.data ?? [])
@@ -654,7 +654,7 @@ function KursLoeschenModal({ kurs, onClose, onErfolg }) {
 // ─── Hauptkomponente ──────────────────────────────────────────
 
 export default function Kursverwaltung() {
-  const { T } = useApp()
+  const { T, profil } = useApp()
   const navigate = useNavigate()
   const [kurse,       setKurse]       = useState([])
   const [laden,       setLaden]       = useState(true)
@@ -664,6 +664,7 @@ export default function Kursverwaltung() {
   const [modal,       setModal]       = useState(null)
 
   const ladeKurse = useCallback(async () => {
+    if (!profil?.schule_id) return
     setLaden(true)
     const { data } = await supabase
       .from('unterricht')
@@ -674,10 +675,11 @@ export default function Kursverwaltung() {
         unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)),
         unterricht_schueler(schueler_id, status)
       `)
+      .eq('schule_id', profil.schule_id)
       .order('name')
     setKurse(data ?? [])
     setLaden(false)
-  }, [])
+  }, [profil?.schule_id])
 
   useEffect(() => { ladeKurse() }, [ladeKurse])
 

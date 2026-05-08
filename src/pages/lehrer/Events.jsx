@@ -88,7 +88,7 @@ export default function LehrerEvents() {
     if (modal.event) {
       ;({ error } = await supabase.from('events').update(payload).eq('id', modal.event.id))
     } else {
-      ;({ error } = await supabase.from('events').insert(payload))
+      ;({ error } = await supabase.from('events').insert({ ...payload, schule_id: profil.schule_id }))
     }
     if (error) setFehler(error.message)
     else { setModal(null); await ladeEvents() }

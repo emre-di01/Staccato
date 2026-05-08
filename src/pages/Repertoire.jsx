@@ -10,7 +10,7 @@ const STATUS_LABEL = { aktuell:'Aktuell', geplant:'Geplant', abgeschlossen:'Abge
 
 // ─── Stück anlegen Modal ──────────────────────────────────────
 function NeuesStueckModal({ onClose, onErfolg }) {
-  const { profil, T } = useApp()
+  const { profil, schule, T } = useApp()
   const [form, setForm] = useState({ titel:'', komponist:'', tonart:'', tempo:'', youtube_url:'' })
   const [laden, setLaden] = useState(false)
   const [fehler, setFehler] = useState('')
@@ -18,7 +18,7 @@ function NeuesStueckModal({ onClose, onErfolg }) {
   async function speichern() {
     if (!form.titel.trim()) { setFehler('Titel ist erforderlich.'); return }
     setLaden(true)
-    const { error } = await supabase.from('stuecke').insert({ ...form, erstellt_von: profil.id })
+    const { error } = await supabase.from('stuecke').insert({ ...form, erstellt_von: profil.id, schule_id: schule?.id })
     if (error) { setFehler(error.message); setLaden(false); return }
     onErfolg(); onClose()
   }
@@ -107,7 +107,7 @@ function StueckKarte({ stueck, kurse = [], onClick }) {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Repertoire() {
-  const { profil, rolle, T } = useApp()
+  const { profil, rolle, schule, T } = useApp()
   const navigate  = useNavigate()
   const location  = useLocation()
   const rolle_    = location.pathname.split('/')[1]   // admin | lehrer | schueler
@@ -124,7 +124,7 @@ export default function Repertoire() {
   const queryClient = useQueryClient()
 
   const { data, isLoading: laden } = useQuery({
-    queryKey: ['repertoire', profil?.id, istAdmin, istSchueler],
+    queryKey: ['repertoire', profil?.id, schule?.id, istAdmin, istSchueler],
     enabled: !!profil?.id,
     queryFn: async () => {
       let bibliothek = []

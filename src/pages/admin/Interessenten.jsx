@@ -10,7 +10,7 @@ const STATUS_FARBE = {
 
 // ─── Interessent anlegen / bearbeiten ─────────────────────────
 function InteressentModal({ item, onClose, onErfolg }) {
-  const { T } = useApp()
+  const { T, profil } = useApp()
   const istNeu = !item?.id
   const [form, setForm] = useState({
     voller_name:  item?.voller_name  ?? '',
@@ -55,6 +55,7 @@ function InteressentModal({ item, onClose, onErfolg }) {
       notizen:       form.notizen       || null,
       email:         form.email         || null,
       telefon:       form.telefon       || null,
+      ...(istNeu && { schule_id: profil?.schule_id }),
     }
     const { error } = istNeu
       ? await supabase.from('interessenten').insert(payload)
@@ -271,14 +272,16 @@ export default function Interessenten() {
   const [modal,        setModal]        = useState(null)
 
   const ladeDaten = useCallback(async () => {
+    if (!profil?.schule_id) return
     setLaden(true)
     const { data } = await supabase
       .from('interessenten')
       .select('*, instrumente(name_de, icon), profiles!interessenten_wunsch_lehrer_fkey(voller_name)')
+      .eq('schule_id', profil.schule_id)
       .order('angemeldet_am', { ascending: false })
     setListe(data ?? [])
     setLaden(false)
-  }, [])
+  }, [profil?.schule_id])
 
   useEffect(() => { ladeDaten() }, [ladeDaten])
 

@@ -23,7 +23,7 @@ const NOTES = [
 ]
 
 export default function LoginPage() {
-  const { session, rolle, laden, T, theme, darkMode, changeTheme, toggleDark, lang, setLang } = useApp()
+  const { session, rolle, laden, T, theme, darkMode, changeTheme, toggleDark, lang, setLang, schulenListe } = useApp()
   const [email,      setEmail]      = useState('')
   const [passwort,   setPasswort]   = useState('')
   const [fehler,     setFehler]     = useState('')
@@ -51,6 +51,14 @@ export default function LoginPage() {
     if (gespeichert) {
       sessionStorage.removeItem('staccato_nach_login')
       return <Navigate to={gespeichert} replace />
+    }
+    // Multi-Tenant: Schul-Auswahl wenn mehrere Schulen und noch keine ausgewählt
+    if (
+      schulenListe.length > 1 &&
+      rolle !== 'superadmin' &&
+      !sessionStorage.getItem('staccato_schule_session')
+    ) {
+      return <Navigate to="/schulen" replace />
     }
     return <Navigate to={startseiteNach(rolle)} replace />
   }

@@ -56,7 +56,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function ladeStats() {
       const [{ data }, aufgabenRes, zieleRes, protokolleRes, inventarRes, gebRes] = await Promise.all([
-        supabase.rpc('dashboard_stats'),
+        supabase.rpc('dashboard_stats', { p_schule_id: profil?.schule_id }),
         supabase.from('vorstand_aufgaben').select('status').eq('schule_id', profil?.schule_id ?? ''),
         supabase.from('vorstand_ziele').select('status').eq('schule_id', profil?.schule_id ?? ''),
         supabase.from('vorstand_protokolle').select('id', { count: 'exact', head: true }).eq('schule_id', profil?.schule_id ?? ''),

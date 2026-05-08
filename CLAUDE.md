@@ -68,7 +68,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **1.7.0** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.0.0** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -130,6 +130,16 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/datenschutz` | `Datenschutz` | public |
 
 **Placeholder routes**: Abrechnung, Dateien, and the `eltern` Dashboard render a `P(label, icon)` placeholder component — these features are in the schema but the UI is not yet implemented.
+
+**V2 Multi-Tenant routes:**
+
+| Path | Component | Roles |
+|------|-----------|-------|
+| `/superadmin` | `SuperadminDashboard` | superadmin only |
+| `/schulen` | `SchulWaehler` | all authenticated |
+| `/einladung/:token` | `Einladung` | public |
+
+`superadmin` has a dedicated nav with "Alle Schulen" → `/superadmin` at the top, then the same admin routes for the currently active school.
 
 ### Navigation menu items per role
 

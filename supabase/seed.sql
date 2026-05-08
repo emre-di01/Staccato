@@ -102,7 +102,8 @@ SELECT
   p.erstellt_am,
   u.email
 FROM public.profiles p
-LEFT JOIN auth.users u ON u.id = p.id;
+LEFT JOIN auth.users u ON u.id = p.id
+WHERE p.schule_id = public.meine_schule_id();
 
 GRANT SELECT ON public.mitglieder_mit_email TO authenticated;
 
