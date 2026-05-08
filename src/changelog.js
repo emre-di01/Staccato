@@ -21,12 +21,6 @@ export const CHANGELOG = [
         tr: 'Dinamik durum çubuğu rengi – seçilen temaya otomatik uyum sağlar',
       },
       {
-        icon: '⬆️',
-        de: 'Pull-to-Refresh: Seite durch Wischgeste nach unten aktualisieren',
-        en: 'Pull-to-refresh: reload page by swiping down',
-        tr: 'Aşağı kaydırarak yenile: aşağı çekerek sayfayı yenile',
-      },
-      {
         icon: '⚙️',
         de: 'Einstellungen als natives Bottom Sheet auf Mobilgeräten, Tab-Bar mit Aktiv-Indikator',
         en: 'Settings as native bottom sheet on mobile, tab bar with active indicator',

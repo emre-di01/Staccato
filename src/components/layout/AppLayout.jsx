@@ -295,10 +295,6 @@ export default function AppLayout() {
   const [popupPos, setPopupPos]             = useState(null)
   const popupGesperrt                       = useRef(false)
   const touchStartX                         = useRef(null)
-  const touchStartY                         = useRef(null)
-  const mainRef                             = useRef(null)
-  const [pullY, setPullY]                   = useState(0)
-  const [pulling, setPulling]               = useState(false)
   const [installPrompt, setInstallPrompt]   = useState(null)
   const [keyboardOffen, setKeyboardOffen]   = useState(false)
   const navConfig = getNavConfig(rolle, T)
@@ -353,27 +349,6 @@ export default function AppLayout() {
     window.location.href = '/login'
   }
 
-  function handlePullTouchStart(e) {
-    if ((mainRef.current?.scrollTop ?? 1) !== 0) return
-    // Don't activate inside modals or scrollable overlays
-    let el = e.target
-    while (el && el !== mainRef.current) {
-      const style = getComputedStyle(el)
-      if (style.position === 'fixed') return
-      if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) return
-      el = el.parentElement
-    }
-    touchStartY.current = e.touches[0].clientY
-  }
-  function handlePullTouchMove(e) {
-    if (touchStartY.current === null || (mainRef.current?.scrollTop ?? 1) > 0) return
-    const dy = e.touches[0].clientY - touchStartY.current
-    if (dy > 0) { setPullY(Math.min(dy, 80)); setPulling(dy > 60) }
-  }
-  function handlePullTouchEnd() {
-    if (pulling) window.location.reload()
-    setPullY(0); setPulling(false); touchStartY.current = null
-  }
   async function handleInstall() {
     if (!installPrompt || installPrompt === 'ios') return
     installPrompt.prompt()
@@ -520,35 +495,9 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main
-          ref={mainRef}
-          style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }}
-          className="main-content"
-          onTouchStart={handlePullTouchStart}
-          onTouchMove={handlePullTouchMove}
-          onTouchEnd={handlePullTouchEnd}
-        >
+        <main style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }} className="main-content">
           <Outlet />
         </main>
-
-        {/* Pull-to-Refresh Indicator */}
-        {pullY > 5 && (
-          <div style={{
-            position: 'fixed',
-            top: `calc(env(safe-area-inset-top, 0px) + ${Math.min(pullY * 0.8 + 16, 88)}px)`,
-            left: '50%', transform: 'translateX(-50%)',
-            width: 34, height: 34, borderRadius: '50%',
-            background: 'var(--surface)', boxShadow: 'var(--shadow-lg)',
-            border: '1.5px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, zIndex: 200, pointerEvents: 'none',
-            opacity: Math.min(1, pullY / 40),
-          }} className="mobile-only">
-            <span style={{ display: 'block', lineHeight: 1, transform: `rotate(${pulling ? 180 : Math.round((pullY / 60) * 180)}deg)`, transition: 'transform 0.15s' }}>
-              {pulling ? '↺' : '↓'}
-            </span>
-          </div>
-        )}
 
         {/* Mobile Bottom Nav */}
         <nav style={{
