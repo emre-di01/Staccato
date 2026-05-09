@@ -10,6 +10,7 @@ function AvatarBereich({ profil, onUpdate }) {
 
   async function hochladen(datei) {
     if (!datei) return
+    if (datei.size > 15 * 1024 * 1024) { toast(T('datei_zu_gross'), 'error'); return }
     setLaden(true)
     const sauber = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const pfad   = `${profil.id}/avatar_${Date.now()}_${sauber}`

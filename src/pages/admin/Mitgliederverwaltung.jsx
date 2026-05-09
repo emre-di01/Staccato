@@ -562,6 +562,7 @@ function DokumenteModal({ mitglied, onClose }) {
 
   async function hochladen() {
     if (!datei) { setFehler(T('dok_no_file')); return }
+    if (datei.size > 15 * 1024 * 1024) { setFehler(T('datei_zu_gross')); return }
     const name = form.name.trim() || datei.name
     setUploading(true); setFehler('')
     const sauber = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')

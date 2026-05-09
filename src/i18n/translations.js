@@ -234,6 +234,7 @@ export const translations = {
     dok_label: 'Bezeichnung',
     dok_choose_file: 'Klicken oder Datei hierher ziehen',
     dok_no_file: 'Bitte eine Datei wählen.',
+    datei_zu_gross: 'Datei zu groß (max. 15 MB).',
     dok_documents: 'Vorhandene Dokumente',
     dok_none: 'Noch keine Dokumente vorhanden.',
 
@@ -948,6 +949,7 @@ export const translations = {
     dok_label: 'Label',
     dok_choose_file: 'Click or drag a file here',
     dok_no_file: 'Please select a file.',
+    datei_zu_gross: 'File too large (max. 15 MB).',
     dok_documents: 'Existing Documents',
     dok_none: 'No documents available yet.',
 
@@ -1662,6 +1664,7 @@ export const translations = {
     dok_label: 'Etiket',
     dok_choose_file: 'Tıklayın veya dosyayı buraya sürükleyin',
     dok_no_file: 'Lütfen bir dosya seçin.',
+    datei_zu_gross: 'Dosya çok büyük (maks. 15 MB).',
     dok_documents: 'Mevcut Belgeler',
     dok_none: 'Henüz belge bulunmuyor.',
 

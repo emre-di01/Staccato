@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useIsMobile } from '../../hooks/useWindowWidth'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { marked } from 'marked'
+import { safeMarkdown } from '../../lib/markdown'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -226,6 +226,7 @@ function DateiUploadModal({ stueckId, onClose, onErfolg }) {
 
   async function hochladen() {
     if (!datei) { setFehler('Bitte eine Datei wählen.'); return }
+    if (datei.size > 15 * 1024 * 1024) { setFehler('Datei zu groß (max. 15 MB).'); return }
     setLaden(true)
     const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const pfad = `${stueckId}/${form.typ}/${Date.now()}_${sauberName}`
@@ -392,7 +393,7 @@ function LiedtextBearbeiten({ stueck, onSpeichern, onAbbrechen }) {
       {tab === 'text' ? (
         vorschau ? (
           <div
-            dangerouslySetInnerHTML={{ __html: marked.parse(text || '*Kein Text vorhanden.*') }}
+            dangerouslySetInnerHTML={{ __html: safeMarkdown(text || '*Kein Text vorhanden.*') }}
             style={{ fontFamily:'Georgia, serif', fontSize:15, lineHeight:1.9, color:'var(--text)', minHeight:300, padding:'8px 0' }} />
         ) : (
           <textarea value={text} onChange={e => setText(e.target.value)}
@@ -503,7 +504,7 @@ export default function StueckDetail() {
   function liedtextAlsPdf() {
     const win = window.open('', '_blank')
     const meta = [stueck.komponist, stueck.tonart, stueck.tempo].filter(Boolean).join(' · ')
-    const html = marked.parse(stueck.liedtext ?? '')
+    const html = safeMarkdown(stueck.liedtext ?? '')
     const logoHtml = schule?.logo_url
       ? `<img src="${schule.logo_url}" class="logo" alt="Logo" />`
       : ''
@@ -721,7 +722,7 @@ ${html}
                   )}
                 </div>
                 {mdModus
-                  ? <div dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }}
+                  ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(stueck.liedtext) }}
                       style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', transition:'font-size 0.2s', wordBreak:'break-word' }} />
                   : <pre style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', whiteSpace:'pre-wrap', margin:0, transition:'font-size 0.2s', wordBreak:'break-word' }}>{stueck.liedtext}</pre>
                 }
@@ -957,7 +958,7 @@ ${html}
           </div>
           <div style={{ flex:1, overflowY:'auto', padding: mob ? '24px 16px' : '40px 10vw', WebkitOverflowScrolling:'touch' }}>
             {mdModus
-              ? <div dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }}
+              ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(stueck.liedtext) }}
                   style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'#fff', margin:'0 auto', maxWidth:700, transition:'font-size 0.15s', wordBreak:'break-word' }} />
               : <pre style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'#fff', whiteSpace:'pre-wrap', margin:'0 auto', maxWidth:700, transition:'font-size 0.15s', wordBreak:'break-word' }}>{stueck.liedtext}</pre>
             }

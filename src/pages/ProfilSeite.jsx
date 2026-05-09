@@ -130,6 +130,7 @@ export default function ProfilSeite() {
   async function avatarHochladen(e) {
     const datei = e.target.files[0]
     if (!datei) return
+    if (datei.size > 15 * 1024 * 1024) { setFehler('Datei zu groß (max. 15 MB).'); return }
     setAvatarLaden(true); setFehler(''); setErfolg('')
     const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const pfad = `${profil.id}/avatar_${Date.now()}_${sauberName}`

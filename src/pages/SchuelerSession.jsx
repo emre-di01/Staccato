@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { marked } from 'marked'
+import { safeMarkdown } from '../lib/markdown'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { startseiteNach } from '../components/ProtectedRoute'
@@ -368,7 +368,7 @@ export default function SchuelerSession() {
                       </div>
                     </div>
                     {mdModus
-                      ? <div dangerouslySetInnerHTML={{ __html: marked.parse(stueck.liedtext) }} style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', fontSize: liedtextGroesse, lineHeight: 1.8, color: 'var(--text)' }} />
+                      ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(stueck.liedtext) }} style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', fontSize: liedtextGroesse, lineHeight: 1.8, color: 'var(--text)' }} />
                       : <pre style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', fontSize: liedtextGroesse, lineHeight: 1.8, color: 'var(--text)', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'Georgia, serif', wordBreak: 'break-word' }}>{stueck.liedtext}</pre>
                     }
                   </>

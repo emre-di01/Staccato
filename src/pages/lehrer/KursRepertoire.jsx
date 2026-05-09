@@ -73,6 +73,7 @@ function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
 
   async function hochladen() {
     if (!datei) { setFehler(T('dok_no_file')); return }
+    if (datei.size > 15 * 1024 * 1024) { setFehler(T('datei_zu_gross')); return }
     setLaden(true)
     const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const bucket = form.schueler_id ? 'schueler-dateien' : 'kurs-dateien'

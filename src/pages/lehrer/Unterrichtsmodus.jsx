@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { marked } from 'marked'
+import { safeMarkdown } from '../../lib/markdown'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { useIsMobile } from '../../hooks/useWindowWidth'
 import QRCode from 'qrcode'
 
 function getYouTubeId(url) {
@@ -77,6 +78,7 @@ export default function Unterrichtsmodus() {
   const { id: kursId } = useParams()
   const navigate = useNavigate()
   const { profil, T } = useApp()
+  const mob = useIsMobile()
 
   const [phase, setPhase] = useState('start') // start | lobby | aktiv | beendet
   const [kurs, setKurs] = useState(null)
@@ -89,8 +91,10 @@ export default function Unterrichtsmodus() {
   const [teilnehmer, setTeilnehmer] = useState([])
   const [reaktionen, setReaktionen] = useState([])
   const [stuecke, setStuecke] = useState([])
-  const [aktiveStueckId, setAktiveStueckId] = useState(null)
-  const [aktiveAnsicht, setAktiveAnsicht] = useState('noten')
+  const [vorschauStueckId, setVorschauStueckId] = useState(null)
+  const [vorschauAnsicht, setVorschauAnsicht] = useState('noten')
+  const [liveStueckId, setLiveStueckId] = useState(null)
+  const [liveAnsicht, setLiveAnsicht] = useState('noten')
   const [laden, setLaden] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [fehler, setFehler] = useState('')
@@ -208,8 +212,14 @@ export default function Unterrichtsmodus() {
     const qr = await QRCode.toDataURL(joinUrl, { width: 240, margin: 2 })
     setQrUrl(qr)
     setSession({ id: vorhandeneSession.id, join_code: vorhandeneSession.join_code, oeffentlich: vorhandeneSession.oeffentlich ?? false })
-    if (vorhandeneSession.aktuelles_stueck) setAktiveStueckId(vorhandeneSession.aktuelles_stueck)
-    if (vorhandeneSession.aktuelle_ansicht) setAktiveAnsicht(vorhandeneSession.aktuelle_ansicht)
+    if (vorhandeneSession.aktuelles_stueck) {
+      setVorschauStueckId(vorhandeneSession.aktuelles_stueck)
+      setLiveStueckId(vorhandeneSession.aktuelles_stueck)
+    }
+    if (vorhandeneSession.aktuelle_ansicht) {
+      setVorschauAnsicht(vorhandeneSession.aktuelle_ansicht)
+      setLiveAnsicht(vorhandeneSession.aktuelle_ansicht)
+    }
     setVorhandeneSession(null)
     setPhase('aktiv')
     setLaden(false)
@@ -226,20 +236,26 @@ export default function Unterrichtsmodus() {
     setLaden(false)
   }
 
-  async function wechsleAnsicht(ansicht, stueckId) {
-    if (!session) return
-    const zielStueck = stueckId ?? aktiveStueckId
+  function wechsleVorschau(ansicht, stueckId) {
+    if (stueckId) setVorschauStueckId(stueckId)
+    setVorschauAnsicht(ansicht)
+  }
+
+  async function teilen() {
+    if (!session || !vorschauStueckId) return
+    setLaden(true)
     await supabase.rpc('session_praesentation_wechseln', {
       p_session_id: session.id,
-      p_ansicht: ansicht,
-      p_stueck_id: zielStueck ?? null,
+      p_ansicht: vorschauAnsicht,
+      p_stueck_id: vorschauStueckId,
     })
     broadcastRef.current?.send({
       type: 'broadcast', event: 'state',
-      payload: { aktuelles_stueck: zielStueck ?? null, aktuelle_ansicht: ansicht },
+      payload: { aktuelles_stueck: vorschauStueckId, aktuelle_ansicht: vorschauAnsicht },
     })
-    setAktiveAnsicht(ansicht)
-    if (stueckId) setAktiveStueckId(stueckId)
+    setLiveStueckId(vorschauStueckId)
+    setLiveAnsicht(vorschauAnsicht)
+    setLaden(false)
   }
 
   function defaultAnsicht(st) {
@@ -250,7 +266,8 @@ export default function Unterrichtsmodus() {
     return 'dateiverwaltung'
   }
 
-  const aktivStueck = stuecke.find(s => s.id === aktiveStueckId)
+  const vorschauStueck = stuecke.find(s => s.id === vorschauStueckId)
+  const bereitsLive = vorschauStueckId === liveStueckId && vorschauAnsicht === liveAnsicht
 
   // ── START ──────────────────────────────────────────────────────
   if (phase === 'start') return (
@@ -423,6 +440,13 @@ export default function Unterrichtsmodus() {
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>{teilnehmer.length} Schüler · Code: <strong style={{ color: 'var(--primary)', fontFamily: 'monospace', fontSize: 13 }}>{session?.join_code}</strong></span>
             {session?.oeffentlich && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)' }}>🌐 Öffentlich</span>}
+            {liveStueckId
+              ? <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                  Live: {stuecke.find(s => s.id === liveStueckId)?.titel} · {liveAnsicht}
+                </span>
+              : <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Noch nichts geteilt</span>
+            }
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -437,53 +461,52 @@ export default function Unterrichtsmodus() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
-        {/* Stück-Liste */}
-        <div style={{ width: 210, minWidth: 210, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={s.label}>{T('session_pieces_label')} ({stuecke.length})</div>
-          {stuecke.length === 0 && (
-            <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '8px 0' }}>Keine Stücke im Kurs.</div>
-          )}
-          {stuecke.map(st => (
-            <button key={st.id} onClick={() => wechsleAnsicht(defaultAnsicht(st), st.id)}
-              style={{
-                padding: '10px 12px', borderRadius: 'var(--radius)', textAlign: 'left',
-                border: `2px solid ${aktiveStueckId === st.id ? 'var(--primary)' : 'var(--border)'}`,
-                background: aktiveStueckId === st.id ? 'var(--primary)' : 'var(--surface)',
-                color: aktiveStueckId === st.id ? 'var(--primary-fg)' : 'var(--text)',
-                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-              }}>
-              <div style={{ fontWeight: 700, fontSize: 13 }}>{st.titel}</div>
-              {st.komponist && <div style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>{st.komponist}</div>}
-            </button>
-          ))}
-        </div>
+      {mob ? (
+        /* ── MOBILE LAYOUT ──────────────────────────────────── */
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 10, paddingBottom: 80 }}>
 
-        {/* Haupt-Bereich */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, gap: 12 }}>
-          {/* Ansicht-Auswahl */}
-          {aktivStueck ? (
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
-                <strong style={{ color: 'var(--text)' }}>{aktivStueck.titel}</strong> – {T('session_view_for_students')}
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {/* Stücke: horizontale Pill-Leiste */}
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ display: 'flex', gap: 8, paddingBottom: 4 }}>
+              {stuecke.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Keine Stücke im Kurs.</span>}
+              {stuecke.map(st => {
+                const istVorschau = vorschauStueckId === st.id
+                const istLive = liveStueckId === st.id
+                return (
+                  <button key={st.id} onClick={() => wechsleVorschau(defaultAnsicht(st), st.id)}
+                    style={{
+                      padding: '8px 14px', borderRadius: 99, whiteSpace: 'nowrap', flexShrink: 0,
+                      border: `2px solid ${istVorschau ? 'var(--primary)' : istLive ? '#22c55e' : 'var(--border)'}`,
+                      background: istVorschau ? 'var(--primary)' : 'var(--surface)',
+                      color: istVorschau ? 'var(--primary-fg)' : 'var(--text)',
+                      cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
+                    }}>
+                    {istLive ? '● ' : ''}{st.titel}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Ansicht-Buttons: horizontal scrollbar */}
+          {vorschauStueck && (
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ display: 'flex', gap: 6, paddingBottom: 4 }}>
                 {Object.entries(ANSICHT).map(([key, { icon, label }]) => {
                   const hatInhalt =
-                    key === 'noten'    ? aktivStueck.stueck_dateien?.some(d => d.typ === 'noten') :
-                    key === 'liedtext' ? !!aktivStueck.liedtext :
-                    key === 'akkorde'  ? (aktivStueck.stueck_dateien?.some(d => d.typ === 'akkorde') || !!aktivStueck.notizen) :
-                    key === 'youtube'  ? !!aktivStueck.youtube_url : true
+                    key === 'noten'    ? vorschauStueck.stueck_dateien?.some(d => d.typ === 'noten') :
+                    key === 'liedtext' ? !!vorschauStueck.liedtext :
+                    key === 'akkorde'  ? (vorschauStueck.stueck_dateien?.some(d => d.typ === 'akkorde') || !!vorschauStueck.notizen) :
+                    key === 'youtube'  ? !!vorschauStueck.youtube_url : true
+                  const istAktiv = vorschauAnsicht === key
                   return (
-                    <button key={key}
-                      onClick={() => hatInhalt && wechsleAnsicht(key)}
+                    <button key={key} onClick={() => hatInhalt && wechsleVorschau(key)}
                       style={{
-                        padding: '8px 14px', borderRadius: 'var(--radius)', fontFamily: 'inherit',
-                        border: `2px solid ${aktiveAnsicht === key ? 'var(--primary)' : 'var(--border)'}`,
-                        background: aktiveAnsicht === key ? 'var(--primary)' : 'var(--surface)',
-                        color: aktiveAnsicht === key ? 'var(--primary-fg)' : (hatInhalt ? 'var(--text-2)' : 'var(--text-3)'),
-                        fontSize: 13, fontWeight: 600, cursor: hatInhalt ? 'pointer' : 'default',
-                        opacity: hatInhalt ? 1 : 0.4,
+                        padding: '7px 12px', borderRadius: 'var(--radius)', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+                        border: `2px solid ${istAktiv ? 'var(--primary)' : 'var(--border)'}`,
+                        background: istAktiv ? 'var(--primary)' : 'var(--surface)',
+                        color: istAktiv ? 'var(--primary-fg)' : (hatInhalt ? 'var(--text-2)' : 'var(--text-3)'),
+                        fontSize: 13, fontWeight: 600, cursor: hatInhalt ? 'pointer' : 'default', opacity: hatInhalt ? 1 : 0.4,
                       }}>
                       {icon} {label}
                     </button>
@@ -491,19 +514,13 @@ export default function Unterrichtsmodus() {
                 })}
               </div>
             </div>
-          ) : (
-            <div style={{ padding: '20px', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '2px dashed var(--border)', color: 'var(--text-3)', fontSize: 14, textAlign: 'center' }}>
-              {T('session_select_piece')}
-            </div>
           )}
 
-          {/* Vorschau: was Schüler gerade sehen */}
-          {aktivStueck && (
+          {/* Inhalt-Vorschau */}
+          {vorschauStueck ? (
             <div style={{ ...s.card, flex: 1, overflowY: 'auto', marginBottom: 0 }}>
-              <div style={s.label}>{T('session_preview_label')}</div>
-
-              {aktiveAnsicht === 'liedtext' && (
-                aktivStueck.liedtext
+              {vorschauAnsicht === 'liedtext' && (
+                vorschauStueck.liedtext
                   ? <>
                       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
                         <div style={{ display:'flex', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', overflow:'hidden' }}>
@@ -512,46 +529,40 @@ export default function Unterrichtsmodus() {
                         </div>
                       </div>
                       {mdModus
-                        ? <div dangerouslySetInnerHTML={{ __html: marked.parse(aktivStueck.liedtext) }} style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)' }} />
-                        : <pre style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'Georgia, serif', wordBreak: 'break-word' }}>{aktivStueck.liedtext}</pre>
+                        ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(vorschauStueck.liedtext) }} style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)' }} />
+                        : <pre style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'Georgia, serif', wordBreak: 'break-word' }}>{vorschauStueck.liedtext}</pre>
                       }
                     </>
-                  : <VorschauPlatzhalter ansicht={aktiveAnsicht} />
+                  : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
               )}
-
-              {aktiveAnsicht === 'akkorde' && (
-                aktivStueck.notizen
-                  ? <div style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', overflowX: 'auto' }}>
-                      <ChordPro text={aktivStueck.notizen} />
-                    </div>
-                  : <VorschauPlatzhalter ansicht={aktiveAnsicht} />
+              {vorschauAnsicht === 'akkorde' && (
+                vorschauStueck.notizen
+                  ? <div style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', overflowX: 'auto' }}><ChordPro text={vorschauStueck.notizen} /></div>
+                  : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
               )}
-
-              {aktiveAnsicht === 'noten' && (
-                aktivStueck.stueck_dateien?.filter(d => d.typ === 'noten').length > 0
+              {vorschauAnsicht === 'noten' && (
+                vorschauStueck.stueck_dateien?.filter(d => d.typ === 'noten').length > 0
                   ? <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      {aktivStueck.stueck_dateien.filter(d => d.typ === 'noten').map(d => (
+                      {vorschauStueck.stueck_dateien.filter(d => d.typ === 'noten').map(d => (
                         <div key={d.id}>
                           {d.stimme && d.stimme !== 'keine' && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 4, textTransform: 'capitalize' }}>Stimme: {d.stimme}</div>}
                           <PdfInline pfad={d.bucket_pfad} />
                         </div>
                       ))}
                     </div>
-                  : <VorschauPlatzhalter ansicht={aktiveAnsicht} />
+                  : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
               )}
-
-              {aktiveAnsicht === 'youtube' && (
-                aktivStueck.youtube_url
+              {vorschauAnsicht === 'youtube' && (
+                vorschauStueck.youtube_url
                   ? <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                      <iframe src={`https://www.youtube.com/embed/${getYouTubeId(aktivStueck.youtube_url)}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} frameBorder="0" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                      <iframe src={`https://www.youtube.com/embed/${getYouTubeId(vorschauStueck.youtube_url)}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} frameBorder="0" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
                     </div>
-                  : <VorschauPlatzhalter ansicht={aktiveAnsicht} />
+                  : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
               )}
-
-              {aktiveAnsicht === 'dateiverwaltung' && (
-                aktivStueck.stueck_dateien?.length > 0
+              {vorschauAnsicht === 'dateiverwaltung' && (
+                vorschauStueck.stueck_dateien?.length > 0
                   ? <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {aktivStueck.stueck_dateien.map(d => (
+                      {vorschauStueck.stueck_dateien.map(d => (
                         <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 'var(--radius)', background: 'var(--bg-2)', border: '1px solid var(--border)', fontSize: 13 }}>
                           <span>📎</span>
                           <span style={{ flex: 1, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
@@ -559,35 +570,210 @@ export default function Unterrichtsmodus() {
                         </div>
                       ))}
                     </div>
-                  : <VorschauPlatzhalter ansicht={aktiveAnsicht} />
+                  : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
               )}
+            </div>
+          ) : (
+            <div style={{ padding: '32px 20px', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '2px dashed var(--border)', color: 'var(--text-3)', fontSize: 14, textAlign: 'center' }}>
+              {T('session_select_piece')}
             </div>
           )}
 
-          {/* Live-Reaktionen */}
-          <div style={{ ...s.card, maxHeight: aktivStueck ? 200 : undefined, flex: aktivStueck ? undefined : 1, overflowY: 'auto', marginBottom: 0 }}>
-            <div style={s.label}>{T('session_reactions_label')}</div>
-            {reaktionen.length === 0 ? (
-              <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '16px 0', textAlign: 'center' }}>
-                {T('session_no_reactions')}
+          {/* Reaktionen kompakt */}
+          {reaktionen.length > 0 && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: '8px 12px', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+              {Object.entries(REAKTION).map(([typ, emoji]) => {
+                const n = reaktionen.filter(r => r.typ === typ).length
+                return n > 0 ? <span key={typ} style={{ fontSize: 13, fontWeight: 700 }}>{emoji} {n}</span> : null
+              })}
+            </div>
+          )}
+
+          {/* Sticky Bottom: Teilen-Button */}
+          {vorschauStueck && (
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '12px 16px 28px', background: 'var(--surface)', borderTop: '2px solid var(--border)', zIndex: 50 }}>
+              <button onClick={teilen} disabled={laden || bereitsLive}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: 'var(--radius)', border: 'none', fontFamily: 'inherit', fontSize: 16, fontWeight: 800, cursor: bereitsLive ? 'default' : 'pointer',
+                  background: bereitsLive ? 'rgba(34,197,94,0.12)' : 'var(--primary)',
+                  color: bereitsLive ? '#16a34a' : 'var(--primary-fg)',
+                }}>
+                {laden ? '…' : bereitsLive ? '✓ Bereits live' : '▶ Jetzt teilen'}
+              </button>
+            </div>
+          )}
+        </div>
+
+      ) : (
+        /* ── DESKTOP LAYOUT ─────────────────────────────────── */
+        <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
+          {/* Stück-Liste */}
+          <div style={{ width: 210, minWidth: 210, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={s.label}>{T('session_pieces_label')} ({stuecke.length})</div>
+            {stuecke.length === 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '8px 0' }}>Keine Stücke im Kurs.</div>
+            )}
+            {stuecke.map(st => {
+              const istVorschau = vorschauStueckId === st.id
+              const istLive = liveStueckId === st.id
+              return (
+                <button key={st.id} onClick={() => wechsleVorschau(defaultAnsicht(st), st.id)}
+                  style={{
+                    padding: '10px 12px', borderRadius: 'var(--radius)', textAlign: 'left',
+                    border: `2px solid ${istVorschau ? 'var(--primary)' : istLive ? '#22c55e' : 'var(--border)'}`,
+                    background: istVorschau ? 'var(--primary)' : 'var(--surface)',
+                    color: istVorschau ? 'var(--primary-fg)' : 'var(--text)',
+                    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                  }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{st.titel}</div>
+                    {istLive && !istVorschau && (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#16a34a', background: 'rgba(34,197,94,0.12)', borderRadius: 4, padding: '2px 5px', flexShrink: 0, marginTop: 1 }}>LIVE</span>
+                    )}
+                    {istLive && istVorschau && (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--primary-fg)', opacity: 0.75, flexShrink: 0, marginTop: 1 }}>● LIVE</span>
+                    )}
+                  </div>
+                  {st.komponist && <div style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>{st.komponist}</div>}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Haupt-Bereich */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, gap: 12 }}>
+            {/* Ansicht-Auswahl */}
+            {vorschauStueck ? (
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
+                  <strong style={{ color: 'var(--text)' }}>{vorschauStueck.titel}</strong> – Vorschau (nur für dich)
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {Object.entries(ANSICHT).map(([key, { icon, label }]) => {
+                    const hatInhalt =
+                      key === 'noten'    ? vorschauStueck.stueck_dateien?.some(d => d.typ === 'noten') :
+                      key === 'liedtext' ? !!vorschauStueck.liedtext :
+                      key === 'akkorde'  ? (vorschauStueck.stueck_dateien?.some(d => d.typ === 'akkorde') || !!vorschauStueck.notizen) :
+                      key === 'youtube'  ? !!vorschauStueck.youtube_url : true
+                    const istAktiv = vorschauAnsicht === key
+                    return (
+                      <button key={key} onClick={() => hatInhalt && wechsleVorschau(key)}
+                        style={{
+                          padding: '8px 14px', borderRadius: 'var(--radius)', fontFamily: 'inherit',
+                          border: `2px solid ${istAktiv ? 'var(--primary)' : 'var(--border)'}`,
+                          background: istAktiv ? 'var(--primary)' : 'var(--surface)',
+                          color: istAktiv ? 'var(--primary-fg)' : (hatInhalt ? 'var(--text-2)' : 'var(--text-3)'),
+                          fontSize: 13, fontWeight: 600, cursor: hatInhalt ? 'pointer' : 'default', opacity: hatInhalt ? 1 : 0.4,
+                        }}>
+                        {icon} {label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {reaktionen.slice(0, 30).map(r => (
-                  <div key={r.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 10px', borderRadius: 'var(--radius)', background: 'var(--bg-2)', fontSize: 13 }}>
-                    <span style={{ fontSize: 18 }}>{REAKTION[r.typ]}</span>
-                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{r.gast_name ?? 'Schüler'}</span>
-                    {r.frage && <span style={{ color: 'var(--text-2)', flex: 1, fontStyle: 'italic' }}>„{r.frage}"</span>}
-                    <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto' }}>
-                      {new Date(r.erstellt_am).toLocaleTimeString('de', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                ))}
+              <div style={{ padding: '20px', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '2px dashed var(--border)', color: 'var(--text-3)', fontSize: 14, textAlign: 'center' }}>
+                {T('session_select_piece')}
               </div>
             )}
+
+            {/* Vorschau: Lehrer-Staging (privat) */}
+            {vorschauStueck && (
+              <div style={{ ...s.card, flex: 1, overflowY: 'auto', marginBottom: 0, display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={s.label}>Vorschau</span>
+                  <button onClick={teilen} disabled={laden || bereitsLive}
+                    style={{
+                      padding: '7px 16px', borderRadius: 'var(--radius)', border: 'none', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: bereitsLive ? 'default' : 'pointer',
+                      background: bereitsLive ? 'rgba(34,197,94,0.12)' : 'var(--primary)',
+                      color: bereitsLive ? '#16a34a' : 'var(--primary-fg)',
+                      transition: 'all 0.2s',
+                    }}>
+                    {laden ? '…' : bereitsLive ? '✓ Bereits live' : '▶ Jetzt teilen'}
+                  </button>
+                </div>
+
+                {vorschauAnsicht === 'liedtext' && (
+                  vorschauStueck.liedtext
+                    ? <>
+                        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+                          <div style={{ display:'flex', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', overflow:'hidden' }}>
+                            <button onClick={() => setMdModus(true)}  style={{ padding:'3px 9px', background: mdModus  ? 'var(--primary)' : 'var(--bg-2)', color: mdModus  ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>MD</button>
+                            <button onClick={() => setMdModus(false)} style={{ padding:'3px 9px', background: !mdModus ? 'var(--primary)' : 'var(--bg-2)', color: !mdModus ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Plain</button>
+                          </div>
+                        </div>
+                        {mdModus
+                          ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(vorschauStueck.liedtext) }} style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)' }} />
+                          : <pre style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: 'var(--text)', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'Georgia, serif', wordBreak: 'break-word' }}>{vorschauStueck.liedtext}</pre>
+                        }
+                      </>
+                    : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
+                )}
+                {vorschauAnsicht === 'akkorde' && (
+                  vorschauStueck.notizen
+                    ? <div style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius)', padding: '14px 16px', overflowX: 'auto' }}><ChordPro text={vorschauStueck.notizen} /></div>
+                    : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
+                )}
+                {vorschauAnsicht === 'noten' && (
+                  vorschauStueck.stueck_dateien?.filter(d => d.typ === 'noten').length > 0
+                    ? <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {vorschauStueck.stueck_dateien.filter(d => d.typ === 'noten').map(d => (
+                          <div key={d.id}>
+                            {d.stimme && d.stimme !== 'keine' && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 4, textTransform: 'capitalize' }}>Stimme: {d.stimme}</div>}
+                            <PdfInline pfad={d.bucket_pfad} />
+                          </div>
+                        ))}
+                      </div>
+                    : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
+                )}
+                {vorschauAnsicht === 'youtube' && (
+                  vorschauStueck.youtube_url
+                    ? <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                        <iframe src={`https://www.youtube.com/embed/${getYouTubeId(vorschauStueck.youtube_url)}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} frameBorder="0" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                      </div>
+                    : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
+                )}
+                {vorschauAnsicht === 'dateiverwaltung' && (
+                  vorschauStueck.stueck_dateien?.length > 0
+                    ? <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {vorschauStueck.stueck_dateien.map(d => (
+                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 'var(--radius)', background: 'var(--bg-2)', border: '1px solid var(--border)', fontSize: 13 }}>
+                            <span>📎</span>
+                            <span style={{ flex: 1, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                            <span style={{ color: 'var(--text-3)', textTransform: 'capitalize', fontSize: 11 }}>{d.typ}</span>
+                          </div>
+                        ))}
+                      </div>
+                    : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
+                )}
+              </div>
+            )}
+
+            {/* Live-Reaktionen */}
+            <div style={{ ...s.card, maxHeight: vorschauStueck ? 200 : undefined, flex: vorschauStueck ? undefined : 1, overflowY: 'auto', marginBottom: 0 }}>
+              <div style={s.label}>{T('session_reactions_label')}</div>
+              {reaktionen.length === 0 ? (
+                <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '16px 0', textAlign: 'center' }}>
+                  {T('session_no_reactions')}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {reaktionen.slice(0, 30).map(r => (
+                    <div key={r.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 10px', borderRadius: 'var(--radius)', background: 'var(--bg-2)', fontSize: 13 }}>
+                      <span style={{ fontSize: 18 }}>{REAKTION[r.typ]}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{r.gast_name ?? 'Schüler'}</span>
+                      {r.frage && <span style={{ color: 'var(--text-2)', flex: 1, fontStyle: 'italic' }}>„{r.frage}"</span>}
+                      <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto' }}>
+                        {new Date(r.erstellt_am).toLocaleTimeString('de', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
