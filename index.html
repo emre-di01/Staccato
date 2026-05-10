@@ -34,6 +34,34 @@
         input, textarea, select { font-size: 16px !important; }
       }
     </style>
+    <!-- Capacitor native: show JS errors visually + disable service worker -->
+    <script>
+      (function () {
+        var isNative = typeof window.Capacitor !== 'undefined' || window.location.hostname === 'localhost';
+        if (isNative) {
+          // Show unhandled JS errors on screen so they're visible without DevTools
+          function showErr(label, msg) {
+            var d = document.createElement('div');
+            d.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:12px 16px;background:#b00020;color:#fff;font:12px/1.4 monospace;z-index:99999;word-break:break-all;white-space:pre-wrap;';
+            d.textContent = label + msg;
+            (document.body || document.documentElement).appendChild(d);
+          }
+          window.onerror = function(msg, src, line) {
+            showErr('JS Error: ', msg + '\n' + (src || '').split('/').pop() + ':' + line);
+          };
+          window.addEventListener('unhandledrejection', function(e) {
+            showErr('Promise Error: ', e.reason && e.reason.message ? e.reason.message : String(e.reason));
+          });
+          // Disable PWA service worker – it can block navigation in Android WebView
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register = function() { return Promise.resolve(null); };
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              regs.forEach(function(r) { r.unregister(); });
+            }).catch(function() {});
+          }
+        }
+      })();
+    </script>
     <!-- Apply background color and theme-color before React renders to avoid flash -->
     <script>
       (function () {
