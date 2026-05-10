@@ -10,6 +10,8 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.4",
+    "@capacitor/core": "^7.6.4",
     "@supabase/supabase-js": "^2.43.0",
     "@tanstack/react-query": "^5.100.9",
     "dompurify": "^3.4.2",
@@ -23,6 +25,7 @@
     "react-router-dom": "^6.23.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.4",
     "@eslint/js": "^10.0.1",
     "@vitejs/plugin-react": "^4.3.0",
     "eslint": "^10.3.0",
