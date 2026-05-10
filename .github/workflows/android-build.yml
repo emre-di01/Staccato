@@ -36,8 +36,6 @@ jobs:
 
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug --no-daemon
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
