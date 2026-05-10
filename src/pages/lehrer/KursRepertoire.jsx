@@ -24,7 +24,10 @@ function NeuesStueckModal({ kursId, onClose, onErfolg }) {
     })
     supabase.functions.invoke('send-email', {
       body: { type: 'new_piece', unterricht_id: kursId, stueck_id: stueck.id },
-    }).catch(console.error)
+    }).catch(() => {})
+    supabase.functions.invoke('send-push', {
+      body: { type: 'new_piece', unterricht_id: kursId, stueck_id: stueck.id },
+    }).catch(() => {})
     onErfolg(); onClose()
   }
 
@@ -160,7 +163,7 @@ export default function KursRepertoire() {
   const [suche,     setSuche]     = useState('')
   const [modal,     setModal]     = useState(null)
 
-  const kannBearbeiten = rolle === 'admin' || rolle === 'lehrer'
+  const kannBearbeiten = rolle === 'admin' || rolle === 'lehrer' || rolle === 'superadmin'
 
   useEffect(() => { ladeData() }, [kursId])
 

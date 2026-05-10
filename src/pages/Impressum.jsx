@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function Impressum() {
   const navigate = useNavigate()
+  const darkMode = localStorage.getItem('staccato_dark') === 'true'
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
       <button onClick={() => navigate(-1)}
@@ -63,6 +64,7 @@ export default function Impressum() {
         <a href="/datenschutz" style={link}>Datenschutzerklärung</a>
         <a href="/lizenzen" style={link}>Open-Source-Lizenzen</a>
       </div>
+
     </div>
   )
 }

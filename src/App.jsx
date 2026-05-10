@@ -39,6 +39,7 @@ const VorstandDashboard    = lazy(() => import('./pages/vorstand/Dashboard'))
 const VorstandZiele        = lazy(() => import('./pages/vorstand/Ziele'))
 const VorstandProtokolle   = lazy(() => import('./pages/vorstand/Protokolle'))
 const ProfilSeite          = lazy(() => import('./pages/ProfilSeite'))
+const Einstellungen        = lazy(() => import('./pages/Einstellungen'))
 const Stundenplan          = lazy(() => import('./pages/Stundenplan'))
 const Platzhalter          = lazy(() => import('./pages/Platzhalter'))
 const SchuelerSession      = lazy(() => import('./pages/SchuelerSession'))
@@ -188,10 +189,11 @@ function AppRoutes() {
       <Route path="/datenschutz" element={<Datenschutz />} />
       <Route path="/lizenzen"    element={<Lizenzen />} />
 
-      {/* Profil - für alle Rollen */}
+      {/* Profil & Einstellungen - für alle Rollen */}
       <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern','vorstand']} />}>
         <Route element={<AppLayout />}>
-          <Route path="/profil" element={<ProfilSeite />} />
+          <Route path="/profil"         element={<ProfilSeite />} />
+          <Route path="/einstellungen"  element={<Einstellungen />} />
         </Route>
       </Route>
 

@@ -94,7 +94,7 @@ const FAQ_INHALT = {
         {
           frage: 'Wie ändere ich meine Sprache?',
           antwort: 'Klicke auf das ⚙️-Symbol in der Seitenleiste. Dort kannst du zwischen Deutsch, Englisch und Türkisch wechseln. Die Sprache wird sofort angewendet.',
-          aktion: { label: 'Einstellungen öffnen', event: 'staccato:open-settings' },
+          aktion: { label: 'Einstellungen öffnen', pfad: '/einstellungen' },
         },
         {
           frage: 'Wie ändere ich mein Passwort oder meine Daten?',
@@ -204,7 +204,7 @@ const FAQ_INHALT = {
         {
           frage: 'How do I change my language?',
           antwort: 'Click the ⚙️ icon in the sidebar. There you can switch between German, English and Turkish. The language is applied immediately.',
-          aktion: { label: 'Open Settings', event: 'staccato:open-settings' },
+          aktion: { label: 'Open Settings', pfad: '/einstellungen' },
         },
         {
           frage: 'How do I change my password or details?',
@@ -314,7 +314,7 @@ const FAQ_INHALT = {
         {
           frage: 'Dilimi nasıl değiştirebilirim?',
           antwort: 'Kenar çubuğundaki ⚙️ simgesine tıklayın. Orada Almanca, İngilizce ve Türkçe arasında geçiş yapabilirsiniz. Dil hemen uygulanır.',
-          aktion: { label: 'Ayarları Aç', event: 'staccato:open-settings' },
+          aktion: { label: 'Ayarları Aç', pfad: '/einstellungen' },
         },
         {
           frage: 'Şifremi veya bilgilerimi nasıl değiştirebilirim?',

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import { useIsMobile } from '../hooks/useWindowWidth'
@@ -66,7 +67,7 @@ function ComposeModal({ onClose, onErfolg, profil, rolle, T, mob }) {
     if (typ === 'direkt' && !empfaengerId) { setFehler(T('msg_err_recipient')); return }
     if (typ === 'kurs'   && !kursId)       { setFehler(T('msg_err_course')); return }
     setLaden(true); setFehler('')
-    const { error } = await supabase.from('nachrichten').insert({
+    const { data: inserted, error } = await supabase.from('nachrichten').insert({
       typ,
       betreff:      betreff.trim(),
       inhalt:       inhalt.trim(),
@@ -74,9 +75,24 @@ function ComposeModal({ onClose, onErfolg, profil, rolle, T, mob }) {
       schule_id:    profil.schule_id,
       empfaenger_id: typ === 'direkt' ? empfaengerId : null,
       kurs_id:       typ === 'kurs'   ? kursId       : null,
-    })
+    }).select('id').single()
     setLaden(false)
     if (error) { setFehler(error.message); return }
+    if (inserted?.id) {
+      supabase.functions.invoke('send-push', { body: { nachricht_id: inserted.id } }).catch(() => {})
+      supabase.functions.invoke('send-email', {
+        body: {
+          type: 'neue_nachricht',
+          nachricht_id:  inserted.id,
+          typ,
+          empfaenger_id: typ === 'direkt' ? empfaengerId : null,
+          kurs_id:       typ === 'kurs'   ? kursId       : null,
+          betreff:       betreff.trim(),
+          inhalt:        inhalt.trim(),
+          absender_id:   profil.id,
+        },
+      }).catch(() => {})
+    }
     onErfolg(); onClose()
   }
 
@@ -156,6 +172,8 @@ export default function Nachrichten() {
   const { profil, rolle, T } = useApp()
   const mob = useIsMobile()
   const kannSenden = ['admin', 'superadmin', 'lehrer'].includes(rolle)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const deepLinkId = useRef(searchParams.get('id'))
 
   const [nachrichten, setNachrichten]   = useState([])
   const [laden, setLaden]               = useState(true)
@@ -183,10 +201,20 @@ export default function Nachrichten() {
     return () => supabase.removeChannel(ch)
   }, [laden_])
 
+  useEffect(() => {
+    if (laden || !nachrichten.length || !deepLinkId.current) return
+    const target = nachrichten.find(n => n.id === deepLinkId.current)
+    if (!target) return
+    deepLinkId.current = null
+    setSearchParams({}, { replace: true })
+    waehleNachricht(target)
+  }, [nachrichten, laden])
+
   async function markierenGelesen(n) {
     if (n.gelesen?.length || n.gesendet_von === profil.id) return
     await supabase.from('nachricht_gelesen').upsert({ nachricht_id: n.id, user_id: profil.id })
     setNachrichten(prev => prev.map(m => m.id === n.id ? { ...m, gelesen: [{ nachricht_id: n.id }] } : m))
+    window.dispatchEvent(new CustomEvent('staccato:nachricht_gelesen'))
   }
 
   function waehleNachricht(n) {

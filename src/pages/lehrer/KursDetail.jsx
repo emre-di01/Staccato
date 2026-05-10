@@ -240,6 +240,7 @@ function AbsagenModal({ stunde, onClose, onErfolg }) {
       .update({ status: 'abgesagt', notizen: grund || null })
       .eq('id', stunde.id)
     if (error) { setFehler(error.message); setLaden(false); return }
+    supabase.functions.invoke('send-email', { body: { type: 'stunde_abgesagt', stunde_id: stunde.id } }).catch(() => {})
     onErfolg()
     onClose()
   }
@@ -479,6 +480,10 @@ function NotizModal({ stunde, onClose, onErfolg }) {
       notizen:      notizen.trim()      || null,
       hausaufgaben: hausaufgaben.trim() || null,
     }).eq('id', stunde.id)
+    const neueHA = hausaufgaben.trim()
+    if (neueHA && neueHA !== (stunde.hausaufgaben ?? '').trim()) {
+      supabase.functions.invoke('send-email', { body: { type: 'hausaufgaben', stunde_id: stunde.id, hausaufgaben: neueHA } }).catch(() => {})
+    }
     onErfolg({ notizen: notizen.trim() || null, hausaufgaben: hausaufgaben.trim() || null })
     onClose()
   }

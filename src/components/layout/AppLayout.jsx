@@ -332,12 +332,11 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
 }
 
 export default function AppLayout() {
-  const { profil, rolle, schule, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe } = useApp()
+  const { profil, rolle, schule, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe, darkMode } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const swipeStartX = useRef(null)
-  const [sidebarOffen, setSidebarOffen]     = useState(false)
-  const [settingsOffen, setSettingsOffen]   = useState(false)
+  const [sidebarOffen, setSidebarOffen]         = useState(false)
   const [joinSessionOffen, setJoinSessionOffen] = useState(false)
   const [changelogOffen, setChangelogOffen] = useState(false)
   const [ungelesen, setUngelesen]           = useState([])
@@ -351,13 +350,20 @@ export default function AppLayout() {
 
   const ladeUngelesen = useCallback(async () => {
     if (!profil) return
-    const { data } = await supabase
-      .from('nachrichten')
-      .select('id, betreff, gesendet_am, typ, sender:profiles!nachrichten_gesendet_von_fkey(voller_name), gelesen:nachricht_gelesen(nachricht_id)')
-      .neq('gesendet_von', profil.id)
-      .order('gesendet_am', { ascending: false })
-      .limit(20)
-    setUngelesen((data ?? []).filter(n => !n.gelesen?.length))
+    const [{ data }, { data: geloescht }] = await Promise.all([
+      supabase
+        .from('nachrichten')
+        .select('id, betreff, gesendet_am, typ, sender:profiles!nachrichten_gesendet_von_fkey(voller_name), gelesen:nachricht_gelesen(nachricht_id)')
+        .neq('gesendet_von', profil.id)
+        .order('gesendet_am', { ascending: false })
+        .limit(20),
+      supabase
+        .from('nachricht_geloescht')
+        .select('nachricht_id')
+        .eq('user_id', profil.id),
+    ])
+    const geloeschtIds = new Set((geloescht ?? []).map(r => r.nachricht_id))
+    setUngelesen((data ?? []).filter(n => !n.gelesen?.length && !geloeschtIds.has(n.id)))
   }, [profil?.id])
 
   useEffect(() => { ladeUngelesen() }, [ladeUngelesen])
@@ -370,6 +376,11 @@ export default function AppLayout() {
       .subscribe()
     return () => supabase.removeChannel(ch)
   }, [ladeUngelesen, profil?.id])
+
+  useEffect(() => {
+    window.addEventListener('staccato:nachricht_gelesen', ladeUngelesen)
+    return () => window.removeEventListener('staccato:nachricht_gelesen', ladeUngelesen)
+  }, [ladeUngelesen])
 
   useEffect(() => {
     const handleBefore = e => {
@@ -394,14 +405,9 @@ export default function AppLayout() {
   }, [])
 
   useEffect(() => {
-    const openSettings = () => setSettingsOffen(true)
     const openJoin = () => setJoinSessionOffen(true)
-    window.addEventListener('staccato:open-settings', openSettings)
     window.addEventListener('staccato:open-join-session', openJoin)
-    return () => {
-      window.removeEventListener('staccato:open-settings', openSettings)
-      window.removeEventListener('staccato:open-join-session', openJoin)
-    }
+    return () => window.removeEventListener('staccato:open-join-session', openJoin)
   }, [])
 
   async function handleAbmelden() {
@@ -473,9 +479,11 @@ export default function AppLayout() {
         {/* Bottom */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
           <NavLink to="/profil" style={({ isActive }) => ({ ...btnStyle, color: isActive ? 'var(--primary)' : 'var(--text-3)', textDecoration:'none' })}>
-            👤 Mein Profil
+            👤 {T('profile_title')}
           </NavLink>
-          <button onClick={() => setSettingsOffen(true)} style={btnStyle}>⚙️ {T('settings')}</button>
+          <NavLink to="/einstellungen" style={({ isActive }) => ({ ...btnStyle, color: isActive ? 'var(--primary)' : 'var(--text-3)', textDecoration:'none' })}>
+            ⚙️ {T('settings')}
+          </NavLink>
           <button onClick={() => window.location.reload()} style={{ ...btnStyle, fontSize: 14, fontWeight: 700, color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 10%, transparent)', padding: '10px 12px', borderRadius: 'var(--radius)', marginTop: 2, marginBottom: 2 }}>↻ Aktualisieren</button>
           <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
           <button onClick={() => setChangelogOffen(true)} style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '2px 0' }}>
@@ -533,9 +541,11 @@ export default function AppLayout() {
               )}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <NavLink to="/profil" onClick={() => setSidebarOffen(false)} style={({ isActive }) => ({ ...btnStyle, textDecoration:'none', color: isActive ? 'var(--primary)' : 'var(--text-3)' })}>
-                  👤 Mein Profil
+                  👤 {T('profile_title')}
                 </NavLink>
-                <button onClick={() => { setSettingsOffen(true); setSidebarOffen(false) }} style={btnStyle}>⚙️ {T('settings')}</button>
+                <NavLink to="/einstellungen" onClick={() => setSidebarOffen(false)} style={({ isActive }) => ({ ...btnStyle, textDecoration:'none', color: isActive ? 'var(--primary)' : 'var(--text-3)' })}>
+                  ⚙️ {T('settings')}
+                </NavLink>
                 <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
                 <button onClick={() => { setChangelogOffen(true); setSidebarOffen(false) }} style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 6, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '2px 0' }}>
                   v{version} ✨
@@ -563,7 +573,7 @@ export default function AppLayout() {
             : <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
           }
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-            <button onClick={() => setSettingsOffen(true)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)' }}>⚙️</button>
+            <NavLink to="/einstellungen" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)', textDecoration: 'none' }}>⚙️</NavLink>
             <button onClick={() => window.location.reload()} style={{ border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer', color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', padding: '7px 12px', borderRadius: 'var(--radius)', fontFamily: 'inherit', lineHeight: 1 }}>↻ Reload</button>
           </div>
         </header>
@@ -636,7 +646,6 @@ export default function AppLayout() {
         </div>
       )}
 
-      {settingsOffen && <SettingsPanel onClose={() => setSettingsOffen(false)} />}
       {joinSessionOffen && <JoinSessionModal onClose={() => setJoinSessionOffen(false)} />}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

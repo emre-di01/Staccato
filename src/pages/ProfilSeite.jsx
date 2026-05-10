@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import OrtAutocomplete from '../components/OrtAutocomplete'
-import { ONBOARDING_LS_KEY } from '../components/OnboardingModal'
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? ''
 
 const DOK_TYP_LABEL = {
   aufnahmeformular: 'Aufnahmeformular',
@@ -41,8 +37,7 @@ function DokumentZeile({ datei, T }) {
 }
 
 export default function ProfilSeite() {
-  const { profil, ladeProfil, T, rolle, confirm, toast } = useApp()
-  const navigate = useNavigate()
+  const { profil, ladeProfil, T, confirm } = useApp()
   const fileRef = useRef()
 
   const [form, setForm] = useState({
@@ -60,44 +55,12 @@ export default function ProfilSeite() {
   const [dateien,     setDateien]     = useState([])
   const [dateiLaden,  setDateiLaden]  = useState(true)
 
-  const DEFAULT_NOTIF = { event_invite: true, new_piece: true }
-  const [notifPrefs,  setNotifPrefs]  = useState({ ...DEFAULT_NOTIF, ...(profil?.email_benachrichtigungen ?? {}) })
-  const [notifLaden,  setNotifLaden]  = useState(false)
-  const [notifErfolg, setNotifErfolg] = useState(false)
-
-  const [kalenderToken, setKalenderToken] = useState(null)
-  const [kalTokenLaden, setKalTokenLaden] = useState(true)
-  const [icalKopiert,   setIcalKopiert]   = useState(false)
-
   useEffect(() => {
     if (!profil?.id) return
     supabase.from('mitglied_dateien')
       .select('*').eq('profil_id', profil.id).order('hochgeladen_am', { ascending: false })
       .then(({ data }) => { setDateien(data ?? []); setDateiLaden(false) })
   }, [profil?.id])
-
-  useEffect(() => {
-    if (!profil?.id) return
-    supabase.from('profiles').select('kalender_token').eq('id', profil.id).single()
-      .then(({ data }) => { setKalenderToken(data?.kalender_token ?? null); setKalTokenLaden(false) })
-  }, [profil?.id])
-
-  const kalenderUrl = kalenderToken
-    ? `${SUPABASE_URL}/functions/v1/kalender?token=${kalenderToken}`
-    : ''
-
-  async function icalKopieren() {
-    if (!kalenderUrl) return
-    await navigator.clipboard.writeText(kalenderUrl)
-    setIcalKopiert(true)
-    setTimeout(() => setIcalKopiert(false), 2000)
-  }
-
-  async function kalenderTokenNeu() {
-    const neuToken = crypto.randomUUID()
-    await supabase.from('profiles').update({ kalender_token: neuToken }).eq('id', profil.id)
-    setKalenderToken(neuToken)
-  }
 
   async function profilSpeichern() {
     setLaden(true); setFehler(''); setErfolg('')
@@ -245,84 +208,6 @@ export default function ProfilSeite() {
           </div>
         )}
       </div>
-
-      {/* E-Mail-Benachrichtigungen */}
-      <div style={s.card}>
-        <h2 style={s.h2}>{T('email_notifications_title')}</h2>
-        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {[
-            { key: 'event_invite', label: T('notif_event_invite'), desc: T('notif_event_invite_desc') },
-            { key: 'new_piece',    label: T('notif_new_piece'),    desc: T('notif_new_piece_desc') },
-          ].map(opt => (
-            <label key={opt.key} style={{ display:'flex', alignItems:'center', gap:14, cursor:'pointer', padding:'12px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: notifPrefs[opt.key] ? 'var(--bg-2)' : 'var(--bg)', transition:'background 0.15s' }}>
-              <div style={{ position:'relative', flexShrink:0 }} onClick={e => { e.preventDefault(); setNotifPrefs(p => ({ ...p, [opt.key]: !p[opt.key] })) }}>
-                <div style={{ width:42, height:24, borderRadius:99, background: notifPrefs[opt.key] ? 'var(--primary)' : 'var(--border)', position:'relative', transition:'background 0.2s' }}>
-                  <div style={{ position:'absolute', top:3, left: notifPrefs[opt.key] ? 21 : 3, width:18, height:18, borderRadius:'50%', background:'#fff', boxShadow:'0 1px 4px rgba(0,0,0,.2)', transition:'left 0.2s' }} />
-                </div>
-              </div>
-              <div onClick={() => setNotifPrefs(p => ({ ...p, [opt.key]: !p[opt.key] }))}>
-                <div style={{ fontWeight:600, fontSize:14, color:'var(--text)' }}>{opt.label}</div>
-                <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>{opt.desc}</div>
-              </div>
-            </label>
-          ))}
-        </div>
-        {notifErfolg && <div style={{ ...s.erfolg, marginTop:12 }}>{T('save')} ✓</div>}
-        <div style={{ display:'flex', justifyContent:'flex-end', marginTop:16 }}>
-          <button onClick={notifSpeichern} disabled={notifLaden} style={s.btnPri}>
-            {notifLaden ? T('loading') : `💾 ${T('save')}`}
-          </button>
-        </div>
-      </div>
-
-      {/* Kalender-Abonnement */}
-      <div style={s.card}>
-        <h2 style={s.h2}>{T('ical_title')}</h2>
-        <p style={{ margin:'0 0 16px', fontSize:13, color:'var(--text-3)', lineHeight:1.5 }}>{T('ical_desc')}</p>
-        {kalTokenLaden ? (
-          <div style={{ color:'var(--text-3)', fontSize:13 }}>{T('ical_loading')}</div>
-        ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            <Feld label={T('ical_url_label')}>
-              <div style={{ display:'flex', gap:8 }}>
-                <input
-                  readOnly
-                  value={kalenderUrl}
-                  style={{ ...s.input, color:'var(--text-3)', fontSize:12, flex:1 }}
-                  onFocus={e => e.target.select()}
-                />
-                <button onClick={icalKopieren} style={{ ...s.btnPri, whiteSpace:'nowrap', flexShrink:0 }}>
-                  {icalKopiert ? `✓ ${T('ical_copied')}` : T('ical_copy')}
-                </button>
-              </div>
-            </Feld>
-            <div style={{ display:'flex', justifyContent:'flex-end' }}>
-              <button
-                onClick={async () => { const ok = await confirm(T('ical_reset_confirm'), { confirmLabel: T('ical_reset') ?? 'Zurücksetzen', dangerous: false }); if (ok) kalenderTokenNeu() }}
-                style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}
-              >
-                🔄 {T('ical_reset')}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Onboarding-Tour (nur Schüler) */}
-      {rolle === 'schueler' && (
-        <div style={s.card}>
-          <h2 style={s.h2}>🗺️ {T('onb_restart')}</h2>
-          <p style={{ margin:'0 0 16px', fontSize:13, color:'var(--text-3)', lineHeight:1.5 }}>
-            {T('onb_restart_desc')}
-          </p>
-          <button
-            onClick={() => { localStorage.removeItem(ONBOARDING_LS_KEY); navigate('/schueler') }}
-            style={{ padding:'10px 20px', borderRadius:'var(--radius)', border:'1.5px solid var(--primary)', background:'var(--bg)', color:'var(--primary)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}
-          >
-            {T('onb_restart')}
-          </button>
-        </div>
-      )}
 
       {/* Passwort */}
       <div style={s.card}>

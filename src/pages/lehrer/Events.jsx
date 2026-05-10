@@ -24,7 +24,7 @@ function toInputVal(ts) {
 const leerForm = { titel: '', typ: 'veranstaltung', beginn: '', ende: '', ort: '', beschreibung: '', oeffentlich: false }
 
 export default function LehrerEvents() {
-  const { profil, T } = useApp()
+  const { profil, rolle, T } = useApp()
   const navigate = useNavigate()
   const [events,  setEvents]  = useState([])
   const [laden,   setLaden]   = useState(true)
@@ -50,7 +50,7 @@ export default function LehrerEvents() {
   }
 
   function kannBearbeiten(ev) {
-    return ev.erstellt_von === profil?.id
+    return ev.erstellt_von === profil?.id || rolle === 'admin' || rolle === 'superadmin'
   }
 
   function oeffneNeu() {

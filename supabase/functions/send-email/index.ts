@@ -85,7 +85,7 @@ async function sendWelcome(body: Record<string, unknown>, _supabase: ReturnType<
       </table>
 
       <p style="margin:20px 0 8px;color:#475569">Melde dich jetzt an und ändere dein Passwort unter <em>Profil → Passwort ändern</em>.</p>
-      <a href="${APP_URL}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+      <a href="${APP_URL}${rolePfad(rolle)}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
     `),
   })
 }
@@ -97,7 +97,7 @@ async function sendEventInvite(body: Record<string, unknown>, supabase: ReturnTy
 
   const [{ data: event }, { data: profil }, { data: { user } }] = await Promise.all([
     supabase.from('events').select('titel, typ, beginn, ende, ort, beschreibung').eq('id', event_id).single(),
-    supabase.from('profiles').select('voller_name, email_benachrichtigungen').eq('id', profil_id).single(),
+    supabase.from('profiles').select('voller_name, rolle, email_benachrichtigungen').eq('id', profil_id).single(),
     supabase.auth.admin.getUserById(profil_id),
   ])
 
@@ -134,7 +134,7 @@ async function sendEventInvite(body: Record<string, unknown>, supabase: ReturnTy
       </table>
 
       <p style="margin:20px 0 8px;color:#475569">Bitte bestätige deine Teilnahme in der App.</p>
-      <a href="${APP_URL}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+      <a href="${APP_URL}${rolePfad(profil?.rolle ?? '')}/events" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur Veranstaltung →</a>
     `),
   })
 }
@@ -181,7 +181,7 @@ async function sendNewPiece(body: Record<string, unknown>, supabase: ReturnType<
           </table>
 
           <p style="margin:20px 0 8px;color:#475569">Das Stück ist jetzt in deiner Staccato-App verfügbar.</p>
-          <a href="${APP_URL}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+          <a href="${APP_URL}/schueler/kurse" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zum Kurs →</a>
         `),
       })
     })
@@ -233,7 +233,7 @@ async function sendStundeAbgesagt(body: Record<string, unknown>, supabase: Retur
           ${stunde.notizen ? `<tr><td style="padding:6px 0;color:#64748b;font-size:14px;vertical-align:top">Grund</td>
               <td style="padding:6px 0;color:#475569;font-size:14px">${esc(stunde.notizen as string)}</td></tr>` : ''}
         </table>
-        <a href="${APP_URL}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+        <a href="${APP_URL}/schueler/stundenplan" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zum Stundenplan →</a>
       `),
     })
   }))
@@ -242,9 +242,9 @@ async function sendStundeAbgesagt(body: Record<string, unknown>, supabase: Retur
 // ─── Neue Nachricht ───────────────────────────────────────────
 
 async function sendNeueNachricht(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
-  const { typ, empfaenger_id, kurs_id, betreff, inhalt, absender_id } = body as {
+  const { typ, empfaenger_id, kurs_id, betreff, inhalt, absender_id, nachricht_id } = body as {
     typ: string; empfaenger_id?: string; kurs_id?: string
-    betreff: string; inhalt: string; absender_id: string
+    betreff: string; inhalt: string; absender_id: string; nachricht_id?: string
   }
 
   const { data: absender } = await supabase.from('profiles').select('voller_name').eq('id', absender_id).single()
@@ -274,11 +274,15 @@ async function sendNeueNachricht(body: Record<string, unknown>, supabase: Return
 
   await Promise.allSettled(empfaengerIds.map(async (eid) => {
     const [{ data: profil }, { data: { user } }] = await Promise.all([
-      supabase.from('profiles').select('voller_name, email_benachrichtigungen').eq('id', eid).single(),
+      supabase.from('profiles').select('voller_name, rolle, email_benachrichtigungen').eq('id', eid).single(),
       supabase.auth.admin.getUserById(eid),
     ])
     if (!user?.email) return
-    if (profil?.email_benachrichtigungen?.neue_nachricht === false) return
+    if (profil?.email_benachrichtigungen?.new_message === false) return
+
+    const msgUrl = nachricht_id
+      ? APP_URL + rolePfad(profil?.rolle ?? '') + '/nachrichten?id=' + nachricht_id
+      : APP_URL + rolePfad(profil?.rolle ?? '') + '/nachrichten'
 
     await transport.sendMail({
       from: SMTP_FROM, to: user.email,
@@ -294,7 +298,7 @@ async function sendNeueNachricht(body: Record<string, unknown>, supabase: Return
           <tr><td style="padding:6px 0;color:#64748b;font-size:14px;vertical-align:top">Nachricht</td>
               <td style="padding:6px 0;color:#475569;font-size:14px;line-height:1.6;white-space:pre-wrap">${esc(inhalt)}</td></tr>
         </table>
-        <a href="${APP_URL}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+        <a href="${msgUrl}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Nachricht öffnen →</a>
       `),
     })
   }))
@@ -340,7 +344,7 @@ async function sendHausaufgaben(body: Record<string, unknown>, supabase: ReturnT
           <tr><td style="padding:6px 0;color:#64748b;font-size:14px;vertical-align:top">Aufgabe</td>
               <td style="padding:6px 0;color:#1e293b;font-size:14px;line-height:1.6;white-space:pre-wrap">${esc(hausaufgaben)}</td></tr>
         </table>
-        <a href="${APP_URL}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+        <a href="${APP_URL}/schueler/kurse" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zum Kurs →</a>
       `),
     })
   }))
@@ -376,7 +380,7 @@ async function sendNeuesDokument(body: Record<string, unknown>, supabase: Return
             <td style="padding:6px 0;color:#1e293b">${esc(typLabel[dokTyp] ?? dokTyp)}</td></tr>
       </table>
       <p style="margin:20px 0 8px;color:#475569">Du kannst das Dokument in der App unter <em>Profil → Dokumente</em> abrufen.</p>
-      <a href="${APP_URL}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zur App</a>
+      <a href="${APP_URL}/profil" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Zum Profil →</a>
     `),
   })
 }
@@ -405,7 +409,7 @@ async function sendRsvpErinnerung(body: Record<string, unknown>, supabase: Retur
 
   await Promise.allSettled(offene.map(async ({ profil_id }) => {
     const [{ data: profil }, { data: { user } }] = await Promise.all([
-      supabase.from('profiles').select('voller_name').eq('id', profil_id).single(),
+      supabase.from('profiles').select('voller_name, rolle').eq('id', profil_id).single(),
       supabase.auth.admin.getUserById(profil_id),
     ])
     if (!user?.email) return
@@ -428,7 +432,7 @@ async function sendRsvpErinnerung(body: Record<string, unknown>, supabase: Retur
           ${event.ort ? `<tr><td style="padding:6px 0;color:#64748b;font-size:14px">Ort</td>
               <td style="padding:6px 0;color:#1e293b">${esc(event.ort as string)}</td></tr>` : ''}
         </table>
-        <a href="${APP_URL}" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Jetzt antworten</a>
+        <a href="${APP_URL}${rolePfad(profil?.rolle ?? '')}/events" style="display:inline-block;margin-top:24px;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Jetzt antworten →</a>
       `),
     })
   }))
@@ -483,6 +487,18 @@ async function sendSchuleinladung(body: Record<string, unknown>) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
+
+function rolePfad(rolle: string): string {
+  switch (rolle) {
+    case 'lehrer':     return '/lehrer'
+    case 'schueler':   return '/schueler'
+    case 'admin':
+    case 'superadmin': return '/admin'
+    case 'eltern':     return '/eltern'
+    case 'vorstand':   return '/vorstand'
+    default:           return ''
+  }
+}
 
 function esc(str: string): string {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')

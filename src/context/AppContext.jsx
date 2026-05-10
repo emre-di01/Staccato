@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { supabase } from '../lib/supabase'
 import { applyTheme, THEMES } from '../themes/themes'
 import { t as translate } from '../i18n/translations'
+import OneSignal from 'react-onesignal'
 
 const AppContext = createContext(null)
 
@@ -117,6 +118,7 @@ export function AppProvider({ children }) {
         setSession(session)
         if (session?.user) {
           await ladeProfil(session.user.id)
+          OneSignal.login(session.user.id).catch(() => {})
         } else {
           setLaden(false)
         }
@@ -149,6 +151,7 @@ export function AppProvider({ children }) {
   }, [ladeProfil])
 
   async function abmelden() {
+    OneSignal.logout().catch(() => {})
     await supabase.auth.signOut()
   }
 
