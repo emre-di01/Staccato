@@ -72,7 +72,7 @@ export default function LehrerDashboard() {
             .in('unterricht_id', unterrichtIds)
             .gte('beginn', new Date().toISOString())
             .eq('status', 'geplant')
-            .order('beginn').limit(5),
+            .order('beginn'),
           supabase.from('stunden').select('*, unterricht(name, typ)')
             .in('unterricht_id', unterrichtIds)
             .gte('beginn', heute0.toISOString())
@@ -195,7 +195,7 @@ export default function LehrerDashboard() {
           {laden ? <SkeletonList rows={3} /> :
            naechsteStunden.length === 0 ? <div style={s.leer}>{T('dash_no_lessons')}</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {naechsteStunden.map(st => {
+              {naechsteStunden.slice(0, 5).map(st => {
                 const beginn = new Date(st.beginn)
                 const istHeute = beginn.toDateString() === jetzt.toDateString()
                 return (
