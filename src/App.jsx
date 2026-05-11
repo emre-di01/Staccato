@@ -43,6 +43,7 @@ const Einstellungen        = lazy(() => import('./pages/Einstellungen'))
 const Stundenplan          = lazy(() => import('./pages/Stundenplan'))
 const Platzhalter          = lazy(() => import('./pages/Platzhalter'))
 const SchuelerSession      = lazy(() => import('./pages/SchuelerSession'))
+const BeamerDisplay        = lazy(() => import('./pages/BeamerDisplay'))
 const Repertoire           = lazy(() => import('./pages/Repertoire'))
 const Nachrichten          = lazy(() => import('./pages/Nachrichten'))
 const Impressum            = lazy(() => import('./pages/Impressum'))
@@ -180,6 +181,9 @@ function AppRoutes() {
 
       {/* Session beitreten */}
       <Route path="/session/:code" element={<SchuelerSession />} />
+
+      {/* Beamer-Anzeige */}
+      <Route path="/beamer" element={<BeamerDisplay />} />
 
       {/* Einladungslink */}
       <Route path="/einladung/:token" element={<Einladung />} />

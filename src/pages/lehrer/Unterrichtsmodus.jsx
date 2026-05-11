@@ -100,8 +100,12 @@ export default function Unterrichtsmodus() {
   const [fehler, setFehler] = useState('')
   const [mdModus, setMdModusState] = useState(() => localStorage.getItem('staccato_liedtext_md') !== 'false')
   function setMdModus(val) { localStorage.setItem('staccato_liedtext_md', String(val)); setMdModusState(val) }
+  const [beamerCode, setBeamerCode] = useState('')
+  const [beamerVerbunden, setBeamerVerbunden] = useState(false)
+  const [zeigeBeamerInput, setZeigeBeamerInput] = useState(false)
   const channelRef = useRef(null)
   const broadcastRef = useRef(null)
+  const beamerRef = useRef(null)
 
   useEffect(() => {
     async function init() {
@@ -225,13 +229,26 @@ export default function Unterrichtsmodus() {
     setLaden(false)
   }
 
+  function beamerVerbinden() {
+    const trimmed = beamerCode.trim().toUpperCase()
+    if (trimmed.length !== 4) return
+    beamerRef.current?.unsubscribe()
+    const ch = supabase.channel(`beamer-${trimmed}`).subscribe()
+    beamerRef.current = ch
+    setBeamerVerbunden(true)
+    setZeigeBeamerInput(false)
+  }
+
   async function sessionBeenden() {
     if (!session) return
     setLaden(true)
     broadcastRef.current?.send({ type: 'broadcast', event: 'state', payload: { status: 'beendet' } })
+    beamerRef.current?.send({ type: 'broadcast', event: 'state', payload: { status: 'beendet' } })
     await supabase.rpc('session_beenden', { p_session_id: session.id })
     channelRef.current?.unsubscribe()
     broadcastRef.current?.unsubscribe()
+    beamerRef.current?.unsubscribe()
+    beamerRef.current = null
     setPhase('beendet')
     setLaden(false)
   }
@@ -249,10 +266,39 @@ export default function Unterrichtsmodus() {
       p_ansicht: vorschauAnsicht,
       p_stueck_id: vorschauStueckId,
     })
+    // Schüler-Broadcast (wie bisher — minimal)
     broadcastRef.current?.send({
       type: 'broadcast', event: 'state',
       payload: { aktuelles_stueck: vorschauStueckId, aktuelle_ansicht: vorschauAnsicht },
     })
+    // Beamer-Broadcast (mit vollem Stück-Inhalt + Signed URLs für Noten)
+    if (beamerRef.current) {
+      let signedUrls = []
+      if (vorschauAnsicht === 'noten') {
+        const notenDateien = vorschauStueck?.stueck_dateien?.filter(d => d.typ === 'noten') ?? []
+        signedUrls = await Promise.all(
+          notenDateien.map(async d => {
+            const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(d.bucket_pfad, 3600)
+            return { stimme: d.stimme, url: data?.signedUrl ?? null }
+          })
+        )
+      }
+      beamerRef.current.send({
+        type: 'broadcast', event: 'state',
+        payload: {
+          aktuelles_stueck: vorschauStueckId,
+          aktuelle_ansicht: vorschauAnsicht,
+          stueck: {
+            titel: vorschauStueck?.titel,
+            komponist: vorschauStueck?.komponist,
+            liedtext: vorschauStueck?.liedtext,
+            notizen: vorschauStueck?.notizen,
+            youtube_url: vorschauStueck?.youtube_url,
+          },
+          signed_urls: signedUrls,
+        },
+      })
+    }
     setLiveStueckId(vorschauStueckId)
     setLiveAnsicht(vorschauAnsicht)
     setLaden(false)
@@ -423,6 +469,41 @@ export default function Unterrichtsmodus() {
         )}
       </div>
 
+      <div style={s.card}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={s.label}>📺 Beamer verbinden</div>
+          {beamerVerbunden && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'rgba(34,197,94,0.1)', borderRadius: 6, padding: '3px 8px' }}>
+              ✓ Verbunden
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={beamerCode}
+            onChange={e => setBeamerCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))}
+            onKeyDown={e => e.key === 'Enter' && beamerVerbinden()}
+            placeholder="XXXX"
+            maxLength={4}
+            style={{ ...s.input, fontFamily: 'monospace', fontSize: 20, letterSpacing: '0.25em', textAlign: 'center', marginTop: 0, flex: 1 }}
+          />
+          <button onClick={beamerVerbinden} disabled={beamerCode.trim().length !== 4} style={{ ...s.btnSek, flexShrink: 0 }}>
+            Verbinden
+          </button>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+            Den 4-stelligen Code vom Beamer / TV eingeben.
+          </div>
+          <button
+            onClick={() => window.open('/beamer', '_blank')}
+            style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: '2px 0', flexShrink: 0 }}
+          >
+            ↗ Beamer öffnen
+          </button>
+        </div>
+      </div>
+
       <button onClick={() => setPhase('aktiv')} style={{ ...s.btnPri, width: '100%', fontSize: 15, padding: 14 }}>
         {T('session_begin_btn')}
       </button>
@@ -449,11 +530,46 @@ export default function Unterrichtsmodus() {
             }
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {Object.entries(REAKTION).map(([typ, emoji]) => {
             const n = reaktionen.filter(r => r.typ === typ).length
             return n > 0 ? <span key={typ} style={{ fontSize: 13, fontWeight: 700 }}>{emoji} {n}</span> : null
           })}
+          {/* Beamer-Indikator / Koppeln */}
+          {beamerVerbunden ? (
+            <button onClick={() => { beamerRef.current?.unsubscribe(); beamerRef.current = null; setBeamerVerbunden(false); setBeamerCode('') }}
+              style={{ ...s.btnSek, fontSize: 12, padding: '6px 10px', color: '#16a34a', borderColor: '#86efac' }}
+              title="Beamer trennen">
+              📺 ✓
+            </button>
+          ) : (
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setZeigeBeamerInput(v => !v)} style={{ ...s.btnSek, fontSize: 12, padding: '6px 10px' }} title="Beamer verbinden">
+                📺
+              </button>
+              {zeigeBeamerInput && (
+                <div style={{
+                  position: 'absolute', top: '110%', right: 0, background: 'var(--surface)',
+                  border: '1.5px solid var(--border)', borderRadius: 'var(--radius-lg)',
+                  padding: '12px 14px', boxShadow: 'var(--shadow-lg)', zIndex: 100,
+                  display: 'flex', gap: 8, alignItems: 'center', minWidth: 220,
+                }}>
+                  <input
+                    value={beamerCode}
+                    onChange={e => setBeamerCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))}
+                    onKeyDown={e => e.key === 'Enter' && beamerVerbinden()}
+                    placeholder="XXXX"
+                    maxLength={4}
+                    autoFocus
+                    style={{ ...s.input, fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.2em', textAlign: 'center', marginTop: 0, padding: '6px 10px', flex: 1 }}
+                  />
+                  <button onClick={beamerVerbinden} disabled={beamerCode.trim().length !== 4} style={{ ...s.btnPri, padding: '7px 12px', fontSize: 13 }}>
+                    OK
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <button onClick={refresh} disabled={refreshing} style={s.btnSek} title="Teilnehmerliste aktualisieren">
             {refreshing ? '…' : '↻'}
           </button>
