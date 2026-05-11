@@ -38,12 +38,6 @@ export const CHANGELOG = [
         en: 'Multilingual schedule – dates and times in the selected app language (DE/EN/TR)',
         tr: 'Çok dilli program – tarih ve saatler seçilen uygulama dilinde (DE/EN/TR)',
       },
-      {
-        icon: '📱',
-        de: 'Android-App – Staccato ist jetzt im Play Store verfügbar',
-        en: 'Android app – Staccato is now available on the Play Store',
-        tr: 'Android uygulaması – Staccato artık Play Store\'da mevcut',
-      },
     ],
   },
   {
