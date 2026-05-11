@@ -32,7 +32,7 @@ export default function PasswortZuruecksetzen() {
       setFehler(T('password_mismatch'))
       return
     }
-    if (passwort.length < 6) {
+    if (passwort.length < 8 || !/[A-Z]/.test(passwort) || !/[a-z]/.test(passwort) || !/[0-9]/.test(passwort)) {
       setFehler(T('password_min_error'))
       return
     }

@@ -80,9 +80,16 @@ export default function ProfilSeite() {
     setNotifLaden(false)
   }
 
+  function validierePasswort(p) {
+    if (p.length < 8 || !/[A-Z]/.test(p) || !/[a-z]/.test(p) || !/[0-9]/.test(p))
+      return 'Passwort muss mindestens 8 Zeichen haben und Groß-/Kleinbuchstaben sowie eine Zahl enthalten.'
+    return null
+  }
+
   async function passwortAendern() {
     if (!pw.neu || pw.neu !== pw.neu2) { setFehler('Passwörter stimmen nicht überein.'); return }
-    if (pw.neu.length < 6) { setFehler('Passwort muss mindestens 6 Zeichen haben.'); return }
+    const err = validierePasswort(pw.neu)
+    if (err) { setFehler(err); return }
     setPwLaden(true); setFehler(''); setErfolg('')
     const { error } = await supabase.auth.updateUser({ password: pw.neu })
     if (error) setFehler(error.message)
@@ -214,7 +221,7 @@ export default function ProfilSeite() {
         <h2 style={s.h2}>🔑 {T('profile_change_password')}</h2>
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
           <Feld label={T('profile_new_password')}>
-            <input type="password" style={s.input} value={pw.neu} placeholder="Mindestens 6 Zeichen"
+            <input type="password" style={s.input} value={pw.neu} placeholder="Mind. 8 Zeichen, Groß/Klein + Zahl"
               onChange={e => setPw(p => ({ ...p, neu: e.target.value }))} />
           </Feld>
           <Feld label={T('profile_confirm_password')}>

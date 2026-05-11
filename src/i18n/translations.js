@@ -539,7 +539,7 @@ export const translations = {
     profile_pw_changed_short: 'Passwort geändert!',
     profile_change_pw_btn: '🔑 Passwort ändern',
     profile_pw_changing: 'Ändere …',
-    password_min_chars: 'Mindestens 6 Zeichen',
+    password_min_chars: 'Mind. 8 Zeichen, Groß/Klein + Zahl',
     profile_tap_to_change: 'Tippen zum Ändern',
 
     // Kurs Repertoire
@@ -566,7 +566,7 @@ export const translations = {
     all_fields_required: 'Alle Felder ausfüllen.',
     unknown_error: 'Unbekannter Fehler',
     link_checking: 'Link wird geprüft…',
-    password_min_error: 'Mindestens 6 Zeichen.',
+    password_min_error: 'Passwort muss mindestens 8 Zeichen haben und Groß-/Kleinbuchstaben sowie eine Zahl enthalten.',
 
     // Interessenten
     interessent_new: '+ Neuer Interessent',
@@ -1292,7 +1292,7 @@ export const translations = {
     profile_pw_changed_short: 'Password changed!',
     profile_change_pw_btn: '🔑 Change Password',
     profile_pw_changing: 'Changing …',
-    password_min_chars: 'At least 6 characters',
+    password_min_chars: 'Min. 8 chars, upper/lower + digit',
     profile_tap_to_change: 'Tap to change',
 
     // Course Repertoire
@@ -1319,7 +1319,7 @@ export const translations = {
     all_fields_required: 'Please fill in all fields.',
     unknown_error: 'Unknown error',
     link_checking: 'Checking link…',
-    password_min_error: 'Minimum 6 characters.',
+    password_min_error: 'Password must be at least 8 characters and contain upper/lowercase letters and a digit.',
 
     // Prospects
     interessent_new: '+ New Prospect',
@@ -2045,7 +2045,7 @@ export const translations = {
     profile_pw_changed_short: 'Şifre değiştirildi!',
     profile_change_pw_btn: '🔑 Şifre Değiştir',
     profile_pw_changing: 'Değiştiriliyor …',
-    password_min_chars: 'En az 6 karakter',
+    password_min_chars: 'En az 8 karakter, büyük/küçük harf + rakam',
     profile_tap_to_change: 'Değiştirmek için dokunun',
 
     // Kurs Repertuvarı
@@ -2072,7 +2072,7 @@ export const translations = {
     all_fields_required: 'Lütfen tüm alanları doldurun.',
     unknown_error: 'Bilinmeyen hata',
     link_checking: 'Bağlantı kontrol ediliyor…',
-    password_min_error: 'En az 6 karakter.',
+    password_min_error: 'Şifre en az 8 karakter olmalı ve büyük/küçük harf ile rakam içermelidir.',
 
     // Adaylar
     interessent_new: '+ Yeni Aday',

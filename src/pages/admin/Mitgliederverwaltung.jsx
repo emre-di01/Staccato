@@ -57,6 +57,10 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
       setFehler(T('all_fields_required'))
       return
     }
+    if (form.passwort.length < 8 || !/[A-Z]/.test(form.passwort) || !/[a-z]/.test(form.passwort) || !/[0-9]/.test(form.passwort)) {
+      setFehler(T('password_min_error'))
+      return
+    }
     setLaden(true)
     setFehler('')
 
@@ -404,7 +408,7 @@ function PasswortModal({ mitglied, onClose }) {
   const [erfolg, setErfolg] = useState(false)
 
   async function speichern() {
-    if (!pw || pw.length < 6) { setFehler(T('password_min_error')); return }
+    if (!pw || pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw)) { setFehler(T('password_min_error')); return }
     if (pw !== pw2) { setFehler(T('password_mismatch')); return }
     setLaden(true); setFehler('')
 
