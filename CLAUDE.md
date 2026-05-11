@@ -369,6 +369,14 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20260508000000_profil_einstellungen.sql` | `thema` (text, default `'klassik'`) and `dark_mode` (boolean, default false) columns on `profiles` — persists UI settings across devices |
 | `20260508000001_fix_vorstand_events_rls.sql` | Fixes RLS so `vorstand` can read all events of their own school and manage their RSVP; also fixes `event_teilnehmer` read policy |
 | `20260508000002_nachricht_geloescht.sql` | `nachricht_geloescht` table — soft-delete per user for messages (`nachricht_id`, `user_id`, `geloescht_am`); RLS: only own rows |
+| `20260509000000_v2_multi_tenant.sql` | V2 Multi-Tenancy: `schul_mitgliedschaften` table (user↔school membership with role), `schul_einladungen` table (invitation tokens), `letzte_schule_id` column on `profiles`, public route `/einladung/:token`, `SchulWaehler` screen, `meine_schule_id()` now reads `letzte_schule_id` |
+| `20260509000001_fix_school_rls.sql` | RLS fix: admin/superadmin see only data of their active school (uses updated `meine_schule_id()`) |
+| `20260509000002_fix_remaining_rls.sql` | RLS fix: `raeume`, `instrumente`, `interessenten`, `events` tables constrained to school boundary |
+| `20260510000000_fix_cross_school_data_isolation.sql` | RLS fix: `stunden`, `mitglieder_mit_email` view, and `stunden_lehrer` were leaking data across schools for admin/superadmin |
+| `20260510000001_superadmin_membership_mgmt.sql` | `nutzer_schulen(user_id)` RPC — superadmin can list/manage school memberships for any user |
+| `20260510000002_fix_student_school_isolation.sql` | RLS fix: students/parents no longer see courses/events from other schools after school-switch (`unterricht_schueler`, `eltern_schueler`, `event_teilnehmer` policies now check school boundary) |
+| `20260510000003_fix_us_rls_recursion.sql` | RLS fix: `unterricht_schueler` policies removed circular reference back into `unterricht` (caused RLS recursion → courses invisible) |
+| `20260510000004_fix_lehrer_schule_filter.sql` | RLS fix: `unt: lesen` teacher path lacked school filter — teacher in school A as lehrer could still see school A courses after switching to school B as schueler |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`).
 
