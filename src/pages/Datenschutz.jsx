@@ -34,8 +34,8 @@ export default function Datenschutz() {
         <ul style={ul}>
           <li><strong>Stammdaten:</strong> Name, E-Mail-Adresse, Telefonnummer, Geburtsdatum, Adresse</li>
           <li><strong>Nutzungsdaten:</strong> Anwesenheiten, Kurszuordnungen, Repertoire-Fortschritt, Unterrichtsprotokolle</li>
-          <li><strong>Technische Daten:</strong> Login-Zeitpunkte, Sitzungsinformationen (Session-Token)</li>
-          <li><strong>Einstellungen:</strong> Sprachpräferenz, Design (lokal im Browser gespeichert, kein Server-Zugriff)</li>
+          <li><strong>Technische Daten:</strong> Login-Zeitpunkte, Sitzungsinformationen (Session-Token), Push-Notification-Token (gerätegebundener Bezeichner für Benachrichtigungen, nur bei aktivierten Push-Benachrichtigungen)</li>
+          <li><strong>Einstellungen:</strong> Sprachpräferenz, Design (lokal im Gerätespeicher, kein Server-Zugriff)</li>
           <li><strong>Dateien:</strong> Hochgeladene Dokumente (z. B. Aufnahmeformulare, Noten, Audiodateien)</li>
         </ul>
       </section>
@@ -61,14 +61,15 @@ export default function Datenschutz() {
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>6. Cookies und lokale Speicherung</h2>
-        <p style={p}>Diese Anwendung verwendet ausschließlich technisch notwendige Cookies und lokale Browserspeicherung (localStorage):</p>
+        <h2 style={h2}>6. Lokale Speicherung</h2>
+        <p style={p}>Diese Anwendung speichert ausschließlich technisch notwendige Daten lokal auf dem Gerät:</p>
         <ul style={ul}>
-          <li><strong>Sitzungs-Cookie (Supabase Auth):</strong> Für sichere Anmeldung und Authentifizierung. Wird beim Abmelden gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
+          <li><strong>Sitzungsdaten (Supabase Auth):</strong> Für sichere Anmeldung und Authentifizierung. Werden beim Abmelden gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
           <li><strong>Design-Einstellungen:</strong> Theme, Dark Mode und Sprache (kein Server-Zugriff). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
           <li><strong>Versionsinformation:</strong> Gesehene Changelog-Version (kein Server-Zugriff). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
+          <li><strong>Push-Notification-Token:</strong> Gerätegebundener Token für den Empfang von Push-Benachrichtigungen. Wird auf dem Server gespeichert, solange Push-Benachrichtigungen aktiviert sind. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
         </ul>
-        <p style={{ ...p, marginTop: 10 }}>Es werden keine Tracking-, Analyse- oder Werbe-Cookies eingesetzt.</p>
+        <p style={{ ...p, marginTop: 10 }}>Es werden keine Tracking-, Analyse- oder Werbe-Cookies eingesetzt. In der Web-App werden Cookies durch localStorage ersetzt; in der Android-App durch den internen App-Speicher.</p>
       </section>
 
       <section style={sek}>
@@ -82,7 +83,21 @@ export default function Datenschutz() {
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>9. Ihre Rechte</h2>
+        <h2 style={h2}>9. Kontolöschung</h2>
+        <p style={p}>
+          Sie können jederzeit die Löschung Ihres Kontos und aller damit verbundenen personenbezogenen Daten beantragen.
+          Die Löschung umfasst Stammdaten, Nutzungsdaten, hochgeladene Dateien und Push-Notification-Tokens.
+        </p>
+        <p style={{ ...p, marginTop: 10 }}>
+          <strong>In der App:</strong> Profil → „Konto löschen" → Löschung beantragen.<br />
+          <strong>Per E-Mail:</strong> <a href="mailto:staccato@401dev.de?subject=Kontolöschung%20beantragen" style={link}>staccato@401dev.de</a> mit dem Betreff „Kontolöschung beantragen".<br />
+          <strong>Per Web:</strong> <a href="https://401dev.de/datenschutz#kontologeschung" style={link}>https://401dev.de/datenschutz</a>
+        </p>
+        <p style={{ ...p, marginTop: 10 }}>Die Bearbeitung erfolgt innerhalb von 30 Tagen. Gesetzliche Aufbewahrungspflichten (z.&nbsp;B. steuerrelevante Unterlagen) bleiben davon unberührt.</p>
+      </section>
+
+      <section style={sek}>
+        <h2 style={h2}>10. Ihre weiteren Rechte</h2>
         <p style={p}>Sie haben gegenüber dem Verantwortlichen folgende Rechte hinsichtlich Ihrer personenbezogenen Daten:</p>
         <ul style={ul}>
           <li><strong>Auskunft</strong> (Art. 15 DSGVO): Jederzeit Auskunft über Ihre gespeicherten Daten</li>
@@ -96,7 +111,7 @@ export default function Datenschutz() {
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>10. Beschwerderecht</h2>
+        <h2 style={h2}>11. Beschwerderecht</h2>
         <p style={p}>
           Sie haben das Recht, sich bei der zuständigen Datenschutz-Aufsichtsbehörde zu beschweren. Die zuständige Behörde für Hessen ist:<br /><br />
           <strong>Der Hessische Beauftragte für Datenschutz und Informationsfreiheit (HBDI)</strong><br />
@@ -107,7 +122,7 @@ export default function Datenschutz() {
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>11. Datensicherheit</h2>
+        <h2 style={h2}>12. Datensicherheit</h2>
         <p style={p}>Die Plattform setzt folgende technische und organisatorische Sicherheitsmaßnahmen ein:</p>
         <ul style={ul}>
           <li>Verschlüsselte Übertragung aller Daten via HTTPS/TLS</li>
@@ -119,7 +134,7 @@ export default function Datenschutz() {
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>12. Minderjährige</h2>
+        <h2 style={h2}>13. Minderjährige</h2>
         <p style={p}>Sofern Schülerinnen und Schüler unter 16 Jahren in der Plattform erfasst werden, erfolgt dies auf Grundlage der Einwilligung der Erziehungsberechtigten durch die jeweilige Musikschule. Erziehungsberechtigte können jederzeit Auskunft, Berichtigung oder Löschung der Daten ihrer Kinder verlangen.</p>
       </section>
 

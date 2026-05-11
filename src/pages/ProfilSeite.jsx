@@ -231,6 +231,20 @@ export default function ProfilSeite() {
           </div>
         </div>
       </div>
+
+      {/* Konto löschen */}
+      <div style={s.card}>
+        <h2 style={{ ...s.h2, color:'var(--danger)' }}>⚠️ Konto löschen</h2>
+        <p style={{ fontSize:14, color:'var(--text-2)', lineHeight:1.6, margin:'0 0 16px' }}>
+          Du kannst die Löschung deines Kontos und aller zugehörigen personenbezogenen Daten beantragen.
+          Die Löschung wird von der Schulverwaltung bearbeitet.
+        </p>
+        <a
+          href={`mailto:staccato@401dev.de?subject=Kontol%C3%B6schung%20beantragen&body=Bitte%20l%C3%B6sche%20mein%20Konto%20(${encodeURIComponent(profil?.voller_name ?? '')}). `}
+          style={{ display:'inline-block', padding:'10px 20px', borderRadius:'var(--radius)', background:'var(--danger)', color:'#fff', fontSize:14, fontWeight:700, textDecoration:'none' }}>
+          Löschung beantragen
+        </a>
+      </div>
     </div>
   )
 }
