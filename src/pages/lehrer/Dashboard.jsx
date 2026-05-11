@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
@@ -7,8 +7,30 @@ import { SkeletonStatCard, SkeletonList, SkeletonStyle } from '../../components/
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
+function useCountUp(target, duration = 700) {
+  const [angezeigt, setAngezeigt] = useState(0)
+  const prev = useRef(0)
+  useEffect(() => {
+    if (typeof target !== 'number') return
+    const start = prev.current
+    const diff = target - start
+    if (diff === 0) return
+    const startTime = performance.now()
+    const frame = (now) => {
+      const p = Math.min((now - startTime) / duration, 1)
+      const ease = 1 - Math.pow(1 - p, 3)
+      setAngezeigt(Math.round(start + diff * ease))
+      if (p < 1) requestAnimationFrame(frame)
+      else prev.current = target
+    }
+    requestAnimationFrame(frame)
+  }, [target, duration])
+  return angezeigt
+}
+
 function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
   const [hovered, setHovered] = useState(false)
+  const angezeigt = useCountUp(typeof wert === 'number' ? wert : 0)
   return (
     <div
       onClick={onClick}
@@ -28,7 +50,7 @@ function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
         <div>
           <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>{label}</div>
-          <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{wert ?? '–'}</div>
+          <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{typeof wert === 'number' ? angezeigt : (wert ?? '–')}</div>
         </div>
         <div style={{
           fontSize:22, width:46, height:46, display:'flex', alignItems:'center', justifyContent:'center',
