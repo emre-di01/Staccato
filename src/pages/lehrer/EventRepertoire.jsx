@@ -144,7 +144,7 @@ function VorhandenesModal({ eventId, bereitsVerknuepft, onClose, onErfolg }) {
 export default function EventRepertoire() {
   const { id: eventId } = useParams()
   const navigate = useNavigate()
-  const { rolle, confirm } = useApp()
+  const { rolle, confirm, schule } = useApp()
   const [event,   setEvent]   = useState(null)
   const [stuecke, setStuecke] = useState([])
   const [laden,   setLaden]   = useState(true)
@@ -188,6 +188,58 @@ export default function EventRepertoire() {
     ))
   }
 
+  function programmDrucken() {
+    const win = window.open('', '_blank')
+    const datum = event?.beginn ? new Date(event.beginn).toLocaleDateString('de-DE', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }) : ''
+    const zeitStr = event?.beginn ? new Date(event.beginn).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' }) : ''
+    const logoHtml = schule?.logo_url ? `<img src="${schule.logo_url}" class="logo" alt="Logo">` : ''
+    const stueckHtml = stuecke.map((es, i) => {
+      const st = es.stuecke
+      const meta = [st?.komponist, st?.tonart, st?.tempo].filter(Boolean).join(' · ')
+      return `<div class="stueck">
+        <div class="nr">${i + 1}</div>
+        <div class="info">
+          <div class="titel">${st?.titel ?? ''}</div>
+          ${meta ? `<div class="meta">${meta}</div>` : ''}
+          ${es.interpret ? `<div class="interpret">${es.interpret}</div>` : ''}
+        </div>
+      </div>`
+    }).join('')
+    win.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="utf-8">
+      <title>Programm – ${event?.titel ?? ''}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Georgia, serif; max-width: 640px; margin: 40px auto; padding: 0 24px; color: #111; }
+        .header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #111; }
+        .schule-name { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+        h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+        .datum { font-size: 14px; color: #555; margin-top: 4px; }
+        .logo { max-height: 72px; max-width: 140px; object-fit: contain; flex-shrink: 0; }
+        .stueck { display: flex; gap: 18px; padding: 14px 0; border-bottom: 1px solid #eee; }
+        .nr { font-size: 16px; font-weight: 700; color: #bbb; min-width: 28px; padding-top: 3px; flex-shrink: 0; }
+        .titel { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+        .meta { font-size: 12px; color: #777; margin-bottom: 2px; }
+        .interpret { font-size: 13px; color: #444; font-style: italic; }
+        .footer { margin-top: 32px; font-size: 11px; color: #bbb; text-align: center; }
+        @media print { body { margin: 15mm 20mm; max-width: none; } @page { margin: 15mm 20mm; } }
+      </style>
+    </head><body>
+      <div class="header">
+        <div style="flex:1">
+          ${schule?.name ? `<div class="schule-name">${schule.name}</div>` : ''}
+          <h1>${event?.titel ?? ''}</h1>
+          <div class="datum">${datum}${zeitStr ? ' · ' + zeitStr + ' Uhr' : ''}${event?.ort ? ' · ' + event.ort : ''}</div>
+        </div>
+        ${logoHtml}
+      </div>
+      ${stueckHtml}
+      <div class="footer">${schule?.name ?? ''}</div>
+      <script>window.onload = () => { window.focus(); window.print() }<\/script>
+    </body></html>`)
+    win.document.close()
+  }
+
   async function interpretSpeichern(stueckId, interpret) {
     await supabase.from('event_stuecke').update({ interpret }).eq('event_id', eventId).eq('stueck_id', stueckId)
     setStuecke(prev => prev.map(s => s.stueck_id === stueckId ? { ...s, interpret } : s))
@@ -219,12 +271,17 @@ export default function EventRepertoire() {
           <h1 style={s.h1}>🎼 {event?.titel}</h1>
           <p style={s.sub}>{stuecke.length} Stück{stuecke.length !== 1 ? 'e' : ''} im Programm</p>
         </div>
-        {kannBearbeiten && (
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => setModal('vorhanden')} style={s.btnSek}>🔗 Verknüpfen</button>
-            <button onClick={() => setModal('neu')} style={s.btnPri}>+ Neues Stück</button>
-          </div>
-        )}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {stuecke.length > 0 && (
+            <button onClick={programmDrucken} style={s.btnSek}>📋 Programm</button>
+          )}
+          {kannBearbeiten && (
+            <>
+              <button onClick={() => setModal('vorhanden')} style={s.btnSek}>🔗 Verknüpfen</button>
+              <button onClick={() => setModal('neu')} style={s.btnPri}>+ Neues Stück</button>
+            </>
+          )}
+        </div>
       </div>
 
       <input placeholder="🔍 Stück, Komponist oder Interpret suchen…" value={suche}
