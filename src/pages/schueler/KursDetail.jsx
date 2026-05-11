@@ -370,18 +370,23 @@ export default function SchuelerKursDetail() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex', gap:2, marginBottom:20, borderBottom:'2px solid var(--border)', overflowX:'auto' }}>
+      <div style={{ display:'flex', gap:2, marginBottom:20, borderBottom:'2px solid var(--border)' }}>
         {[
-          ['stunden',     `📅 ${T('schedule_title')}`],
+          ['stunden',     T('kurs_tab_lessons')],
           ['anwesenheit', T('kurs_tab_attendance')],
-          ['repertoire',  `🎼 ${T('repertoire_title')} (${stuecke.length})`],
-          ['dateien',     `📁 ${T('files')} (${dateien.length})`],
-        ].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)}
-            style={{ padding:'10px 16px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: tab===k ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===k ? 800 : 500, borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, whiteSpace:'nowrap' }}>
-            {l}
-          </button>
-        ))}
+          ['repertoire',  T('kurs_tab_repertoire')],
+          ['dateien',     `📁 ${T('files')}`],
+        ].map(([k, raw]) => {
+          const [icon, ...rest] = raw.split(' ')
+          const label = rest.join(' ')
+          return (
+            <button key={k} onClick={() => setTab(k)}
+              style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2, padding:'8px 2px', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, transition:'all 0.15s' }}>
+              <span style={{ fontSize:18, lineHeight:1 }}>{icon}</span>
+              <span style={{ fontSize:10, fontWeight: tab===k ? 700 : 400, color: tab===k ? 'var(--text)' : 'var(--text-3)', whiteSpace:'nowrap' }}>{label}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* STUNDENPLAN */}

@@ -16,12 +16,17 @@ function zeitStr(date, tz) {
   return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: tz }).format(date)
 }
 
-const STUNDEN_VON = 7
-const STUNDEN_BIS = 22   // bis 22:00 Uhr
-const SLOT_HOEHE  = 60   // px pro Stunde
+function langToLocale(lang) {
+  return { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }[lang] || 'de-DE'
+}
 
-const WOCHENTAGE      = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-const WOCHENTAGE_LANG = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
+function formatDatum(datum, locale = 'de-DE') {
+  return datum.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
+}
+
+const STUNDEN_VON = 7
+const STUNDEN_BIS = 22
+const SLOT_HOEHE  = 60
 
 const TYP_FARBE = {
   einzel:   '#3b82f6',
@@ -41,10 +46,6 @@ function getMontag(datum) {
   d.setDate(d.getDate() + diff)
   d.setHours(0, 0, 0, 0)
   return d
-}
-
-function formatDatum(datum) {
-  return datum.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })
 }
 
 function istHeute(datum) {
@@ -122,7 +123,8 @@ function EventBlock({ event, onClick, tz }) {
 
 // ─── Detail Modal ─────────────────────────────────────────────
 function DetailModal({ stunde, onClose, tz }) {
-  const { T, rolle, profil } = useApp()
+  const { T, rolle, profil, lang } = useApp()
+  const locale = langToLocale(lang)
   const navigate = useNavigate()
   const kannAktionen   = rolle === 'lehrer' || rolle === 'admin' || rolle === 'superadmin'
   const kannEntschuldigen = (rolle === 'schueler' || rolle === 'vorstand') && stunde.status === 'geplant' && new Date(stunde.beginn) > new Date()
@@ -176,10 +178,10 @@ function DetailModal({ stunde, onClose, tz }) {
             <div style={{ display:'flex', gap:10, alignItems:'center', fontSize:14, color:'var(--text-2)' }}>
               <span style={{ fontSize:18 }}>📅</span>
               <div>
-                <div style={{ fontWeight:600 }}>{beginn.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}</div>
+                <div style={{ fontWeight:600 }}>{beginn.toLocaleDateString(locale, { weekday:'long', day:'numeric', month:'long' })}</div>
                 <div style={{ fontSize:13, color:'var(--text-3)' }}>
-                  {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} {T('schedule_lesson_at')}
-                  {ende && ` – ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} ${T('schedule_lesson_at')}`}
+                  {beginn.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', hour12:false, timeZone: tz })} {T('schedule_lesson_at')}
+                  {ende && ` – ${ende.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', hour12:false, timeZone: tz })} ${T('schedule_lesson_at')}`}
                 </div>
               </div>
             </div>
@@ -227,7 +229,8 @@ function DetailModal({ stunde, onClose, tz }) {
 
 // ─── Event Detail Modal ───────────────────────────────────────
 function EventDetailModal({ event, onClose, tz }) {
-  const { T } = useApp()
+  const { T, lang } = useApp()
+  const locale = langToLocale(lang)
   const beginn = new Date(event.beginn)
   const ende   = event.ende ? new Date(event.ende) : null
   const farbe  = EVENT_TYP_FARBE[event.typ] ?? '#6b7280'
@@ -248,9 +251,9 @@ function EventDetailModal({ event, onClose, tz }) {
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'var(--text-3)', padding:0, lineHeight:1 }}>✕</button>
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:8, fontSize:14, color:'var(--text-2)' }}>
-          <div>📅 {beginn.toLocaleDateString('de-DE', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</div>
-          <div>🕐 {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} {T('schedule_lesson_at')}
-            {ende && ` – ${ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })} ${T('schedule_lesson_at')}`}
+          <div>📅 {beginn.toLocaleDateString(locale, { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</div>
+          <div>🕐 {beginn.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', hour12:false, timeZone: tz })} {T('schedule_lesson_at')}
+            {ende && ` – ${ende.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', hour12:false, timeZone: tz })} ${T('schedule_lesson_at')}`}
           </div>
           {event.ort && (
             <a href={`https://maps.google.com/?q=${encodeURIComponent(event.ort)}`} target="_blank" rel="noopener noreferrer"
@@ -268,11 +271,18 @@ function EventDetailModal({ event, onClose, tz }) {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Stundenplan() {
-  const { profil, rolle, T, zeitzone } = useApp()
+  const { profil, rolle, T, zeitzone, lang } = useApp()
   const location = useLocation()
   const navigate = useNavigate()
   const tz = zeitzone || 'Europe/Berlin'
+  const locale = langToLocale(lang)
   const mob = useIsMobile()
+  // Short weekday names (Mon-based, locale-aware) – Jan 6 2025 is a Monday
+  const wochentage = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date('2025-01-06')
+    d.setDate(6 + i)
+    return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d)
+  })
   // Admin unter /lehrer/* → eigene Kurse wie ein Lehrer anzeigen
   const alsLehrer = rolle === 'lehrer' || location.pathname.startsWith('/lehrer')
 
@@ -397,7 +407,7 @@ export default function Stundenplan() {
         <button onClick={() => wocheNavigieren(-1)} style={s.navBtn}>‹</button>
         <div style={{ flex:1, textAlign:'center' }}>
           <span style={{ fontSize: mob ? 14 : 16, fontWeight:700, color:'var(--text)' }}>
-            {formatDatum(wocheTage[0])} – {formatDatum(wocheTage[6])}
+            {formatDatum(wocheTage[0], locale)} – {formatDatum(wocheTage[6], locale)}
           </span>
         </div>
         <button onClick={() => wocheNavigieren(1)} style={s.navBtn}>›</button>
@@ -424,7 +434,7 @@ export default function Stundenplan() {
                 background: istHeute(tag) ? 'var(--bg-2)' : 'transparent',
               }}>
                 <div style={{ fontSize:10, fontWeight:700, color: istHeute(tag) ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
-                  {WOCHENTAGE[i]}
+                  {wochentage[i]}
                 </div>
                 <div style={{ fontSize: mob ? 15 : 18, fontWeight:800, color: istHeute(tag) ? 'var(--accent)' : 'var(--text)', marginTop:1 }}>
                   {tag.getDate()}
@@ -526,7 +536,7 @@ export default function Stundenplan() {
 
                 const TagTrenner = neuerTag ? (
                   <div key={'tag-' + tagKey} style={{ padding:'10px 4px 4px', fontSize:12, fontWeight:800, color: istHeute(beginn) ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>
-                    {istHeute(beginn) ? `● ${T('schedule_today')}` : ''} {beginn.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}
+                    {istHeute(beginn) ? `● ${T('schedule_today')}` : ''} {beginn.toLocaleDateString(locale, { weekday:'long', day:'numeric', month:'long' })}
                   </div>
                 ) : null
 
@@ -539,9 +549,9 @@ export default function Stundenplan() {
                       <div style={{ width:4, borderRadius:99, alignSelf:'stretch', background:farbe, flexShrink:0 }} />
                       <div style={{ textAlign:'center', minWidth:44 }}>
                         <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>
-                          {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })}
+                          {beginn.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', hour12:false, timeZone: tz })}
                         </div>
-                        {item.ende && <div style={{ fontSize:11, color:'var(--text-3)' }}>{new Date(item.ende).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })}</div>}
+                        {item.ende && <div style={{ fontSize:11, color:'var(--text-3)' }}>{new Date(item.ende).toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', hour12:false, timeZone: tz })}</div>}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -566,9 +576,9 @@ export default function Stundenplan() {
                       <div style={{ width:4, borderRadius:99, alignSelf:'stretch', background:farbe, flexShrink:0 }} />
                       <div style={{ textAlign:'center', minWidth:44 }}>
                         <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>
-                          {beginn.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })}
+                          {beginn.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', hour12:false, timeZone: tz })}
                         </div>
-                        {ende && <div style={{ fontSize:11, color:'var(--text-3)' }}>{ende.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: tz })}</div>}
+                        {ende && <div style={{ fontSize:11, color:'var(--text-3)' }}>{ende.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', hour12:false, timeZone: tz })}</div>}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.unterricht?.name}</div>

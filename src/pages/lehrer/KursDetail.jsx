@@ -681,14 +681,19 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:20, borderBottom:'2px solid var(--border)' }}>
-        {[['stunden', T('kurs_tab_lessons')],['anwesenheit', T('kurs_tab_attendance')],['schueler', T('kurs_tab_students')],['repertoire', T('kurs_tab_repertoire')]].map(([key, label]) => (
-          <button key={key}
-            onClick={() => key === 'repertoire' ? navigate(`/${segment}/kurse/${id}/repertoire`) : setAktiveTab(key)}
-            style={{ padding:'10px 18px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: aktiveTab===key ? 'var(--text)' : 'var(--text-3)', fontWeight: aktiveTab===key ? 800 : 500, borderBottom:`2px solid ${aktiveTab===key ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, transition:'all 0.15s' }}>
-            {label}
-          </button>
-        ))}
+      <div style={{ display:'flex', gap:2, marginBottom:20, borderBottom:'2px solid var(--border)' }}>
+        {[['stunden', T('kurs_tab_lessons')],['anwesenheit', T('kurs_tab_attendance')],['schueler', T('kurs_tab_students')],['repertoire', T('kurs_tab_repertoire')]].map(([key, raw]) => {
+          const [icon, ...rest] = raw.split(' ')
+          const label = rest.join(' ')
+          return (
+            <button key={key}
+              onClick={() => key === 'repertoire' ? navigate(`/${segment}/kurse/${id}/repertoire`) : setAktiveTab(key)}
+              style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2, padding:'8px 2px', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', borderBottom:`2px solid ${aktiveTab===key ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, transition:'all 0.15s' }}>
+              <span style={{ fontSize:18, lineHeight:1 }}>{icon}</span>
+              <span style={{ fontSize:10, fontWeight: aktiveTab===key ? 700 : 400, color: aktiveTab===key ? 'var(--text)' : 'var(--text-3)', whiteSpace:'nowrap' }}>{label}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Tab: Stunden */}
