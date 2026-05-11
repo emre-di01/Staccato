@@ -175,41 +175,47 @@ function PdfViewer({ datei }) {
 }
 
 // ─── Schüler Anwesenheits-Übersicht ──────────────────────────
-function SchuelerAnwesenheit({ profil, kursId, stunden }) {
+function SchuelerAnwesenheit({ profil, kursId }) {
   const { T } = useApp()
+  const [stunden,      setStunden]      = useState([])
   const [anwesenheiten, setAnwesenheiten] = useState([])
   const [laden, setLaden] = useState(true)
 
   useEffect(() => {
     async function ladeData() {
-      const stundenIds = stunden.filter(s => s.status === 'stattgefunden').map(s => s.id)
-      if (stundenIds.length === 0) { setLaden(false); return }
-      const { data } = await supabase.from('anwesenheit')
-        .select('*, stunden(beginn)')
-        .eq('schueler_id', profil.id)
-        .in('stunde_id', stundenIds)
-        .order('stunde_id')
-      setAnwesenheiten(data ?? [])
+      const { data: st } = await supabase.from('stunden')
+        .select('id, beginn, status')
+        .eq('unterricht_id', kursId)
+        .eq('status', 'stattgefunden')
+        .order('beginn', { ascending: false })
+      const stattgefunden = st ?? []
+      setStunden(stattgefunden)
+      if (stattgefunden.length > 0) {
+        const { data: anw } = await supabase.from('anwesenheit')
+          .select('*')
+          .eq('schueler_id', profil.id)
+          .in('stunde_id', stattgefunden.map(s => s.id))
+        setAnwesenheiten(anw ?? [])
+      }
       setLaden(false)
     }
     ladeData()
-  }, [profil?.id, stunden])
+  }, [profil?.id, kursId])
 
-  const stattgefunden = stunden.filter(s => s.status === 'stattgefunden')
   const anwesend = anwesenheiten.filter(a => a.status === 'anwesend' || a.status === 'zu_spaet').length
-  const quote = stattgefunden.length > 0 ? Math.round(100 * anwesend / stattgefunden.length) : null
+  const quote = stunden.length > 0 ? Math.round(100 * anwesend / stunden.length) : null
 
   const STATUS_ICON = { anwesend:'✅', abwesend:'❌', entschuldigt:'🟡', zu_spaet:'⏰' }
 
   if (laden) return <div style={{ padding:20, color:'var(--text-3)' }}>{T('loading')}</div>
-  if (stattgefunden.length === 0) return <div style={s.leer}>{T('attendance_none_held')}</div>
+  if (stunden.length === 0) return <div style={s.leer}>{T('attendance_none_held')}</div>
 
   return (
     <div>
       {/* Statistik */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap:12, marginBottom:20 }}>
         {[
-          { label: T('attendance_total_lessons'), wert: stattgefunden.length, farbe:'var(--primary)' },
+          { label: T('attendance_total_lessons'), wert: stunden.length, farbe:'var(--primary)' },
           { label: T('present'), wert: anwesend, farbe:'var(--success)' },
           { label: T('attendance_rate_label'), wert: quote !== null ? `${quote}%` : '–', farbe: quote >= 80 ? 'var(--success)' : quote >= 60 ? 'var(--warning)' : 'var(--danger)' },
         ].map(item => (
@@ -222,7 +228,7 @@ function SchuelerAnwesenheit({ profil, kursId, stunden }) {
 
       {/* Liste */}
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        {stattgefunden.map(st => {
+        {stunden.map(st => {
           const anw = anwesenheiten.find(a => a.stunde_id === st.id)
           const beginn = new Date(st.beginn)
           return (
@@ -429,7 +435,7 @@ export default function SchuelerKursDetail() {
       {tab === 'anwesenheit' && (
         <>
           <Hinweis text={T('hint_kurs_anwesenheit')} style={{ marginBottom:16 }} />
-          <SchuelerAnwesenheit profil={profil} kursId={id} stunden={stunden} />
+          <SchuelerAnwesenheit profil={profil} kursId={id} />
         </>
       )}
 
