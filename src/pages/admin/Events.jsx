@@ -315,7 +315,7 @@ export default function AdminEvents() {
                 </div>
               )}
               <div style={s.cardActions}>
-                {ev.typ !== 'vorstandssitzung' && (
+                {['konzert','vorspiel','pruefung','veranstaltung','sonstiges'].includes(ev.typ) && (
                   <button onClick={() => navigate(`/admin/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 {T('repertoire')}</button>
                 )}
                 <button onClick={() => oeffneTeilnehmer(ev)} style={s.btnSm}>👥 {T('manage_participants')}</button>

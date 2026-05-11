@@ -26,7 +26,19 @@ serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS })
 
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader) return new Response('Unauthorized', { status: 401, headers: CORS })
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response('Unauthorized', { status: 401, headers: CORS })
+  }
+
+  const userClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } },
+  )
+  const { data: { user }, error: authErr } = await userClient.auth.getUser()
+  if (authErr || !user) {
+    return new Response('Unauthorized', { status: 401, headers: CORS })
+  }
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -36,6 +48,14 @@ serve(async (req) => {
   let body: Record<string, unknown>
   try { body = await req.json() } catch {
     return new Response('Invalid JSON', { status: 400, headers: CORS })
+  }
+
+  // welcome emails contain plaintext passwords — only admin/superadmin may send them
+  if (body.type === 'welcome') {
+    const { data: profil } = await supabase.from('profiles').select('rolle').eq('id', user.id).single()
+    if (!['admin', 'superadmin'].includes(profil?.rolle ?? '')) {
+      return new Response('Forbidden', { status: 403, headers: CORS })
+    }
   }
 
   try {

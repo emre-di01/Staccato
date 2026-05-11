@@ -45,10 +45,13 @@ Musikschul-Management-Plattform — von der Mitgliederverwaltung bis zum digital
 
 | Service | URL |
 |---------|-----|
-| App | https://401dev.de |
+| Landing Page | https://staccato-music.de |
+| App | https://app.staccato-music.de |
 | Supabase API | https://api.401dev.de |
 
-Nginx auf dem Server dient als Reverse Proxy mit Certbot/Let's Encrypt-Zertifikaten. Config: `/etc/nginx/sites-available/staccato`.
+Nginx auf dem Server dient als Reverse Proxy mit Certbot/Let's Encrypt-Zertifikaten.
+- Config App: `/etc/nginx/sites-available/staccato-music`
+- Config Legacy: `/etc/nginx/sites-available/staccato`
 
 ## Setup (Entwicklung)
 

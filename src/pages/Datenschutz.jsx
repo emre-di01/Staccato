@@ -91,7 +91,7 @@ export default function Datenschutz() {
         <p style={{ ...p, marginTop: 10 }}>
           <strong>In der App:</strong> Profil → „Konto löschen" → Löschung beantragen.<br />
           <strong>Per E-Mail:</strong> <a href="mailto:staccato@401dev.de?subject=Kontolöschung%20beantragen" style={link}>staccato@401dev.de</a> mit dem Betreff „Kontolöschung beantragen".<br />
-          <strong>Per Web:</strong> <a href="https://401dev.de/datenschutz#kontologeschung" style={link}>https://401dev.de/datenschutz</a>
+          <strong>Per Web:</strong> <a href="https://app.staccato-music.de/datenschutz#kontologeschung" style={link}>https://app.staccato-music.de/datenschutz</a>
         </p>
         <p style={{ ...p, marginTop: 10 }}>Die Bearbeitung erfolgt innerhalb von 30 Tagen. Gesetzliche Aufbewahrungspflichten (z.&nbsp;B. steuerrelevante Unterlagen) bleiben davon unberührt.</p>
       </section>

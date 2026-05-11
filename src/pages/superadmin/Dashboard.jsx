@@ -91,7 +91,7 @@ export default function SuperadminDashboard() {
   }
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
@@ -119,7 +119,7 @@ export default function SuperadminDashboard() {
           {schulen.map(s => {
             const isAktiv = schule?.name === s.name
             return (
-              <div key={s.schule_id} style={{
+              <div key={s.schule_id} className="schul-karte" style={{
                 background: 'var(--surface)', border: `1px solid ${isAktiv ? 'var(--primary)' : 'var(--border)'}`,
                 borderRadius: 'var(--radius-lg)', padding: '20px 24px',
                 display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
@@ -160,7 +160,7 @@ export default function SuperadminDashboard() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                <div className="schul-karte-buttons" style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                   {!isAktiv && (
                     <button
                       onClick={() => handleWechsel(s.schule_id)}
@@ -281,6 +281,14 @@ export default function SuperadminDashboard() {
           </div>
         </Modal>
       )}
+
+      <style>{`
+        @media (max-width: 640px) {
+          .schul-karte { padding: 14px 16px !important; }
+          .schul-karte-buttons { width: 100%; flex-shrink: 1 !important; }
+          .schul-karte-buttons button { flex: 1; justify-content: center; }
+        }
+      `}</style>
     </div>
   )
 }

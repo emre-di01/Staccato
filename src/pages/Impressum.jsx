@@ -27,7 +27,7 @@ export default function Impressum() {
         <h2 style={h2}>Kontakt</h2>
         <p style={p}>
           E-Mail: <a href="mailto:staccato@401dev.de" style={link}>staccato@401dev.de</a><br />
-          Website: <a href="https://401dev.de" style={link}>https://401dev.de</a>
+          Website: <a href="https://staccato-music.de" style={link}>https://staccato-music.de</a>
         </p>
       </section>
 

@@ -164,7 +164,7 @@ export default function SchuelerEvents() {
 
                     {/* Aktionen */}
                     <div style={s.aktionenRow}>
-                      {ev.typ !== 'vorstandssitzung' && (
+                      {['konzert','vorspiel','pruefung','veranstaltung','sonstiges'].includes(ev.typ) && (
                         <button onClick={() => navigate(`${basePath}/events/${ev.id}/repertoire`)}
                           style={s.programmBtn}>
                           🎼 Programm

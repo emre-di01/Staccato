@@ -166,6 +166,10 @@ export default function EventRepertoire() {
         .eq('event_id', eventId)
         .order('reihenfolge'),
     ])
+    if (ev.data?.typ === 'vorstandssitzung') {
+      navigate(-1)
+      return
+    }
     setEvent(ev.data)
     setStuecke(es.data ?? [])
     setLaden(false)

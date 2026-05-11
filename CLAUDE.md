@@ -16,9 +16,12 @@ No linting or test commands are configured.
 
 | Service | URL |
 |---------|-----|
-| Frontend | `https://401dev.de` |
+| Landing Page | `https://staccato-music.de` |
+| App | `https://app.staccato-music.de` |
 | Supabase API | `https://api.401dev.de` |
 | Supabase Studio | `http://127.0.0.1:54323` (nur lokal) |
+
+> Die alte Domain `401dev.de` bleibt weiterhin aktiv (parallel).
 
 ## Environment Setup
 
@@ -41,7 +44,7 @@ SMTP_PORT=465
 SMTP_USER=...
 SMTP_PASS=...
 SMTP_FROM=staccato@401dev.de
-APP_URL=https://401dev.de
+APP_URL=https://app.staccato-music.de
 ```
 
 Start Supabase so the `.env` is exported to the container environment:
@@ -53,13 +56,19 @@ set -a && source supabase/.env && set +a && supabase start
 
 ### Nginx (Reverse Proxy)
 
-Config: `/etc/nginx/sites-available/staccato` (symlink in `sites-enabled/`)
+Zwei Configs:
+- `/etc/nginx/sites-available/staccato` — `401dev.de` + `api.401dev.de` (Bestandsconfig)
+- `/etc/nginx/sites-available/staccato-music` — `staccato-music.de` (Landing) + `app.staccato-music.de` (App)
 
-- `401dev.de` + `www.401dev.de` → `dist/` (Frontend, statisch)
+Routing:
+- `staccato-music.de` + `www.staccato-music.de` → `staccato-landing/dist/` (Landing Page, statisch)
+- `app.staccato-music.de` → `staccato/dist/` (App, statisch)
 - `api.401dev.de` → `localhost:54321` (Supabase Kong), inkl. WebSocket-Headers für Realtime
 - HTTP → HTTPS Redirect für alle Domains
 
-TLS-Zertifikate via **Certbot / Let's Encrypt** (`/etc/letsencrypt/live/401dev.de/`), werden automatisch alle 90 Tage erneuert.
+TLS-Zertifikate via **Certbot / Let's Encrypt**:
+- `/etc/letsencrypt/live/401dev.de/` (für 401dev.de + api.401dev.de)
+- `/etc/letsencrypt/live/staccato-music.de/` (für staccato-music.de + www + app)
 
 Nginx nach Config-Änderungen neu laden:
 ```bash

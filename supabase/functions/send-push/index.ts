@@ -58,9 +58,25 @@ async function sendPushToRecipients(
   }))
 }
 
+const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' }
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } })
+    return new Response(null, { headers: CORS_HEADERS })
+  }
+
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS })
+  }
+  const userClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } },
+  )
+  const { data: { user }, error: authErr } = await userClient.auth.getUser()
+  if (authErr || !user) {
+    return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS })
   }
 
   const payload = await req.json()

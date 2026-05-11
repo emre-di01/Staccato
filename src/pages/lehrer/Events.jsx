@@ -172,7 +172,7 @@ export default function LehrerEvents() {
               )}
               {ev.beschreibung && <div style={s.cardBeschreibung}>{ev.beschreibung}</div>}
               <div style={s.cardActions}>
-                {ev.typ !== 'vorstandssitzung' && (
+                {['konzert','vorspiel','pruefung','veranstaltung','sonstiges'].includes(ev.typ) && (
                   <button onClick={() => navigate(`/lehrer/events/${ev.id}/repertoire`)} style={s.btnSm}>🎼 Repertoire</button>
                 )}
                 {kannBearbeiten(ev) && <>
