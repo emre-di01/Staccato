@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -29,14 +30,14 @@ function NeuesStueckModal({ eventId, onClose, onErfolg }) {
     onErfolg(); onClose()
   }
 
-  return (
-    <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={s.modal}>
+  return createPortal(
+    <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
           <h3 style={s.modalTitel}>🎵 Neues Stück</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
           {[
             { key:'titel',       label:'Titel *',       placeholder:'z.B. Ave Maria' },
             { key:'komponist',   label:'Komponist',     placeholder:'z.B. Schubert' },
@@ -61,7 +62,7 @@ function NeuesStueckModal({ eventId, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Bestehendes Stück verknüpfen ─────────────────────────────
@@ -96,14 +97,14 @@ function VorhandenesModal({ eventId, bereitsVerknuepft, onClose, onErfolg }) {
     setLaden(false)
   }
 
-  return (
-    <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={s.modal}>
+  return createPortal(
+    <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
           <h3 style={s.modalTitel}>🔗 Stück verknüpfen</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
           <input style={s.input} placeholder="🔍 Stück oder Komponist suchen…" value={suche}
             onChange={e => { setSuche(e.target.value); setGewählt('') }} />
           <div style={{ maxHeight:240, overflowY:'auto', display:'flex', flexDirection:'column', gap:6 }}>
@@ -136,7 +137,7 @@ function VorhandenesModal({ eventId, bereitsVerknuepft, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Hauptkomponente ──────────────────────────────────────────
@@ -346,8 +347,9 @@ const s = {
   iconBtn:     { background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--text-3)', padding:4 },
   leer:        { padding:'48px', textAlign:'center', color:'var(--text-3)', fontSize:14, background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px dashed var(--border)' },
   overlay:     { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 },
-  modal:       { background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' },
-  modalHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 },
+  modal:       { background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' },
+  modalHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 },
+  modalBody:   { overflowY:'auto', flex:1, padding:'24px 32px 28px', overscrollBehavior:'contain' },
   modalTitel:  { margin:0, fontSize:18, fontWeight:800, color:'var(--text)' },
   chip:        { fontSize:11, padding:'2px 8px', borderRadius:99, background:'var(--bg-2)', border:'1px solid var(--border)', color:'var(--text-3)' },
 }

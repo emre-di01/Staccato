@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
@@ -7,10 +7,33 @@ import OnboardingModal from '../../components/OnboardingModal'
 import Hinweis from '../../components/Hinweis'
 import { Skeleton, SkeletonStatCard, SkeletonList, SkeletonStyle } from '../../components/Skeleton'
 
+function useCountUp(target, duration = 700) {
+  const [val, setVal] = useState(0)
+  const rafRef = useRef(null)
+  const prevRef = useRef(0)
+  useEffect(() => {
+    if (typeof target !== 'number' || isNaN(target)) return
+    const from = prevRef.current
+    prevRef.current = target
+    const start = performance.now()
+    const tick = now => {
+      const t = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setVal(Math.round(from + (target - from) * eased))
+      if (t < 1) rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [target, duration])
+  return val
+}
+
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
 function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
   const [hovered, setHovered] = useState(false)
+  const counted = useCountUp(typeof wert === 'number' ? wert : 0)
+  const display = typeof wert === 'number' ? counted : wert
   return (
     <div
       onClick={onClick}
@@ -30,7 +53,7 @@ function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
         <div>
           <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>{label}</div>
-          <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{wert ?? '–'}</div>
+          <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{display ?? '–'}</div>
         </div>
         <div style={{
           fontSize:22, width:46, height:46, display:'flex', alignItems:'center', justifyContent:'center',

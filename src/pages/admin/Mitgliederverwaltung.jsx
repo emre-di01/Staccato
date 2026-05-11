@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import SharedModal from '../../components/Modal'
 import Avatar from '../../components/Avatar'
 
 const ROLLEN      = ['lehrer', 'schueler', 'eltern', 'vorstand']
@@ -29,26 +31,7 @@ function Badge({ rolle }) {
 }
 
 function Modal({ titel, onClose, children, breit = false }) {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 1000, padding: 16,
-    }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{
-        background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-        padding: '28px 32px', width: '100%', maxWidth: breit ? 600 : 460,
-        boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)',
-        maxHeight: '90vh', overflowY: 'auto',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{titel}</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
+  return <SharedModal titel={titel} onClose={onClose} maxWidth={breit ? 600 : 460}>{children}</SharedModal>
 }
 
 function Feld({ label, children }) {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -67,10 +68,10 @@ function StueckModal({ stueck, onClose }) {
 
   function youtubeId(url) { return url?.match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1] }
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000, padding:0 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000, padding:0 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg) var(--radius-lg) 0 0', width:'100%', maxWidth:700, maxHeight:'85vh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'var(--shadow-lg)' }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg) var(--radius-lg) 0 0', width:'100%', maxWidth:700, maxHeight:'85vh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'var(--shadow-lg)' }}>
 
         {/* Header */}
         <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
@@ -137,7 +138,7 @@ function StueckModal({ stueck, onClose }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 function AkkordAnzeige({ datei }) {

@@ -1,15 +1,40 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { supabase } from '../../lib/supabase'
+import { SlidingTabs } from '../../components/SlidingTabs'
+
+function useCountUp(target, duration = 700) {
+  const [val, setVal] = useState(0)
+  const rafRef = useRef(null)
+  const prevRef = useRef(0)
+  useEffect(() => {
+    if (typeof target !== 'number' || isNaN(target)) return
+    const from = prevRef.current
+    prevRef.current = target
+    const start = performance.now()
+    const tick = now => {
+      const t = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setVal(Math.round(from + (target - from) * eased))
+      if (t < 1) rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [target, duration])
+  return val
+}
 
 const TYP_ICON    = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 const ROLLE_LABEL = { schueler: 'Schüler', lehrer: 'Lehrer', admin: 'Admin', superadmin: 'Superadmin', eltern: 'Eltern', vorstand: 'Vorstand' }
 
 function StatCard({ icon, label, value, color = 'var(--primary)', sub, onClick }) {
   const [hovered, setHovered] = useState(false)
+  const counted = useCountUp(typeof value === 'number' ? value : 0)
+  const display = typeof value === 'number' ? counted : value
   return (
     <div
+      className="stagger-item"
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -27,7 +52,7 @@ function StatCard({ icon, label, value, color = 'var(--primary)', sub, onClick }
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <div style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 500, marginBottom: 8 }}>{label}</div>
-          <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: '-1px' }}>{value ?? '–'}</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: '-1px' }}>{display ?? '–'}</div>
           {sub && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{sub}</div>}
         </div>
         <div style={{
@@ -147,22 +172,16 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 28, borderBottom: '2px solid var(--border)', paddingBottom: 0 }}>
-        {[
-          { key: 'uebersicht', label: '📊 Übersicht' },
-          { key: 'meine_kurse', label: '🎵 Meine Kurse' },
-          { key: 'einstellungen', label: '⚙️ Einstellungen' },
-        ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{
-            padding: '10px 18px', border: 'none', background: 'none',
-            fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-            color: tab === t.key ? 'var(--primary)' : 'var(--text-3)',
-            borderBottom: `2px solid ${tab === t.key ? 'var(--primary)' : 'transparent'}`,
-            marginBottom: -2, transition: 'all 0.15s',
-          }}>
-            {t.label}
-          </button>
-        ))}
+      <div style={{ marginBottom: 28 }}>
+        <SlidingTabs
+          active={tab}
+          onChange={setTab}
+          tabs={[
+            { key: 'uebersicht', label: '📊 Übersicht' },
+            { key: 'meine_kurse', label: '🎵 Meine Kurse' },
+            { key: 'einstellungen', label: '⚙️ Einstellungen' },
+          ]}
+        />
       </div>
 
       {/* Tab: Übersicht */}

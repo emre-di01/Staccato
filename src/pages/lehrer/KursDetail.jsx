@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -64,15 +65,15 @@ function EinzelStundeModal({ kursId, raumId, onClose, onErfolg }) {
     onClose()
   }
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>+ Einzelne Stunde</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ overflowY:'auto', flex:1, padding:'20px 32px 28px', overscrollBehavior:'contain', display:'flex', flexDirection:'column', gap:14 }}>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
             <label style={s.label}>Datum</label>
             <input type="date" style={s.input} value={form.datum}
@@ -117,7 +118,7 @@ function EinzelStundeModal({ kursId, raumId, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Anwesenheits-Übersicht pro Schüler ───────────────────────
@@ -246,10 +247,10 @@ function AbsagenModal({ stunde, onClose, onErfolg }) {
   }
 
   const beginn = new Date(stunde.beginn)
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>Stunde absagen</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
@@ -273,7 +274,7 @@ function AbsagenModal({ stunde, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Anwesenheit erfassen Modal ───────────────────────────────
@@ -305,11 +306,11 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
 
   const beginn = new Date(stunde.beginn)
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:500, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:500, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 }}>
           <div>
             <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>✅ Anwesenheit</h3>
             <div style={{ fontSize:13, color:'var(--text-3)', marginTop:4 }}>
@@ -319,7 +320,7 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)' }}>✕</button>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:20 }}>
+        <div style={{ overflowY:'auto', flex:1, padding:'20px 32px 28px', overscrollBehavior:'contain', display:'flex', flexDirection:'column', gap:10 }}>
           {schueler.map(s => (
             <div key={s.schueler_id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)' }}>
               <Avatar name={s.profiles?.voller_name} avatarUrl={s.profiles?.avatar_url} size={36} />
@@ -334,17 +335,17 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
               </div>
             </div>
           ))}
-        </div>
 
-        <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-          <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
-          <button onClick={speichern} disabled={laden} style={s.btnPri}>
-            {laden ? 'Speichere …' : '💾 Anwesenheit speichern'}
-          </button>
+          <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:10 }}>
+            <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+            <button onClick={speichern} disabled={laden} style={s.btnPri}>
+              {laden ? 'Speichere …' : '💾 Anwesenheit speichern'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 function StundenBulkModal({ kurs, onClose, onErfolg }) {
@@ -380,10 +381,10 @@ function StundenBulkModal({ kurs, onClose, onErfolg }) {
     setLoeschLaden(false)
   }
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>⚡ Stunden – {kurs.name}</h3>
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 }}>✕</button>
@@ -434,7 +435,7 @@ function StundenBulkModal({ kurs, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 const bulkInput = { padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, outline:'none', fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', width:'100%', boxSizing:'border-box' }
@@ -443,10 +444,10 @@ function SchuelerProfilModal({ profil: p, onClose }) {
   const alter = p?.geburtsdatum
     ? Math.floor((new Date() - new Date(p.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000))
     : null
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1100, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1100, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:340, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:340, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>Schüler-Profil</h3>
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 }}>✕</button>
@@ -466,7 +467,7 @@ function SchuelerProfilModal({ profil: p, onClose }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 function NotizModal({ stunde, onClose, onErfolg }) {
@@ -489,10 +490,10 @@ function NotizModal({ stunde, onClose, onErfolg }) {
   }
 
   const beginn = new Date(stunde.beginn)
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'24px 28px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'24px 28px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
           <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:'var(--text)' }}>
             📝 {beginn.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}
@@ -519,7 +520,7 @@ function NotizModal({ stunde, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 export default function KursDetail() {

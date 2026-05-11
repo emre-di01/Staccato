@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -31,14 +33,14 @@ function NeuesStueckModal({ kursId, onClose, onErfolg }) {
     onErfolg(); onClose()
   }
 
-  return (
-    <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={s.modal}>
+  return createPortal(
+    <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
           <h3 style={s.modalTitel}>🎵 Neues Stück</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
           {[
             { key:'titel',       label:'Titel *',       placeholder:'z.B. Ave Maria' },
             { key:'komponist',   label:'Komponist',     placeholder:'z.B. Schubert' },
@@ -61,7 +63,8 @@ function NeuesStueckModal({ kursId, onClose, onErfolg }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -100,14 +103,14 @@ function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
     setLaden(false)
   }
 
-  return (
-    <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={s.modal}>
+  return createPortal(
+    <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
           <h3 style={s.modalTitel}>📁 {T('upload')}</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
           {/* Für wen */}
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
             <label style={s.label}>{T('upload_for_whom')}</label>
@@ -143,7 +146,8 @@ function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -163,6 +167,7 @@ export default function KursRepertoire() {
   const [suche,     setSuche]     = useState('')
   const [modal,     setModal]     = useState(null)
 
+  const queryClient    = useQueryClient()
   const kannBearbeiten = rolle === 'admin' || rolle === 'lehrer' || rolle === 'superadmin'
 
   useEffect(() => { ladeData() }, [kursId])
@@ -186,10 +191,29 @@ export default function KursRepertoire() {
     setLaden(false)
   }
 
-  async function stueckEntfernen(unterrichtStueckId) {
+  async function stueckEntfernen(stueckId) {
     if (!await confirm(T('piece_remove_confirm'), { confirmLabel: 'Entfernen' })) return
-    await supabase.from('unterricht_stuecke').delete().eq('unterricht_id', kursId).eq('stueck_id', unterrichtStueckId)
-    setStuecke(prev => prev.filter(s => s.stueck_id !== unterrichtStueckId))
+
+    // Remove from this course's join table
+    await supabase.from('unterricht_stuecke').delete()
+      .eq('unterricht_id', kursId).eq('stueck_id', stueckId)
+    setStuecke(prev => prev.filter(s => s.stueck_id !== stueckId))
+
+    // Check remaining usages across all courses and events
+    const [{ count: kCount }, { count: eCount }] = await Promise.all([
+      supabase.from('unterricht_stuecke').select('*', { count: 'exact', head: true }).eq('stueck_id', stueckId),
+      supabase.from('event_stuecke').select('*', { count: 'exact', head: true }).eq('stueck_id', stueckId),
+    ])
+
+    if ((kCount ?? 0) === 0 && (eCount ?? 0) === 0) {
+      // Delete storage files first, then the piece itself
+      const { data: files } = await supabase.from('stueck_dateien').select('bucket_pfad').eq('stueck_id', stueckId)
+      if (files?.length) {
+        await supabase.storage.from('stueck-dateien').remove(files.map(f => f.bucket_pfad))
+      }
+      await supabase.from('stuecke').delete().eq('id', stueckId)
+      queryClient.invalidateQueries({ queryKey: ['repertoire'] })
+    }
   }
 
   async function statusAendern(stueckId, status) {
@@ -377,8 +401,9 @@ const s = {
   iconBtn:     { background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--text-3)', padding:4 },
   leer:        { padding:'48px', textAlign:'center', color:'var(--text-3)', fontSize:14, background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px dashed var(--border)' },
   overlay:     { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 },
-  modal:       { background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' },
-  modalHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 },
+  modal:       { background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' },
+  modalHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 },
+  modalBody:   { overflowY:'auto', flex:1, padding:'24px 32px 28px', overscrollBehavior:'contain' },
   modalTitel:  { margin:0, fontSize:18, fontWeight:800, color:'var(--text)' },
   chip:        { fontSize:12, padding:'2px 8px', borderRadius:99, background:'var(--bg-2)', border:'1px solid var(--border)', color:'var(--text-3)' },
   mediaIcon:   { fontSize:16 },

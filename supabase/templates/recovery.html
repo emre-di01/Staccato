@@ -6,7 +6,7 @@
     <div style="font-size: 32px; margin-bottom: 8px;">♩</div>
     <h1 style="font-size: 22px; font-weight: 800; color: #1a1a1a; margin: 0 0 8px;">Passwort zurücksetzen</h1>
     <p style="color: #666; font-size: 14px; margin: 0 0 28px;">Du hast eine Anfrage zum Zurücksetzen deines Passworts für <strong>Staccato</strong> erhalten.</p>
-    <a href="http://178.254.1.229:54321/auth/v1/verify?token={{ .TokenHash }}&type=recovery&redirect_to={{ .SiteURL }}/passwort-zuruecksetzen"
+    <a href="{{ .ConfirmationURL }}"
       style="display: inline-block; background: #6c47ff; color: #fff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 15px;">
       Passwort zurücksetzen
     </a>

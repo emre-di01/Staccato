@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import OrtAutocomplete from '../../components/OrtAutocomplete'
+import { SlidingTabs, haptic, EmptyState } from '../../components/SlidingTabs'
 
 const TYP_ICON = { konzert: '🎵', vorspiel: '🎤', pruefung: '📝', veranstaltung: '🎭', vorstandssitzung: '🏛', sonstiges: '📅' }
 const TYPEN = ['konzert', 'vorspiel', 'pruefung', 'veranstaltung', 'vorstandssitzung', 'sonstiges']
@@ -43,6 +45,14 @@ export default function AdminEvents() {
   const [tnSuche,    setTnSuche]    = useState('')
   const [raeume,     setRaeume]     = useState([])
   const [rsvpSenden, setRsvpSenden] = useState(null)
+  const [rsvpFlash, setRsvpFlash]   = useState({})
+  const [mob,        setMob]        = useState(() => window.innerWidth < 600)
+
+  useEffect(() => {
+    const fn = () => setMob(window.innerWidth < 600)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
 
   useEffect(() => { if (profil) ladeEvents() }, [profil?.id])
   useEffect(() => {
@@ -65,6 +75,10 @@ export default function AdminEvents() {
   }
 
   async function zusageAendern(eventId, status) {
+    haptic()
+    const fk = eventId + status
+    setRsvpFlash(f => ({ ...f, [fk]: true }))
+    setTimeout(() => setRsvpFlash(f => { const n = { ...f }; delete n[fk]; return n }), 450)
     setRsvpSenden(eventId)
     await supabase.from('event_teilnehmer')
       .upsert({ event_id: eventId, profil_id: profil.id, zusage: status }, { onConflict: 'event_id,profil_id' })
@@ -221,7 +235,7 @@ export default function AdminEvents() {
   )
 
   return (
-    <div style={s.page}>
+    <div style={{ ...s.page, padding: mob ? 12 : 24 }}>
       <div style={s.header}>
         <div>
           <h1 style={s.titel}>{T('events')}</h1>
@@ -238,25 +252,24 @@ export default function AdminEvents() {
         style={{ ...s.inp, marginBottom: 12, maxWidth: 340 }}
       />
 
-      <div style={s.tabs}>
-        {['kommend','vergangen','alle'].map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ ...s.tab, ...(tab===t ? s.tabAktiv : {}) }}>
-            {T('event_' + t)}
-          </button>
-        ))}
-      </div>
+      <SlidingTabs
+        active={tab}
+        onChange={setTab}
+        style={{ marginBottom: 20 }}
+        tabs={['kommend','vergangen','alle'].map(t => ({ key: t, label: T('event_' + t) }))}
+      />
 
       {laden ? (
-        <div style={s.leer}>{T('loading')}</div>
+        <EmptyState icon="⏳" message={T('loading')} />
       ) : gefiltert.length === 0 ? (
-        <div style={s.leer}>{T('event_no_results')}</div>
+        <EmptyState icon="📭" message={T('event_no_results')} />
       ) : (
         <div style={s.grid}>
           {gefiltert.map(ev => {
             const zusage = ev.meine_zusage || null
             const vergangen = new Date(ev.beginn) < jetzt
             return (
-            <div key={ev.id} style={s.card}>
+            <div key={ev.id} className="stagger-item" style={{ ...s.card, padding: mob ? 14 : 20 }}>
               <div style={s.cardTop}>
                 <div style={s.typBadge}>
                   <span style={s.typIcon}>{TYP_ICON[ev.typ]}</span>
@@ -290,13 +303,13 @@ export default function AdminEvents() {
                   <button
                     onClick={() => zusageAendern(ev.id, 'zugesagt')}
                     disabled={rsvpSenden === ev.id}
-                    style={{ ...s.btnSm, ...(zusage === 'zugesagt' ? s.rsvpAktiv : {}) }}>
+                    style={{ ...s.btnSm, ...(zusage === 'zugesagt' ? s.rsvpAktiv : {}), animation: rsvpFlash[ev.id + 'zugesagt'] ? 'rsvpBounce 0.38s ease both' : 'none' }}>
                     ✓ {T('rsvp_yes')}
                   </button>
                   <button
                     onClick={() => zusageAendern(ev.id, 'abgesagt')}
                     disabled={rsvpSenden === ev.id}
-                    style={{ ...s.btnSm, ...(zusage === 'abgesagt' ? s.rsvpAktivNein : {}) }}>
+                    style={{ ...s.btnSm, ...(zusage === 'abgesagt' ? s.rsvpAktivNein : {}), animation: rsvpFlash[ev.id + 'abgesagt'] ? 'rsvpBounce 0.38s ease both' : 'none' }}>
                     ✕ {T('rsvp_no')}
                   </button>
                 </div>
@@ -316,9 +329,9 @@ export default function AdminEvents() {
       )}
 
       {/* Formular-Modal */}
-      {modal?.typ === 'form' && (
-        <div style={s.overlay} onClick={() => setModal(null)}>
-          <div style={s.modalBox} onClick={e => e.stopPropagation()}>
+      {modal?.typ === 'form' && createPortal(
+        <div className="modal-overlay" style={s.overlay} onClick={() => setModal(null)}>
+          <div className="modal-inner" style={s.modalBox} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitel}>{modal.event ? T('edit_event') : T('new_event')}</h2>
               <button onClick={() => setModal(null)} style={s.closeBtn}>✕</button>
@@ -380,13 +393,14 @@ export default function AdminEvents() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Teilnehmer-Modal */}
-      {modal?.typ === 'teilnehmer' && (
-        <div style={s.overlay} onClick={() => setModal(null)}>
-          <div style={{ ...s.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+      {modal?.typ === 'teilnehmer' && createPortal(
+        <div className="modal-overlay" style={s.overlay} onClick={() => setModal(null)}>
+          <div className="modal-inner" style={{ ...s.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitel}>{T('manage_participants')}</h2>
               <button onClick={() => setModal(null)} style={s.closeBtn}>✕</button>
@@ -439,7 +453,8 @@ export default function AdminEvents() {
                 )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

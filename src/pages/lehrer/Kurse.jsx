@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
@@ -57,15 +58,15 @@ function NeuerKursModal({ onClose, onErfolg }) {
     onErfolg(); onClose()
   }
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>+ Neuer Kurs</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ overflowY:'auto', flex:1, padding:'24px 32px 28px', overscrollBehavior:'contain', display:'flex', flexDirection:'column', gap:14 }}>
           <div>
             <label style={s.label}>Kursname *</label>
             <input style={s.input} placeholder="z.B. Klavierunterricht" value={form.name}
@@ -125,7 +126,7 @@ function NeuerKursModal({ onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 export default function LehrerKurse() {

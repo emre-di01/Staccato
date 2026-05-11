@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import SharedModal from '../../components/Modal'
 import Avatar from '../../components/Avatar'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
@@ -21,18 +23,7 @@ const WOCHENTAGE = [
 // ─── UI Basis ─────────────────────────────────────────────────
 
 function Modal({ titel, onClose, children, breit = false }) {
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="kurs-modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth: breit ? 680 : 500, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
-          <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{titel}</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
+  return <SharedModal titel={titel} onClose={onClose} maxWidth={breit ? 680 : 500}>{children}</SharedModal>
 }
 
 function Feld({ label, children, halb = false }) {
@@ -220,10 +211,10 @@ function KursModal({ kurs, onClose, onErfolg }) {
         {/* Uhrzeit */}
         <Feld label={T('kurs_mgmt_time')} halb>
           <div className="kurs-zeit-row" style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <input type="time" style={{ ...s.input, flex:1 }} value={form.uhrzeit_von}
+            <input type="time" style={{ ...s.input, flex:1, minWidth:0, width:'auto' }} value={form.uhrzeit_von}
               onChange={e => setForm(f => ({ ...f, uhrzeit_von: e.target.value }))} />
-            <span className="kurs-zeit-sep" style={{ color:'var(--text-3)', fontSize:13 }}>{T('kurs_mgmt_time_to')}</span>
-            <input type="time" style={{ ...s.input, flex:1 }} value={form.uhrzeit_bis}
+            <span className="kurs-zeit-sep" style={{ color:'var(--text-3)', fontSize:13, flexShrink:0 }}>{T('kurs_mgmt_time_to')}</span>
+            <input type="time" style={{ ...s.input, flex:1, minWidth:0, width:'auto' }} value={form.uhrzeit_bis}
               onChange={e => setForm(f => ({ ...f, uhrzeit_bis: e.target.value }))} />
           </div>
         </Feld>

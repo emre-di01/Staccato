@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Modal from '../../components/Modal'
 
 const STUNDEN_VON = 7
 const STUNDEN_BIS = 21
@@ -23,22 +25,6 @@ function formatDatum(datum) {
 
 function istHeute(datum) {
   return datum.toDateString() === new Date().toDateString()
-}
-
-// ─── Modal ────────────────────────────────────────────────────
-function Modal({ titel, onClose, children }) {
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
-          <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{titel}</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
 }
 
 // ─── Raum anlegen / bearbeiten ────────────────────────────────
@@ -232,10 +218,10 @@ function Belegungsplan({ raum, woche }) {
       </div>
 
       {/* Detail Modal */}
-      {detail && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1001, padding:16 }}
+      {detail && createPortal(
+        <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1001, padding:16 }}
           onClick={() => setDetail(null)}>
-          <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'24px', maxWidth:360, width:'100%', boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}
+          <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'24px', maxWidth:360, width:'100%', boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
               <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:'var(--text)' }}>{detail.unterricht?.name}</h3>
@@ -251,7 +237,7 @@ function Belegungsplan({ raum, woche }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   )
 }

@@ -210,7 +210,7 @@ export const THEMES = {
       '--border':       'rgba(255,255,255,0.76)',
       '--text':         '#1C1C1E',
       '--text-2':       '#48484A',
-      '--text-3':       'rgba(60,60,67,0.55)',
+      '--text-3':       'rgba(60,60,67,0.72)',
       '--primary':      '#007AFF',
       '--primary-fg':   '#ffffff',
       '--accent':       '#AF52DE',
@@ -249,7 +249,7 @@ export const THEMES = {
       '--border':       'rgba(255,255,255,0.11)',
       '--text':         '#F2F2F7',
       '--text-2':       '#EBEBF5',
-      '--text-3':       'rgba(235,235,245,0.45)',
+      '--text-3':       'rgba(235,235,245,0.62)',
       '--primary':      '#0A84FF',
       '--primary-fg':   '#ffffff',
       '--accent':       '#BF5AF2',
@@ -347,11 +347,13 @@ export function applyTheme(themeKey, darkMode) {
   if (!theme) return
   const vars = darkMode ? theme.dark : theme.light
   const root = document.documentElement
+  root.setAttribute('data-transitioning', '')
   Object.entries(vars).forEach(([key, val]) => {
     if (key !== 'globalCss') root.style.setProperty(key, val)
   })
   root.setAttribute('data-theme', themeKey)
   root.setAttribute('data-mode', darkMode ? 'dark' : 'light')
+  setTimeout(() => root.removeAttribute('data-transitioning'), 400)
 
   const metaColor = THEME_META_COLORS[themeKey]?.[darkMode ? 'dark' : 'light']
   if (metaColor) {

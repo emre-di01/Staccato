@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Modal from '../../components/Modal'
 
 const STATUS_CONFIG = {
   offen:          { label: 'Offen',          farbe: 'var(--warning)',  fg: '#fff' },
@@ -14,21 +15,6 @@ function StatusBadge({ status }) {
     <span style={{ background: c.farbe, color: c.fg, padding: '2px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
       {c.label}
     </span>
-  )
-}
-
-function Modal({ titel, onClose, children }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '28px 32px', width: '100%', maxWidth: 520, boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{titel}</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
   )
 }
 
@@ -59,7 +45,7 @@ function ZielModal({ ziel, vorstandMitglieder, schuleId, profilId, onClose, onGe
   }
 
   return (
-    <Modal titel={ziel ? T('vorstand_edit_ziel') : T('vorstand_new_ziel')} onClose={onClose}>
+    <Modal titel={ziel ? T('vorstand_edit_ziel') : T('vorstand_new_ziel')} onClose={onClose} maxWidth={520}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <label style={s.label}>{T('name')} *</label>
@@ -145,7 +131,7 @@ function AufgabeModal({ aufgabe, zielId, vorstandMitglieder, schuleId, profilId,
   }
 
   return (
-    <Modal titel={aufgabe ? T('vorstand_edit_aufgabe') : T('vorstand_new_aufgabe')} onClose={onClose}>
+    <Modal titel={aufgabe ? T('vorstand_edit_aufgabe') : T('vorstand_new_aufgabe')} onClose={onClose} maxWidth={520}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <label style={s.label}>{T('name')} *</label>

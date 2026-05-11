@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useIsMobile } from '../../hooks/useWindowWidth'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { safeMarkdown } from '../../lib/markdown'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -241,14 +243,14 @@ function DateiUploadModal({ stueckId, onClose, onErfolg }) {
     setLaden(false)
   }
 
-  return (
-    <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={s.modal}>
+  return createPortal(
+    <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
           <h3 style={s.modalTitel}>📎 Datei hochladen</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
             <label style={s.label}>Dateityp</label>
             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
@@ -308,7 +310,8 @@ function DateiUploadModal({ stueckId, onClose, onErfolg }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -446,6 +449,7 @@ export default function StueckDetail() {
   const { kursId, stueckId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const { rolle, T, schule, confirm } = useApp()
 
   const mob = useIsMobile()
@@ -587,6 +591,7 @@ ${html}
     if (pfade.length > 0) await supabase.storage.from('stueck-dateien').remove(pfade)
     // DB-Eintrag löschen (Kaskade räumt stueck_dateien + unterricht_stuecke auf)
     await supabase.from('stuecke').delete().eq('id', stueckId)
+    queryClient.invalidateQueries({ queryKey: ['repertoire'] })
     navigate(backPfad)
   }
 
@@ -909,10 +914,10 @@ ${html}
       )}
 
       {/* PDF Export Modal */}
-      {pdfModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+      {pdfModal && createPortal(
+        <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
           onClick={e => { if (e.target === e.currentTarget) setPdfModal(false) }}>
-          <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:28, width:'100%', maxWidth:380, boxShadow:'var(--shadow-lg)' }}>
+          <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:28, width:'100%', maxWidth:380, boxShadow:'var(--shadow-lg)' }}>
             <div style={{ fontWeight:800, fontSize:16, marginBottom:16 }}>📄 PDF exportieren</div>
             <div style={{ fontSize:14, color:'var(--text-2)', marginBottom:16 }}>
               <strong style={{ color:'var(--text)' }}>{stueck?.titel}</strong>
@@ -934,11 +939,12 @@ ${html}
               <button onClick={() => { setPdfModal(false); liedtextAlsPdf() }} style={s.btnPri}>🖨️ Drucken</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Vollbild Modus */}
-      {vollbild && stueck?.liedtext && (
+      {vollbild && stueck?.liedtext && createPortal(
         <div style={{ position:'fixed', inset:0, background:'#111', zIndex:2000, display:'flex', flexDirection:'column' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', background:'rgba(255,255,255,0.06)', flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ flex:1, minWidth:0 }}>
@@ -975,7 +981,8 @@ ${html}
               <span style={{ color:'rgba(255,255,255,0.4)', fontSize:12, minWidth:36, textAlign:'center' }}>{textGroesse}px</span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -983,8 +990,9 @@ ${html}
 
 const s = {
   overlay:     { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 },
-  modal:       { background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' },
-  modalHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 },
+  modal:       { background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' },
+  modalHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 },
+  modalBody:   { overflowY:'auto', flex:1, padding:'24px 32px 28px', overscrollBehavior:'contain' },
   modalTitel:  { margin:0, fontSize:18, fontWeight:800, color:'var(--text)' },
   iconBtn:     { background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 },
   label:       { fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' },

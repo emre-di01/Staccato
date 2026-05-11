@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Modal from '../../components/Modal'
 
 const TYP_CONFIG = {
   vorstandssitzung:     { label: 'Vorstandssitzung',     farbe: '#7c3aed', fg: '#fff' },
@@ -14,21 +15,6 @@ function TypBadge({ typ }) {
     <span style={{ background: c.farbe, color: c.fg, padding: '2px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
       {c.label}
     </span>
-  )
-}
-
-function Modal({ titel, onClose, children }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '28px 32px', width: '100%', maxWidth: 600, boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)', maxHeight: '92vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{titel}</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
   )
 }
 
@@ -77,7 +63,7 @@ function ProtokolModal({ protokoll, vorstandMitglieder, schuleId, profilId, onCl
   }
 
   return (
-    <Modal titel={protokoll ? T('vorstand_edit_protokoll') : T('vorstand_new_protokoll')} onClose={onClose}>
+    <Modal titel={protokoll ? T('vorstand_edit_protokoll') : T('vorstand_new_protokoll')} onClose={onClose} maxWidth={600} maxHeight="92vh">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <label style={s.label}>{T('name')} *</label>
@@ -224,7 +210,7 @@ function ProtokollDetail({ protokoll, vorstandMitglieder, profilId, schuleId, on
   }
 
   return (
-    <Modal titel={protokoll.titel} onClose={onClose}>
+    <Modal titel={protokoll.titel} onClose={onClose} maxWidth={600} maxHeight="92vh">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <TypBadge typ={protokoll.sitzungstyp} />

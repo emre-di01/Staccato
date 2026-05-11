@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import Avatar from '../../components/Avatar'
@@ -59,13 +60,13 @@ function DetailPanel({ eintrag, onClose }) {
     ? Math.floor((Date.now() - new Date(profile.geburtsdatum)) / (365.25 * 24 * 3600 * 1000))
     : null
 
-  return (
+  return createPortal(
     <>
       {/* Overlay */}
-      <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.4)' }} onClick={onClose} />
+      <div className="modal-overlay" style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.4)' }} onClick={onClose} />
 
       {/* Panel */}
-      <div style={{
+      <div className="modal-inner" style={{
         position:'fixed', top:0, right:0, bottom:0, zIndex:201,
         width: '100%', maxWidth: 440,
         background:'var(--surface)', borderLeft:'1px solid var(--border)',
@@ -202,7 +203,7 @@ function DetailPanel({ eintrag, onClose }) {
         </div>
       </div>
     </>
-  )
+  , document.body)
 }
 
 // ─── Hauptseite ────────────────────────────────────────────────

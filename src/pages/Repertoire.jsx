@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
@@ -23,14 +24,14 @@ function NeuesStueckModal({ onClose, onErfolg }) {
     onErfolg(); onClose()
   }
 
-  return (
-    <div style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={s.modal}>
+  return createPortal(
+    <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
           <h3 style={s.modalTitel}>🎵 Neues Stück</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
           {[
             { key:'titel',       label:'Titel *',      placeholder:'z.B. Ave Maria' },
             { key:'komponist',   label:'Komponist',    placeholder:'z.B. Schubert' },
@@ -54,7 +55,7 @@ function NeuesStueckModal({ onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Stück-Karte ──────────────────────────────────────────────
@@ -333,8 +334,9 @@ export default function Repertoire() {
 
 const s = {
   overlay:    { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 },
-  modal:      { background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' },
-  modalHeader:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 },
+  modal:      { background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' },
+  modalHeader:{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 },
+  modalBody:  { overflowY:'auto', flex:1, padding:'24px 32px 28px', overscrollBehavior:'contain' },
   modalTitel: { margin:0, fontSize:18, fontWeight:800, color:'var(--text)' },
   iconBtn:    { background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 },
   label:      { fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' },

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
@@ -156,10 +157,10 @@ function DetailModal({ stunde, onClose, tz }) {
     setLaden(false)
   }
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000, padding:'0' }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000, padding:'0' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg) var(--radius-lg) 0 0', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', overflow:'hidden', margin:'0 auto' }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg) var(--radius-lg) 0 0', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', overflow:'hidden', margin:'0 auto' }}>
         <div style={{ height:5, background:farbe }} />
         <div style={{ padding:'20px 24px 32px' }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
@@ -221,7 +222,7 @@ function DetailModal({ stunde, onClose, tz }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Event Detail Modal ───────────────────────────────────────
@@ -231,10 +232,10 @@ function EventDetailModal({ event, onClose, tz }) {
   const ende   = event.ende ? new Date(event.ende) : null
   const farbe  = EVENT_TYP_FARBE[event.typ] ?? '#6b7280'
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
       onClick={onClose}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg) var(--radius-lg) 0 0', padding:'20px 24px 32px', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', margin:'0 auto' }}
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg) var(--radius-lg) 0 0', padding:'20px 24px 32px', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', margin:'0 auto' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display:'flex', gap:12, alignItems:'flex-start', marginBottom:16 }}>
           <div style={{ width:4, borderRadius:99, alignSelf:'stretch', background:farbe, flexShrink:0 }} />
@@ -262,7 +263,7 @@ function EventDetailModal({ event, onClose, tz }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Hauptkomponente ──────────────────────────────────────────

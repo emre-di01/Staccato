@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -72,18 +73,18 @@ function InteressentModal({ item, onClose, onErfolg }) {
     </div>
   )
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:520, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:520, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>
             {istNeu ? T('interessent_new') : T('interessent_edit')}
           </h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ overflowY:'auto', flex:1, padding:'20px 32px 28px', overscrollBehavior:'contain', display:'flex', flexDirection:'column', gap:14 }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             <div style={{ gridColumn:'span 2' }}>{F('voller_name',T('full_name_label'),'text',T('interessent_name_placeholder'))}</div>
             {F('email',T('email'),'email','name@beispiel.de')}
@@ -144,7 +145,7 @@ function InteressentModal({ item, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Zu Mitglied konvertieren Modal ───────────────────────────
@@ -201,9 +202,9 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
     setErfolg(true); setLaden(false)
   }
 
-  if (erfolg) return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'32px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', textAlign:'center' }}>
+  if (erfolg) return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'32px', width:'100%', maxWidth:440, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', textAlign:'center' }}>
         <div style={{ fontSize:48, marginBottom:12 }}>✅</div>
         <h3 style={{ margin:'0 0 8px', fontSize:18, fontWeight:800, color:'var(--text)' }}>{item.voller_name} {T('interessent_converted_title')}</h3>
         <p style={{ margin:'0 0 20px', color:'var(--text-3)', fontSize:13 }}>
@@ -212,12 +213,12 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
         <button onClick={() => { onErfolg(); onClose() }} style={s.btnPri}>{T('done')}</button>
       </div>
     </div>
-  )
+  , document.body)
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{T('interessent_konvertieren')}</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
@@ -259,7 +260,7 @@ function KonvertierenModal({ item, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Hauptkomponente ──────────────────────────────────────────

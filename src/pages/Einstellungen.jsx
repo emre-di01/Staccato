@@ -16,7 +16,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export default function Einstellungen() {
-  const { profil, ladeProfil, T, rolle, lang, setLang, theme, darkMode, changeTheme, toggleDark } = useApp()
+  const { profil, ladeProfil, T, rolle, lang, setLang, theme, darkMode, changeTheme, toggleDark, großeSchrift, toggleGrosseSchrift } = useApp()
   const navigate = useNavigate()
 
   const DEFAULT_NOTIF = { event_invite: true, new_piece: true, new_message: true, lesson_reminder: false }
@@ -157,6 +157,21 @@ export default function Einstellungen() {
             </div>
             <div style={{ width: 42, height: 24, borderRadius: 99, background: darkMode ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
               <div style={{ position: 'absolute', top: 3, left: darkMode ? 21 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.2)', transition: 'left 0.2s' }} />
+            </div>
+          </button>
+        </div>
+
+        <div style={s.gruppe}>
+          <div style={s.gruppeLabel}>{T('barrierefreiheit')}</div>
+          <button onClick={toggleGrosseSchrift} aria-pressed={großeSchrift}
+            style={{ ...s.toggleRow, border: `1.5px solid ${großeSchrift ? 'var(--primary)' : 'var(--border)'}`, background: großeSchrift ? 'color-mix(in srgb, var(--primary) 6%, transparent)' : 'var(--bg)' }}>
+            <span style={{ fontSize: 18 }}>{großeSchrift ? '🔡' : '🔠'}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{großeSchrift ? T('grosse_schrift') : T('normale_schrift')}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{großeSchrift ? 'Schrift um 15% vergrößert' : 'Alle Inhalte in normaler Größe'}</div>
+            </div>
+            <div style={{ width: 42, height: 24, borderRadius: 99, background: großeSchrift ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: 3, left: großeSchrift ? 21 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.2)', transition: 'left 0.2s' }} />
             </div>
           </button>
         </div>

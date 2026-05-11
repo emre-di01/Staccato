@@ -2,42 +2,24 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import Modal from '../../components/Modal'
 import { startseiteNach } from '../../components/ProtectedRoute'
 
-function Modal({ titel, onClose, children }) {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 1000, padding: 16,
-    }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{
-        background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '28px 32px',
-        width: '100%', maxWidth: 460, boxShadow: 'var(--shadow-lg)',
-        border: '1px solid var(--border)', maxHeight: '90vh', overflowY: 'auto',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{titel}</h3>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
-}
 
 export default function SuperadminDashboard() {
   const { schuleWechseln, ladeProfil, session, schule, rolle, T } = useApp()
   const navigate = useNavigate()
 
-  const [schulen,    setSchulen]    = useState([])
-  const [laden,      setLaden]      = useState(true)
-  const [neuModal,   setNeuModal]   = useState(false)
-  const [form,       setForm]       = useState({ name: '', adresse: '', email: '', telefon: '', farbe: '' })
-  const [saving,     setSaving]     = useState(false)
-  const [fehler,     setFehler]     = useState('')
-  const [erfolg,     setErfolg]     = useState('')
-  const [wechseln,   setWechseln]   = useState(null)
+  const [schulen,       setSchulen]       = useState([])
+  const [laden,         setLaden]         = useState(true)
+  const [neuModal,      setNeuModal]      = useState(false)
+  const [form,          setForm]          = useState({ name: '', adresse: '', email: '', telefon: '', farbe: '' })
+  const [saving,        setSaving]        = useState(false)
+  const [fehler,        setFehler]        = useState('')
+  const [erfolg,        setErfolg]        = useState('')
+  const [wechseln,      setWechseln]      = useState(null)
+  const [loeschenModal, setLoeschenModal] = useState(null)
+  const [loeschen,      setLoeschen]      = useState(false)
 
   useEffect(() => {
     ladeSchulen()
@@ -68,6 +50,26 @@ export default function SuperadminDashboard() {
     setForm({ name: '', adresse: '', email: '', telefon: '', farbe: '' })
     await ladeSchulen()
     setTimeout(() => setErfolg(''), 3000)
+  }
+
+  async function handleAktivToggle(schule_id, aktiv) {
+    await supabase.from('schulen').update({ aktiv: !aktiv }).eq('id', schule_id)
+    await ladeSchulen()
+  }
+
+  async function handleLoeschen() {
+    if (!loeschenModal) return
+    setLoeschen(true)
+    setFehler('')
+    const { error } = await supabase.from('schulen').delete().eq('id', loeschenModal.id)
+    if (error) {
+      setFehler('Schule kann nicht gelöscht werden solange noch Mitglieder oder Daten vorhanden sind.')
+      setLoeschen(false)
+      return
+    }
+    setLoeschenModal(null)
+    setLoeschen(false)
+    await ladeSchulen()
   }
 
   async function handleWechsel(schule_id) {
@@ -158,7 +160,7 @@ export default function SuperadminDashboard() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                   {!isAktiv && (
                     <button
                       onClick={() => handleWechsel(s.schule_id)}
@@ -184,6 +186,28 @@ export default function SuperadminDashboard() {
                       {T('manage_school')} →
                     </button>
                   )}
+                  <button
+                    onClick={() => handleAktivToggle(s.schule_id, s.aktiv)}
+                    style={{
+                      padding: '8px 14px', borderRadius: 'var(--radius)',
+                      border: '1px solid var(--border)', background: 'transparent',
+                      color: s.aktiv ? 'var(--warning)' : 'var(--success)',
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    {s.aktiv ? '⏸ Deaktivieren' : '▶ Reaktivieren'}
+                  </button>
+                  <button
+                    onClick={() => setLoeschenModal({ id: s.schule_id, name: s.name })}
+                    style={{
+                      padding: '8px 14px', borderRadius: 'var(--radius)',
+                      border: '1px solid var(--danger)', background: 'transparent',
+                      color: 'var(--danger)', fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    🗑 Löschen
+                  </button>
                 </div>
               </div>
             )
@@ -195,6 +219,23 @@ export default function SuperadminDashboard() {
             </div>
           )}
         </div>
+      )}
+
+      {loeschenModal && (
+        <Modal titel="🗑 Schule löschen" onClose={() => { setLoeschenModal(null); setFehler('') }}>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 16, lineHeight: 1.6 }}>
+            Soll <strong>{loeschenModal.name}</strong> wirklich permanent gelöscht werden?
+            <br /><br />
+            <span style={{ color: 'var(--danger)', fontWeight: 600 }}>⚠ Achtung:</span> Alle Mitglieder und Daten müssen vorher entfernt sein, sonst schlägt das Löschen fehl.
+          </p>
+          {fehler && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{fehler}</p>}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={() => { setLoeschenModal(null); setFehler('') }} style={btnSek}>Abbrechen</button>
+            <button onClick={handleLoeschen} disabled={loeschen} style={{ ...btnPri, background: 'var(--danger)' }}>
+              {loeschen ? 'Löschen …' : 'Endgültig löschen'}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {neuModal && (

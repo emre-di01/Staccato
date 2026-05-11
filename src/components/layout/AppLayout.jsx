@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { startseiteNach } from '../ProtectedRoute'
@@ -149,7 +149,7 @@ function JoinSessionModal({ onClose }) {
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:360, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>🎬 Session beitreten</h3>
-          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)' }}>✕</button>
+          <button onClick={onClose} aria-label="Schließen" style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:10, margin:-10, minWidth:44, minHeight:44, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
         </div>
         <p style={{ margin:'0 0 16px', fontSize:13, color:'var(--text-3)' }}>Gib den 6-stelligen Code ein, den dir dein Lehrer gegeben hat.</p>
         <input
@@ -173,7 +173,7 @@ function JoinSessionModal({ onClose }) {
 
 // Settings Panel
 function SettingsPanel({ onClose }) {
-  const { theme, darkMode, lang, changeTheme, toggleDark, setLang, T } = useApp()
+  const { theme, darkMode, lang, changeTheme, toggleDark, setLang, großeSchrift, toggleGrosseSchrift, T } = useApp()
   const isMobile = window.innerWidth < 769
   const [show, setShow] = useState(false)
   useEffect(() => { requestAnimationFrame(() => setShow(true)) }, [])
@@ -184,7 +184,7 @@ function SettingsPanel({ onClose }) {
       display: 'flex', alignItems: 'flex-end',
       justifyContent: isMobile ? 'center' : 'flex-end',
       background: 'rgba(0,0,0,0.35)',
-    }} onClick={onClose}>
+    }} onClick={onClose} role="dialog" aria-modal="true" aria-label={T('settings')}>
       <div style={{
         background: 'var(--surface)',
         borderRadius: isMobile ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)',
@@ -221,7 +221,7 @@ function SettingsPanel({ onClose }) {
         </div>
 
         {/* Themes */}
-        <div>
+        <div style={{ marginBottom: 20 }}>
           <div style={s.settLabel}>{T('theme')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
             {THEME_KEYS.map(key => (
@@ -236,6 +236,17 @@ function SettingsPanel({ onClose }) {
             ))}
           </div>
         </div>
+
+        {/* Barrierefreiheit */}
+        <div>
+          <div style={s.settLabel}>{T('barrierefreiheit')}</div>
+          <button
+            onClick={toggleGrosseSchrift}
+            aria-pressed={großeSchrift}
+            style={{ ...s.settBtn, marginTop: 8, width: '100%', ...(großeSchrift ? s.settBtnAktiv : {}) }}>
+            {großeSchrift ? `🔡 ${T('normale_schrift')}` : `🔠 ${T('grosse_schrift')}`}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -243,7 +254,7 @@ function SettingsPanel({ onClose }) {
 
 const s = {
   settLabel: { fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  settBtn: { padding: '8px 12px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg-2)', color: 'var(--text-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' },
+  settBtn: { padding: '12px 14px', minHeight: 44, borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg-2)', color: 'var(--text-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' },
   settBtnAktiv: { background: 'var(--primary)', color: 'var(--primary-fg)', borderColor: 'var(--primary)' },
 }
 
@@ -255,7 +266,7 @@ function zeitAgo(iso) {
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
 }
 
-function NavGroup({ gruppe, items, setPopupPos, popupGesperrt, setSidebarOffen, ungelesen = 0 }) {
+function NavGroup({ gruppe, items, setSidebarOffen, ungelesen = 0, pillMode = false }) {
   const location = useLocation()
   const hatAktive = items.some(item => location.pathname === item.to || location.pathname.startsWith(item.to + '/'))
   const [offen, setOffen] = useState(hatAktive)
@@ -266,34 +277,27 @@ function NavGroup({ gruppe, items, setPopupPos, popupGesperrt, setSidebarOffen, 
     <div style={{ marginBottom: 2 }}>
       <button onClick={() => setOffen(o => !o)} style={{
         display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-        padding: '5px 16px 5px 12px', background: 'none', border: 'none',
+        padding: '10px 16px 6px 12px', minHeight: 44, background: 'none', border: 'none',
         cursor: 'pointer', fontFamily: 'inherit',
         fontSize: 11, fontWeight: 700, color: 'var(--text-3)',
         textTransform: 'uppercase', letterSpacing: '0.07em',
-        marginTop: 8,
+        marginTop: 4,
       }}>
         <span style={{ flex: 1, textAlign: 'left' }}>{gruppe}</span>
         <span style={{ fontSize: 9, opacity: 0.7 }}>{offen ? '▾' : '▸'}</span>
       </button>
       {offen && (
         <div>
-          {items.map(item => <NavItem key={item.to} item={item} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen} />)}
+          {items.map(item => <NavItem key={item.to} item={item} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen} pillMode={pillMode} />)}
         </div>
       )}
     </div>
   )
 }
 
-function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarOffen, ungelesen = 0 }) {
+function NavItem({ item, mobile = false, setSidebarOffen, ungelesen = 0, pillMode = false }) {
   return (
-    <div style={{ position: 'relative', ...(mobile ? { flex: 1, display: 'flex' } : {}) }}
-      onMouseEnter={e => {
-        if (!item.nachrichten || mobile || popupGesperrt.current) return
-        const rect = e.currentTarget.getBoundingClientRect()
-        setPopupPos({ top: rect.top })
-      }}
-      onMouseLeave={() => item.nachrichten && setPopupPos(null)}
-    >
+    <div style={{ position: 'relative', zIndex: pillMode ? 1 : 'auto', ...(mobile ? { flex: 1, display: 'flex' } : {}) }}>
       <NavLink
         to={item.to}
         end={item.to.split('/').length === 2}
@@ -308,11 +312,11 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
           transition: 'all 0.15s', position: 'relative',
         } : {
           display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 16px', borderRadius: 'var(--radius)',
+          padding: '11px 16px', minHeight: 44, borderRadius: 'var(--radius)',
           textDecoration: 'none', fontSize: 14, fontWeight: 500,
           color: isActive ? 'var(--primary-fg)' : 'var(--text-2)',
-          background: isActive ? 'var(--primary)' : 'transparent',
-          transition: 'all 0.15s',
+          background: isActive && !pillMode ? 'var(--primary)' : 'transparent',
+          transition: 'color 0.15s',
           marginBottom: 2,
         }}
       >
@@ -331,17 +335,57 @@ function NavItem({ item, mobile = false, setPopupPos, popupGesperrt, setSidebarO
   )
 }
 
+function DesktopNav({ navConfig, setSidebarOffen, ungelesen }) {
+  const location = useLocation()
+  const navRef = useRef(null)
+  const [pill, setPill] = useState(null)
+
+  useLayoutEffect(() => {
+    const nav = navRef.current
+    if (!nav) return
+    const active = nav.querySelector('a[aria-current="page"]')
+    if (!active) { setPill(null); return }
+    const navRect = nav.getBoundingClientRect()
+    const activeRect = active.getBoundingClientRect()
+    setPill(prev => ({
+      top: activeRect.top - navRect.top,
+      height: activeRect.height,
+      animate: prev !== null,
+    }))
+  }, [location.pathname])
+
+  return (
+    <nav ref={navRef} style={{ flex: 1, position: 'relative' }}>
+      {pill && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0,
+          top: pill.top, height: pill.height,
+          background: 'var(--primary)', borderRadius: 'var(--radius)',
+          transition: pill.animate ? 'top 0.28s cubic-bezier(0.4,0,0.2,1)' : 'none',
+          zIndex: 0, pointerEvents: 'none',
+        }} />
+      )}
+      {navConfig.map(entry => entry.gruppe
+        ? <NavGroup key={entry.gruppe} {...entry} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen} pillMode />
+        : <NavItem key={entry.to} item={entry} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen} pillMode />
+      )}
+    </nav>
+  )
+}
+
 export default function AppLayout() {
-  const { profil, rolle, schule, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe, darkMode } = useApp()
+  const { profil, rolle, schule, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe, darkMode, großeSchrift } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const swipeStartX = useRef(null)
+  const histIdxRef = useRef(null)
+  const currentHistIdx = window.history.state?.idx ?? 0
+  const pageDir = histIdxRef.current !== null && currentHistIdx < histIdxRef.current ? 'back' : 'forward'
+  histIdxRef.current = currentHistIdx
   const [sidebarOffen, setSidebarOffen]         = useState(false)
   const [joinSessionOffen, setJoinSessionOffen] = useState(false)
   const [changelogOffen, setChangelogOffen] = useState(false)
   const [ungelesen, setUngelesen]           = useState([])
-  const [popupPos, setPopupPos]             = useState(null)
-  const popupGesperrt                       = useRef(false)
   const touchStartX                         = useRef(null)
   const [installPrompt, setInstallPrompt]   = useState(null)
   const [keyboardOffen, setKeyboardOffen]   = useState(false)
@@ -410,6 +454,70 @@ export default function AppLayout() {
     return () => window.removeEventListener('staccato:open-join-session', openJoin)
   }, [])
 
+  useEffect(() => {
+    // ── Ripple effect on all buttons ──────────────────────────
+    function isDark(rgb) {
+      const m = rgb.match(/\d+/g)
+      if (!m || m.length < 3) return false
+      return 0.299 * +m[0] + 0.587 * +m[1] + 0.114 * +m[2] < 128
+    }
+    function handleRipple(e) {
+      const btn = e.target.closest('button:not(:disabled)')
+      if (!btn) return
+      const rect = btn.getBoundingClientRect()
+      const size = Math.max(rect.width, rect.height) * 2.5
+      const color = isDark(getComputedStyle(btn).backgroundColor)
+        ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.1)'
+      const ripple = document.createElement('span')
+      ripple.style.cssText = [
+        'position:absolute', `width:${size}px`, `height:${size}px`,
+        'border-radius:50%', `background:${color}`,
+        `left:${e.clientX - rect.left - size / 2}px`,
+        `top:${e.clientY - rect.top - size / 2}px`,
+        'animation:ripple 0.55s ease-out forwards',
+        'pointer-events:none', 'z-index:0',
+      ].join(';')
+      const prevPos = btn.style.position
+      const prevOvf = btn.style.overflow
+      btn.style.position = 'relative'
+      btn.style.overflow  = 'hidden'
+      btn.appendChild(ripple)
+      setTimeout(() => {
+        ripple.remove()
+        btn.style.position = prevPos
+        btn.style.overflow  = prevOvf
+      }, 600)
+    }
+    document.addEventListener('mousedown', handleRipple)
+
+    // ── Modal entrance animation (MutationObserver) ───────────
+    const obs = new MutationObserver(muts => {
+      for (const mut of muts) {
+        for (const node of mut.addedNodes) {
+          if (node.nodeType !== 1) continue
+          const cs = node.style
+          if (
+            cs.position === 'fixed' &&
+            parseInt(cs.zIndex) >= 500 &&
+            cs.alignItems === 'center' &&
+            cs.justifyContent === 'center'
+          ) {
+            const content = node.firstElementChild
+            if (content && !content.style.animation) {
+              content.style.animation = 'modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1) backwards'
+            }
+          }
+        }
+      }
+    })
+    obs.observe(document.getElementById('root') ?? document.body, { childList: true, subtree: true })
+
+    return () => {
+      document.removeEventListener('mousedown', handleRipple)
+      obs.disconnect()
+    }
+  }, [])
+
   async function handleAbmelden() {
     await supabase.auth.signOut()
     window.location.href = '/login'
@@ -453,12 +561,7 @@ export default function AppLayout() {
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1 }}>
-          {navConfig.map(entry => entry.gruppe
-            ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
-            : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
-          )}
-        </nav>
+        <DesktopNav navConfig={navConfig} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
 
         {/* Session beitreten (Schüler + Vorstand) */}
         {(rolle === 'schueler' || rolle === 'vorstand') && (
@@ -486,7 +589,7 @@ export default function AppLayout() {
           </NavLink>
           <button onClick={() => window.location.reload()} style={{ ...btnStyle, fontSize: 14, fontWeight: 700, color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 10%, transparent)', padding: '10px 12px', borderRadius: 'var(--radius)', marginTop: 2, marginBottom: 2 }}>↻ Aktualisieren</button>
           <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
-          <button onClick={() => setChangelogOffen(true)} style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '2px 0' }}>
+          <button onClick={() => setChangelogOffen(true)} aria-label="Versionshistorie anzeigen" style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '8px 0' }}>
             v{version} ✨
           </button>
         </div>
@@ -516,13 +619,13 @@ export default function AppLayout() {
                 ? <img src={schule.logo_url} alt={schule.name ?? 'Logo'} style={{ maxHeight: 36, maxWidth: 140, objectFit: 'contain' }} />
                 : <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
               }
-              <button onClick={() => setSidebarOffen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
+              <button onClick={() => setSidebarOffen(false)} aria-label="Menü schließen" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)', padding: 10, margin: -10, minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
             {/* Scrollable Nav */}
             <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
               {navConfig.map(entry => entry.gruppe
-                ? <NavGroup key={entry.gruppe} {...entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
-                : <NavItem  key={entry.to}    item={entry} setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
+                ? <NavGroup key={entry.gruppe} {...entry} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
+                : <NavItem  key={entry.to}    item={entry} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
               )}
             </nav>
             {/* Sticky Footer */}
@@ -547,7 +650,7 @@ export default function AppLayout() {
                   ⚙️ {T('settings')}
                 </NavLink>
                 <button onClick={handleAbmelden} style={btnStyle}>👋 {T('logout')}</button>
-                <button onClick={() => { setChangelogOffen(true); setSidebarOffen(false) }} style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 6, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '2px 0' }}>
+                <button onClick={() => { setChangelogOffen(true); setSidebarOffen(false) }} aria-label="Versionshistorie anzeigen" style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 6, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '8px 0' }}>
                   v{version} ✨
                 </button>
               </div>
@@ -566,15 +669,15 @@ export default function AppLayout() {
           borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 50,
         }} className="mobile-header">
           <div style={{ flex: 1 }}>
-            <button onClick={() => setSidebarOffen(true)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text)' }}>☰</button>
+            <button onClick={() => setSidebarOffen(true)} aria-label="Menü öffnen" aria-expanded={sidebarOffen} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text)', padding: '11px 12px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '-11px 0' }}>☰</button>
           </div>
           {schule?.logo_url
             ? <img src={schule.logo_url} alt={schule.name ?? 'Logo'} style={{ maxHeight: 32, maxWidth: 120, objectFit: 'contain' }} />
             : <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
           }
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-            <NavLink to="/einstellungen" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)', textDecoration: 'none' }}>⚙️</NavLink>
-            <button onClick={() => window.location.reload()} style={{ border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer', color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', padding: '7px 12px', borderRadius: 'var(--radius)', fontFamily: 'inherit', lineHeight: 1 }}>↻ Reload</button>
+            <NavLink to="/einstellungen" aria-label={T('settings')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--text-2)', textDecoration: 'none', minWidth: 44, minHeight: 44 }}>⚙️</NavLink>
+            <button onClick={() => window.location.reload()} style={{ border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer', color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', padding: '7px 12px', borderRadius: 'var(--radius)', fontFamily: 'inherit', lineHeight: 1, minHeight: 44 }}>↻ Reload</button>
           </div>
         </header>
 
@@ -593,13 +696,7 @@ export default function AppLayout() {
             swipeStartX.current = null
           }}
         >
-          <style>{`
-            @keyframes pageFade {
-              from { opacity: 0; transform: translateY(5px); }
-              to   { opacity: 1; transform: translateY(0); }
-            }
-          `}</style>
-          <div key={location.pathname} style={{ animation: 'pageFade 0.18s ease' }}>
+          <div key={location.pathname} style={{ animation: `${pageDir === 'back' ? 'slideFromLeft' : 'slideFromRight'} 0.22s cubic-bezier(0.4,0,0.2,1) both` }}>
             <Outlet />
           </div>
         </main>
@@ -612,10 +709,11 @@ export default function AppLayout() {
           background: 'var(--surface)',
           borderTop: '1px solid var(--border)',
           position: 'sticky', bottom: 0,
-          transform: keyboardOffen ? 'translateY(100%)' : 'translateY(0)',
+          zIndex: 10,
+          ...(keyboardOffen && { transform: 'translateY(100%)' }),
           transition: 'transform 0.2s ease',
         }} className="mobile-bottom-nav">
-          {navItems.slice(0, 5).map(item => <NavItem key={item.to} item={item} mobile setPopupPos={setPopupPos} popupGesperrt={popupGesperrt} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />)}
+          {navItems.slice(0, 5).map(item => <NavItem key={item.to} item={item} mobile setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />)}
         </nav>
       </div>
 
@@ -642,7 +740,7 @@ export default function AppLayout() {
               Installieren
             </button>
           )}
-          <button onClick={handleDismissInstall} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-3)', padding: '4px', lineHeight: 1, flexShrink: 0 }}>✕</button>
+          <button onClick={handleDismissInstall} aria-label="Schließen" style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-3)', padding: 12, lineHeight: 1, flexShrink: 0, minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
       )}
 
@@ -661,45 +759,6 @@ export default function AppLayout() {
         />
       )}
 
-      {/* Nachrichten-Hover-Popup – unten rechts */}
-      {popupPos && ungelesen.length > 0 && (
-        <div style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 500,
-          background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)',
-          width: 320, maxHeight: 400, display: 'flex', flexDirection: 'column',
-          overflow: 'hidden',
-          animation: 'fadeSlideUp 0.18s ease',
-        }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>💬 {ungelesen.length} ungelesen</span>
-            <button onClick={() => { setPopupPos(null); popupGesperrt.current = true; setTimeout(() => { popupGesperrt.current = false }, 2000) }} style={{ background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--text-3)', lineHeight:1, padding:0 }}>✕</button>
-          </div>
-          <div style={{ overflowY: 'auto' }}>
-            {ungelesen.slice(0, 5).map(n => (
-              <div key={n.id} style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', cursor: 'default' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
-                    {n.betreff}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)', flexShrink: 0, marginLeft: 8 }}>
-                    {(() => { const d = Date.now() - new Date(n.gesendet_am).getTime(); return d < 3600000 ? `${Math.floor(d/60000)} Min.` : d < 86400000 ? `${Math.floor(d/3600000)} Std.` : `${Math.floor(d/86400000)}d` })()}
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                  {n.typ === 'broadcast' ? '📢 Alle' : n.sender?.voller_name ?? '—'}
-                </div>
-              </div>
-            ))}
-            {ungelesen.length > 5 && (
-              <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
-                + {ungelesen.length - 5} weitere
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Changelog Modal */}
       {changelogOffen && (
         <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.45)', backdropFilter:'blur(3px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
@@ -710,7 +769,7 @@ export default function AppLayout() {
                 <div style={{ fontSize:18, fontWeight:800, color:'var(--text)' }}>✨ Versionshistorie</div>
                 <div style={{ fontSize:12, color:'var(--text-3)', marginTop:3 }}>Staccato v{version}</div>
               </div>
-              <button onClick={() => setChangelogOffen(false)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'var(--text-3)', lineHeight:1 }}>✕</button>
+              <button onClick={() => setChangelogOffen(false)} aria-label="Schließen" style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'var(--text-3)', lineHeight:1, padding:10, margin:-10, minWidth:44, minHeight:44, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
             </div>
             <div style={{ overflowY:'auto', padding:'16px 24px 24px', display:'flex', flexDirection:'column', gap:24 }}>
               {CHANGELOG.map(entry => (
@@ -765,7 +824,18 @@ export default function AppLayout() {
           touch-action: manipulation;
           -webkit-tap-highlight-color: transparent;
         }
-        button:active:not(:disabled) { transform: scale(0.96); }
+        button:active:not(:disabled) { transform: scale(0.96) !important; }
+
+        /* Focus-Ring für Tastatur-Navigation */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+          outline: 2px solid var(--primary) !important;
+          outline-offset: 2px !important;
+          box-shadow: none !important;
+        }
 
         /* Scrollbar (nur Desktop) */
         @media (hover: hover) {
@@ -778,6 +848,87 @@ export default function AppLayout() {
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideFromRight {
+          from { opacity: 0; transform: translateX(20px); }
+          to   { opacity: 1; transform: none; }
+        }
+        @keyframes slideFromLeft {
+          from { opacity: 0; transform: translateX(-20px); }
+          to   { opacity: 1; transform: none; }
+        }
+
+        @keyframes staggerIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .stagger-item { animation: staggerIn 0.22s ease both; }
+        .stagger-item:nth-child(1)  { animation-delay: 0ms; }
+        .stagger-item:nth-child(2)  { animation-delay: 50ms; }
+        .stagger-item:nth-child(3)  { animation-delay: 100ms; }
+        .stagger-item:nth-child(4)  { animation-delay: 150ms; }
+        .stagger-item:nth-child(5)  { animation-delay: 200ms; }
+        .stagger-item:nth-child(6)  { animation-delay: 250ms; }
+        .stagger-item:nth-child(7)  { animation-delay: 300ms; }
+        .stagger-item:nth-child(8)  { animation-delay: 350ms; }
+        .stagger-item:nth-child(9)  { animation-delay: 400ms; }
+        .stagger-item:nth-child(10) { animation-delay: 450ms; }
+        .stagger-item:nth-child(11) { animation-delay: 500ms; }
+        .stagger-item:nth-child(12) { animation-delay: 550ms; }
+
+        html[data-transitioning] *,
+        html[data-transitioning] *::before,
+        html[data-transitioning] *::after {
+          transition: background-color 0.35s ease, color 0.35s ease,
+                      border-color 0.35s ease, box-shadow 0.35s ease !important;
+        }
+
+        @keyframes emptyBob {
+          0%, 100% { transform: translateY(0); }
+          50%       { transform: translateY(-7px); }
+        }
+        @keyframes rsvpBounce {
+          0%   { transform: scale(1); }
+          35%  { transform: scale(1.18); }
+          65%  { transform: scale(0.94); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes ripple {
+          from { transform: scale(0); opacity: 1; }
+          to   { transform: scale(1); opacity: 0; }
+        }
+
+        @keyframes modalIn {
+          from { opacity: 0; transform: scale(0.92) translateY(8px); }
+          to   { opacity: 1; transform: none; }
+        }
+
+        /* Modal-Overlays: Bottom-Sheet auf Mobile */
+        @media (max-width: 640px) {
+          .modal-overlay {
+            align-items: flex-end !important;
+            padding: 0 !important;
+          }
+          .modal-inner {
+            border-radius: 20px 20px 0 0 !important;
+            max-width: 100% !important;
+            padding: 20px 16px 32px !important;
+            max-height: 92dvh !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+          }
+          .kurs-modal-inner {
+            border-radius: 20px 20px 0 0 !important;
+            max-width: 100% !important;
+            padding: 20px 16px 32px !important;
+            max-height: 92dvh !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+          }
         }
 
         @media (max-width: 768px) {

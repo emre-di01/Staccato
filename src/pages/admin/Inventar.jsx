@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import QRCode from 'qrcode'
 import jsQR from 'jsqr'
 import { supabase } from '../../lib/supabase'
@@ -82,18 +83,21 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
     onGeaendert()
   }
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', zIndex:1100,
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', zIndex:1100,
       alignItems: mob ? 'flex-end' : 'center', justifyContent: mob ? 'stretch' : 'center', padding: mob ? 0 : 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', width:'100%', maxWidth: mob ? '100%' : 460, maxHeight: mob ? '85vh' : '80vh',
-        borderRadius: mob ? '18px 18px 0 0' : 'var(--radius-lg)', padding: mob ? '20px 16px 28px' : '24px 28px',
-        boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', overflowY:'auto' }}>
-        {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 16px' }} />}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
-          <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>⚙️ Kategorien verwalten</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
+      <div className="modal-inner" style={{ background:'var(--surface)', width:'100%', maxWidth: mob ? '100%' : 460, maxHeight: mob ? '85vh' : '80vh',
+        borderRadius: mob ? '18px 18px 0 0' : 'var(--radius-lg)',
+        boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ padding: mob ? '20px 16px 0' : '24px 28px 0', flexShrink:0 }}>
+          {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 14px' }} />}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>⚙️ Kategorien verwalten</h3>
+            <button onClick={onClose} style={s.iconBtn}>✕</button>
+          </div>
         </div>
+        <div style={{ overflowY:'auto', flex:1, padding: mob ? '16px 16px 28px' : '16px 28px 28px', overscrollBehavior:'contain' }}>
 
         {/* Bestehende Kategorien */}
         <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
@@ -168,9 +172,10 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
             ))}
           </div>
         </div>
+        </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Barcode-Eingabe-Modal (Scan → Formularfeld) ──────────────
@@ -242,8 +247,8 @@ function BarcodeEingabeModal({ onGescannt, onClose }) {
     })
   }
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:1200, display:'flex', flexDirection:'column' }}>
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:1200, display:'flex', flexDirection:'column' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', background:'rgba(0,0,0,0.6)' }}>
         <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>📷 Barcode / EAN scannen</span>
         <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:4 }}>✕</button>
@@ -272,7 +277,7 @@ function BarcodeEingabeModal({ onGescannt, onClose }) {
         )}
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Inventar-Modal ───────────────────────────────────────────
@@ -318,21 +323,24 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
   }
 
   return (<>
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', zIndex:1000,
+    {createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', zIndex:1000,
       alignItems: mob ? 'flex-end' : 'center', justifyContent: mob ? 'stretch' : 'center', padding: mob ? 0 : 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', width:'100%', maxWidth: mob ? '100%' : 520,
+      <div className="modal-inner" style={{ background:'var(--surface)', width:'100%', maxWidth: mob ? '100%' : 520,
         maxHeight: mob ? '92vh' : '90vh', borderRadius: mob ? '18px 18px 0 0' : 'var(--radius-lg)',
-        padding: mob ? '20px 16px 28px' : '28px 32px', boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', overflowY:'auto' }}>
-        {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 18px' }} />}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
-          <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>
-            {istNeu ? '+ Neuer Gegenstand' : 'Gegenstand bearbeiten'}
-          </h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
+        boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ padding: mob ? '20px 16px 0' : '28px 32px 0', flexShrink:0 }}>
+          {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 14px' }} />}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>
+              {istNeu ? '+ Neuer Gegenstand' : 'Gegenstand bearbeiten'}
+            </h3>
+            <button onClick={onClose} style={s.iconBtn}>✕</button>
+          </div>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ overflowY:'auto', flex:1, padding: mob ? '16px 16px 28px' : '20px 32px 28px', display:'flex', flexDirection:'column', gap:14 }}>
           {/* Kategorie */}
           {kategorien.length > 0 && (
             <div>
@@ -430,6 +438,7 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
         </div>
       </div>
     </div>
+    , document.body)}
 
     {barcodeScanner && (
       <BarcodeEingabeModal
@@ -519,20 +528,21 @@ function EtikettEinzelModal({ item, onClose }) {
   const quer = vorschau ? vorschau.w > vorschau.h : false
   const qrPx = vorschau ? (Math.min(vorschau.w, vorschau.h) - (quer ? 6 : 10)) * 3.78 * SCALE : 0
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', zIndex:1000,
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', zIndex:1000,
       alignItems: mob ? 'flex-end' : 'center', justifyContent: mob ? 'stretch' : 'center', padding: mob ? 0 : 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', width:'100%', maxWidth: mob ? '100%' : 440,
+      <div className="modal-inner" style={{ background:'var(--surface)', width:'100%', maxWidth: mob ? '100%' : 440,
         maxHeight: mob ? '88vh' : '85vh', borderRadius: mob ? '18px 18px 0 0' : 'var(--radius-lg)',
-        padding: mob ? '20px 16px 28px' : '24px 28px', boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', overflowY:'auto' }}>
-        {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 16px' }} />}
-
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
-          <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>🏷️ Etikett drucken</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
+        boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ padding: mob ? '20px 16px 0' : '24px 28px 0', flexShrink:0 }}>
+          {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 14px' }} />}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>🏷️ Etikett drucken</h3>
+            <button onClick={onClose} style={s.iconBtn}>✕</button>
+          </div>
         </div>
-
+        <div style={{ overflowY:'auto', flex:1, padding: mob ? '16px 16px 28px' : '16px 28px 28px', overscrollBehavior:'contain' }}>
         <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16, background:'var(--bg)', borderRadius:'var(--radius)', padding:'8px 12px' }}>
           <strong style={{ color:'var(--text)' }}>{item.inventarnummer}</strong> · {item.name}
         </div>
@@ -580,9 +590,10 @@ function EtikettEinzelModal({ item, onClose }) {
           <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
           <button onClick={drucken} disabled={laden} style={s.btnPri}>🖨️ Drucken</button>
         </div>
+        </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Etiketten drucken (A4-Grid) ─────────────────────────────
@@ -718,8 +729,8 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
 
   const kat = gefunden?.inventar_kategorien
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:2000, display:'flex', flexDirection:'column' }}>
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:2000, display:'flex', flexDirection:'column' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', background:'rgba(0,0,0,0.6)' }}>
         <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>📷 Inventar scannen</span>
         <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:4 }}>✕</button>
@@ -813,7 +824,7 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
         </div>
       )}
     </div>
-  )
+  , document.body)
 }
 
 const sScanner = {

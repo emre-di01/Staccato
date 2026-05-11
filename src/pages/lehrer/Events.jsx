@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { SlidingTabs, EmptyState } from '../../components/SlidingTabs'
 
 const TYP_ICON = { konzert: '🎵', vorspiel: '🎤', pruefung: '📝', veranstaltung: '🎭', vorstandssitzung: '🏛', sonstiges: '📅' }
 const TYPEN = ['konzert', 'vorspiel', 'pruefung', 'veranstaltung', 'vorstandssitzung', 'sonstiges']
@@ -34,6 +36,13 @@ export default function LehrerEvents() {
   const [modal,   setModal]   = useState(null)
   const [form,    setForm]    = useState(leerForm)
   const [senden,  setSenden]  = useState(false)
+  const [mob,     setMob]     = useState(() => window.innerWidth < 600)
+
+  useEffect(() => {
+    const fn = () => setMob(window.innerWidth < 600)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
 
   useEffect(() => { if (profil) ladeEvents() }, [profil?.id])
 
@@ -111,7 +120,7 @@ export default function LehrerEvents() {
   })
 
   return (
-    <div style={s.page}>
+    <div style={{ ...s.page, padding: mob ? 12 : 24 }}>
       <div style={s.header}>
         <div>
           <h1 style={s.titel}>{T('events')}</h1>
@@ -128,22 +137,21 @@ export default function LehrerEvents() {
         style={{ ...s.inp, marginBottom: 12, maxWidth: 340 }}
       />
 
-      <div style={s.tabs}>
-        {['kommend','vergangen','alle'].map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ ...s.tab, ...(tab===t ? s.tabAktiv : {}) }}>
-            {T('event_' + t)}
-          </button>
-        ))}
-      </div>
+      <SlidingTabs
+        active={tab}
+        onChange={setTab}
+        style={{ marginBottom: 20 }}
+        tabs={['kommend','vergangen','alle'].map(t => ({ key: t, label: T('event_' + t) }))}
+      />
 
       {laden ? (
-        <div style={s.leer}>{T('loading')}</div>
+        <EmptyState icon="⏳" message={T('loading')} />
       ) : gefiltert.length === 0 ? (
-        <div style={s.leer}>{T('event_no_results')}</div>
+        <EmptyState icon="📭" message={T('event_no_results')} />
       ) : (
         <div style={s.grid}>
           {gefiltert.map(ev => (
-            <div key={ev.id} style={s.card}>
+            <div key={ev.id} className="stagger-item" style={{ ...s.card, padding: mob ? 14 : 20 }}>
               <div style={s.cardTop}>
                 <div style={s.typBadge}>
                   <span style={s.typIcon}>{TYP_ICON[ev.typ]}</span>
@@ -177,9 +185,9 @@ export default function LehrerEvents() {
         </div>
       )}
 
-      {modal?.typ === 'form' && (
-        <div style={s.overlay} onClick={() => setModal(null)}>
-          <div style={s.modalBox} onClick={e => e.stopPropagation()}>
+      {modal?.typ === 'form' && createPortal(
+        <div className="modal-overlay" style={s.overlay} onClick={() => setModal(null)}>
+          <div className="modal-inner" style={s.modalBox} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <h2 style={s.modalTitel}>{modal.event ? T('edit_event') : T('new_event')}</h2>
               <button onClick={() => setModal(null)} style={s.closeBtn}>✕</button>
@@ -228,7 +236,8 @@ export default function LehrerEvents() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

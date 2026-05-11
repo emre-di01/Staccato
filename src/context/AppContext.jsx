@@ -43,6 +43,7 @@ export function AppProvider({ children }) {
   const [theme,        setThemeKey]     = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
   const [darkMode,     setDarkMode]     = useState(() => localStorage.getItem('staccato_dark') === 'true')
   const [lang,         setLangState]    = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
+  const [großeSchrift, setGrosseSchrift] = useState(() => localStorage.getItem('staccato_grosse_schrift') === 'true')
 
   const loadedUidRef = useRef(null)
   const profilIdRef  = useRef(null)
@@ -53,6 +54,11 @@ export function AppProvider({ children }) {
     localStorage.setItem('staccato_theme', theme)
     localStorage.setItem('staccato_dark', darkMode)
   }, [theme, darkMode, schule?.farbe])
+
+  useEffect(() => {
+    document.documentElement.style.zoom = großeSchrift ? '1.15' : ''
+    localStorage.setItem('staccato_grosse_schrift', String(großeSchrift))
+  }, [großeSchrift])
 
   useEffect(() => {
     if (schule?.name) document.title = `Staccato – ${schule.name}`
@@ -170,6 +176,10 @@ export function AppProvider({ children }) {
     setDarkMode(d => { const next = !d; saveToProfile({ dark_mode: next }); return next })
   }
 
+  function toggleGrosseSchrift() {
+    setGrosseSchrift(g => !g)
+  }
+
   function setLang(l) {
     setLangState(l); saveToProfile({ sprache: l })
   }
@@ -188,6 +198,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       session, profil, rolle, laden,
       theme, darkMode, lang, zeitzone,
+      großeSchrift, toggleGrosseSchrift,
       schule, setSchule,
       schulenListe,
       schuleWechseln,

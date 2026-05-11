@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
@@ -96,14 +97,15 @@ function ComposeModal({ onClose, onErfolg, profil, rolle, T, mob }) {
     onErfolg(); onClose()
   }
 
-  return (
-    <div style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', display:'flex', alignItems: mob ? 'flex-end' : 'center', justifyContent:'center', padding: mob ? 0 : 16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', display:'flex', alignItems: mob ? 'flex-end' : 'center', justifyContent:'center', padding: mob ? 0 : 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius: mob ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)', padding: mob ? '20px 16px 32px' : '28px 32px', width:'100%', maxWidth: mob ? '100%' : 520, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight: mob ? '90dvh' : 'auto', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius: mob ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)', width:'100%', maxWidth: mob ? '100%' : 520, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight: mob ? '90dvh' : '90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding: mob ? '20px 16px 0' : '28px 32px 0', flexShrink:0 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>✏️ {T('msg_compose')}</h3>
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)' }}>✕</button>
         </div>
+        <div style={{ overflowY:'auto', flex:1, padding: mob ? '16px 16px 32px' : '24px 32px 28px', overscrollBehavior:'contain' }}>
 
         {/* Typ */}
         <div style={{ display:'flex', gap:8, marginBottom:16 }}>
@@ -163,9 +165,10 @@ function ComposeModal({ onClose, onErfolg, profil, rolle, T, mob }) {
             {laden ? '…' : `📤 ${T('msg_send')}`}
           </button>
         </div>
+        </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 export default function Nachrichten() {

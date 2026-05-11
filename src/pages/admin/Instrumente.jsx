@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
@@ -38,18 +39,18 @@ function InstrumentModal({ instrument, onClose, onErfolg }) {
     setLaden(false)
   }
 
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+  return createPortal(
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 32px', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>
             {istNeu ? '+ Neues Instrument' : 'Instrument bearbeiten'}
           </h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ overflowY:'auto', flex:1, padding:'24px 32px 28px', overscrollBehavior:'contain', display:'flex', flexDirection:'column', gap:14 }}>
           {/* Icon Auswahl */}
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             <label style={s.label}>Icon</label>
@@ -102,7 +103,7 @@ function InstrumentModal({ instrument, onClose, onErfolg }) {
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 // ─── Hauptkomponente ──────────────────────────────────────────
