@@ -17,8 +17,8 @@ export default function Impressum() {
         <h2 style={h2}>Anbieter</h2>
         <p style={p}>
           <strong>Emre Dingil</strong><br />
-          Adolf-Leweke-Str. 14<br />
-          60435 Frankfurt am Main<br />
+          Karlstr.101<br />
+          64285 Darmstadt<br />
           Deutschland
         </p>
       </section>
