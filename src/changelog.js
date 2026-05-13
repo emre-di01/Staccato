@@ -14,30 +14,6 @@ export const CHANGELOG = [
         en: 'Beamer mode – connect a projector or TV to teaching mode and display content directly',
         tr: 'Beamer modu – projektör veya TV\'yi ders moduna bağla ve içerikleri doğrudan görüntüle',
       },
-      {
-        icon: '🎵',
-        de: 'Metronom mit BPM-Tap – direkt im Stück, inkl. Tempo-Label (Largo … Presto) und Speichern',
-        en: 'Metronome with BPM tap – directly in the piece, with tempo label (Largo … Presto) and save',
-        tr: 'BPM-Tap\'lı metronom – parçada doğrudan, tempo etiketi (Largo … Presto) ve kaydetme',
-      },
-      {
-        icon: '🖨️',
-        de: 'Konzertprogramm-Druck – druckbares Programm mit Schullogo direkt aus dem Event-Repertoire',
-        en: 'Concert programme print – printable programme with school logo directly from event repertoire',
-        tr: 'Konser programı baskısı – etkinlik repertuarından okul logolu yazdırılabilir program',
-      },
-      {
-        icon: '♿',
-        de: 'Barrierefreiheit & Große-Schrift-Modus – größere Touchflächen, ARIA-Labels, Zoom-Einstellung',
-        en: 'Accessibility & large-text mode – larger touch targets, ARIA labels, zoom setting',
-        tr: 'Erişilebilirlik ve büyük yazı modu – daha geniş dokunma alanları, ARIA etiketleri, zoom',
-      },
-      {
-        icon: '🌐',
-        de: 'Mehrsprachiger Stundenplan – Datum und Uhrzeit in der gewählten App-Sprache (DE/EN/TR)',
-        en: 'Multilingual schedule – dates and times in the selected app language (DE/EN/TR)',
-        tr: 'Çok dilli program – tarih ve saatler seçilen uygulama dilinde (DE/EN/TR)',
-      },
     ],
   },
   {
