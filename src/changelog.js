@@ -12,5 +12,5 @@ export const CHANGELOG = [
         de: 'Beamer-Modus – Projektor oder TV mit dem Unterrichtsmodus koppeln und Inhalte direkt anzeigen',
         en: 'Beamer mode – connect a projector or TV to teaching mode and display content directly',
         tr: 'Beamer modu – projektör veya TV\'yi ders moduna bağla ve içerikleri doğrudan görüntüle',
-      }
+      },
 ]
