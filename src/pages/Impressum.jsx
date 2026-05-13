@@ -35,8 +35,8 @@ export default function Impressum() {
         <h2 style={h2}>Verantwortlich für den Inhalt (§ 55 Abs. 2 RStV)</h2>
         <p style={p}>
           Emre Dingil<br />
-          Adolf-Leweke-Str. 14<br />
-          60435 Frankfurt am Main
+          Karlstr.101<br />
+          64285 Darmstadt
         </p>
       </section>
 
