@@ -7,16 +7,14 @@ export function getNavConfig(rolle, T) {
         { icon: '🎵', label: T('courses'),       to: '/admin/kurse' },
         { icon: '📅', label: T('schedule'),      to: '/admin/stundenplan' },
         { icon: '🎼', label: T('repertoire'),    to: '/admin/repertoire' },
-        { icon: '🎭', label: T('events'),        to: '/admin/events' },
       ]},
       { gruppe: 'Verwaltung', items: [
         { icon: '👥', label: T('members'),       to: '/admin/mitglieder' },
+        { icon: '🎭', label: T('events'),        to: '/admin/events' },
         { icon: '🏫', label: T('rooms'),         to: '/admin/raeume' },
         { icon: '🎸', label: T('instruments'),   to: '/admin/instrumente' },
         { icon: '📦', label: T('inventar'),      to: '/admin/inventar' },
         { icon: '📋', label: T('prospects'),     to: '/admin/interessenten' },
-      ]},
-      { gruppe: 'Kommunikation', items: [
         { icon: '💬', label: T('messages'),      to: '/admin/nachrichten', nachrichten: true },
       ]},
       { gruppe: 'Vorstand', items: [
@@ -32,16 +30,14 @@ export function getNavConfig(rolle, T) {
         { icon: '🎵', label: T('courses'),       to: '/admin/kurse' },
         { icon: '📅', label: T('schedule'),      to: '/admin/stundenplan' },
         { icon: '🎼', label: T('repertoire'),    to: '/admin/repertoire' },
-        { icon: '🎭', label: T('events'),        to: '/admin/events' },
       ]},
       { gruppe: 'Verwaltung', items: [
         { icon: '👥', label: T('members'),       to: '/admin/mitglieder' },
+        { icon: '🎭', label: T('events'),        to: '/admin/events' },
         { icon: '🏫', label: T('rooms'),         to: '/admin/raeume' },
         { icon: '🎸', label: T('instruments'),   to: '/admin/instrumente' },
         { icon: '📦', label: T('inventar'),      to: '/admin/inventar' },
         { icon: '📋', label: T('prospects'),     to: '/admin/interessenten' },
-      ]},
-      { gruppe: 'Kommunikation', items: [
         { icon: '💬', label: T('messages'),      to: '/admin/nachrichten', nachrichten: true },
       ]},
       { gruppe: 'Vorstand', items: [

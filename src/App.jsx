@@ -33,6 +33,7 @@ const SchuelerKurse        = lazy(() => import('./pages/schueler/Kurse'))
 const SchuelerKursDetail   = lazy(() => import('./pages/schueler/KursDetail'))
 const SchuelerAnwesenheit  = lazy(() => import('./pages/schueler/Anwesenheit'))
 const SchuelerEvents       = lazy(() => import('./pages/schueler/Events'))
+const SchuelerDateien      = lazy(() => import('./pages/schueler/Dateien'))
 const SchuelerFAQ          = lazy(() => import('./pages/schueler/FAQ'))
 const VorstandFAQ          = lazy(() => import('./pages/vorstand/FAQ'))
 const VorstandDashboard    = lazy(() => import('./pages/vorstand/Dashboard'))
@@ -123,7 +124,7 @@ function AppRoutes() {
           <Route path="/schueler/kurse"               element={<SchuelerKurse />} />
           <Route path="/schueler/kurse/:id"           element={<SchuelerKursDetail />} />
           <Route path="/schueler/kurse/:id/anwesenheit" element={<SchuelerAnwesenheit />} />
-          <Route path="/schueler/dateien"             element={P('Dateien', '📁')} />
+          <Route path="/schueler/dateien"             element={<SchuelerDateien />} />
           <Route path="/schueler/events"                                       element={<SchuelerEvents />} />
           <Route path="/schueler/events/:id/repertoire"                      element={<EventRepertoire />} />
           <Route path="/schueler/events/:kursId/repertoire/:stueckId"        element={<StueckDetail />} />

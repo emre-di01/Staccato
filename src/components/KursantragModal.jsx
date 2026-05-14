@@ -218,14 +218,14 @@ export default function KursantragModal({ schueler, kurs, onClose }) {
     <div class="row-3">
       <div class="field"><span class="label">Zahlungsweise</span><span class="val">${WEISE_LABEL[profil.zahlungsweise] ?? ''}</span></div>
       <div class="field"><span class="label">Zahlungsrhythmus</span><span class="val">${RHYTHMUS_LABEL[profil.zahlungsrhythmus] ?? ''}</span></div>
-      <div class="field"><span class="label">Monatsbeitrag</span><span class="val">${profil.mitgliedsbeitrag ? `${Number(profil.mitgliedsbeitrag).toFixed(2)} €` : ''}</span></div>
+      <div class="field"><span class="label">${kurs?.abrechnungs_typ === 'pauschale' ? 'Monatspauschale' : kurs?.abrechnungs_typ === 'paket' ? 'Paket' : 'Preis/Stunde'}</span><span class="val">${kurs?.abrechnungs_typ === 'pauschale' && kurs?.pauschale_monat ? `${Number(kurs.pauschale_monat).toFixed(2)} €/Monat` : kurs?.abrechnungs_typ === 'paket' && kurs?.paket_stunden ? `${kurs.paket_stunden}er Paket` : kurs?.preis_pro_stunde ? `${Number(kurs.preis_pro_stunde).toFixed(2)} €/Std.` : ''}</span></div>
     </div>
   </div>` : ''}
 
   ${sepaBlock}
 
   <div class="consent">
-    <strong>Einwilligung:</strong> Ich melde mich hiermit verbindlich für den oben genannten Kurs an und erkenne die Unterrichtsbedingungen von ${schule?.name ?? 'der Musikschule'} an. Meine personenbezogenen Daten werden gemäß der Datenschutzerklärung zum Zweck der Unterrichtsorganisation verarbeitet. Eine Kündigung ist mit einer Frist von 4 Wochen zum Monatsende möglich.
+    <strong>Einwilligung:</strong> Ich melde mich hiermit verbindlich für den oben genannten Kurs an und erkenne die Unterrichtsbedingungen von ${schule?.name ?? 'der Musikschule'} an. Meine personenbezogenen Daten werden gemäß der Datenschutzerklärung zum Zweck der Unterrichtsorganisation verarbeitet. Eine Kündigung ist mit einer Frist von ${schule?.kuendigungsfrist ?? '4 Wochen zum Monatsende'} möglich.
   </div>
 
   ${hatErziehung ? `

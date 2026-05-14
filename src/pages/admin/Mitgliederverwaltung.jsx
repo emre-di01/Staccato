@@ -830,7 +830,7 @@ function KursantragAuswahlModal({ mitglied, onClose }) {
 
   useEffect(() => {
     supabase.from('unterricht_schueler')
-      .select('unterricht(id, name, typ, wochentag, uhrzeit_von, uhrzeit_bis, abrechnungs_typ, farbe, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
+      .select('unterricht(id, name, typ, wochentag, uhrzeit_von, uhrzeit_bis, abrechnungs_typ, preis_pro_stunde, pauschale_monat, paket_stunden, farbe, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
       .eq('schueler_id', mitglied.id)
       .eq('status', 'aktiv')
       .then(({ data }) => { setKurse((data ?? []).map(r => r.unterricht).filter(Boolean)); setLaden(false) })
@@ -1221,17 +1221,17 @@ export default function Mitgliederverwaltung() {
                         </button>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📧</button>
-                      <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>🔑</button>
-                      <button onClick={() => setModal({ typ: 'antrag', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📋</button>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>📧</button>
+                      <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>🔑</button>
+                      <button onClick={() => setModal({ typ: 'antrag', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>📋</button>
                       {m.rolle === 'schueler' && (
-                        <button onClick={() => setModal({ typ: 'kursantrag', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📄</button>
+                        <button onClick={() => setModal({ typ: 'kursantrag', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>📄</button>
                       )}
-                      <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📁</button>
-                      <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>🗑</button>
+                      <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>📁</button>
+                      <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>🗑</button>
                       {rolle === 'superadmin' && (
-                        <button onClick={() => setModal({ typ: 'schulen', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>🏫</button>
+                        <button onClick={() => setModal({ typ: 'schulen', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>🏫</button>
                       )}
                     </div>
                   </div>

@@ -28,9 +28,11 @@ export default function LoginPage() {
   const [passwort,   setPasswort]   = useState('')
   const [fehler,     setFehler]     = useState('')
   const [senden,     setSenden]     = useState(false)
-  const [ansicht,    setAnsicht]    = useState('login') // 'login' | 'reset'
-  const [resetEmail, setResetEmail] = useState('')
-  const [resetOk,    setResetOk]    = useState(false)
+  const [ansicht,      setAnsicht]      = useState('login') // 'login' | 'reset' | 'magic'
+  const [resetEmail,   setResetEmail]   = useState('')
+  const [resetOk,      setResetOk]      = useState(false)
+  const [magicEmail,   setMagicEmail]   = useState('')
+  const [magicOk,      setMagicOk]      = useState(false)
 
   if (!laden && session) {
     if (!rolle) {
@@ -69,6 +71,22 @@ export default function LoginPage() {
     setFehler('')
     const { error } = await supabase.auth.signInWithPassword({ email, password: passwort })
     if (error) setFehler(T('login_error'))
+    setSenden(false)
+  }
+
+  async function handleMagic(e) {
+    e.preventDefault()
+    setSenden(true)
+    setFehler('')
+    const { error } = await supabase.auth.signInWithOtp({
+      email: magicEmail,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: window.location.origin,
+      },
+    })
+    if (error) setFehler(T('magic_link_error'))
+    else setMagicOk(true)
     setSenden(false)
   }
 
@@ -219,9 +237,51 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <p style={{ marginTop: 24, fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
+              <div style={{ marginTop: 20, textAlign: 'center' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{T('magic_link_hint')} </span>
+                <button type="button" onClick={() => { setAnsicht('magic'); setFehler(''); setMagicOk(false); setMagicEmail(email) }}
+                  style={{ fontSize: 12, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, fontWeight: 600 }}>
+                  {T('magic_link_action')}
+                </button>
+              </div>
+
+              <p style={{ marginTop: 16, fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>
                 {T('no_access')}
               </p>
+            </>
+          ) : ansicht === 'magic' ? (
+            <>
+              <button type="button" onClick={() => { setAnsicht('login'); setFehler(''); setMagicOk(false) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginBottom: 24 }}>
+                ← {T('back_to_login')}
+              </button>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.5px' }}>
+                {T('magic_link_title')}
+              </h1>
+              <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 32 }}>{T('magic_link_sub')}</p>
+
+              {magicOk ? (
+                <div style={{ background: 'color-mix(in srgb, var(--success) 15%, transparent)', border: '1px solid var(--success)', borderRadius: 'var(--radius)', padding: '14px 16px', color: 'var(--success)', fontSize: 14 }}>
+                  {T('magic_link_sent')}
+                </div>
+              ) : (
+                <form onSubmit={handleMagic} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={lbl}>{T('email')}</label>
+                    <input type="email" value={magicEmail} onChange={e => setMagicEmail(e.target.value)} required
+                      placeholder="name@beispiel.de" style={inp} autoFocus />
+                  </div>
+                  {fehler && <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{fehler}</p>}
+                  <button type="submit" disabled={senden} style={{
+                    marginTop: 8, padding: '13px', borderRadius: 'var(--radius)',
+                    border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)',
+                    fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    opacity: senden ? 0.7 : 1, transition: 'opacity 0.15s',
+                  }}>
+                    {senden ? T('loading') : T('magic_link_btn')}
+                  </button>
+                </form>
+              )}
             </>
           ) : (
             <>

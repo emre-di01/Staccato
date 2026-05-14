@@ -375,6 +375,7 @@ function SchulEinstellungen({ schule, schuleId, onGespeichert }) {
     telefon:          schule?.telefon          ?? '',
     adresse:          schule?.adresse          ?? '',
     inventar_prefix:  schule?.inventar_prefix  ?? '',
+    kuendigungsfrist: schule?.kuendigungsfrist ?? '',
   })
   const [speichern, setSpeichern] = useState(false)
   const [erfolg,    setErfolg]    = useState(false)
@@ -388,7 +389,8 @@ function SchulEinstellungen({ schule, schuleId, onGespeichert }) {
       email:           form.email.trim()           || null,
       telefon:         form.telefon.trim()         || null,
       adresse:         form.adresse.trim()         || null,
-      inventar_prefix: form.inventar_prefix.trim().toUpperCase() || 'INV',
+      inventar_prefix:  form.inventar_prefix.trim().toUpperCase() || 'INV',
+      kuendigungsfrist: form.kuendigungsfrist.trim() || null,
     }
     await supabase.from('schulen').update(payload).eq('id', schuleId)
     onGespeichert(s => ({ ...s, ...payload }))
@@ -444,6 +446,15 @@ function SchulEinstellungen({ schule, schuleId, onGespeichert }) {
             onChange={e => setForm(f => ({ ...f, inventar_prefix: e.target.value.toUpperCase() }))}
             placeholder="INV"
             style={{ width: 120, boxSizing: 'border-box', padding: '9px 12px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'monospace', outline: 'none', letterSpacing: '0.05em' }} />
+        </div>
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>
+            Kündigungsfrist <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>(erscheint auf Formularen)</span>
+          </label>
+          <input value={form.kuendigungsfrist}
+            onChange={e => setForm(f => ({ ...f, kuendigungsfrist: e.target.value }))}
+            placeholder="z.B. 4 Wochen zum Monatsende"
+            style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end', paddingTop: 4 }}>
           {erfolg && <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>{T('settings_saved')}</span>}

@@ -189,7 +189,7 @@ export default function AufnahmeantragModal({ mitglied, onClose }) {
   ${sepaBlock}
 
   <div class="consent">
-    <strong>Einwilligung Datenschutz:</strong> Ich erkläre mich damit einverstanden, dass meine personenbezogenen Daten zum Zweck der Mitgliederverwaltung und Unterrichtsorganisation gemäß der Datenschutzerklärung von ${schule?.name ?? 'der Musikschule'} elektronisch verarbeitet und gespeichert werden. Die Daten werden nicht an Dritte weitergegeben. Die Einwilligung kann jederzeit widerrufen werden.
+    <strong>Einwilligung Datenschutz:</strong> Ich erkläre mich damit einverstanden, dass meine personenbezogenen Daten zum Zweck der Mitgliederverwaltung und Unterrichtsorganisation gemäß der Datenschutzerklärung von ${schule?.name ?? 'der Musikschule'} elektronisch verarbeitet und gespeichert werden. Die Daten werden nicht an Dritte weitergegeben. Die Einwilligung kann jederzeit widerrufen werden.${schule?.kuendigungsfrist ? ` Eine Kündigung der Mitgliedschaft ist mit einer Frist von ${schule.kuendigungsfrist} möglich.` : ''}
   </div>
 
   ${hatErziehungsberechtigten ? `
