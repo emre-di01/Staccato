@@ -125,9 +125,7 @@ export default function SchuelerSession() {
   const [zeigeFrageEingabe, setZeigeFrageEingabe] = useState(false)
   const [frageText, setFrageText] = useState('')
   const [liedtextGroesse, setLiedtextGroesse] = useState(15)
-  const [mdModus,         setMdModusState]    = useState(() => localStorage.getItem('staccato_liedtext_md') !== 'false')
   const [refreshing,      setRefreshing]      = useState(false)
-  function setMdModus(val) { localStorage.setItem('staccato_liedtext_md', String(val)); setMdModusState(val) }
   const channelRef = useRef(null)
 
   const istGast = !authLaden && !authSession
@@ -175,7 +173,7 @@ export default function SchuelerSession() {
 
   async function ladeStueck(stueckId) {
     const [{ data: st }, { data: df }] = await Promise.all([
-      supabase.from('stuecke').select('id, titel, komponist, youtube_url, liedtext, notizen').eq('id', stueckId).single(),
+      supabase.from('stuecke').select('id, titel, komponist, youtube_url, liedtext, liedtext_md, notizen').eq('id', stueckId).single(),
       supabase.from('stueck_dateien').select('id, typ, name, bucket_pfad, stimme').eq('stueck_id', stueckId).order('hochgeladen_am'),
     ])
     setStueck(st)
@@ -361,13 +359,8 @@ export default function SchuelerSession() {
                           A
                         </button>
                       ))}
-                      <div style={{ flex: 1 }} />
-                      <div style={{ display:'flex', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', overflow:'hidden' }}>
-                        <button onClick={() => setMdModus(true)}  style={{ padding:'4px 9px', background: mdModus  ? 'var(--primary)' : 'var(--bg-2)', color: mdModus  ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>MD</button>
-                        <button onClick={() => setMdModus(false)} style={{ padding:'4px 9px', background: !mdModus ? 'var(--primary)' : 'var(--bg-2)', color: !mdModus ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Plain</button>
-                      </div>
                     </div>
-                    {mdModus
+                    {stueck.liedtext_md !== false
                       ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(stueck.liedtext) }} style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', fontSize: liedtextGroesse, lineHeight: 1.8, color: 'var(--text)' }} />
                       : <pre style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', fontSize: liedtextGroesse, lineHeight: 1.8, color: 'var(--text)', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'Georgia, serif', wordBreak: 'break-word' }}>{stueck.liedtext}</pre>
                     }
