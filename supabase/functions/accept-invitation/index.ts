@@ -70,13 +70,15 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: createErr?.message ?? 'Fehler beim Anlegen.' }), { status: 500, headers: CORS })
   }
 
-  // Profil vervollständigen (Trigger hat es angelegt, wir setzen letzte_schule_id)
-  await supabase.from('profiles').update({
+  // Profil anlegen/aktualisieren — upsert statt update, damit auch dann ein
+  // Profil entsteht, wenn der handle_new_user-Trigger nicht gefeuert hat.
+  await supabase.from('profiles').upsert({
+    id:               user.id,
     voller_name:      voller_name.trim(),
     rolle:            einladung.rolle,
     schule_id:        einladung.schule_id,
     letzte_schule_id: einladung.schule_id,
-  }).eq('id', user.id)
+  }, { onConflict: 'id' })
 
   // Mitgliedschaft anlegen
   await supabase.from('schul_mitgliedschaften').upsert({

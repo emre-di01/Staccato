@@ -101,6 +101,7 @@ export default function Unterrichtsmodus() {
   const [beamerCode, setBeamerCode] = useState('')
   const [beamerVerbunden, setBeamerVerbunden] = useState(false)
   const [zeigeBeamerInput, setZeigeBeamerInput] = useState(false)
+  const [beamerFontSize, setBeamerFontSize] = useState(28)
   const channelRef = useRef(null)
   const broadcastRef = useRef(null)
   const beamerRef = useRef(null)
@@ -235,6 +236,14 @@ export default function Unterrichtsmodus() {
     beamerRef.current = ch
     setBeamerVerbunden(true)
     setZeigeBeamerInput(false)
+  }
+
+  function beamerSchriftAendern(delta) {
+    setBeamerFontSize(s => {
+      const neu = Math.min(60, Math.max(16, s + delta))
+      beamerRef.current?.send({ type: 'broadcast', event: 'font_size', payload: { size: neu } })
+      return neu
+    })
   }
 
   async function sessionBeenden() {
@@ -535,11 +544,21 @@ export default function Unterrichtsmodus() {
           })}
           {/* Beamer-Indikator / Koppeln */}
           {beamerVerbunden ? (
-            <button onClick={() => { beamerRef.current?.unsubscribe(); beamerRef.current = null; setBeamerVerbunden(false); setBeamerCode('') }}
-              style={{ ...s.btnSek, fontSize: 12, padding: '6px 10px', color: '#16a34a', borderColor: '#86efac' }}
-              title="Beamer trennen">
-              📺 ✓
-            </button>
+            <>
+              <button onClick={() => beamerSchriftAendern(-4)}
+                style={{ ...s.btnSek, fontSize: 12, padding: '6px 10px' }} title="Schrift kleiner">
+                A−
+              </button>
+              <button onClick={() => beamerSchriftAendern(4)}
+                style={{ ...s.btnSek, fontSize: 12, padding: '6px 10px' }} title="Schrift größer">
+                A+
+              </button>
+              <button onClick={() => { beamerRef.current?.unsubscribe(); beamerRef.current = null; setBeamerVerbunden(false); setBeamerCode('') }}
+                style={{ ...s.btnSek, fontSize: 12, padding: '6px 10px', color: '#16a34a', borderColor: '#86efac' }}
+                title="Beamer trennen">
+                📺 ✓
+              </button>
+            </>
           ) : (
             <div style={{ position: 'relative' }}>
               <button onClick={() => setZeigeBeamerInput(v => !v)} style={{ ...s.btnSek, fontSize: 12, padding: '6px 10px' }} title="Beamer verbinden">

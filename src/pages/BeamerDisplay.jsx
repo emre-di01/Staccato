@@ -77,6 +77,9 @@ export default function BeamerDisplay() {
         setPayload(p)
         setPhase('aktiv')
       })
+      .on('broadcast', { event: 'font_size' }, ({ payload: p }) => {
+        if (p?.size) setFontSize(p.size)
+      })
       .subscribe()
     channelRef.current = ch
     return () => ch.unsubscribe()
