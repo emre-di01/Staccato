@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext'
 import SharedModal from '../../components/Modal'
 import Avatar from '../../components/Avatar'
 import AufnahmeantragModal from '../../components/AufnahmeantragModal'
+import KursantragModal from '../../components/KursantragModal'
 
 const ROLLEN      = ['lehrer', 'schueler', 'eltern', 'vorstand']
 const ALLE_ROLLEN = ['admin', 'lehrer', 'schueler', 'eltern', 'vorstand']
@@ -15,6 +16,10 @@ const ROLLEN_FARBE = {
   eltern:    { bg: 'var(--warning)',  text: '#fff' },
   superadmin:{ bg: 'var(--danger)',   text: '#fff' },
   vorstand:  { bg: '#7c3aed',         text: '#fff' },
+}
+
+function bicGueltig(bic) {
+  return /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic.replace(/\s/g, '').toUpperCase())
 }
 
 function ibanGueltig(iban) {
@@ -280,10 +285,8 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
   const [fehler, setFehler] = useState('')
 
   async function speichern() {
-    if (form.iban && !ibanGueltig(form.iban)) {
-      setFehler('Ungültige IBAN – bitte prüfen.')
-      return
-    }
+    if (form.iban && !ibanGueltig(form.iban)) { setFehler('Ungültige IBAN – bitte prüfen.'); return }
+    if (form.bic  && !bicGueltig(form.bic))  { setFehler('Ungültige BIC – bitte prüfen.');  return }
     setLaden(true)
     const payload = {
       ...form,
@@ -392,8 +395,11 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
                 )}
               </Feld>
               <Feld label="BIC">
-                <input style={s.input} value={form.bic} placeholder="XXXXXXXX"
+                <input style={{ ...s.input, borderColor: form.bic && !bicGueltig(form.bic) ? 'var(--danger)' : undefined }}
+                  value={form.bic} placeholder="XXXXXXXX"
                   onChange={e => setForm(f => ({ ...f, bic: e.target.value.toUpperCase() }))} />
+                {form.bic && !bicGueltig(form.bic) && <span style={{ fontSize:11, color:'var(--danger)', marginTop:3 }}>Ungültige BIC</span>}
+                {form.bic && bicGueltig(form.bic) && <span style={{ fontSize:11, color:'var(--success)', marginTop:3 }}>✓ Gültige BIC</span>}
               </Feld>
             </div>
           )}
@@ -815,6 +821,58 @@ function LoeschenModal({ mitglied, onClose, onErfolg }) {
   )
 }
 
+// ─── Kursantrag Modal (Kursauswahl) ──────────────────────────
+
+function KursantragAuswahlModal({ mitglied, onClose }) {
+  const [kurse,  setKurse]  = useState([])
+  const [laden,  setLaden]  = useState(true)
+  const [gewählt, setGewählt] = useState(null)
+
+  useEffect(() => {
+    supabase.from('unterricht_schueler')
+      .select('unterricht(id, name, typ, wochentag, uhrzeit_von, uhrzeit_bis, abrechnungs_typ, farbe, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
+      .eq('schueler_id', mitglied.id)
+      .eq('status', 'aktiv')
+      .then(({ data }) => { setKurse((data ?? []).map(r => r.unterricht).filter(Boolean)); setLaden(false) })
+  }, [mitglied.id])
+
+  if (gewählt) return <KursantragModal schueler={mitglied} kurs={gewählt} onClose={onClose} />
+
+  return (
+    <Modal titel={`📋 Kursanmeldung – ${mitglied.voller_name}`} onClose={onClose} breit>
+      {laden ? (
+        <div style={{ color: 'var(--text-3)', fontSize: 13 }}>Lade Kurse…</div>
+      ) : kurse.length === 0 ? (
+        <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '12px 0' }}>Kein aktiver Kurs zugeordnet.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 4 }}>Für welchen Kurs soll die Anmeldung erstellt werden?</div>
+          {kurse.map(k => (
+            <button key={k.id} onClick={() => setGewählt(k)} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 16px', borderRadius: 'var(--radius)',
+              border: '1.5px solid var(--border)', background: 'var(--bg-2)',
+              cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              transition: 'border-color 0.15s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
+              <span style={{ fontSize: 20 }}>{k.instrumente?.icon ?? '🎵'}</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{k.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                  {k.wochentag?.toUpperCase()} {k.uhrzeit_von?.slice(0,5)}–{k.uhrzeit_bis?.slice(0,5)}
+                  {k.instrumente && ` · ${k.instrumente.name_de}`}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
+  )
+}
+
 // ─── Schulen Modal (Superadmin) ───────────────────────────────
 
 function SchulenModal({ mitglied, onClose }) {
@@ -1068,6 +1126,8 @@ export default function Mitgliederverwaltung() {
               <tbody>
                 {gefiltert.map((m, i) => {
                   const kannBearbeiten = m.rolle !== 'admin' || rolle === 'superadmin'
+                  const zahlungUnvollstaendig = m.zahlungsweise === 'sepa' && !m.iban
+                  const zahlungOk = m.zahlungsweise && !(m.zahlungsweise === 'sepa' && !m.iban)
                   return (
                   <tr key={m.id}
                     className={kannBearbeiten ? 'mitglied-row' : ''}
@@ -1080,6 +1140,8 @@ export default function Mitgliederverwaltung() {
                           <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{m.voller_name}</div>
                           {m.email && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{m.email}</div>}
                           {m.notizen && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{T('has_notes')}</div>}
+                          {zahlungUnvollstaendig && <div style={{ fontSize: 11, color: 'var(--warning, #f59e0b)', marginTop: 1 }}>⚠️ IBAN fehlt</div>}
+                          {zahlungOk && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>💳 {m.zahlungsweise === 'sepa' ? 'SEPA' : m.zahlungsweise === 'ueberweisung' ? 'Überweisung' : 'Bar'}</div>}
                         </div>
                       </div>
                     </td>
@@ -1103,6 +1165,9 @@ export default function Mitgliederverwaltung() {
                             <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Kurszuordnungen">🔗</button>
                           )}
                           <button onClick={() => setModal({ typ: 'antrag', mitglied: m })} style={s.btnKlein} title="Aufnahmeantrag">📋</button>
+                          {m.rolle === 'schueler' && (
+                            <button onClick={() => setModal({ typ: 'kursantrag', mitglied: m })} style={s.btnKlein} title="Kursanmeldung">📄</button>
+                          )}
                           <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={s.btnKlein} title="Dokumente">📁</button>
                           <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnKlein, color:'var(--danger)' }} title="Löschen">🗑</button>
                           {rolle === 'superadmin' && (
@@ -1160,6 +1225,9 @@ export default function Mitgliederverwaltung() {
                       <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📧</button>
                       <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>🔑</button>
                       <button onClick={() => setModal({ typ: 'antrag', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📋</button>
+                      {m.rolle === 'schueler' && (
+                        <button onClick={() => setModal({ typ: 'kursantrag', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📄</button>
+                      )}
                       <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📁</button>
                       <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>🗑</button>
                       {rolle === 'superadmin' && (
@@ -1185,6 +1253,7 @@ export default function Mitgliederverwaltung() {
       {modal?.typ === 'passwort'  && <PasswortModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'zuordnung' && <ZuordnungModal mitglied={modal.mitglied} onClose={() => setModal(null)} T={T} />}
       {modal?.typ === 'antrag'    && <AufnahmeantragModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
+      {modal?.typ === 'kursantrag' && <KursantragAuswahlModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'dokumente' && <DokumenteModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'schulen'   && <SchulenModal   mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'loeschen'  && (
