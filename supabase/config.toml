@@ -294,8 +294,8 @@ max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]
@@ -391,6 +391,7 @@ ONESIGNAL_REST_API_KEY = "env(ONESIGNAL_REST_API_KEY)"
 VAPID_PUBLIC_KEY = "env(VAPID_PUBLIC_KEY)"
 VAPID_PRIVATE_KEY = "env(VAPID_PRIVATE_KEY)"
 VAPID_SUBJECT = "env(VAPID_SUBJECT)"
+INTERNAL_SECRET = "env(INTERNAL_SECRET)"
 
 [analytics]
 enabled = true

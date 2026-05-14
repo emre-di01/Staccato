@@ -4,6 +4,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import Avatar from '../../components/Avatar'
+import ZertifikatModal from '../../components/ZertifikatModal'
+import KursantragModal from '../../components/KursantragModal'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 const STATUS_FARBE = {
@@ -541,6 +543,8 @@ export default function KursDetail() {
   const [alleSchueler,      setAlleSchueler]      = useState([])
   const [schuelerSuche,     setSchuelerSuche]     = useState('')
   const [schuelerProfilModal, setSchuelerProfilModal] = useState(null)
+  const [zertifikatSchueler, setZertifikatSchueler] = useState(null)
+  const [kursantragSchueler, setKursantragSchueler] = useState(null)
 
   useEffect(() => {
     async function ladeData() {
@@ -873,6 +877,12 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
                         {sc.stimmgruppe}
                       </span>
                     )}
+                    <button onClick={e => { e.stopPropagation(); setKursantragSchueler(sc.profiles) }}
+                      style={{ background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--text-3)', padding:'4px 6px', lineHeight:1 }}
+                      title="Kursanmeldung">📋</button>
+                    <button onClick={e => { e.stopPropagation(); setZertifikatSchueler(sc.profiles) }}
+                      style={{ background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--text-3)', padding:'4px 6px', lineHeight:1 }}
+                      title="Zertifikat erstellen">🎓</button>
                     <button onClick={e => { e.stopPropagation(); schuelerEntfernen(sc.schueler_id) }}
                       style={{ background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--danger)', padding:'4px 6px', lineHeight:1 }}
                       title="Aus Kurs entfernen">🗑</button>
@@ -957,6 +967,10 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
       )}
       {schuelerProfilModal && (
         <SchuelerProfilModal profil={schuelerProfilModal} onClose={() => setSchuelerProfilModal(null)} />
+      )}
+      {zertifikatSchueler && (
+        <ZertifikatModal schueler={zertifikatSchueler} kurs={kurs} onClose={() => setZertifikatSchueler(null)} />
+        {kursantragSchueler && <KursantragModal schueler={kursantragSchueler} kurs={kurs} onClose={() => setKursantragSchueler(null)} />}
       )}
       {modal?.typ === 'notiz' && (
         <NotizModal

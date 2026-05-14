@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import SharedModal from '../../components/Modal'
 import Avatar from '../../components/Avatar'
+import AufnahmeantragModal from '../../components/AufnahmeantragModal'
 
 const ROLLEN      = ['lehrer', 'schueler', 'eltern', 'vorstand']
 const ALLE_ROLLEN = ['admin', 'lehrer', 'schueler', 'eltern', 'vorstand']
@@ -14,6 +15,16 @@ const ROLLEN_FARBE = {
   eltern:    { bg: 'var(--warning)',  text: '#fff' },
   superadmin:{ bg: 'var(--danger)',   text: '#fff' },
   vorstand:  { bg: '#7c3aed',         text: '#fff' },
+}
+
+function ibanGueltig(iban) {
+  const rein = iban.replace(/\s/g, '').toUpperCase()
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/.test(rein)) return false
+  const umgestellt = rein.slice(4) + rein.slice(0, 4)
+  const ziffern = umgestellt.split('').map(c => isNaN(c) ? String(c.charCodeAt(0) - 55) : c).join('')
+  let rest = 0
+  for (const chunk of ziffern.match(/.{1,9}/g)) rest = Number(String(rest) + chunk) % 97
+  return rest === 1
 }
 
 // ─── UI Komponenten ───────────────────────────────────────────
@@ -247,21 +258,46 @@ function EinladungModal({ onClose, T }) {
 function ProfilModal({ mitglied, onClose, onErfolg, T }) {
   const { rolle: currentRolle } = useApp()
   const [form, setForm] = useState({
-    voller_name:         mitglied.voller_name ?? '',
-    rolle:               mitglied.rolle ?? 'schueler',
-    telefon:             mitglied.telefon ?? '',
-    adresse:             mitglied.adresse ?? '',
-    geburtsdatum:        mitglied.geburtsdatum ?? '',
-    notizen:             mitglied.notizen ?? '',
-    aktiv:               mitglied.aktiv ?? true,
-    kann_kurse_anlegen:  mitglied.kann_kurse_anlegen ?? false,
+    voller_name:                    mitglied.voller_name ?? '',
+    rolle:                          mitglied.rolle ?? 'schueler',
+    telefon:                        mitglied.telefon ?? '',
+    adresse:                        mitglied.adresse ?? '',
+    geburtsdatum:                   mitglied.geburtsdatum ?? '',
+    notizen:                        mitglied.notizen ?? '',
+    aktiv:                          mitglied.aktiv ?? true,
+    kann_kurse_anlegen:             mitglied.kann_kurse_anlegen ?? false,
+    iban:                           mitglied.iban ?? '',
+    bic:                            mitglied.bic ?? '',
+    kontoinhaber:                   mitglied.kontoinhaber ?? '',
+    zahlungsweise:                  mitglied.zahlungsweise ?? '',
+    zahlungsrhythmus:               mitglied.zahlungsrhythmus ?? '',
+    mitgliedsbeitrag:               mitglied.mitgliedsbeitrag ?? '',
+    erziehungsberechtigter_name:    mitglied.erziehungsberechtigter_name ?? '',
+    erziehungsberechtigter_telefon: mitglied.erziehungsberechtigter_telefon ?? '',
+    erziehungsberechtigter_email:   mitglied.erziehungsberechtigter_email ?? '',
   })
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
 
   async function speichern() {
+    if (form.iban && !ibanGueltig(form.iban)) {
+      setFehler('Ungültige IBAN – bitte prüfen.')
+      return
+    }
     setLaden(true)
-    const payload = { ...form, geburtsdatum: form.geburtsdatum || null }
+    const payload = {
+      ...form,
+      geburtsdatum:    form.geburtsdatum    || null,
+      zahlungsweise:   form.zahlungsweise   || null,
+      zahlungsrhythmus: form.zahlungsrhythmus || null,
+      mitgliedsbeitrag: form.mitgliedsbeitrag !== '' ? form.mitgliedsbeitrag : null,
+      iban:            form.iban            || null,
+      bic:             form.bic             || null,
+      kontoinhaber:    form.kontoinhaber    || null,
+      erziehungsberechtigter_name:    form.erziehungsberechtigter_name    || null,
+      erziehungsberechtigter_telefon: form.erziehungsberechtigter_telefon || null,
+      erziehungsberechtigter_email:   form.erziehungsberechtigter_email   || null,
+    }
     const { error } = await supabase.from('profiles').update(payload).eq('id', mitglied.id)
     if (error) setFehler(error.message)
     else { onErfolg(); onClose() }
@@ -308,6 +344,82 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
             <label htmlFor="kann_kurse_anlegen" style={s.label}>Darf eigene Kurse anlegen</label>
           </div>
         )}
+        {/* Zahlungsdaten */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+            💳 Zahlungsdaten
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <Feld label="Zahlungsweise">
+              <select style={s.input} value={form.zahlungsweise} onChange={e => setForm(f => ({ ...f, zahlungsweise: e.target.value }))}>
+                <option value="">– wählen –</option>
+                <option value="sepa">SEPA-Lastschrift</option>
+                <option value="ueberweisung">Überweisung</option>
+                <option value="bar">Barzahlung</option>
+              </select>
+            </Feld>
+            <Feld label="Zahlungsrhythmus">
+              <select style={s.input} value={form.zahlungsrhythmus} onChange={e => setForm(f => ({ ...f, zahlungsrhythmus: e.target.value }))}>
+                <option value="">– wählen –</option>
+                <option value="monatlich">Monatlich</option>
+                <option value="quartalsweise">Quartalsweise</option>
+                <option value="halbjaehrlich">Halbjährlich</option>
+                <option value="jaehrlich">Jährlich</option>
+              </select>
+            </Feld>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <Feld label="Mitgliedsbeitrag (€)">
+              <input type="number" step="0.01" min="0" style={s.input} value={form.mitgliedsbeitrag}
+                placeholder="z.B. 29.00" onChange={e => setForm(f => ({ ...f, mitgliedsbeitrag: e.target.value }))} />
+            </Feld>
+            <Feld label="Kontoinhaber">
+              <input style={s.input} value={form.kontoinhaber} placeholder="Abweichend vom Mitglied"
+                onChange={e => setForm(f => ({ ...f, kontoinhaber: e.target.value }))} />
+            </Feld>
+          </div>
+          {form.zahlungsweise === 'sepa' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
+              <Feld label="IBAN">
+                <input style={{ ...s.input, borderColor: form.iban && !ibanGueltig(form.iban) ? 'var(--danger)' : undefined }}
+                  value={form.iban} placeholder="DE12 3456 7890 1234 5678 90"
+                  onChange={e => setForm(f => ({ ...f, iban: e.target.value.toUpperCase() }))} />
+                {form.iban && !ibanGueltig(form.iban) && (
+                  <span style={{ fontSize: 11, color: 'var(--danger)', marginTop: 3 }}>Ungültige IBAN</span>
+                )}
+                {form.iban && ibanGueltig(form.iban) && (
+                  <span style={{ fontSize: 11, color: 'var(--success)', marginTop: 3 }}>✓ Gültige IBAN</span>
+                )}
+              </Feld>
+              <Feld label="BIC">
+                <input style={s.input} value={form.bic} placeholder="XXXXXXXX"
+                  onChange={e => setForm(f => ({ ...f, bic: e.target.value.toUpperCase() }))} />
+              </Feld>
+            </div>
+          )}
+        </div>
+
+        {/* Erziehungsberechtigte */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+            👨‍👩‍👧 Erziehungsberechtigte (bei Minderjährigen)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Feld label="Name">
+              <input style={s.input} value={form.erziehungsberechtigter_name}
+                onChange={e => setForm(f => ({ ...f, erziehungsberechtigter_name: e.target.value }))} />
+            </Feld>
+            <Feld label="Telefon">
+              <input style={s.input} value={form.erziehungsberechtigter_telefon}
+                onChange={e => setForm(f => ({ ...f, erziehungsberechtigter_telefon: e.target.value }))} />
+            </Feld>
+          </div>
+          <Feld label="E-Mail" style={{ marginTop: 12 }}>
+            <input style={{ ...s.input, marginTop: 6 }} value={form.erziehungsberechtigter_email}
+              onChange={e => setForm(f => ({ ...f, erziehungsberechtigter_email: e.target.value }))} />
+          </Feld>
+        </div>
+
         {fehler && <p style={s.fehler}>{fehler}</p>}
         <div style={s.btnRow}>
           <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
@@ -990,6 +1102,7 @@ export default function Mitgliederverwaltung() {
                           {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
                             <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Kurszuordnungen">🔗</button>
                           )}
+                          <button onClick={() => setModal({ typ: 'antrag', mitglied: m })} style={s.btnKlein} title="Aufnahmeantrag">📋</button>
                           <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={s.btnKlein} title="Dokumente">📁</button>
                           <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnKlein, color:'var(--danger)' }} title="Löschen">🗑</button>
                           {rolle === 'superadmin' && (
@@ -1046,6 +1159,7 @@ export default function Mitgliederverwaltung() {
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📧</button>
                       <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>🔑</button>
+                      <button onClick={() => setModal({ typ: 'antrag', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📋</button>
                       <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>📁</button>
                       <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>🗑</button>
                       {rolle === 'superadmin' && (
@@ -1070,6 +1184,7 @@ export default function Mitgliederverwaltung() {
       {modal?.typ === 'email'     && <EmailModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} />}
       {modal?.typ === 'passwort'  && <PasswortModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'zuordnung' && <ZuordnungModal mitglied={modal.mitglied} onClose={() => setModal(null)} T={T} />}
+      {modal?.typ === 'antrag'    && <AufnahmeantragModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'dokumente' && <DokumenteModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'schulen'   && <SchulenModal   mitglied={modal.mitglied} onClose={() => setModal(null)} />}
       {modal?.typ === 'loeschen'  && (

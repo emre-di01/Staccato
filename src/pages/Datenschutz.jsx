@@ -61,20 +61,23 @@ export default function Datenschutz() {
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>6. Lokale Speicherung</h2>
-        <p style={p}>Diese Anwendung speichert ausschließlich technisch notwendige Daten lokal auf dem Gerät:</p>
+        <h2 style={h2}>6. Lokale Speicherung / Cookies</h2>
+        <p style={p}>Die Web-App (<strong>app.staccato-music.de</strong>) speichert ausschließlich technisch notwendige Daten lokal auf dem Gerät — es werden keine Tracking-Cookies gesetzt:</p>
         <ul style={ul}>
           <li><strong>Sitzungsdaten (Supabase Auth):</strong> Für sichere Anmeldung und Authentifizierung. Werden beim Abmelden gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
           <li><strong>Design-Einstellungen:</strong> Theme, Dark Mode und Sprache (kein Server-Zugriff). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
           <li><strong>Versionsinformation:</strong> Gesehene Changelog-Version (kein Server-Zugriff). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
           <li><strong>Push-Notification-Token:</strong> Gerätegebundener Token für den Empfang von Push-Benachrichtigungen. Wird auf dem Server gespeichert, solange Push-Benachrichtigungen aktiviert sind. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
         </ul>
-        <p style={{ ...p, marginTop: 10 }}>Es werden keine Tracking-, Analyse- oder Werbe-Cookies eingesetzt. In der Web-App werden Cookies durch localStorage ersetzt; in der Android-App durch den internen App-Speicher.</p>
+        <p style={{ ...p, marginTop: 16 }}>Auf der <strong>Marketingwebsite (staccato-music.de)</strong> wird Google Analytics eingesetzt — ausschließlich nach Ihrer ausdrücklichen Einwilligung (Cookie-Banner). Google Analytics setzt Cookies (<code>_ga</code>, <code>_ga_*</code>) zur Analyse des Nutzungsverhaltens. IP-Adressen werden anonymisiert. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO. Sie können Ihre Einwilligung jederzeit widerrufen, indem Sie den Browser-Speicher (localStorage) löschen.</p>
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>7. Weitergabe an Dritte</h2>
-        <p style={p}>Eine Weitergabe personenbezogener Daten an Dritte findet nicht statt. Insbesondere werden keine Daten an Analyse-, Werbe- oder Social-Media-Dienste übertragen.</p>
+        <h2 style={h2}>7. Weitergabe an Dritte / Google Analytics</h2>
+        <p style={p}>
+          Im Bereich der Web-App findet keine Weitergabe personenbezogener Daten an Dritte statt.<br /><br />
+          Auf der Marketingwebsite staccato-music.de wird <strong>Google Analytics 4</strong> (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Irland) eingesetzt — nur nach Einwilligung. Google verarbeitet die Daten auf Basis eines Auftragsverarbeitungsvertrags (Art. 28 DSGVO). IP-Adressen werden vor der Übertragung anonymisiert. Weitere Informationen: <a href="https://policies.google.com/privacy" style={link} target="_blank" rel="noreferrer">policies.google.com/privacy</a>
+        </p>
       </section>
 
       <section style={sek}>
@@ -83,17 +86,18 @@ export default function Datenschutz() {
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>9. Kontolöschung</h2>
+        <h2 style={h2}>9. Selbstauskunft, Datenexport und Kontolöschung</h2>
         <p style={p}>
-          Sie können jederzeit die Löschung Ihres Kontos und aller damit verbundenen personenbezogenen Daten beantragen.
+          Sie können jederzeit eine Kopie aller über Sie gespeicherten personenbezogenen Daten herunterladen
+          sowie Ihr Konto und alle zugehörigen Daten sofort und unwiderruflich selbst löschen (Art. 15, 17, 20 DSGVO).
           Die Löschung umfasst Stammdaten, Nutzungsdaten, hochgeladene Dateien und Push-Notification-Tokens.
         </p>
         <p style={{ ...p, marginTop: 10 }}>
-          <strong>In der App:</strong> Profil → „Konto löschen" → Löschung beantragen.<br />
-          <strong>Per E-Mail:</strong> <a href="mailto:staccato@401dev.de?subject=Kontolöschung%20beantragen" style={link}>staccato@401dev.de</a> mit dem Betreff „Kontolöschung beantragen".<br />
-          <strong>Per Web:</strong> <a href="https://app.staccato-music.de/datenschutz#kontologeschung" style={link}>https://app.staccato-music.de/datenschutz</a>
+          <strong>Daten exportieren:</strong> Profil → „Meine Daten (DSGVO Art. 15)" → „Daten herunterladen" — sofortiger Download als JSON-Datei.<br />
+          <strong>Konto löschen:</strong> Profil → „Konto löschen" → Bestätigung mit „LÖSCHEN" — sofortige, unwiderrufliche Löschung.<br />
+          <strong>Per E-Mail:</strong> <a href="mailto:staccato@401dev.de?subject=Kontolöschung%20beantragen" style={link}>staccato@401dev.de</a>
         </p>
-        <p style={{ ...p, marginTop: 10 }}>Die Bearbeitung erfolgt innerhalb von 30 Tagen. Gesetzliche Aufbewahrungspflichten (z.&nbsp;B. steuerrelevante Unterlagen) bleiben davon unberührt.</p>
+        <p style={{ ...p, marginTop: 10 }}>Gesetzliche Aufbewahrungspflichten (z.&nbsp;B. steuerrelevante Unterlagen) bleiben davon unberührt.</p>
       </section>
 
       <section style={sek}>

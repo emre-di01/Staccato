@@ -99,17 +99,28 @@ export default function SchuelerDashboard() {
 
       // Nächste Stunden
       let naechsteStunden = []
+      let hausaufgaben = []
       const ids = meineKurse.map(k => k.id)
       if (ids.length > 0) {
-        const { data: st } = await supabase
-          .from('stunden')
-          .select('*, unterricht(name, typ)')
-          .in('unterricht_id', ids)
-          .gte('beginn', new Date().toISOString())
-          .eq('status', 'geplant')
-          .order('beginn')
-          .limit(5)
+        const [{ data: st }, { data: hw }] = await Promise.all([
+          supabase.from('stunden')
+            .select('*, unterricht(name, typ)')
+            .in('unterricht_id', ids)
+            .gte('beginn', new Date().toISOString())
+            .eq('status', 'geplant')
+            .order('beginn')
+            .limit(5),
+          supabase.from('stunden')
+            .select('id, beginn, hausaufgaben, unterricht(name)')
+            .in('unterricht_id', ids)
+            .not('hausaufgaben', 'is', null)
+            .neq('hausaufgaben', '')
+            .lte('beginn', new Date().toISOString())
+            .order('beginn', { ascending: false })
+            .limit(5),
+        ])
         naechsteStunden = st ?? []
+        hausaufgaben = hw ?? []
       }
 
       const { data: anwData } = await supabase
@@ -120,13 +131,14 @@ export default function SchuelerDashboard() {
       const anwOk    = (anwData ?? []).filter(a => a.status === 'anwesend' || a.status === 'zu_spaet').length
       const anwesenheitsRate = anwGesamt >= 3 ? Math.round(100 * anwOk / anwGesamt) : null
 
-      return { kurse: meineKurse, naechsteStunden, anwesenheitsRate }
+      return { kurse: meineKurse, naechsteStunden, anwesenheitsRate, hausaufgaben }
     },
   })
 
-  const kurse           = data?.kurse           ?? []
-  const naechsteStunden = data?.naechsteStunden ?? []
+  const kurse            = data?.kurse            ?? []
+  const naechsteStunden  = data?.naechsteStunden  ?? []
   const anwesenheitsRate = data?.anwesenheitsRate ?? null
+  const hausaufgaben     = data?.hausaufgaben     ?? []
 
   return (
     <div>
@@ -252,6 +264,28 @@ export default function SchuelerDashboard() {
           )}
         </div>
       </div>
+
+      {/* Hausaufgaben */}
+      {(laden || hausaufgaben.length > 0) && (
+        <div style={{ marginTop: 8 }}>
+          <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:14 }}>📝 Hausaufgaben</h2>
+          {laden ? <SkeletonList rows={2} /> : (
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {hausaufgaben.map(st => (
+                <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'14px 16px', border:'1px solid var(--border)', display:'flex', gap:14 }}>
+                  <div style={{ flexShrink:0, fontSize:22 }}>📋</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, color:'var(--text-3)', marginBottom:4 }}>
+                      {st.unterricht?.name} · {new Date(st.beginn).toLocaleDateString('de-DE', { day:'numeric', month:'short' })}
+                    </div>
+                    <div style={{ fontSize:14, color:'var(--text)', lineHeight:1.6, whiteSpace:'pre-wrap' }}>{st.hausaufgaben}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <style>{`
         @media (max-width: 768px) {

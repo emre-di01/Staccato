@@ -24,18 +24,23 @@ export default function WhatsNewModal() {
   const entry = CHANGELOG[0]
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16,
-    }}>
-      <div style={{
-        background: 'var(--surface)', borderRadius: 20, padding: '32px 28px',
-        width: '100%', maxWidth: 440, boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
-        fontFamily: "'Outfit','DM Sans',sans-serif",
-        animation: 'wnSlide .25s ease',
+    <div
+      onClick={dismiss}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
       }}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--surface)', borderRadius: 20, padding: '32px 28px',
+          width: '100%', maxWidth: 440, boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
+          fontFamily: "'Outfit','DM Sans',sans-serif",
+          animation: 'wnSlide .25s ease',
+          maxHeight: 'calc(100vh - 32px)', overflowY: 'auto',
+        }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
           <div style={{
@@ -55,7 +60,7 @@ export default function WhatsNewModal() {
 
         {/* Feature list */}
         <ul style={{ listStyle: 'none', padding: 0, margin: '20px 0 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {entry.features.map((f, i) => (
+          {entry.features.slice(0, 3).map((f, i) => (
             <li key={i} style={{
               display: 'flex', alignItems: 'flex-start', gap: 12,
               background: 'var(--bg-2)', borderRadius: 12, padding: '10px 14px',

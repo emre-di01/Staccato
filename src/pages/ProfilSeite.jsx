@@ -55,11 +55,68 @@ export default function ProfilSeite() {
   const [dateien,     setDateien]     = useState([])
   const [dateiLaden,  setDateiLaden]  = useState(true)
 
+  // MFA
+  const [mfaFaktoren,   setMfaFaktoren]   = useState([])
+  const [mfaPhase,      setMfaPhase]      = useState('idle') // idle | enrolling | verifying
+  const [mfaEnrollData, setMfaEnrollData] = useState(null)
+  const [mfaCode,       setMfaCode]       = useState('')
+  const [mfaLaden,      setMfaLaden]      = useState(false)
+
+  const [loeschModal,  setLoeschModal]  = useState(false)
+  const [loeschInput,  setLoeschInput]  = useState('')
+  const [loeschLaden,  setLoeschLaden]  = useState(false)
+  const [exportLaden,  setExportLaden]  = useState(false)
+
+  async function ladeMfaFaktoren() {
+    const { data } = await supabase.auth.mfa.listFactors()
+    setMfaFaktoren(data?.totp?.filter(f => f.status === 'verified') ?? [])
+  }
+
+  async function mfaAktivieren() {
+    setMfaLaden(true); setFehler('')
+    // Unverifizierte Altfaktoren bereinigen
+    const { data: existing } = await supabase.auth.mfa.listFactors()
+    for (const f of existing?.totp ?? []) await supabase.auth.mfa.unenroll({ factorId: f.id })
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: 'totp', issuer: 'Staccato',
+      friendlyName: profil?.voller_name ?? 'Staccato',
+    })
+    if (error) { setFehler(error.message); setMfaLaden(false); return }
+    setMfaEnrollData(data)
+    setMfaPhase('verifying')
+    setMfaLaden(false)
+  }
+
+  async function mfaBestätigen(e) {
+    e.preventDefault()
+    setMfaLaden(true); setFehler('')
+    const { data: challenge, error: ce } = await supabase.auth.mfa.challenge({ factorId: mfaEnrollData.id })
+    if (ce) { setFehler(ce.message); setMfaLaden(false); return }
+    const { error } = await supabase.auth.mfa.verify({
+      factorId: mfaEnrollData.id, challengeId: challenge.id,
+      code: mfaCode.replace(/\s/g, ''),
+    })
+    if (error) { setFehler('Ungültiger Code – bitte erneut versuchen.'); setMfaLaden(false); return }
+    setMfaPhase('idle'); setMfaCode(''); setMfaEnrollData(null)
+    await ladeMfaFaktoren()
+    setErfolg('Zwei-Faktor-Authentifizierung aktiviert!')
+    setMfaLaden(false)
+  }
+
+  async function mfaDeaktivieren(factorId) {
+    setMfaLaden(true)
+    await supabase.auth.mfa.unenroll({ factorId })
+    await ladeMfaFaktoren()
+    setErfolg('Zwei-Faktor-Authentifizierung deaktiviert.')
+    setMfaLaden(false)
+  }
+
   useEffect(() => {
     if (!profil?.id) return
     supabase.from('mitglied_dateien')
       .select('*').eq('profil_id', profil.id).order('hochgeladen_am', { ascending: false })
       .then(({ data }) => { setDateien(data ?? []); setDateiLaden(false) })
+    ladeMfaFaktoren()
   }, [profil?.id])
 
   async function profilSpeichern() {
@@ -112,6 +169,40 @@ export default function ProfilSeite() {
     await ladeProfil(profil.id)
     setErfolg('Profilbild gespeichert!')
     setAvatarLaden(false)
+  }
+
+  async function datenExportieren() {
+    setExportLaden(true)
+    const { data, error } = await supabase.rpc('meine_daten_exportieren')
+    if (error) { setFehler('Export fehlgeschlagen: ' + error.message); setExportLaden(false); return }
+    if (!data) { setFehler('Keine Daten erhalten.'); setExportLaden(false); return }
+    const json = JSON.stringify(data, null, 2)
+    const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(json)
+    const a = document.createElement('a')
+    a.setAttribute('href', dataUrl)
+    a.setAttribute('download', `staccato-daten-${new Date().toISOString().slice(0,10)}.json`)
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setExportLaden(false)
+  }
+
+  async function kontoLoeschen() {
+    setLoeschLaden(true)
+    // Avatar aus Storage löschen
+    if (profil?.avatar_url) {
+      const match = profil.avatar_url.split('?')[0].match(/\/avatare\/(.+)$/)
+      if (match) await supabase.storage.from('avatare').remove([decodeURIComponent(match[1])])
+    }
+    const { error } = await supabase.rpc('mein_konto_loeschen')
+    if (error) {
+      setFehler('Löschen fehlgeschlagen: ' + error.message)
+      setLoeschLaden(false)
+      setLoeschModal(false)
+      return
+    }
+    await supabase.auth.signOut()
+    window.location.href = '/'
   }
 
   async function avatarLoeschen() {
@@ -239,19 +330,137 @@ export default function ProfilSeite() {
         </div>
       </div>
 
-      {/* Konto löschen */}
+      {/* 2FA */}
       <div style={s.card}>
+        <h2 style={s.h2}>🛡️ Zwei-Faktor-Authentifizierung</h2>
+
+        {mfaPhase === 'idle' && (
+          mfaFaktoren.length === 0 ? (
+            <>
+              <p style={{ margin:'0 0 16px', fontSize:14, color:'var(--text-2)', lineHeight:1.6 }}>
+                Erhöhe die Sicherheit deines Kontos mit einer Authenticator-App (z. B. Google Authenticator oder Authy).
+              </p>
+              <button onClick={mfaAktivieren} disabled={mfaLaden} style={s.btnPri}>
+                {mfaLaden ? 'Vorbereiten …' : '🛡️ 2FA aktivieren'}
+              </button>
+            </>
+          ) : (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:20 }}>✅</span>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:14, color:'var(--text)' }}>2FA ist aktiviert</div>
+                  <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>{mfaFaktoren[0].friendly_name}</div>
+                </div>
+              </div>
+              <button onClick={() => mfaDeaktivieren(mfaFaktoren[0].id)} disabled={mfaLaden}
+                style={{ ...s.btnPri, background:'var(--danger)', color:'#fff' }}>
+                {mfaLaden ? '…' : 'Deaktivieren'}
+              </button>
+            </div>
+          )
+        )}
+
+        {mfaPhase === 'verifying' && mfaEnrollData && (
+          <form onSubmit={mfaBestätigen} style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            <p style={{ margin:0, fontSize:14, color:'var(--text-2)', lineHeight:1.6 }}>
+              Scanne diesen QR-Code mit deiner Authenticator-App und gib dann den 6-stelligen Code ein.
+            </p>
+            <div style={{ display:'flex', justifyContent:'center' }}>
+              <img src={mfaEnrollData.totp.qr_code} alt="QR-Code"
+                style={{ width:180, height:180, borderRadius:'var(--radius)', border:'1px solid var(--border)', padding:8, background:'#fff' }} />
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', background:'var(--bg)', borderRadius:'var(--radius)', border:'1px solid var(--border)' }}>
+              <code style={{ flex:1, fontSize:12, letterSpacing:'0.08em', color:'var(--text)', wordBreak:'break-all' }}>
+                {mfaEnrollData.totp.secret}
+              </code>
+              <button type="button"
+                onClick={() => navigator.clipboard.writeText(mfaEnrollData.totp.secret)}
+                style={{ flexShrink:0, padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                Kopieren
+              </button>
+            </div>
+            <Feld label="6-stelliger Code aus der App">
+              <input
+                style={{ ...s.input, letterSpacing:'0.2em', fontSize:20, textAlign:'center' }}
+                value={mfaCode}
+                onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000 000"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+              />
+            </Feld>
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button type="button"
+                onClick={() => { setMfaPhase('idle'); setMfaEnrollData(null); setMfaCode('') }}
+                style={{ ...s.btnPri, background:'var(--border)', color:'var(--text)' }}>
+                Abbrechen
+              </button>
+              <button type="submit" disabled={mfaLaden || mfaCode.length !== 6} style={s.btnPri}>
+                {mfaLaden ? 'Prüfe …' : '✓ Bestätigen'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Datenschutz / DSGVO */}
+      <div style={s.card}>
+        <h2 style={s.h2}>🔒 Meine Daten (DSGVO Art. 15)</h2>
+        <p style={{ fontSize:14, color:'var(--text-2)', lineHeight:1.6, margin:'0 0 16px' }}>
+          Du hast das Recht, eine Kopie aller über dich gespeicherten personenbezogenen Daten zu erhalten.
+        </p>
+        <button onClick={datenExportieren} disabled={exportLaden} style={s.btnPri}>
+          {exportLaden ? 'Exportiere …' : '⬇ Daten herunterladen'}
+        </button>
+      </div>
+
+      {/* Konto löschen */}
+      <div style={{ ...s.card, borderColor:'var(--danger)' }}>
         <h2 style={{ ...s.h2, color:'var(--danger)' }}>⚠️ Konto löschen</h2>
         <p style={{ fontSize:14, color:'var(--text-2)', lineHeight:1.6, margin:'0 0 16px' }}>
-          Du kannst die Löschung deines Kontos und aller zugehörigen personenbezogenen Daten beantragen.
-          Die Löschung wird von der Schulverwaltung bearbeitet.
+          Hiermit löschst du dein Konto und alle zugehörigen personenbezogenen Daten unwiderruflich
+          (gemäß Art. 17 DSGVO). Diese Aktion kann nicht rückgängig gemacht werden.
         </p>
-        <a
-          href={`mailto:staccato@401dev.de?subject=Kontol%C3%B6schung%20beantragen&body=Bitte%20l%C3%B6sche%20mein%20Konto%20(${encodeURIComponent(profil?.voller_name ?? '')}). `}
-          style={{ display:'inline-block', padding:'10px 20px', borderRadius:'var(--radius)', background:'var(--danger)', color:'#fff', fontSize:14, fontWeight:700, textDecoration:'none' }}>
-          Löschung beantragen
-        </a>
+        <button onClick={() => { setLoeschModal(true); setLoeschInput('') }}
+          style={{ ...s.btnPri, background:'transparent', color:'var(--danger)', border:'1.5px solid var(--danger)' }}>
+          Konto löschen
+        </button>
       </div>
+
+      {/* Lösch-Bestätigungs-Modal */}
+      {loeschModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
+          <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'28px 28px 24px', maxWidth:420, width:'100%', boxShadow:'var(--shadow-lg)' }}>
+            <h2 style={{ margin:'0 0 12px', fontSize:18, fontWeight:800, color:'var(--danger)' }}>Konto unwiderruflich löschen</h2>
+            <p style={{ margin:'0 0 20px', fontSize:14, color:'var(--text-2)', lineHeight:1.6 }}>
+              Alle deine Daten werden sofort und dauerhaft gelöscht. Du wirst automatisch abgemeldet.
+            </p>
+            <p style={{ margin:'0 0 10px', fontSize:13, fontWeight:700, color:'var(--text)' }}>
+              Tippe <strong>LÖSCHEN</strong> zur Bestätigung:
+            </p>
+            <input
+              style={{ ...s.input, marginBottom:20 }}
+              value={loeschInput}
+              onChange={e => setLoeschInput(e.target.value)}
+              placeholder="LÖSCHEN"
+              autoFocus
+            />
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button onClick={() => setLoeschModal(false)} disabled={loeschLaden}
+                style={{ ...s.btnPri, background:'var(--border)', color:'var(--text)' }}>
+                Abbrechen
+              </button>
+              <button onClick={kontoLoeschen}
+                disabled={loeschInput !== 'LÖSCHEN' || loeschLaden}
+                style={{ ...s.btnPri, background:'var(--danger)', color:'#fff', opacity: loeschInput !== 'LÖSCHEN' ? 0.5 : 1 }}>
+                {loeschLaden ? 'Lösche …' : 'Endgültig löschen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
