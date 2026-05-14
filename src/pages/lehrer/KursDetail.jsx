@@ -968,10 +968,8 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
       {schuelerProfilModal && (
         <SchuelerProfilModal profil={schuelerProfilModal} onClose={() => setSchuelerProfilModal(null)} />
       )}
-      {zertifikatSchueler && (
-        <ZertifikatModal schueler={zertifikatSchueler} kurs={kurs} onClose={() => setZertifikatSchueler(null)} />
-        {kursantragSchueler && <KursantragModal schueler={kursantragSchueler} kurs={kurs} onClose={() => setKursantragSchueler(null)} />}
-      )}
+      {zertifikatSchueler && <ZertifikatModal schueler={zertifikatSchueler} kurs={kurs} onClose={() => setZertifikatSchueler(null)} />}
+      {kursantragSchueler && <KursantragModal schueler={kursantragSchueler} kurs={kurs} onClose={() => setKursantragSchueler(null)} />}
       {modal?.typ === 'notiz' && (
         <NotizModal
           stunde={modal.stunde}
