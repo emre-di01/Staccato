@@ -8,21 +8,33 @@ export default function SuperadminDemos() {
   const [tab, setTab]                 = useState('anfragen')
   const [anfragen, setAnfragen]       = useState([])
   const [demos, setDemos]             = useState([])
+  const [archiv, setArchiv]           = useState([])
   const [laden, setLaden]             = useState(true)
-  const [aktion, setAktion]           = useState(null)  // { id, typ }
+  const [aktion, setAktion]           = useState(null)
   const [ablehnModal, setAblehnModal] = useState(null)
 
   useEffect(() => { ladeAlles() }, [])
 
   async function ladeAlles() {
     setLaden(true)
-    const [{ data: a }, { data: d }] = await Promise.all([
+    const [{ data: a }, { data: d }, { data: ar }] = await Promise.all([
       supabase.from('demo_anfragen').select('*').eq('status', 'ausstehend').order('erstellt_am', { ascending: false }),
       supabase.from('demo_anfragen').select('*, schulen(id, name, demo_expires_at)').eq('status', 'genehmigt').order('genehmigt_am', { ascending: false }),
+      supabase.from('demo_anfragen').select('*').eq('status', 'archiviert').order('genehmigt_am', { ascending: false }),
     ])
     setAnfragen(a ?? [])
     setDemos(d ?? [])
+    setArchiv(ar ?? [])
     setLaden(false)
+  }
+
+  async function rufeFunktionAuf(anfrage_id, token) {
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/demo-genehmigen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ anfrage_id }),
+    })
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? 'Fehler') }
   }
 
   async function handleGenehmigen(anfrage) {
@@ -31,15 +43,30 @@ export default function SuperadminDemos() {
     setAktion({ id: anfrage.id, typ: 'genehmigen' })
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/demo-genehmigen`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ anfrage_id: anfrage.id }),
-      })
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? 'Fehler') }
+      await rufeFunktionAuf(anfrage.id, session.access_token)
       toast('Demo genehmigt – Zugangsdaten wurden gesendet.', 'success')
       await ladeAlles()
     } catch (e) {
+      toast(e.message, 'error')
+    } finally {
+      setAktion(null)
+    }
+  }
+
+  async function handleNeuSchalten(anfrage) {
+    const ok = await confirm(`Neue Demo-Umgebung für „${anfrage.schul_name}" erstellen und Zugangsdaten erneut an ${anfrage.email} senden?`, { confirmLabel: 'Neue Demo erstellen', dangerous: false })
+    if (!ok) return
+    setAktion({ id: anfrage.id, typ: 'genehmigen' })
+    try {
+      // Temporarily reset to ausstehend so the edge function accepts it
+      await supabase.from('demo_anfragen').update({ status: 'ausstehend' }).eq('id', anfrage.id)
+      const { data: { session } } = await supabase.auth.getSession()
+      await rufeFunktionAuf(anfrage.id, session.access_token)
+      toast('Neue Demo erstellt – Zugangsdaten wurden gesendet.', 'success')
+      await ladeAlles()
+    } catch (e) {
+      // Revert status on failure
+      await supabase.from('demo_anfragen').update({ status: 'archiviert' }).eq('id', anfrage.id)
       toast(e.message, 'error')
     } finally {
       setAktion(null)
@@ -63,11 +90,11 @@ export default function SuperadminDemos() {
   }
 
   async function handleLoeschen(demo) {
-    const ok = await confirm(`Demo-Schule „${demo.schulen?.name}" und alle Accounts unwiderruflich löschen?`, { confirmLabel: 'Löschen' })
+    const ok = await confirm(`Demo-Schule „${demo.schulen?.name}" und alle Accounts unwiderruflich löschen? Die Anfrage bleibt im Archiv.`, { confirmLabel: 'Löschen' })
     if (!ok) return
     setAktion({ id: demo.id, typ: 'loeschen' })
     const { error } = await supabase.rpc('demo_schule_loeschen', { p_schule_id: demo.schulen?.id })
-    if (error) { toast(error.message, 'error') } else { toast('Demo gelöscht.', 'success'); await ladeAlles() }
+    if (error) { toast(error.message, 'error') } else { toast('Demo gelöscht – Anfrage archiviert.', 'success'); await ladeAlles() }
     setAktion(null)
   }
 
@@ -75,20 +102,26 @@ export default function SuperadminDemos() {
     const ok = await confirm(`Demo-Schule „${demo.schulen?.name}" in echte Schule umwandeln? Das Demo-Ablaufdatum wird entfernt.`, { confirmLabel: 'Umwandeln', dangerous: false })
     if (!ok) return
     await supabase.from('schulen').update({ ist_demo: false, demo_expires_at: null }).eq('id', demo.schulen?.id)
+    await supabase.from('demo_anfragen').update({ status: 'archiviert' }).eq('id', demo.id)
     toast('Schule erfolgreich umgewandelt.', 'success')
     await ladeAlles()
   }
 
   function verbleibendeTageBis(dt) {
     if (!dt) return null
-    const diff = new Date(dt) - new Date()
-    return Math.ceil(diff / (1000 * 60 * 60 * 24))
+    return Math.ceil((new Date(dt) - new Date()) / (1000 * 60 * 60 * 24))
   }
 
   function fmt(dt) {
     if (!dt) return '–'
     return new Date(dt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
   }
+
+  const tabs = [
+    { key: 'anfragen', label: `Anfragen${anfragen.length ? ` (${anfragen.length})` : ''}` },
+    { key: 'demos',    label: `Aktive Demos${demos.length ? ` (${demos.length})` : ''}` },
+    { key: 'archiv',   label: `Archiv${archiv.length ? ` (${archiv.length})` : ''}` },
+  ]
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -99,12 +132,8 @@ export default function SuperadminDemos() {
         </p>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', borderRadius: 'var(--radius)', padding: 4, marginBottom: 24, width: 'fit-content', border: '1px solid var(--border)' }}>
-        {[
-          { key: 'anfragen', label: `Anfragen${anfragen.length ? ` (${anfragen.length})` : ''}` },
-          { key: 'demos',    label: `Aktive Demos${demos.length ? ` (${demos.length})` : ''}` },
-        ].map(t => (
+        {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '8px 18px', borderRadius: 'var(--radius)', border: 'none',
             background: tab === t.key ? 'var(--primary)' : 'transparent',
@@ -137,22 +166,18 @@ export default function SuperadminDemos() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button
-                    onClick={() => setAblehnModal(a)}
-                    disabled={aktion?.id === a.id}
-                    style={{ padding: '8px 16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                  >Ablehnen</button>
-                  <button
-                    onClick={() => handleGenehmigen(a)}
-                    disabled={!!aktion}
-                    style={{ padding: '8px 16px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-                  >{aktion?.id === a.id && aktion.typ === 'genehmigen' ? 'Erstelle Demo …' : '✓ Genehmigen'}</button>
+                  <button onClick={() => setAblehnModal(a)} disabled={aktion?.id === a.id}
+                    style={btnSek}>Ablehnen</button>
+                  <button onClick={() => handleGenehmigen(a)} disabled={!!aktion}
+                    style={btnPri}>
+                    {aktion?.id === a.id && aktion.typ === 'genehmigen' ? 'Erstelle Demo …' : '✓ Genehmigen'}
+                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
-      ) : (
+      ) : tab === 'demos' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {demos.length === 0 && (
             <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: 48 }}>Keine aktiven Demos.</div>
@@ -182,9 +207,10 @@ export default function SuperadminDemos() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                    <button onClick={() => handleVerlaengern(d.schulen)} style={{ padding: '8px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>+7 Tage</button>
-                    <button onClick={() => handleKonvertieren(d)} style={{ padding: '8px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Umwandeln</button>
-                    <button onClick={() => handleLoeschen(d)} disabled={aktion?.id === d.id} style={{ padding: '8px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <button onClick={() => handleVerlaengern(d.schulen)} style={btnSek}>+7 Tage</button>
+                    <button onClick={() => handleKonvertieren(d)} style={{ ...btnSek, borderColor: 'var(--primary)', color: 'var(--primary)' }}>Umwandeln</button>
+                    <button onClick={() => handleLoeschen(d)} disabled={aktion?.id === d.id}
+                      style={{ ...btnSek, borderColor: 'var(--danger)', color: 'var(--danger)' }}>
                       {aktion?.id === d.id ? '…' : '🗑 Löschen'}
                     </button>
                   </div>
@@ -192,6 +218,39 @@ export default function SuperadminDemos() {
               </div>
             )
           })}
+        </div>
+      ) : (
+        /* Archiv */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {archiv.length === 0 && (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: 48 }}>Kein Archiv vorhanden.</div>
+          )}
+          {archiv.map(a => (
+            <div key={a.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', opacity: 0.85 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 4 }}>{a.schul_name}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 2 }}>
+                    <strong>{a.name}</strong> · <a href={`mailto:${a.email}`} style={{ color: 'var(--primary)' }}>{a.email}</a>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    Genehmigt: {fmt(a.genehmigt_am)} · Archiviert nach Demo-Ende
+                  </div>
+                  {a.beschreibung && (
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', background: 'var(--bg)', borderRadius: 'var(--radius)', padding: '10px 14px', marginTop: 8, lineHeight: 1.6, borderLeft: '3px solid var(--border)' }}>
+                      {a.beschreibung}
+                    </div>
+                  )}
+                </div>
+                <div style={{ flexShrink: 0 }}>
+                  <button onClick={() => handleNeuSchalten(a)} disabled={!!aktion}
+                    style={btnPri}>
+                    {aktion?.id === a.id && aktion.typ === 'genehmigen' ? 'Erstelle Demo …' : '↺ Neue Demo schalten'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -210,5 +269,5 @@ export default function SuperadminDemos() {
   )
 }
 
-const btnPri = { padding: '10px 20px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
-const btnSek = { padding: '10px 20px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }
+const btnPri = { padding: '8px 16px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
+const btnSek = { padding: '8px 16px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
