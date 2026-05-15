@@ -53,6 +53,7 @@ const Lizenzen             = lazy(() => import('./pages/Lizenzen'))
 const SchulWaehler         = lazy(() => import('./pages/SchulWaehler'))
 const Einladung            = lazy(() => import('./pages/Einladung'))
 const SuperadminDashboard  = lazy(() => import('./pages/superadmin/Dashboard'))
+const SuperadminDemos      = lazy(() => import('./pages/superadmin/Demos'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -172,6 +173,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute erlaubteRollen={['superadmin']} />}>
         <Route element={<AppLayout />}>
           <Route path="/superadmin" element={<SuperadminDashboard />} />
+          <Route path="/superadmin/demos" element={<SuperadminDemos />} />
         </Route>
       </Route>
 

@@ -368,6 +368,9 @@ allow_dynamic_registration = false
 [functions.kalender]
 verify_jwt = false
 
+[functions.demo-anfragen]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

@@ -2,6 +2,7 @@ export function getNavConfig(rolle, T) {
   if (rolle === 'superadmin') {
     return [
       { icon: '🏫', label: T('all_schools'), to: '/superadmin' },
+      { icon: '🧪', label: 'Demo-Anfragen', to: '/superadmin/demos' },
       { icon: '📊', label: T('dashboard'),   to: '/admin' },
       { gruppe: 'Unterricht', items: [
         { icon: '🎵', label: T('courses'),       to: '/admin/kurse' },

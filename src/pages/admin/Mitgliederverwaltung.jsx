@@ -991,7 +991,8 @@ function SchulenModal({ mitglied, onClose }) {
 // ─── Hauptkomponente ──────────────────────────────────────────
 
 export default function Mitgliederverwaltung() {
-  const { T, rolle } = useApp()
+  const { T, rolle, schule } = useApp()
+  const istDemo = schule?.ist_demo === true
   const [mitglieder,  setMitglieder]  = useState([])
   const [laden,       setLaden]       = useState(true)
   const [suche,       setSuche]       = useState('')
@@ -1057,9 +1058,11 @@ export default function Mitgliederverwaltung() {
           <button onClick={() => setModal({ typ: 'einladung' })} style={s.btnSek}>
             📧 {T('invite_member')}
           </button>
-          <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>
-            {T('member_create')}
-          </button>
+          {!istDemo && (
+            <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>
+              {T('member_create')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1107,7 +1110,7 @@ export default function Mitgliederverwaltung() {
       ) : gefiltert.length === 0 ? (
         <div style={s.leer}>
           <div style={{ marginBottom: 12 }}>{T('member_none_found')}</div>
-          {suche === '' && filterRolle === 'alle' && filterAktiv === 'alle' && (
+          {suche === '' && filterRolle === 'alle' && filterAktiv === 'alle' && !istDemo && (
             <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>{T('member_create')}</button>
           )}
         </div>
@@ -1247,7 +1250,7 @@ export default function Mitgliederverwaltung() {
 
       {/* Modals */}
       {modal?.typ === 'einladung' && <EinladungModal onClose={() => setModal(null)} T={T} />}
-      {modal?.typ === 'anlegen'   && <NutzerAnlegenModal onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
+      {modal?.typ === 'anlegen' && !istDemo && <NutzerAnlegenModal onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
       {modal?.typ === 'profil'    && <ProfilModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
       {modal?.typ === 'email'     && <EmailModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} />}
       {modal?.typ === 'passwort'  && <PasswortModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}

@@ -89,7 +89,7 @@ export function AppProvider({ children }) {
         if (activeSchuleId) {
           const { data: schuleData } = await supabase
             .from('schulen')
-            .select('id, zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix, farbe')
+            .select('id, zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix, farbe, ist_demo, demo_expires_at, kuendigungsfrist')
             .eq('id', activeSchuleId)
             .single()
           if (schuleData?.zeitzone) setZeitzone(schuleData.zeitzone)

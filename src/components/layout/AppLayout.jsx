@@ -310,6 +310,24 @@ export default function AppLayout() {
 
         <OfflineBanner />
 
+        {schule?.ist_demo && (() => {
+          const tage = schule.demo_expires_at
+            ? Math.ceil((new Date(schule.demo_expires_at) - new Date()) / (1000 * 60 * 60 * 24))
+            : null
+          return (
+            <div style={{
+              background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+              borderBottom: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
+              padding: '8px 20px', textAlign: 'center', fontSize: 13,
+              color: 'var(--primary)', fontWeight: 600,
+            }}>
+              🧪 Demo-Umgebung
+              {tage !== null && tage > 0 && ` · ${tage} Tag${tage !== 1 ? 'e' : ''} verbleibend`}
+              {tage !== null && tage <= 0 && ' · Abgelaufen'}
+            </div>
+          )
+        })()}
+
         <main
           style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }}
           className="main-content"
