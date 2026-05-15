@@ -2,3 +2,7 @@
 node_modules/
 dist/
 *.pem
+
+# Android keystore
+android/app/*.jks
+android/app/*.keystore
