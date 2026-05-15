@@ -5,6 +5,7 @@ const VAPID_PUBLIC_KEY  = Deno.env.get('VAPID_PUBLIC_KEY')!
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
 const VAPID_SUBJECT     = Deno.env.get('VAPID_SUBJECT')!
 const APP_URL           = (Deno.env.get('APP_URL') ?? 'http://localhost:5173').replace(/\/$/, '')
+const FCM_SA_JSON       = Deno.env.get('FIREBASE_SERVICE_ACCOUNT') ?? ''
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 
@@ -12,6 +13,71 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
+
+// ── FCM HTTP v1 via Service Account JWT ──────────────────────
+async function getFcmAccessToken(sa: Record<string, string>): Promise<string> {
+  const now = Math.floor(Date.now() / 1000)
+  const enc = new TextEncoder()
+  const b64url = (buf: ArrayBuffer) =>
+    btoa(String.fromCharCode(...new Uint8Array(buf)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+
+  const header  = b64url(enc.encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).buffer)
+  const payload = b64url(enc.encode(JSON.stringify({
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now, exp: now + 3600,
+  })).buffer)
+
+  const pemBody = sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s/g, '')
+  const der     = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0))
+  const key     = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign'])
+  const sig     = b64url(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(`${header}.${payload}`)))
+
+  const res  = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${header}.${payload}.${sig}`,
+  })
+  const json = await res.json()
+  return json.access_token
+}
+
+async function sendFcm(fcmToken: string, title: string, body: string, url: string): Promise<boolean> {
+  if (!FCM_SA_JSON) return false
+  try {
+    const sa          = JSON.parse(FCM_SA_JSON)
+    const accessToken = await getFcmAccessToken(sa)
+    const res         = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: {
+            token: fcmToken,
+            notification: { title, body },
+            data: { url },
+            android: { notification: { sound: 'default', channel_id: 'staccato_default' } },
+          },
+        }),
+      },
+    )
+    if (!res.ok) {
+      const err = await res.json()
+      if (err?.error?.status === 'NOT_FOUND' || err?.error?.status === 'UNREGISTERED') {
+        await supabase.from('push_subscriptions').delete().eq('fcm_token', fcmToken)
+      }
+      console.error('FCM error:', err?.error?.message)
+      return false
+    }
+    return true
+  } catch (e) {
+    console.error('FCM send failed:', e)
+    return false
+  }
+}
 
 function rolePfad(rolle: string): string {
   switch (rolle) {
@@ -35,22 +101,29 @@ async function sendPushToRecipients(
 
   const { data: subs } = await supabase
     .from('push_subscriptions')
-    .select('endpoint, p256dh, auth_key, user_id')
+    .select('endpoint, p256dh, auth_key, fcm_token, platform, user_id')
     .in('user_id', recipients.map(r => r.id))
   if (!subs?.length) { console.log('No push subscriptions found for users'); return }
 
   await Promise.allSettled(subs.map(async sub => {
-    const url     = urlMap[sub.user_id] ?? APP_URL
+    const url = urlMap[sub.user_id] ?? APP_URL
+
+    if (sub.platform === 'android' || sub.platform === 'ios') {
+      if (sub.fcm_token) await sendFcm(sub.fcm_token, title, body, url)
+      return
+    }
+
+    // Web Push (VAPID)
     const payload = JSON.stringify({ title, body, url })
     try {
       await webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
         payload,
       )
-      console.log('Push sent to', sub.user_id)
+      console.log('Web push sent to', sub.user_id)
     } catch (err: unknown) {
       const status = (err as { statusCode?: number }).statusCode
-      console.error('Push failed for', sub.user_id, status)
+      console.error('Web push failed for', sub.user_id, status)
       if (status === 404 || status === 410) {
         await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
       }

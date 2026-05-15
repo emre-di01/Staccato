@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { THEMES, THEME_KEYS } from '../themes/themes'
 import { ONBOARDING_LS_KEY } from '../components/OnboardingModal'
+import { isNative, registerNativePush, unregisterNativePush, isNativePushRegistered } from '../lib/nativePush'
 
 const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL ?? ''
 const VAPID_PUBLIC_KEY  = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? ''
@@ -43,6 +44,11 @@ export default function Einstellungen() {
     if (!profil?.id) return
     async function checkPush() {
       try {
+        if (isNative) {
+          setPushEnabled(await isNativePushRegistered(profil.id, supabase))
+          setPushLaden(false)
+          return
+        }
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
           setPushEnabled(false); setPushLaden(false); return
         }
@@ -64,6 +70,17 @@ export default function Einstellungen() {
     if (pushLaden) return
     setPushLaden(true)
     try {
+      if (isNative) {
+        if (pushEnabled) {
+          await unregisterNativePush(profil.id, supabase)
+          setPushEnabled(false)
+        } else {
+          const ok = await registerNativePush(profil.id, supabase)
+          setPushEnabled(ok)
+        }
+        setPushLaden(false)
+        return
+      }
       const reg = await navigator.serviceWorker.ready
       if (pushEnabled) {
         const sub = await reg.pushManager.getSubscription()
@@ -86,6 +103,7 @@ export default function Einstellungen() {
           endpoint: sub.endpoint,
           p256dh:   btoa(String.fromCharCode(...new Uint8Array(key))),
           auth_key: btoa(String.fromCharCode(...new Uint8Array(auth))),
+          platform: 'web',
         }, { onConflict: 'endpoint' })
         setPushEnabled(true)
       }
