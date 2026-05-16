@@ -66,7 +66,7 @@ function StatCard({ icon, label, value, color = 'var(--primary)', sub, onClick }
 }
 
 export default function AdminDashboard() {
-  const { profil, schule, setSchule, T } = useApp()
+  const { profil, schule, T } = useApp()
   const navigate = useNavigate()
   const [tab, setTab] = useState('uebersicht')
   const [stats, setStats] = useState(null)
@@ -177,9 +177,8 @@ export default function AdminDashboard() {
           active={tab}
           onChange={setTab}
           tabs={[
-            { key: 'uebersicht', label: '📊 Übersicht' },
+            { key: 'uebersicht',  label: '📊 Übersicht' },
             { key: 'meine_kurse', label: '🎵 Meine Kurse' },
-            { key: 'einstellungen', label: '⚙️ Einstellungen' },
           ]}
         />
       </div>
@@ -357,113 +356,6 @@ export default function AdminDashboard() {
         </>
       )}
 
-      {/* Tab: Einstellungen */}
-      {tab === 'einstellungen' && (
-        <SchulEinstellungen schule={schule} schuleId={profil?.schule_id} onGespeichert={setSchule} />
-      )}
-    </div>
-  )
-}
-
-function SchulEinstellungen({ schule, schuleId, onGespeichert }) {
-  const { T } = useApp()
-  const [form, setForm] = useState({
-    name:             schule?.name             ?? '',
-    logo_url:         schule?.logo_url         ?? '',
-    website:          schule?.website          ?? '',
-    email:            schule?.email            ?? '',
-    telefon:          schule?.telefon          ?? '',
-    adresse:          schule?.adresse          ?? '',
-    inventar_prefix:  schule?.inventar_prefix  ?? '',
-    kuendigungsfrist: schule?.kuendigungsfrist ?? '',
-  })
-  const [speichern, setSpeichern] = useState(false)
-  const [erfolg,    setErfolg]    = useState(false)
-
-  async function speichernFn() {
-    setSpeichern(true)
-    const payload = {
-      name:            form.name.trim()            || schule?.name,
-      logo_url:        form.logo_url.trim()        || null,
-      website:         form.website.trim()         || null,
-      email:           form.email.trim()           || null,
-      telefon:         form.telefon.trim()         || null,
-      adresse:         form.adresse.trim()         || null,
-      inventar_prefix:  form.inventar_prefix.trim().toUpperCase() || 'INV',
-      kuendigungsfrist: form.kuendigungsfrist.trim() || null,
-    }
-    await supabase.from('schulen').update(payload).eq('id', schuleId)
-    onGespeichert(s => ({ ...s, ...payload }))
-    setSpeichern(false)
-    setErfolg(true)
-    setTimeout(() => setErfolg(false), 2500)
-  }
-
-  function feld(label, key, type = 'text', placeholder = '') {
-    return (
-      <div>
-        <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>{label}</label>
-        <input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-          placeholder={placeholder}
-          style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ maxWidth: 560 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 24 }}>{T('settings_school_title')}</h2>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {feld(T('settings_school_name'), 'name', 'text', 'Meine Musikschule')}
-        <div>
-          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>
-            {T('settings_logo_url')} <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>({T('settings_logo_hint')})</span>
-          </label>
-          <input type="url" value={form.logo_url} onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))}
-            placeholder="https://beispiel.de/logo.png"
-            style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
-          {form.logo_url && (
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src={form.logo_url} alt={T('settings_logo_url')}
-                style={{ maxHeight: 48, maxWidth: 160, objectFit: 'contain', borderRadius: 6, border: '1px solid var(--border)', padding: 4, background: '#fff' }}
-                onError={e => { e.target.style.display = 'none' }} />
-              <button onClick={() => setForm(f => ({ ...f, logo_url: '' }))}
-                style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                {T('settings_logo_remove')}
-              </button>
-            </div>
-          )}
-        </div>
-        {feld('Website', 'website', 'url', 'https://...')}
-        {feld(T('email'), 'email', 'email', 'info@musikschule.de')}
-        {feld(T('profile_phone'), 'telefon', 'tel', '+49 ...')}
-        {feld(T('profile_address'), 'adresse', 'text', 'Musterstraße 1, 12345 Stadt')}
-        <div>
-          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>
-            {T('settings_inventar_prefix')} <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>({T('settings_inventar_prefix_hint')})</span>
-          </label>
-          <input value={form.inventar_prefix} maxLength={8}
-            onChange={e => setForm(f => ({ ...f, inventar_prefix: e.target.value.toUpperCase() }))}
-            placeholder="INV"
-            style={{ width: 120, boxSizing: 'border-box', padding: '9px 12px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'monospace', outline: 'none', letterSpacing: '0.05em' }} />
-        </div>
-        <div>
-          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>
-            Kündigungsfrist <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>(erscheint auf Formularen)</span>
-          </label>
-          <input value={form.kuendigungsfrist}
-            onChange={e => setForm(f => ({ ...f, kuendigungsfrist: e.target.value }))}
-            placeholder="z.B. 4 Wochen zum Monatsende"
-            style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end', paddingTop: 4 }}>
-          {erfolg && <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>{T('settings_saved')}</span>}
-          <button onClick={speichernFn} disabled={speichern}
-            style={{ padding: '9px 22px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg, #fff)', fontSize: 14, fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: speichern ? 0.7 : 1 }}>
-            {speichern ? `${T('save')} …` : `💾 ${T('save')}`}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

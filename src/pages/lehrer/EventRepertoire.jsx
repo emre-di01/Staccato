@@ -144,7 +144,7 @@ function VorhandenesModal({ eventId, bereitsVerknuepft, onClose, onErfolg }) {
 export default function EventRepertoire() {
   const { id: eventId } = useParams()
   const navigate = useNavigate()
-  const { rolle, confirm, schule } = useApp()
+  const { rolle, confirm, schule, T } = useApp()
   const [event,   setEvent]   = useState(null)
   const [stuecke, setStuecke] = useState([])
   const [laden,   setLaden]   = useState(true)
@@ -342,6 +342,7 @@ export default function EventRepertoire() {
                     {/* Meta */}
                     <div style={{ display:'flex', gap:8, flexWrap:'wrap', margin:'8px 0' }}>
                       {st?.tonart && <span style={s.chip}>🎵 {st.tonart}</span>}
+                      {st?.takt   && <span style={s.chip}><span style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginRight:2 }}>{T('piece_takt')}</span>{st.takt}</span>}
                       {st?.tempo  && <span style={s.chip}>♩ {st.tempo}</span>}
                       {st?.liedtext       && <span style={s.chip}>📝 Text</span>}
                       {typen.includes('noten') && <span style={s.chip}>📄 Noten</span>}

@@ -470,6 +470,13 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20260514000000_stuecke_liedtext_md.sql` | `liedtext_md` boolean column on `stuecke` (default `true`) — persists per-piece MD/Plain toggle state in DB instead of localStorage |
 | `20260514000001_fix_handle_new_user_trigger.sql` | **Critical bugfix**: binds `on_auth_user_created` trigger on `auth.users` — the `handle_new_user()` function existed but the trigger was never created, so no `profiles` row was inserted for users created via `auth.admin.createUser()` (e.g. `accept-invitation` Edge Function) |
 | `20260514000002_schulen_kuendigungsfrist.sql` | `kuendigungsfrist` text column on `schulen` |
+| `20260515000000` … `20260515000006` | Abo-Pläne: `abo_plan` enum + Limits-Spalten auf `schulen`, Feature-Gates `hat_vorstand`/`hat_inventar`, User-Limit-Check-Funktion, Stats-Plan |
+| `20260516000000_stuecke_takt_anmerkungen.sql` | `takt` (text) und `anmerkungen` (text) Spalten auf `stuecke` |
+| `20260516000001_interessenten_pipeline_enum.sql` | Neue Enum-Werte `kontaktiert`, `angebot`, `verloren` für `schueler_status` — **separate Datei** wegen PostgreSQL Enum-Einschränkung |
+| `20260516000002_interessenten_verlauf.sql` | `interessenten_verlauf` Tabelle für CRM-Aktivitäts-Timeline (Trigger: Statuswechsel, Probe-Termine, Daten-Edits werden automatisch geloggt); RLS: lehrer darf lesen, admin/superadmin darf schreiben |
+| `20260516000003_rechnungen_rechtlich.sql` | §14 UStG Rechnungsnummer (atomarer Trigger), GoBD `storniert_am/von`, §4 Nr. 21 UStG `steuer_hinweis`; `rechnungen_prefix`/`rechnungen_zaehler` auf `schulen` |
+| `20260516000004_rechnungen_freitext.sql` | `typ` (mitgliedsbeitrag/freitext) und `positionen` (jsonb) auf `rechnungen` |
+| `20260516000005_ausgaben.sql` | `ausgaben` Tabelle (Kreditoren): Empfänger, Betrag, Kategorie (gehalt/miete/material/versicherung/sonstiges), Belegnummer, Fälligkeit, GoBD-Stornierung; RLS: admin/superadmin |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

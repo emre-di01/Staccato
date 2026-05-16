@@ -6,8 +6,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { safeMarkdown } from '../../lib/markdown'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
-import * as pdfjsLib from 'pdfjs-dist'
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
 
 // ─── Transponieren ───────────────────────────────────────────
 const SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
@@ -144,6 +142,8 @@ function PdfViewer({ url }) {
 
     async function render() {
       try {
+        const pdfjsLib = await import('pdfjs-dist')
+        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
         const pdf = await pdfjsLib.getDocument({ url }).promise
         if (abgebrochen) return
 
@@ -300,7 +300,7 @@ function AudioPlayer({ datei, kannLoeschen, onLoeschen }) {
 
 // ─── Upload Modal ─────────────────────────────────────────────
 function DateiUploadModal({ stueckId, onClose, onErfolg }) {
-  const { profil } = useApp()
+  const { profil, T } = useApp()
   const fileRef = useRef()
   const [form, setForm] = useState({ typ: 'noten', stimme: 'keine', name: '' })
   const [datei, setDatei] = useState(null)
@@ -309,7 +309,7 @@ function DateiUploadModal({ stueckId, onClose, onErfolg }) {
 
   async function hochladen() {
     if (!datei) { setFehler('Bitte eine Datei wählen.'); return }
-    if (datei.size > 15 * 1024 * 1024) { setFehler('Datei zu groß (max. 15 MB).'); return }
+    if (datei.size > 50 * 1024 * 1024) { setFehler(T('file_too_large').replace('{n}', 50)); return }
     setLaden(true)
     const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const pfad = `${stueckId}/${form.typ}/${Date.now()}_${sauberName}`
@@ -653,7 +653,7 @@ export default function StueckDetail() {
   const [filterStimme, setFilterStimme] = useState('alle')
   const [bearbeiteText, setBearbeiteText] = useState(false)
   const [bearbeiteMeta, setBearbeiteMeta] = useState(false)
-  const [metaForm,     setMetaForm]     = useState({ titel:'', komponist:'', tonart:'', tempo:'' })
+  const [metaForm,     setMetaForm]     = useState({ titel:'', komponist:'', tonart:'', tempo:'', takt:'', anmerkungen:'' })
   const [modal,        setModal]        = useState(null)
   const [textGroesse,  setTextGroesse]  = useState(18)
   const [vollbild,     setVollbild]     = useState(false)
@@ -750,13 +750,13 @@ ${html}
   }
 
   function metaBearbeitenStarten() {
-    setMetaForm({ titel: stueck.titel ?? '', komponist: stueck.komponist ?? '', tonart: stueck.tonart ?? '', tempo: stueck.tempo ?? '' })
+    setMetaForm({ titel: stueck.titel ?? '', komponist: stueck.komponist ?? '', tonart: stueck.tonart ?? '', tempo: stueck.tempo ?? '', takt: stueck.takt ?? '', anmerkungen: stueck.anmerkungen ?? '' })
     tapZeitenEditRef.current = []
     setBearbeiteMeta(true)
   }
 
   async function metaSpeichern() {
-    const payload = { titel: metaForm.titel.trim() || stueck.titel, komponist: metaForm.komponist.trim() || null, tonart: metaForm.tonart.trim() || null, tempo: metaForm.tempo.trim() || null }
+    const payload = { titel: metaForm.titel.trim() || stueck.titel, komponist: metaForm.komponist.trim() || null, tonart: metaForm.tonart.trim() || null, tempo: metaForm.tempo.trim() || null, takt: metaForm.takt || null, anmerkungen: metaForm.anmerkungen.trim() || null }
     await supabase.from('stuecke').update(payload).eq('id', stueckId)
     setStueck(s => ({ ...s, ...payload }))
     setBearbeiteMeta(false)
@@ -856,6 +856,43 @@ ${html}
                   )}
                 </div>
               ))}
+              {/* Takt */}
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                <label style={s.label}>{T('piece_taktart')}</label>
+                <select style={s.input} value={metaForm.takt} onChange={e => setMetaForm(p => ({ ...p, takt: e.target.value }))}>
+                  <option value="">{T('piece_taktart_none')}</option>
+                  <optgroup label="Gerader Takt">
+                    <option value="4/4">4/4</option>
+                    <option value="2/4">2/4</option>
+                    <option value="2/2">2/2 (alla breve)</option>
+                  </optgroup>
+                  <optgroup label="Ungerader Takt">
+                    <option value="3/4">3/4</option>
+                    <option value="3/8">3/8</option>
+                  </optgroup>
+                  <optgroup label="Zusammengesetzt">
+                    <option value="6/8">6/8</option>
+                    <option value="6/4">6/4</option>
+                    <option value="9/8">9/8</option>
+                    <option value="12/8">12/8</option>
+                  </optgroup>
+                  <optgroup label="Ungerade">
+                    <option value="5/4">5/4</option>
+                    <option value="5/8">5/8</option>
+                    <option value="7/8">7/8</option>
+                    <option value="7/4">7/4</option>
+                    <option value="10/8">10/8</option>
+                    <option value="11/8">11/8</option>
+                  </optgroup>
+                </select>
+              </div>
+              {/* Anmerkungen */}
+              <div style={{ display:'flex', flexDirection:'column', gap:5, gridColumn: mob ? 'span 1' : 'span 2' }}>
+                <label style={s.label}>{T('piece_anmerkungen')}</label>
+                <textarea style={{ ...s.input, minHeight:72, resize:'vertical' }} placeholder={T('piece_anmerkungen_placeholder')}
+                  value={metaForm.anmerkungen}
+                  onChange={e => setMetaForm(p => ({ ...p, anmerkungen: e.target.value }))} />
+              </div>
             </div>
             <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
               <button onClick={() => setBearbeiteMeta(false)} style={s.btnSek}>Abbrechen</button>
@@ -869,12 +906,18 @@ ${html}
               <div style={{ display:'flex', gap:12, flexWrap:'wrap', fontSize:13, color:'var(--text-2)', alignItems:'center' }}>
                 {stueck.komponist && <span>🎼 {stueck.komponist}</span>}
                 {stueck.tonart    && <span>🎵 {stueck.tonart}</span>}
+                {stueck.takt      && <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><span style={{ fontSize:10, color:'var(--text-3)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{T('piece_takt')}</span><span style={{ fontWeight:700, fontVariantNumeric:'tabular-nums' }}>{stueck.takt}</span></span>}
                 {stueck.tempo     && <span>♩ {stueck.tempo}</span>}
                 <button onClick={() => setMetronomOffen(o => !o)}
                   style={{ padding:'2px 10px', borderRadius:99, border:'1.5px solid var(--border)', background: metronomOffen ? 'var(--primary)' : 'var(--bg-2)', color: metronomOffen ? 'var(--primary-fg)' : 'var(--text-3)', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit', lineHeight:'22px' }}>
                   ♩ Metronom
                 </button>
               </div>
+              {stueck.anmerkungen && (
+                <div style={{ marginTop:8, fontSize:13, color:'var(--text-2)', background:'var(--bg)', borderRadius:'var(--radius)', padding:'8px 12px', borderLeft:'3px solid var(--border)', whiteSpace:'pre-wrap' }}>
+                  {stueck.anmerkungen}
+                </div>
+              )}
             </div>
             {kannBearbeiten && (
               <div style={{ display:'flex', gap:8 }}>

@@ -182,7 +182,7 @@ function ProtokollDetail({ protokoll, vorstandMitglieder, profilId, schuleId, on
 
   async function hochladen() {
     if (!datei) return
-    if (datei.size > 15 * 1024 * 1024) { setUploadFehler('Datei zu groß (max. 15 MB).'); return }
+    if (datei.size > 50 * 1024 * 1024) { setUploadFehler(T('file_too_large').replace('{n}', 50)); return }
     setUploading(true); setUploadFehler('')
     const sauber = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const pfad = `${schuleId}/${protokoll.id}/${Date.now()}_${sauber}`

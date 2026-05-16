@@ -41,7 +41,11 @@ export function AppProvider({ children }) {
   const [zeitzone,     setZeitzone]     = useState('Europe/Berlin')
   const [laden,        setLaden]        = useState(true)
   const [theme,        setThemeKey]     = useState(() => localStorage.getItem('staccato_theme') || DEFAULT_THEME)
-  const [darkMode,     setDarkMode]     = useState(() => localStorage.getItem('staccato_dark') === 'true')
+  const [darkMode,     setDarkMode]     = useState(() => {
+    const saved = localStorage.getItem('staccato_dark')
+    if (saved !== null) return saved === 'true'
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+  })
   const [lang,         setLangState]    = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
   const [großeSchrift, setGrosseSchrift] = useState(() => localStorage.getItem('staccato_grosse_schrift') === 'true')
 
@@ -54,6 +58,16 @@ export function AppProvider({ children }) {
     localStorage.setItem('staccato_theme', theme)
     localStorage.setItem('staccato_dark', darkMode)
   }, [theme, darkMode, schule?.farbe])
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
+    if (!mq) return
+    const handler = e => {
+      if (localStorage.getItem('staccato_dark') === null) setDarkMode(e.matches)
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   useEffect(() => {
     document.documentElement.style.zoom = großeSchrift ? '1.15' : ''
@@ -87,11 +101,23 @@ export function AppProvider({ children }) {
 
         const activeSchuleId = data.letzte_schule_id ?? data.schule_id
         if (activeSchuleId) {
-          const { data: schuleData } = await supabase
+          // Vollständige Abfrage inkl. neuer Spalten (nach Migration 20260517000001)
+          let { data: schuleData, error: schuleErr } = await supabase
             .from('schulen')
-            .select('id, zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix, farbe, ist_demo, demo_expires_at, kuendigungsfrist')
+            .select('id, zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix, farbe, ist_demo, demo_expires_at, kuendigungsfrist, plan, max_lehrer, max_schueler, max_storage_mb, hat_vorstand, hat_inventar, abo_status, abo_bis, verein_verifiziert, steuernummer, ustid, steuer_hinweis, rechnungen_prefix, rechtsform, vereinsreg_nr, vereinsreg_gericht, ist_gemeinnuetzig, finanzamt, freistellungsbescheid_datum')
             .eq('id', activeSchuleId)
             .single()
+
+          // Fallback: Migration noch nicht eingespielt → ohne neue Spalten
+          if (schuleErr) {
+            const { data: fallback } = await supabase
+              .from('schulen')
+              .select('id, zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix, farbe, ist_demo, demo_expires_at, kuendigungsfrist, plan, max_lehrer, max_schueler, max_storage_mb, hat_vorstand, hat_inventar, abo_status, abo_bis, verein_verifiziert, steuernummer, ustid, steuer_hinweis, rechnungen_prefix')
+              .eq('id', activeSchuleId)
+              .single()
+            schuleData = fallback
+          }
+
           if (schuleData?.zeitzone) setZeitzone(schuleData.zeitzone)
           setSchule(schuleData ?? null)
         }
@@ -194,12 +220,25 @@ export function AppProvider({ children }) {
 
   const rolle = profil?.rolle ?? null
 
+  const abo = schule ? {
+    plan:             schule.plan        ?? 'pro',
+    status:           schule.abo_status  ?? 'aktiv',
+    bis:              schule.abo_bis     ?? null,
+    aktiv:            (schule.abo_status ?? 'aktiv') !== 'gesperrt',
+    hatVorstand:      schule.hat_vorstand ?? true,
+    hatInventar:      schule.hat_inventar ?? true,
+    maxLehrer:        schule.max_lehrer   ?? null,
+    maxSchueler:      schule.max_schueler ?? null,
+    maxStorageMb:     schule.max_storage_mb ?? null,
+    vereinVerifiziert: schule.verein_verifiziert ?? false,
+  } : null
+
   return (
     <AppContext.Provider value={{
       session, profil, rolle, laden,
       theme, darkMode, lang, zeitzone,
       großeSchrift, toggleGrosseSchrift,
-      schule, setSchule,
+      schule, setSchule, abo,
       schulenListe,
       schuleWechseln,
       changeTheme, toggleDark, setLang,

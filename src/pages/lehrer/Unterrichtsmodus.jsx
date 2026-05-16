@@ -98,6 +98,7 @@ export default function Unterrichtsmodus() {
   const [laden, setLaden] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [fehler, setFehler] = useState('')
+  const [kopiert, setKopiert] = useState(false)
   const [beamerCode, setBeamerCode] = useState('')
   const [beamerVerbunden, setBeamerVerbunden] = useState(false)
   const [zeigeBeamerInput, setZeigeBeamerInput] = useState(false)
@@ -187,6 +188,13 @@ export default function Unterrichtsmodus() {
     setRefreshing(true)
     await ladeTeilnehmer(session.id)
     setRefreshing(false)
+  }
+
+  function codeKopieren() {
+    if (!session?.join_code) return
+    navigator.clipboard.writeText(`${window.location.origin}/session/${session.join_code}`)
+    setKopiert(true)
+    setTimeout(() => setKopiert(false), 2000)
   }
 
   async function sessionStarten() {
@@ -443,11 +451,12 @@ export default function Unterrichtsmodus() {
         </div>
         <div style={{ ...s.card, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', marginBottom: 0 }}>
           <div style={s.label}>{T('session_code_label')}</div>
-          <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: '0.15em', color: 'var(--primary)', marginTop: 12, fontFamily: 'monospace' }}>
-            {session?.join_code}
+          <div onClick={codeKopieren} title="Link kopieren"
+            style={{ fontSize: 38, fontWeight: 900, letterSpacing: '0.15em', color: kopiert ? 'var(--success)' : 'var(--primary)', marginTop: 12, fontFamily: 'monospace', cursor: 'pointer', transition: 'color 0.2s', userSelect: 'none' }}>
+            {kopiert ? '✓ Kopiert!' : session?.join_code}
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
-            {window.location.origin}/session/...
+            {kopiert ? 'Link in Zwischenablage' : `${window.location.origin}/session/${session?.join_code}`}
           </div>
           {session?.oeffentlich && (
             <div style={{ marginTop: 10, fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', borderRadius: 6, padding: '4px 8px', display: 'inline-block' }}>

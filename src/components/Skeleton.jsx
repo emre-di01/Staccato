@@ -1,6 +1,12 @@
+const shimmerStyle = {
+  background: 'linear-gradient(90deg, var(--border) 25%, color-mix(in srgb, var(--border) 55%, var(--surface)) 50%, var(--border) 75%)',
+  backgroundSize: '200% 100%',
+  animation: 'skeletonShimmer 1.4s ease infinite',
+}
+
 export function Skeleton({ width = '100%', height = 14, radius = 6, style }) {
   return (
-    <div style={{ width, height, borderRadius: radius, background: 'var(--border)', animation: 'skeletonShimmer 1.6s ease-in-out infinite', ...style }} />
+    <div style={{ width, height, borderRadius: radius, ...shimmerStyle, ...style }} />
   )
 }
 
@@ -38,9 +44,8 @@ export function SkeletonStyle() {
   return (
     <style>{`
       @keyframes skeletonShimmer {
-        0%   { opacity: 1; }
-        50%  { opacity: 0.45; }
-        100% { opacity: 1; }
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
       }
     `}</style>
   )

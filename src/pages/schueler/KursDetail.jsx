@@ -280,7 +280,7 @@ export default function SchuelerKursDetail() {
     async function ladeData() {
       const [k, us, d, st] = await Promise.all([
         supabase.from('unterricht').select('*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name))').eq('id', id).single(),
-        supabase.from('unterricht_stuecke').select('*, stuecke(*, stueck_dateien(typ))').eq('unterricht_id', id).order('reihenfolge'),
+        supabase.from('unterricht_stuecke').select('*, stuecke(*, stueck_dateien(typ))').eq('unterricht_id', id).neq('status', 'geplant').order('reihenfolge'),
         // Kurs-Dateien + eigene Schüler-Dateien
         supabase.from('dateien').select('*')
           .or(`unterricht_id.eq.${id},schueler_id.eq.${profil.id}`)

@@ -39,6 +39,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-misc': ['@tanstack/react-query', 'marked'],
+          'vendor-pdfjs': ['pdfjs-dist'],
         },
       },
     },

@@ -62,12 +62,16 @@ serve(async (req) => {
     const vorstandPass = genPass()
     const expiresAt    = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
-    // 1. Create demo school
+    // 1. Create demo school — always pro plan with all features enabled
     const { data: schule, error: schuleErr } = await supabase.from('schulen').insert({
       name: anfrage.schul_name,
       ist_demo: true,
       demo_expires_at: expiresAt,
       aktiv: true,
+      plan: 'pro',
+      hat_vorstand: true,
+      hat_inventar: true,
+      abo_status: 'aktiv',
     }).select('id').single()
     if (schuleErr || !schule) throw new Error(`Schule konnte nicht erstellt werden: ${schuleErr?.message}`)
     const schuleId = schule.id

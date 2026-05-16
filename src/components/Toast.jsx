@@ -44,12 +44,16 @@ export function ToastContainer({ toasts, onRemove }) {
           to   { opacity: 1; transform: translateY(0)    scale(1); }
         }
       `}</style>
-      <div style={{
-        position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', flexDirection: 'column-reverse', gap: 8,
-        zIndex: 10000, pointerEvents: 'none', alignItems: 'center',
-        width: 'max-content', maxWidth: 'calc(100vw - 32px)',
-      }}>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
+        style={{
+          position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', flexDirection: 'column-reverse', gap: 8,
+          zIndex: 10000, pointerEvents: 'none', alignItems: 'center',
+          width: 'max-content', maxWidth: 'calc(100vw - 32px)',
+        }}>
         {toasts.map(t => <ToastItem key={t.id} toast={t} onRemove={onRemove} />)}
       </div>
     </>

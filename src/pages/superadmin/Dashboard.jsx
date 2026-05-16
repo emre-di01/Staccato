@@ -20,6 +20,10 @@ export default function SuperadminDashboard() {
   const [wechseln,      setWechseln]      = useState(null)
   const [loeschenModal, setLoeschenModal] = useState(null)
   const [loeschen,      setLoeschen]      = useState(false)
+  const [planModal,     setPlanModal]     = useState(null)
+  const [planForm,      setPlanForm]      = useState({})
+  const [planSaving,    setPlanSaving]    = useState(false)
+  const [planFehler,    setPlanFehler]    = useState('')
 
   useEffect(() => {
     ladeSchulen()
@@ -61,14 +65,50 @@ export default function SuperadminDashboard() {
     if (!loeschenModal) return
     setLoeschen(true)
     setFehler('')
-    const { error } = await supabase.from('schulen').delete().eq('id', loeschenModal.id)
+    const { error } = await supabase.rpc('demo_schule_loeschen', { p_schule_id: loeschenModal.id })
     if (error) {
-      setFehler('Schule kann nicht gelöscht werden solange noch Mitglieder oder Daten vorhanden sind.')
+      setFehler('Schule konnte nicht gelöscht werden: ' + error.message)
       setLoeschen(false)
       return
     }
     setLoeschenModal(null)
     setLoeschen(false)
+    await ladeSchulen()
+  }
+
+  function openPlanModal(s) {
+    setPlanForm({
+      plan:              s.plan ?? 'pro',
+      abo_status:        s.abo_status ?? 'aktiv',
+      abo_bis:           s.abo_bis ?? '',
+      verein_verifiziert: s.verein_verifiziert ?? false,
+      hat_vorstand:      s.hat_vorstand ?? true,
+      hat_inventar:      s.hat_inventar ?? true,
+      max_lehrer:        s.max_lehrer ?? '',
+      max_schueler:      s.max_schueler ?? '',
+      max_storage_mb:    s.max_storage_mb ?? '',
+    })
+    setPlanFehler('')
+    setPlanModal(s)
+  }
+
+  async function handlePlanSpeichern() {
+    setPlanSaving(true)
+    setPlanFehler('')
+    const { error } = await supabase.from('schulen').update({
+      plan:               planForm.plan,
+      abo_status:         planForm.abo_status,
+      abo_bis:            planForm.abo_bis || null,
+      verein_verifiziert: planForm.verein_verifiziert,
+      hat_vorstand:       planForm.hat_vorstand,
+      hat_inventar:       planForm.hat_inventar,
+      max_lehrer:         planForm.max_lehrer !== '' ? parseInt(planForm.max_lehrer) : null,
+      max_schueler:       planForm.max_schueler !== '' ? parseInt(planForm.max_schueler) : null,
+      max_storage_mb:     planForm.max_storage_mb !== '' ? parseInt(planForm.max_storage_mb) : null,
+    }).eq('id', planModal.schule_id)
+    if (error) { setPlanFehler(error.message); setPlanSaving(false); return }
+    setPlanModal(null)
+    setPlanSaving(false)
     await ladeSchulen()
   }
 
@@ -149,6 +189,18 @@ export default function SuperadminDashboard() {
                         Deaktiviert
                       </span>
                     )}
+                    {s.ist_demo && (
+                      <span style={{ fontSize: 11, background: '#f59e0b', color: '#fff', padding: '2px 8px', borderRadius: 99, fontWeight: 700 }}>
+                        Demo
+                      </span>
+                    )}
+                    <span style={{
+                      fontSize: 11, padding: '2px 8px', borderRadius: 99, fontWeight: 700,
+                      background: s.abo_status === 'gesperrt' ? 'var(--danger)' : 'color-mix(in srgb, var(--primary) 15%, transparent)',
+                      color: s.abo_status === 'gesperrt' ? '#fff' : 'var(--primary)',
+                    }}>
+                      {s.plan ?? 'pro'}{s.verein_verifiziert ? ' e.V.' : ''}{s.abo_status === 'trial' ? ' (Trial)' : ''}{s.abo_status === 'gesperrt' ? ' ⛔' : ''}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: 16, marginTop: 4, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
@@ -160,54 +212,43 @@ export default function SuperadminDashboard() {
                   </div>
                 </div>
 
-                <div className="schul-karte-buttons" style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                  {!isAktiv && (
+                <div className="schul-karte-buttons" style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                  {isAktiv ? (
+                    <button
+                      onClick={() => navigate('/admin')}
+                      style={{ padding: '8px 16px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                    >
+                      {T('manage_school')} →
+                    </button>
+                  ) : (
                     <button
                       onClick={() => handleWechsel(s.schule_id)}
                       disabled={!!wechseln}
-                      style={{
-                        padding: '8px 16px', borderRadius: 'var(--radius)', border: '1px solid var(--primary)',
-                        background: 'transparent', color: 'var(--primary)', fontSize: 13, fontWeight: 600,
-                        cursor: 'pointer', fontFamily: 'inherit',
-                      }}
+                      style={{ padding: '8px 16px', borderRadius: 'var(--radius)', border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                     >
                       {wechseln === s.schule_id ? '…' : T('switch_to_school')}
                     </button>
                   )}
-                  {isAktiv && (
+                  <div style={{ display: 'flex', gap: 6 }}>
                     <button
-                      onClick={() => navigate('/admin')}
-                      style={{
-                        padding: '8px 16px', borderRadius: 'var(--radius)', border: 'none',
-                        background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 13, fontWeight: 600,
-                        cursor: 'pointer', fontFamily: 'inherit',
-                      }}
+                      onClick={() => openPlanModal(s)}
+                      style={{ flex: 1, padding: '6px 10px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                     >
-                      {T('manage_school')} →
+                      ⚙ Plan
                     </button>
-                  )}
-                  <button
-                    onClick={() => handleAktivToggle(s.schule_id, s.aktiv)}
-                    style={{
-                      padding: '8px 14px', borderRadius: 'var(--radius)',
-                      border: '1px solid var(--border)', background: 'transparent',
-                      color: s.aktiv ? 'var(--warning)' : 'var(--success)',
-                      fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                  >
-                    {s.aktiv ? '⏸ Deaktivieren' : '▶ Reaktivieren'}
-                  </button>
-                  <button
-                    onClick={() => setLoeschenModal({ id: s.schule_id, name: s.name })}
-                    style={{
-                      padding: '8px 14px', borderRadius: 'var(--radius)',
-                      border: '1px solid var(--danger)', background: 'transparent',
-                      color: 'var(--danger)', fontSize: 13, fontWeight: 600,
-                      cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                  >
-                    🗑 Löschen
-                  </button>
+                    <button
+                      onClick={() => handleAktivToggle(s.schule_id, s.aktiv)}
+                      style={{ flex: 1, padding: '6px 10px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'transparent', color: s.aktiv ? 'var(--warning)' : 'var(--success)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                    >
+                      {s.aktiv ? '⏸ Deaktiv.' : '▶ Reaktiv.'}
+                    </button>
+                    <button
+                      onClick={() => setLoeschenModal({ id: s.schule_id, name: s.name })}
+                      style={{ padding: '6px 10px', borderRadius: 'var(--radius)', border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      🗑
+                    </button>
+                  </div>
                 </div>
               </div>
             )
@@ -276,6 +317,87 @@ export default function SuperadminDashboard() {
               <button onClick={() => setNeuModal(false)} style={btnSek}>Abbrechen</button>
               <button onClick={handleNeuSchule} disabled={saving} style={btnPri}>
                 {saving ? 'Anlegen …' : '+ Schule anlegen'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {planModal && (
+        <Modal titel={`⚙ Plan: ${planModal.name}`} onClose={() => setPlanModal(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={lbl}>Plan</label>
+                <select style={inp} value={planForm.plan} onChange={e => setPlanForm(f => ({ ...f, plan: e.target.value }))}>
+                  {['solo','starter','verein','pro','enterprise'].map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={lbl}>Abo-Status</label>
+                <select style={inp} value={planForm.abo_status} onChange={e => setPlanForm(f => ({ ...f, abo_status: e.target.value }))}>
+                  <option value="aktiv">Aktiv</option>
+                  <option value="trial">Trial</option>
+                  <option value="gesperrt">Gesperrt</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={lbl}>Abo läuft ab (optional)</label>
+              <input type="date" style={inp} value={planForm.abo_bis}
+                onChange={e => setPlanForm(f => ({ ...f, abo_bis: e.target.value }))} />
+            </div>
+
+            <div style={{ display: 'flex', gap: 20 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text)' }}>
+                <input type="checkbox" checked={planForm.hat_vorstand}
+                  onChange={e => setPlanForm(f => ({ ...f, hat_vorstand: e.target.checked }))} />
+                Vorstandsmodul
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text)' }}>
+                <input type="checkbox" checked={planForm.hat_inventar}
+                  onChange={e => setPlanForm(f => ({ ...f, hat_inventar: e.target.checked }))} />
+                Inventarmodul
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text)' }}>
+                <input type="checkbox" checked={planForm.verein_verifiziert}
+                  onChange={e => setPlanForm(f => ({ ...f, verein_verifiziert: e.target.checked }))} />
+                e.V. verifiziert
+              </label>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 10px' }}>
+                Individuelle Limits (leer = unbegrenzt, überschreibt Plan-Defaults)
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={lbl}>Max. Lehrer</label>
+                  <input type="number" style={inp} placeholder="∞" value={planForm.max_lehrer}
+                    onChange={e => setPlanForm(f => ({ ...f, max_lehrer: e.target.value }))} min="1" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={lbl}>Max. Schüler</label>
+                  <input type="number" style={inp} placeholder="∞" value={planForm.max_schueler}
+                    onChange={e => setPlanForm(f => ({ ...f, max_schueler: e.target.value }))} min="1" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={lbl}>Max. Storage (MB)</label>
+                  <input type="number" style={inp} placeholder="∞" value={planForm.max_storage_mb}
+                    onChange={e => setPlanForm(f => ({ ...f, max_storage_mb: e.target.value }))} min="1" />
+                </div>
+              </div>
+            </div>
+
+            {planFehler && <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{planFehler}</p>}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+              <button onClick={() => setPlanModal(null)} style={btnSek}>Abbrechen</button>
+              <button onClick={handlePlanSpeichern} disabled={planSaving} style={btnPri}>
+                {planSaving ? 'Speichern …' : 'Speichern'}
               </button>
             </div>
           </div>

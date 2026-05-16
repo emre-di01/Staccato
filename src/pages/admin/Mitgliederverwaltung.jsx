@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -61,12 +61,18 @@ function Feld({ label, children }) {
 
 // ─── Nutzer anlegen Modal ─────────────────────────────────────
 
-function NutzerAnlegenModal({ onClose, onErfolg, T }) {
+function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
   const { profil, rolle: currentRolle } = useApp()
   const [form, setForm] = useState({ email: '', voller_name: '', passwort: '', rolle: 'schueler', telefon: '', geburtsdatum: '' })
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
   const [erfolg, setErfolg] = useState(false)
+
+  function limitErreicht(rolle) {
+    if (rolle === 'lehrer' && abo?.maxLehrer != null && stats.lehrer >= abo.maxLehrer) return abo.maxLehrer
+    if (rolle === 'schueler' && abo?.maxSchueler != null && stats.schueler >= abo.maxSchueler) return abo.maxSchueler
+    return null
+  }
 
   async function anlegen() {
     if (!form.email || !form.voller_name || !form.passwort) {
@@ -75,6 +81,12 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
     }
     if (form.passwort.length < 8 || !/[A-Z]/.test(form.passwort) || !/[a-z]/.test(form.passwort) || !/[0-9]/.test(form.passwort)) {
       setFehler(T('password_min_error'))
+      return
+    }
+    const limit = limitErreicht(form.rolle)
+    if (limit != null) {
+      const key = form.rolle === 'lehrer' ? 'plan_limit_lehrer' : 'plan_limit_schueler'
+      setFehler(T(key).replace('{n}', limit))
       return
     }
     setLaden(true)
@@ -89,9 +101,18 @@ function NutzerAnlegenModal({ onClose, onErfolg, T }) {
     })
 
     if (error) {
-      setFehler(error.message.includes('409') || error.message.includes('already')
-        ? T('interessent_email_exists')
-        : error.message)
+      const msg = error.message
+      if (msg.includes('409') || msg.includes('already')) {
+        setFehler(T('interessent_email_exists'))
+      } else if (msg.includes('PLAN_LIMIT_LEHRER')) {
+        const n = msg.split(':')[1]
+        setFehler(T('plan_limit_lehrer').replace('{n}', n))
+      } else if (msg.includes('PLAN_LIMIT_SCHUELER')) {
+        const n = msg.split(':')[1]
+        setFehler(T('plan_limit_schueler').replace('{n}', n))
+      } else {
+        setFehler(msg)
+      }
       setLaden(false)
       return
     }
@@ -667,7 +688,7 @@ function DokumenteModal({ mitglied, onClose }) {
 
   async function hochladen() {
     if (!datei) { setFehler(T('dok_no_file')); return }
-    if (datei.size > 15 * 1024 * 1024) { setFehler(T('datei_zu_gross')); return }
+    if (datei.size > 50 * 1024 * 1024) { setFehler(T('file_too_large').replace('{n}', 50)); return }
     const name = form.name.trim() || datei.name
     setUploading(true); setFehler('')
     const sauber = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -988,10 +1009,155 @@ function SchulenModal({ mitglied, onClose }) {
   )
 }
 
+// ─── Side Drawer ──────────────────────────────────────────────
+
+const FOCUSABLE_SEL = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function MitgliedDrawer({ mitglied, onClose, onAktion, rolle }) {
+  const drawerRef   = useRef(null)
+  const titleId     = useId()
+  const triggerRef  = useRef(typeof document !== 'undefined' ? document.activeElement : null)
+
+  useEffect(() => {
+    const el = drawerRef.current
+    if (!el) return
+    const first = el.querySelector(FOCUSABLE_SEL)
+    ;(first ?? el).focus()
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key !== 'Tab') return
+      const nodes = [...el.querySelectorAll(FOCUSABLE_SEL)]
+      if (!nodes.length) { e.preventDefault(); return }
+      const firstEl = nodes[0], lastEl = nodes[nodes.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) { e.preventDefault(); lastEl.focus() }
+      } else {
+        if (document.activeElement === lastEl) { e.preventDefault(); firstEl.focus() }
+      }
+    }
+
+    el.addEventListener('keydown', handleKeyDown)
+    return () => {
+      el.removeEventListener('keydown', handleKeyDown)
+      triggerRef.current?.focus()
+    }
+  }, [onClose])
+
+  const zahlungUnvollstaendig = mitglied.zahlungsweise === 'sepa' && !mitglied.iban
+  const zahlungOk = mitglied.zahlungsweise && !(mitglied.zahlungsweise === 'sepa' && !mitglied.iban)
+  const kannBearbeiten = mitglied.rolle !== 'admin' || rolle === 'superadmin'
+
+  const stammdaten = [
+    { icon: '✏️', label: 'Profil bearbeiten', typ: 'profil' },
+    { icon: '📧', label: 'E-Mail ändern', typ: 'email' },
+    { icon: '🔑', label: 'Passwort setzen', typ: 'passwort' },
+    ...(mitglied.rolle === 'lehrer' || mitglied.rolle === 'schueler'
+      ? [{ icon: '🔗', label: 'Kurszuordnungen', typ: 'zuordnung' }]
+      : []),
+  ]
+
+  const dokumente = [
+    { icon: '📋', label: 'Aufnahmeantrag', typ: 'antrag' },
+    ...(mitglied.rolle === 'schueler' ? [{ icon: '📄', label: 'Kursanmeldung', typ: 'kursantrag' }] : []),
+    { icon: '📁', label: 'Dateien', typ: 'dokumente' },
+  ]
+
+  const btnStyle = {
+    display: 'flex', alignItems: 'center', gap: 12,
+    padding: '10px 14px', borderRadius: 'var(--radius)',
+    border: '1.5px solid var(--border)', background: 'var(--bg)',
+    color: 'var(--text)', fontSize: 14, cursor: 'pointer',
+    fontFamily: 'inherit', textAlign: 'left', width: '100%',
+    transition: 'background 0.15s',
+  }
+
+  return createPortal(
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 1000, animation: 'drawerFadeIn 0.2s ease' }} />
+      <div ref={drawerRef} className="mitglied-drawer" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} style={{ outline: 'none' }}>
+        <div className="mobile-handle" />
+        {/* Header */}
+        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: 14, flexShrink: 0 }}>
+          <Avatar name={mitglied.voller_name} avatarUrl={mitglied.avatar_url} size={52} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div id={titleId} style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', marginBottom: 3 }}>{mitglied.voller_name}</div>
+            {mitglied.email && <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mitglied.email}</div>}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Badge rolle={mitglied.rolle} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: mitglied.aktiv ? 'var(--success)' : 'var(--danger)' }}>
+                {mitglied.aktiv ? '● Aktiv' : '○ Inaktiv'}
+              </span>
+            </div>
+            {mitglied.telefon && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>📞 {mitglied.telefon}</div>}
+            {mitglied.geburtsdatum && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>🎂 {new Date(mitglied.geburtsdatum).toLocaleDateString('de-DE')}</div>}
+            {zahlungUnvollstaendig && <div style={{ fontSize: 11, color: 'var(--warning, #f59e0b)', marginTop: 4 }}>⚠️ IBAN fehlt</div>}
+            {zahlungOk && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>💳 {mitglied.zahlungsweise === 'sepa' ? 'SEPA' : mitglied.zahlungsweise === 'ueberweisung' ? 'Überweisung' : 'Bar'}</div>}
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--text-3)', padding: 4, flexShrink: 0, lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Aktionen */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {kannBearbeiten ? (
+            <>
+              <div>
+                <div style={s.sectionLabel}>Stammdaten</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {stammdaten.map(a => (
+                    <button key={a.typ} onClick={() => onAktion(a.typ)} className="drawer-btn" style={btnStyle}>
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>{a.icon}</span>
+                      <span style={{ fontWeight: 600 }}>{a.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div style={s.sectionLabel}>Dokumente</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {dokumente.map(a => (
+                    <button key={a.typ} onClick={() => onAktion(a.typ)} className="drawer-btn" style={btnStyle}>
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>{a.icon}</span>
+                      <span style={{ fontWeight: 600 }}>{a.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {rolle === 'superadmin' && (
+                <div>
+                  <div style={s.sectionLabel}>Superadmin</div>
+                  <button onClick={() => onAktion('schulen')} className="drawer-btn" style={btnStyle}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>🏫</span>
+                    <span style={{ fontWeight: 600 }}>Schulen verwalten</span>
+                  </button>
+                </div>
+              )}
+
+              <div style={{ paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                <button onClick={() => onAktion('loeschen')} style={{ ...btnStyle, border: '1.5px solid var(--danger)', color: 'var(--danger)', background: 'transparent' }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>🗑</span>
+                  <span style={{ fontWeight: 600 }}>Mitglied löschen</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: 'var(--text-3)', fontSize: 13, textAlign: 'center', paddingTop: 8 }}>
+              Nur Superadmin kann Admins bearbeiten
+            </div>
+          )}
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
 // ─── Hauptkomponente ──────────────────────────────────────────
 
 export default function Mitgliederverwaltung() {
-  const { T, rolle, schule } = useApp()
+  const { T, rolle, schule, abo } = useApp()
   const istDemo = schule?.ist_demo === true
   const [mitglieder,  setMitglieder]  = useState([])
   const [laden,       setLaden]       = useState(true)
@@ -999,6 +1165,7 @@ export default function Mitgliederverwaltung() {
   const [filterRolle, setFilterRolle] = useState('alle')
   const [filterAktiv, setFilterAktiv] = useState('alle')
   const [modal,       setModal]       = useState(null)
+  const [drawerMitglied, setDrawerMitglied] = useState(null)
 
   const ladeMitglieder = useCallback(async () => {
     setLaden(true)
@@ -1025,6 +1192,12 @@ export default function Mitgliederverwaltung() {
     lehrer:   mitglieder.filter(m => m.rolle === 'lehrer').length,
     schueler: mitglieder.filter(m => m.rolle === 'schueler').length,
     eltern:   mitglieder.filter(m => m.rolle === 'eltern').length,
+  }
+
+  function handleDrawerAktion(typ) {
+    const m = drawerMitglied
+    setDrawerMitglied(null)
+    setModal({ typ, mitglied: m })
   }
 
   function csvExportieren() {
@@ -1058,11 +1231,21 @@ export default function Mitgliederverwaltung() {
           <button onClick={() => setModal({ typ: 'einladung' })} style={s.btnSek}>
             📧 {T('invite_member')}
           </button>
-          {!istDemo && (
-            <button onClick={() => setModal({ typ: 'anlegen' })} style={s.btnPri}>
-              {T('member_create')}
-            </button>
-          )}
+          {!istDemo && (() => {
+            const lehrerVoll   = abo?.maxLehrer   != null && stats.lehrer   >= abo.maxLehrer
+            const schuelerVoll = abo?.maxSchueler != null && stats.schueler >= abo.maxSchueler
+            const allesVoll    = lehrerVoll && schuelerVoll
+            return (
+              <button
+                onClick={() => !allesVoll && setModal({ typ: 'anlegen' })}
+                className="btn-shine"
+                style={{ ...s.btnPri, ...(allesVoll ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
+                title={allesVoll ? T('plan_limit_beide').replace('{l}', abo.maxLehrer).replace('{s}', abo.maxSchueler) : undefined}
+              >
+                {T('member_create')}
+              </button>
+            )
+          })()}
         </div>
       </div>
 
@@ -1121,9 +1304,10 @@ export default function Mitgliederverwaltung() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-2)' }}>
-                  {[T('member_header'), T('role'), T('profile_phone'), T('profile_birthday'), T('status'), T('actions')].map(h => (
+                  {[T('member_header'), T('role'), T('profile_phone'), T('profile_birthday'), T('status')].map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)' }}>{h}</th>
                   ))}
+                  <th style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', width: 32 }} />
                 </tr>
               </thead>
               <tbody>
@@ -1134,7 +1318,7 @@ export default function Mitgliederverwaltung() {
                   return (
                   <tr key={m.id}
                     className={kannBearbeiten ? 'mitglied-row' : ''}
-                    onClick={() => kannBearbeiten && setModal({ typ: 'profil', mitglied: m })}
+                    onClick={() => kannBearbeiten && setDrawerMitglied(m)}
                     style={{ background: i % 2 === 0 ? 'var(--surface)' : 'var(--bg)', borderBottom: '1px solid var(--border)', cursor: kannBearbeiten ? 'pointer' : 'default' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1158,28 +1342,8 @@ export default function Mitgliederverwaltung() {
                         {m.aktiv ? `● ${T('active')}` : `○ ${T('inactive')}`}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
-                      {kannBearbeiten ? (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={s.btnKlein} title={T('edit')}>✏️</button>
-                          <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={s.btnKlein} title="E-Mail">📧</button>
-                          <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={s.btnKlein} title="Passwort">🔑</button>
-                          {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
-                            <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={s.btnKlein} title="Kurszuordnungen">🔗</button>
-                          )}
-                          <button onClick={() => setModal({ typ: 'antrag', mitglied: m })} style={s.btnKlein} title="Aufnahmeantrag">📋</button>
-                          {m.rolle === 'schueler' && (
-                            <button onClick={() => setModal({ typ: 'kursantrag', mitglied: m })} style={s.btnKlein} title="Kursanmeldung">📄</button>
-                          )}
-                          <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={s.btnKlein} title="Dokumente">📁</button>
-                          <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnKlein, color:'var(--danger)' }} title="Löschen">🗑</button>
-                          {rolle === 'superadmin' && (
-                            <button onClick={() => setModal({ typ: 'schulen', mitglied: m })} style={s.btnKlein} title="Schulen verwalten">🏫</button>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--text-3)', paddingLeft: 4 }}>–</span>
-                      )}
+                    <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--text-3)', fontSize: 18, width: 32 }}>
+                      {kannBearbeiten && '›'}
                     </td>
                   </tr>
                   )
@@ -1193,54 +1357,29 @@ export default function Mitgliederverwaltung() {
             {gefiltert.map(m => {
               const kannBearbeiten = m.rolle !== 'admin' || rolle === 'superadmin'
               return (
-              <div key={m.id} style={{
-                background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-                padding: '16px', border: '1px solid var(--border)',
-                boxShadow: 'var(--shadow)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  <Avatar name={m.voller_name} avatarUrl={m.avatar_url} size={44} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{m.voller_name}</div>
-                    {m.email && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{m.email}</div>}
-                    <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                      <Badge rolle={m.rolle} />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: m.aktiv ? 'var(--success)' : 'var(--danger)' }}>
-                        {m.aktiv ? `● ${T('active')}` : `○ ${T('inactive')}`}
-                      </span>
-                    </div>
+              <div key={m.id}
+                onClick={() => kannBearbeiten && setDrawerMitglied(m)}
+                className={`fade-in-scroll${kannBearbeiten ? ' hover-lift' : ''}`}
+                style={{
+                  background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
+                  padding: '14px 16px', border: '1px solid var(--border)',
+                  boxShadow: 'var(--shadow)',
+                  cursor: kannBearbeiten ? 'pointer' : 'default',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}>
+                <Avatar name={m.voller_name} avatarUrl={m.avatar_url} size={44} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{m.voller_name}</div>
+                  {m.email && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Badge rolle={m.rolle} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: m.aktiv ? 'var(--success)' : 'var(--danger)' }}>
+                      {m.aktiv ? `● ${T('active')}` : `○ ${T('inactive')}`}
+                    </span>
                   </div>
+                  {m.telefon && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>📞 {m.telefon}</div>}
                 </div>
-                {m.telefon && <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 8 }}>📞 {m.telefon}</div>}
-                {kannBearbeiten ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setModal({ typ: 'profil', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                        ✏️ {T('edit')}
-                      </button>
-                      {(m.rolle === 'lehrer' || m.rolle === 'schueler') && (
-                        <button onClick={() => setModal({ typ: 'zuordnung', mitglied: m })} style={{ ...s.btnSek, flex: 1, fontSize: 13 }}>
-                          🔗 {T('member_assignments')}
-                        </button>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button onClick={() => setModal({ typ: 'email', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>📧</button>
-                      <button onClick={() => setModal({ typ: 'passwort', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>🔑</button>
-                      <button onClick={() => setModal({ typ: 'antrag', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>📋</button>
-                      {m.rolle === 'schueler' && (
-                        <button onClick={() => setModal({ typ: 'kursantrag', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>📄</button>
-                      )}
-                      <button onClick={() => setModal({ typ: 'dokumente', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>📁</button>
-                      <button onClick={() => setModal({ typ: 'loeschen', mitglied: m })} style={{ ...s.btnSek, fontSize: 13, color:'var(--danger)', borderColor:'var(--danger)' }}>🗑</button>
-                      {rolle === 'superadmin' && (
-                        <button onClick={() => setModal({ typ: 'schulen', mitglied: m })} style={{ ...s.btnSek, fontSize: 13 }}>🏫</button>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', padding: '8px 0' }}>Nur Superadmin kann Admins bearbeiten</div>
-                )}
+                {kannBearbeiten && <span style={{ fontSize: 20, color: 'var(--text-3)', flexShrink: 0 }}>›</span>}
               </div>
               )
             })}
@@ -1250,7 +1389,7 @@ export default function Mitgliederverwaltung() {
 
       {/* Modals */}
       {modal?.typ === 'einladung' && <EinladungModal onClose={() => setModal(null)} T={T} />}
-      {modal?.typ === 'anlegen' && !istDemo && <NutzerAnlegenModal onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
+      {modal?.typ === 'anlegen' && !istDemo && <NutzerAnlegenModal onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} abo={abo} stats={stats} />}
       {modal?.typ === 'profil'    && <ProfilModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} T={T} />}
       {modal?.typ === 'email'     && <EmailModal mitglied={modal.mitglied} onClose={() => setModal(null)} onErfolg={ladeMitglieder} />}
       {modal?.typ === 'passwort'  && <PasswortModal mitglied={modal.mitglied} onClose={() => setModal(null)} />}
@@ -1267,6 +1406,15 @@ export default function Mitgliederverwaltung() {
         />
       )}
 
+      {drawerMitglied && (
+        <MitgliedDrawer
+          mitglied={drawerMitglied}
+          onClose={() => setDrawerMitglied(null)}
+          onAktion={handleDrawerAktion}
+          rolle={rolle}
+        />
+      )}
+
       <style>{`
         .mitglied-row:hover td { background: color-mix(in srgb, var(--primary) 6%, var(--surface)) !important; }
         @media (max-width: 768px) {
@@ -1276,6 +1424,42 @@ export default function Mitgliederverwaltung() {
         @media (min-width: 769px) {
           .mobile-cards { display: none !important; }
         }
+        @keyframes drawerFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes drawerSlideIn { from { transform: translateX(100%) } to { transform: translateX(0) } }
+        @keyframes drawerSlideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
+        .mitglied-drawer {
+          position: fixed;
+          right: 0; top: 0; bottom: 0; width: 380px;
+          background: var(--surface);
+          border-left: 1px solid var(--border);
+          box-shadow: -4px 0 32px rgba(0,0,0,0.14);
+          z-index: 1001;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          animation: drawerSlideIn 0.22s ease;
+        }
+        .mobile-handle { display: none; }
+        @media (max-width: 768px) {
+          .mitglied-drawer {
+            left: 0; right: 0; top: auto; width: 100%;
+            max-height: 85vh;
+            border-left: none;
+            border-top: 1px solid var(--border);
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+            animation: drawerSlideUp 0.22s ease;
+          }
+          .mobile-handle {
+            display: block;
+            width: 36px; height: 4px;
+            background: var(--border);
+            border-radius: 99px;
+            margin: 10px auto 0;
+            flex-shrink: 0;
+          }
+        }
+        .drawer-btn:hover { background: color-mix(in srgb, var(--primary) 8%, var(--bg)) !important; }
       `}</style>
     </div>
   )

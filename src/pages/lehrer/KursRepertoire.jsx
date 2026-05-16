@@ -5,6 +5,27 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
+// ─── Konfetti ─────────────────────────────────────────────────
+function konfetti() {
+  if (!document.getElementById('konfetti-style')) {
+    const style = document.createElement('style')
+    style.id = 'konfetti-style'
+    style.textContent = '@keyframes kfall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}'
+    document.head.appendChild(style)
+  }
+  const wrap = document.createElement('div')
+  wrap.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden'
+  document.body.appendChild(wrap)
+  const farben = ['#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#ef4444','#14b8a6']
+  for (let i = 0; i < 70; i++) {
+    const el = document.createElement('div')
+    const w = 6 + Math.random() * 8, isCircle = Math.random() > 0.5
+    el.style.cssText = `position:absolute;left:${Math.random()*100}%;top:-20px;width:${w}px;height:${isCircle ? w : w * 0.5}px;background:${farben[i % farben.length]};border-radius:${isCircle ? '50%' : '2px'};animation:kfall ${2.5 + Math.random() * 1.5}s ${Math.random() * 0.6}s ease-in forwards`
+    wrap.appendChild(el)
+  }
+  setTimeout(() => wrap.remove(), 4500)
+}
+
 // ─── Stück anlegen Modal ──────────────────────────────────────
 function NeuesStueckModal({ kursId, onClose, onErfolg }) {
   const { profil, T } = useApp()
@@ -79,7 +100,7 @@ function DateiUploadModal({ kursId, schuelerListe, onClose, onErfolg }) {
 
   async function hochladen() {
     if (!datei) { setFehler(T('dok_no_file')); return }
-    if (datei.size > 15 * 1024 * 1024) { setFehler(T('datei_zu_gross')); return }
+    if (datei.size > 50 * 1024 * 1024) { setFehler(T('file_too_large').replace('{n}', 50)); return }
     setLaden(true)
     const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const bucket = form.schueler_id ? 'schueler-dateien' : 'kurs-dateien'
@@ -219,6 +240,14 @@ export default function KursRepertoire() {
   async function statusAendern(stueckId, status) {
     await supabase.from('unterricht_stuecke').update({ status }).eq('unterricht_id', kursId).eq('stueck_id', stueckId)
     setStuecke(prev => prev.map(s => s.stueck_id === stueckId ? { ...s, status } : s))
+    if (status === 'abgeschlossen') konfetti()
+  }
+
+  function zufaelligesStueck() {
+    const pool = stuecke.filter(us => us.status !== 'abgeschlossen')
+    if (!pool.length) return
+    const us = pool[Math.floor(Math.random() * pool.length)]
+    navigate(`/${segment}/kurse/${kursId}/repertoire/${us.stueck_id}`)
   }
 
   async function dateiLoeschen(datei) {
@@ -287,8 +316,13 @@ export default function KursRepertoire() {
       {/* STÜCKE */}
       {tab === 'stuecke' && (
         <div>
-          <input placeholder="🔍 Stück oder Komponist suchen …" value={suche} onChange={e => setSuche(e.target.value)}
-            style={{ ...s.input, maxWidth:340, marginBottom:20 }} />
+          <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:20 }}>
+            <input placeholder="🔍 Stück oder Komponist suchen …" value={suche} onChange={e => setSuche(e.target.value)}
+              style={{ ...s.input, maxWidth:340, margin:0 }} />
+            {stuecke.some(us => us.status !== 'abgeschlossen') && (
+              <button onClick={zufaelligesStueck} title="Zufälliges Stück" style={{ ...s.btnSek, padding:'9px 12px', fontSize:18, lineHeight:1 }}>🎲</button>
+            )}
+          </div>
 
           {gefilterteStuecke.length === 0 ? (
             <div style={s.leer}>
@@ -318,6 +352,7 @@ export default function KursRepertoire() {
                       {/* Meta */}
                       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
                         {st.tonart && <span style={s.chip}>🎵 {st.tonart}</span>}
+                        {st.takt   && <span style={s.chip}><span style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginRight:2 }}>{T('piece_takt')}</span>{st.takt}</span>}
                         {st.tempo  && <span style={s.chip}>♩ {st.tempo}</span>}
                       </div>
 

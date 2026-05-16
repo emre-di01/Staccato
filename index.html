@@ -75,7 +75,8 @@
             fresh:   { light: '#f0fdf4', dark: '#020f06' },
           };
           var theme = localStorage.getItem('staccato_theme') || 'klassik';
-          var dark  = localStorage.getItem('staccato_dark') === 'true';
+          var savedDark = localStorage.getItem('staccato_dark');
+          var dark  = savedDark !== null ? savedDark === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
           var bg    = (BG[theme] || BG.klassik)[dark ? 'dark' : 'light'];
           document.documentElement.style.backgroundColor = bg;
           document.body.style.backgroundColor = bg;

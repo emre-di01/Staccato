@@ -81,7 +81,7 @@ function EinzelStundeModal({ kursId, raumId, onClose, onErfolg }) {
             <input type="date" style={s.input} value={form.datum}
               onChange={e => setForm(f => ({ ...f, datum: e.target.value }))} />
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))', gap:12 }}>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={s.label}>Von</label>
               <input type="time" style={s.input} value={form.uhrzeit_von}
@@ -401,7 +401,7 @@ function StundenBulkModal({ kurs, onClose, onErfolg }) {
               ⚠️ Kein Wochentag/Uhrzeit definiert. Bitte erst im Kurs eintragen.
             </div>
           )}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:12 }}>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={{ fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>Von</label>
               <input type="date" style={bulkInput} value={von} onChange={e => setVon(e.target.value)} />
@@ -703,51 +703,51 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
       {/* Tab: Stunden */}
       {aktiveTab === 'stunden' && (
         <div>
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:14 }}>
-            <div style={{ display:'flex', flexDirection:'column', gap:8, flex:1 }}>
-              {/* Status-Filter */}
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                {[['alle', T('filter_all')], ['geplant', T('kurs_status_planned')], ['stattgefunden', T('kurs_status_done')], ['abgesagt', T('kurs_status_cancelled')]].map(([val, label]) => (
-                  <button key={val} onClick={() => setStundenFilter(val)} style={{
-                    padding:'5px 12px', borderRadius:99, border:'1.5px solid', fontSize:12, fontWeight:600,
-                    cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s',
-                    borderColor: stundenFilter===val ? 'var(--primary)' : 'var(--border)',
-                    background:  stundenFilter===val ? 'var(--primary)' : 'transparent',
-                    color:       stundenFilter===val ? 'var(--primary-fg)' : 'var(--text-3)',
-                  }}>{label}</button>
-                ))}
-              </div>
-              {/* Jahr- und Monat-Filter */}
-              {stunden.length > 0 && (() => {
-                const jahre  = [...new Set(stunden.map(st => new Date(st.beginn).getFullYear()))].sort((a,b) => b-a)
-                const monate = [
-                  { val:'1',  label:'Januar' }, { val:'2',  label:'Februar' }, { val:'3',  label:'März' },
-                  { val:'4',  label:'April' },  { val:'5',  label:'Mai' },     { val:'6',  label:'Juni' },
-                  { val:'7',  label:'Juli' },   { val:'8',  label:'August' },  { val:'9',  label:'September' },
-                  { val:'10', label:'Oktober' },{ val:'11', label:'November' },{ val:'12', label:'Dezember' },
-                ]
-                if (jahre.length < 2 && stunden.length < 6) return null
-                return (
-                  <div style={{ display:'flex', gap:8 }}>
-                    <select value={jahrFilter} onChange={e => setJahrFilter(e.target.value)} style={selStyle}>
-                      <option value=''>Alle Jahre</option>
-                      {jahre.map(j => <option key={j} value={j}>{j}</option>)}
-                    </select>
-                    <select value={monatFilter} onChange={e => setMonatFilter(e.target.value)} style={selStyle}>
-                      <option value=''>Alle Monate</option>
-                      {monate.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
-                    </select>
-                  </div>
-                )
-              })()}
+          <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:14 }}>
+            {/* Status-Filter chips – horizontal scroll, kein Wrap */}
+            <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:2 }}>
+              {[['alle', T('filter_all')], ['geplant', T('kurs_status_planned')], ['stattgefunden', T('kurs_status_done')], ['abgesagt', T('kurs_status_cancelled')]].map(([val, label]) => (
+                <button key={val} onClick={() => setStundenFilter(val)} style={{
+                  padding:'5px 12px', borderRadius:99, border:'1.5px solid', fontSize:12, fontWeight:600,
+                  cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s', flexShrink:0,
+                  borderColor: stundenFilter===val ? 'var(--primary)' : 'var(--border)',
+                  background:  stundenFilter===val ? 'var(--primary)' : 'transparent',
+                  color:       stundenFilter===val ? 'var(--primary-fg)' : 'var(--text-3)',
+                }}>{label}</button>
+              ))}
             </div>
-            <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+            {/* Jahr/Monat-Filter */}
+            {stunden.length > 0 && (() => {
+              const jahre  = [...new Set(stunden.map(st => new Date(st.beginn).getFullYear()))].sort((a,b) => b-a)
+              const monate = [
+                { val:'1',  label:'Januar' }, { val:'2',  label:'Februar' }, { val:'3',  label:'März' },
+                { val:'4',  label:'April' },  { val:'5',  label:'Mai' },     { val:'6',  label:'Juni' },
+                { val:'7',  label:'Juli' },   { val:'8',  label:'August' },  { val:'9',  label:'September' },
+                { val:'10', label:'Oktober' },{ val:'11', label:'November' },{ val:'12', label:'Dezember' },
+              ]
+              if (jahre.length < 2 && stunden.length < 6) return null
+              return (
+                <div style={{ display:'flex', gap:8 }}>
+                  <select value={jahrFilter} onChange={e => setJahrFilter(e.target.value)} style={selStyle}>
+                    <option value=''>Alle Jahre</option>
+                    {jahre.map(j => <option key={j} value={j}>{j}</option>)}
+                  </select>
+                  <select value={monatFilter} onChange={e => setMonatFilter(e.target.value)} style={selStyle}>
+                    <option value=''>Alle Monate</option>
+                    {monate.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
+                  </select>
+                </div>
+              )
+            })()}
+            {/* Aktions-Buttons: sekundär links, primär rechts */}
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
               <button onClick={notizenDrucken} style={s.btnSek} title="Notizen und Hausaufgaben drucken / als PDF">
                 🖨 Notizen
               </button>
               <button onClick={() => setModal({ typ:'stunden_bulk' })} style={s.btnSek} title="Wochentermine für einen Zeitraum generieren oder löschen">
                 ⚡ Generieren
               </button>
+              <div style={{ flex:1 }} />
               <button onClick={() => setModal({ typ:'einzelstunde' })} style={s.btnPri}>
                 {T('kurs_create_lesson')}
               </button>
@@ -765,8 +765,8 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
             const istHeute  = beginn.toDateString() === jetzt.toDateString()
             return (
               <div key={st.id} style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:'12px 16px', border:`1px solid ${istHeute ? 'var(--accent)' : 'var(--border)'}`, display:'flex', flexDirection:'column', gap:10 }}>
-                {/* Obere Zeile: Datum + Info */}
-                <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                {/* Obere Zeile: Datum + Info + Icon-Buttons */}
+                <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
                   <div style={{ textAlign:'center', minWidth:48, flexShrink:0 }}>
                     <div style={{ fontSize:11, fontWeight:700, color: istHeute ? 'var(--accent)' : 'var(--text-3)', textTransform:'uppercase' }}>
                       {istHeute ? 'Heute' : beginn.toLocaleDateString('de-DE', { weekday:'short' })}
@@ -785,48 +785,55 @@ ${st.hausaufgaben ? `<div class="block"><div class="label">📚 Hausaufgaben</di
                     {st.notizen && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:4 }}>📝 {st.notizen}</div>}
                     {st.hausaufgaben && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>📚 {st.hausaufgaben}</div>}
                   </div>
+                  {/* Icon-Buttons immer rechts oben */}
+                  <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                    <button onClick={() => setModal({ typ:'notiz', stunde: st })}
+                      style={{ padding:'5px 8px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}
+                      title={T('kurs_edit_notes')}>
+                      📝
+                    </button>
+                    <button onClick={() => stundeLoeschen(st.id, st.beginn)}
+                      style={{ padding:'5px 8px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                      🗑
+                    </button>
+                  </div>
                 </div>
-                {/* Untere Zeile: Buttons */}
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
+                {/* Untere Zeile: Haupt-Aktions-Button */}
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                   {!istVorbei && st.status === 'geplant' && (
                     <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
-                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      style={{ flex:1, padding:'7px 12px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                       {T('kurs_mark_attendance')}
                     </button>
                   )}
-                  {istVorbei && st.status === 'geplant' && (
+                  {istVorbei && st.status === 'geplant' && (<>
                     <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
-                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      style={{ flex:1, padding:'7px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
                       {T('kurs_mark_late')}
                     </button>
-                  )}
-                  {st.status === 'geplant' && (
                     <button onClick={() => setModal({ typ:'absagen', stunde: st })}
-                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:'1px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                      {T('kurs_cancel_btn')}
+                    </button>
+                  </>)}
+                  {!istVorbei && st.status === 'geplant' && (
+                    <button onClick={() => setModal({ typ:'absagen', stunde: st })}
+                      style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:'1px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                       {T('kurs_cancel_btn')}
                     </button>
                   )}
                   {st.status === 'stattgefunden' && (
                     <button onClick={() => setModal({ typ:'anwesenheit', stunde: st })}
-                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-                      ✏️ Anwesenheit
+                      style={{ flex:1, padding:'7px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                      ✏️ {T('kurs_edit_attendance')}
                     </button>
                   )}
                   {st.status === 'abgesagt' && (
                     <button onClick={() => stundeWiederherstellen(st.id)}
-                      style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                      style={{ flex:1, padding:'7px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
                       {T('kurs_restore')}
                     </button>
                   )}
-                  <button onClick={() => setModal({ typ:'notiz', stunde: st })}
-                    style={{ padding:'6px 10px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}
-                    title="Notizen bearbeiten">
-                    📝
-                  </button>
-                  <button onClick={() => stundeLoeschen(st.id, st.beginn)}
-                    style={{ padding:'6px 10px', borderRadius:'var(--radius)', border:'1px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
-                    🗑
-                  </button>
                 </div>
               </div>
             )

@@ -78,6 +78,7 @@ function StueckKarte({ stueck, kurse = [], onClick }) {
         <div style={{ fontSize:13, color:'var(--text-3)' }}>
           {stueck.komponist && <span>🎼 {stueck.komponist}</span>}
           {stueck.tonart    && <span style={{ marginLeft:10 }}>🎵 {stueck.tonart}</span>}
+          {stueck.takt      && <span style={{ marginLeft:10, display:'inline-flex', alignItems:'center', gap:3 }}><span style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{T('piece_takt')}</span><span style={{ fontWeight:700 }}>{stueck.takt}</span></span>}
         </div>
       </div>
 
