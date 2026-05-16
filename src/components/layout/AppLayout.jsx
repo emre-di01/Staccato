@@ -13,7 +13,7 @@ import ChangelogModal from './ChangelogModal'
 import OfflineBanner from './OfflineBanner'
 
 export default function AppLayout() {
-  const { profil, rolle, schule, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe, darkMode, großeSchrift } = useApp()
+  const { profil, rolle, schule, abo, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe, darkMode, großeSchrift } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const swipeStartX = useRef(null)
@@ -30,7 +30,7 @@ export default function AppLayout() {
   const [installPrompt, setInstallPrompt]       = useState(null)
   const [keyboardOffen, setKeyboardOffen]       = useState(false)
 
-  const navConfig = getNavConfig(rolle, T)
+  const navConfig = getNavConfig(rolle, T, abo)
   const navItems  = flattenNav(navConfig)
 
   const ladeUngelesen = useCallback(async () => {
@@ -157,6 +157,42 @@ export default function AppLayout() {
     }
   }, [])
 
+  useEffect(() => {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationPlayState = 'running'
+          io.unobserve(entry.target)
+        }
+      })
+    }, { threshold: 0.08 })
+
+    function scan(root) {
+      root.querySelectorAll?.('.fade-in-scroll').forEach(el => {
+        el.style.animationPlayState = 'paused'
+        io.observe(el)
+      })
+    }
+
+    scan(document)
+
+    const mutObs = new MutationObserver(muts => {
+      muts.forEach(mut => {
+        mut.addedNodes.forEach(node => {
+          if (node.nodeType !== 1) return
+          scan(node)
+          if (node.classList?.contains('fade-in-scroll')) {
+            node.style.animationPlayState = 'paused'
+            io.observe(node)
+          }
+        })
+      })
+    })
+    mutObs.observe(document.getElementById('root') ?? document.body, { childList: true, subtree: true })
+
+    return () => { io.disconnect(); mutObs.disconnect() }
+  }, [])
+
   async function handleInstall() {
     if (!installPrompt || installPrompt === 'ios') return
     installPrompt.prompt()
@@ -173,9 +209,10 @@ export default function AppLayout() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100dvh', background: 'var(--bg)', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
+      <a href="#main-content" className="skip-link">Zum Hauptinhalt springen</a>
 
       {/* Desktop Sidebar */}
-      <aside style={{
+      <aside aria-label="Hauptnavigation" style={{
         width: 240, minWidth: 240, background: 'var(--surface)',
         borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column', padding: '20px 12px',
@@ -217,6 +254,9 @@ export default function AppLayout() {
           <NavLink to="/einstellungen" style={({ isActive }) => ({ ...btnStyle, color: isActive ? 'var(--primary)' : 'var(--text-3)', textDecoration: 'none' })}>
             ⚙️ {T('settings')}
           </NavLink>
+          <NavLink to={`/${rolle === 'superadmin' ? 'admin' : rolle}/tools`} style={({ isActive }) => ({ ...btnStyle, color: isActive ? 'var(--primary)' : 'var(--text-3)', textDecoration: 'none' })}>
+            🔧 {T('tools_nav')}
+          </NavLink>
           <button onClick={() => window.location.reload()} style={{ ...btnStyle, fontSize: 14, fontWeight: 700, color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 10%, transparent)', padding: '10px 12px', borderRadius: 'var(--radius)', marginTop: 2, marginBottom: 2 }}>↻ Aktualisieren</button>
           <button onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/login' })} style={btnStyle}>👋 {T('logout')}</button>
           <button onClick={() => setChangelogOffen(true)} aria-label="Versionshistorie anzeigen" style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '8px 0' }}>
@@ -236,7 +276,7 @@ export default function AppLayout() {
           onTouchEnd={() => { touchStartX.current = null }}
         >
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setSidebarOffen(false)} />
-          <aside style={{
+          <aside aria-label="Hauptnavigation" style={{
             width: 'min(260px, calc(100vw - 48px))',
             background: 'var(--surface)', borderRight: '1px solid var(--border)',
             display: 'flex', flexDirection: 'column',
@@ -250,7 +290,7 @@ export default function AppLayout() {
               }
               <button onClick={() => setSidebarOffen(false)} aria-label="Menü schließen" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)', padding: 10, margin: -10, minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
-            <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
+            <nav aria-label="Hauptmenü" style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
               {navConfig.map(entry => entry.gruppe
                 ? <NavGroup key={entry.gruppe} {...entry} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
                 : <NavItem  key={entry.to}    item={entry} setSidebarOffen={setSidebarOffen} ungelesen={ungelesen.length} />
@@ -275,6 +315,9 @@ export default function AppLayout() {
                 </NavLink>
                 <NavLink to="/einstellungen" onClick={() => setSidebarOffen(false)} style={({ isActive }) => ({ ...btnStyle, textDecoration: 'none', color: isActive ? 'var(--primary)' : 'var(--text-3)' })}>
                   ⚙️ {T('settings')}
+                </NavLink>
+                <NavLink to={`/${rolle === 'superadmin' ? 'admin' : rolle}/tools`} onClick={() => setSidebarOffen(false)} style={({ isActive }) => ({ ...btnStyle, textDecoration: 'none', color: isActive ? 'var(--primary)' : 'var(--text-3)' })}>
+                  🔧 {T('tools_nav')}
                 </NavLink>
                 <button onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/login' })} style={btnStyle}>👋 {T('logout')}</button>
                 <button onClick={() => { setChangelogOffen(true); setSidebarOffen(false) }} aria-label="Versionshistorie anzeigen" style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 6, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '8px 0' }}>
@@ -304,7 +347,7 @@ export default function AppLayout() {
           }
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
             <NavLink to="/einstellungen" aria-label={T('settings')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'var(--text-2)', textDecoration: 'none', minWidth: 44, minHeight: 44 }}>⚙️</NavLink>
-            <button onClick={() => window.location.reload()} style={{ border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer', color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', padding: '7px 12px', borderRadius: 'var(--radius)', fontFamily: 'inherit', lineHeight: 1, minHeight: 44 }}>↻ Reload</button>
+            <button onClick={() => window.location.reload()} aria-label="Neu laden" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', color: 'var(--text-2)', background: 'none', border: 'none', minWidth: 44, minHeight: 44 }}>↻</button>
           </div>
         </header>
 
@@ -329,7 +372,8 @@ export default function AppLayout() {
         })()}
 
         <main
-          style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }}
+          id="main-content"
+          style={{ flex: 1, padding: '32px 40px', overflowY: 'auto', scrollBehavior: 'smooth' }}
           className="main-content"
           onTouchStart={e => { swipeStartX.current = e.touches[0].clientX }}
           onTouchEnd={e => {
@@ -345,7 +389,7 @@ export default function AppLayout() {
         </main>
 
         {/* Mobile Bottom Nav */}
-        <nav style={{
+        <nav aria-label="Schnellnavigation" style={{
           display: 'none', alignItems: 'center',
           padding: '8px 12px',
           paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
@@ -407,6 +451,23 @@ export default function AppLayout() {
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { height: -webkit-fill-available; }
+
+        .skip-link {
+          position: absolute;
+          top: -100px;
+          left: 16px;
+          z-index: 99999;
+          padding: 10px 18px;
+          background: var(--primary);
+          color: var(--primary-fg);
+          border-radius: var(--radius);
+          font-weight: 700;
+          font-size: 14px;
+          text-decoration: none;
+          transition: top 0.15s ease;
+          white-space: nowrap;
+        }
+        .skip-link:focus { top: 12px; outline: 3px solid var(--primary); outline-offset: 2px; }
         body {
           background: var(--bg);
           color: var(--text);
@@ -505,6 +566,55 @@ export default function AppLayout() {
           to   { opacity: 1; transform: none; }
         }
 
+        /* ── Hover Lift ── */
+        .hover-lift {
+          transition: transform 0.22s ease, box-shadow 0.22s ease !important;
+          will-change: transform;
+        }
+        @media (hover: hover) {
+          .hover-lift:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 10px 28px rgba(0,0,0,0.13) !important;
+          }
+        }
+        .hover-lift:active { transform: translateY(-1px) !important; }
+
+        /* ── Primary Button Shine ── */
+        .btn-shine {
+          position: relative;
+          overflow: hidden;
+        }
+        .btn-shine::after {
+          content: '';
+          position: absolute;
+          top: 0; left: -100%;
+          width: 60%; height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+          transform: skewX(-20deg);
+          transition: left 0.45s ease;
+          pointer-events: none;
+        }
+        @media (hover: hover) {
+          .btn-shine:hover::after { left: 160%; }
+        }
+
+        /* ── Nav Badge Pulse ── */
+        @keyframes badgePulse {
+          0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 65%, transparent); }
+          70%  { box-shadow: 0 0 0 6px transparent; }
+          100% { box-shadow: 0 0 0 0 transparent; }
+        }
+        .nav-badge { animation: badgePulse 2.2s ease infinite; }
+
+        /* ── Scroll Fade-In ── */
+        .fade-in-scroll {
+          animation: fadeInScroll 0.45s cubic-bezier(0.4,0,0.2,1) both;
+        }
+        @keyframes fadeInScroll {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
         @media (max-width: 640px) {
           .modal-overlay {
             align-items: flex-end !important;
@@ -554,6 +664,15 @@ export default function AppLayout() {
 
         @media (min-width: 769px) {
           .mobile-only { display: none !important; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+          }
         }
       `}</style>
     </div>

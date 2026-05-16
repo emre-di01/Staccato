@@ -19,6 +19,8 @@ const Instrumente          = lazy(() => import('./pages/admin/Instrumente'))
 const Inventar             = lazy(() => import('./pages/admin/Inventar'))
 const AdminEvents          = lazy(() => import('./pages/admin/Events'))
 const Interessenten        = lazy(() => import('./pages/admin/Interessenten'))
+const Rechnungen           = lazy(() => import('./pages/admin/Rechnungen'))
+const AdminEinstellungen   = lazy(() => import('./pages/admin/Einstellungen'))
 const LehrerDashboard      = lazy(() => import('./pages/lehrer/Dashboard'))
 const LehrerKurse          = lazy(() => import('./pages/lehrer/Kurse'))
 const KursDetail           = lazy(() => import('./pages/lehrer/KursDetail'))
@@ -36,6 +38,7 @@ const SchuelerEvents       = lazy(() => import('./pages/schueler/Events'))
 const SchuelerDateien      = lazy(() => import('./pages/schueler/Dateien'))
 const SchuelerFAQ          = lazy(() => import('./pages/schueler/FAQ'))
 const VorstandFAQ          = lazy(() => import('./pages/vorstand/FAQ'))
+const Tools                = lazy(() => import('./pages/Tools'))
 const VorstandDashboard    = lazy(() => import('./pages/vorstand/Dashboard'))
 const VorstandZiele        = lazy(() => import('./pages/vorstand/Ziele'))
 const VorstandProtokolle   = lazy(() => import('./pages/vorstand/Protokolle'))
@@ -92,7 +95,10 @@ function AppRoutes() {
           <Route path="/admin/instrumente"      element={<Instrumente />} />
           <Route path="/admin/inventar"         element={<Inventar />} />
           <Route path="/admin/interessenten"    element={<Interessenten />} />
+          <Route path="/admin/rechnungen"       element={<Rechnungen />} />
           <Route path="/admin/nachrichten"      element={<Nachrichten />} />
+          <Route path="/admin/tools"            element={<Tools />} />
+          <Route path="/admin/einstellungen"    element={<AdminEinstellungen />} />
         </Route>
       </Route>
 
@@ -113,6 +119,7 @@ function AppRoutes() {
           <Route path="/lehrer/events/:id/repertoire"                        element={<EventRepertoire />} />
           <Route path="/lehrer/events/:kursId/repertoire/:stueckId"          element={<StueckDetail />} />
           <Route path="/lehrer/nachrichten"     element={<Nachrichten />} />
+          <Route path="/lehrer/tools"           element={<Tools />} />
           <Route path="/lehrer/profil"          element={<ProfilSeite />} />
         </Route>
       </Route>
@@ -132,6 +139,7 @@ function AppRoutes() {
           <Route path="/schueler/repertoire"         element={<Repertoire />} />
           <Route path="/schueler/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/schueler/nachrichten"         element={<Nachrichten />} />
+          <Route path="/schueler/tools"              element={<Tools />} />
           <Route path="/schueler/faq"                element={<SchuelerFAQ />} />
           <Route path="/schueler/profil"              element={<ProfilSeite />} />
         </Route>
@@ -152,6 +160,7 @@ function AppRoutes() {
           <Route path="/vorstand/repertoire"            element={<Repertoire />} />
           <Route path="/vorstand/repertoire/:stueckId"  element={<StueckDetail />} />
           <Route path="/vorstand/inventar"              element={<Inventar />} />
+          <Route path="/vorstand/tools"                 element={<Tools />} />
           <Route path="/vorstand/faq"                   element={<VorstandFAQ />} />
           <Route path="/vorstand/profil"                element={<ProfilSeite />} />
         </Route>
@@ -166,6 +175,7 @@ function AppRoutes() {
           <Route path="/eltern/events"          element={P('Veranstaltungen', '🎭')} />
           <Route path="/eltern/nachrichten"     element={<Nachrichten />} />
           <Route path="/eltern/profil"          element={<ProfilSeite />} />
+          <Route path="/eltern/tools"           element={<Tools />} />
         </Route>
       </Route>
 
