@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   worker: { format: 'es' },
-  optimizeDeps: { exclude: ['@xenova/transformers'] },
+  optimizeDeps: { exclude: ['@xenova/transformers', 'verovio'] },
   test: {
     environment: 'jsdom',
     include: ['src/**/__tests__/**/*.test.{js,jsx}'],
@@ -39,6 +39,7 @@ export default defineConfig({
       },
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['**/*verovio*'],
       },
     }),
   ],

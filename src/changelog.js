@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.2.0'
+export const CURRENT_VERSION = '2.3.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.3.0',
+    date: '2026-05-16',
+    features: [
+      {
+        icon: '🎼',
+        de: 'MusicXML-Notation – Partituren aus MuseScore & Co. direkt im Browser als interaktive Notenansicht (powered by Verovio)',
+        en: 'MusicXML Notation – scores from MuseScore rendered directly in the browser as interactive sheet music (powered by Verovio)',
+        tr: 'MusicXML Notasyonu – MuseScore partisyonları, tarayıcıda interaktif nota görünümü olarak (Verovio destekli)',
+      },
+      {
+        icon: '🔍',
+        de: 'MusicBrainz-Integration – Komponist, Tonart und Metadaten beim Bearbeiten eines Stücks automatisch befüllen',
+        en: 'MusicBrainz integration – automatically fill in composer, key and metadata when editing a piece',
+        tr: 'MusicBrainz entegrasyonu – eser düzenlerken besteci, tonalite ve meta verileri otomatik doldur',
+      },
+      {
+        icon: '✨',
+        de: 'Überarbeiteter Stück-Header – Titel in einer Zeile, harmonisches Layout mit klarer Aktionsleiste',
+        en: 'Redesigned piece header – title on one line, harmonious layout with clear action bar',
+        tr: 'Yeniden tasarlanan eser başlığı – tek satırda başlık, net eylem çubuğuyla uyumlu düzen',
+      },
+    ],
+  },
   {
     version: '2.2.0',
     date: '2026-05-16',

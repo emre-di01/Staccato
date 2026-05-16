@@ -357,6 +357,76 @@ function PdfViewer({ url }) {
   )
 }
 
+// ─── Verovio (MusicXML → SVG) ────────────────────────────────
+let verovioModCache = null
+async function ladeVerovio() {
+  if (verovioModCache) return verovioModCache
+  const [{ default: createMod }, { VerovioToolkit }] = await Promise.all([
+    import('verovio/wasm'),
+    import('verovio/esm'),
+  ])
+  const mod = await createMod()
+  verovioModCache = { mod, VerovioToolkit }
+  return verovioModCache
+}
+
+function VerovioViewer({ datei, kannLoeschen, onLoeschen }) {
+  const [seiten,      setSeiten]      = useState([])
+  const [laden,       setLaden]       = useState(true)
+  const [fehler,      setFehler]      = useState('')
+  const [seite,       setSeite]       = useState(1)
+
+  useEffect(() => { render() }, [])
+
+  async function render() {
+    setLaden(true); setFehler('')
+    try {
+      const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 3600)
+      if (!data?.signedUrl) throw new Error('Signed URL fehlgeschlagen')
+      const xml = await fetch(data.signedUrl).then(r => r.text())
+      const { mod, VerovioToolkit } = await ladeVerovio()
+      const tk = new VerovioToolkit(mod)
+      tk.setOptions({ scale: 40, adjustPageWidth: 1, pageMarginTop: 60, pageMarginBottom: 60, pageMarginLeft: 60, pageMarginRight: 60 })
+      tk.loadData(xml)
+      const count = tk.getPageCount()
+      const svgList = Array.from({ length: count }, (_, i) => tk.renderToSVG(i + 1))
+      setSeiten(svgList)
+    } catch (e) {
+      setFehler(e.message)
+    }
+    setLaden(false)
+  }
+
+  const btnStyle = { padding:'5px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }
+
+  return (
+    <div style={{ borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', overflow:'hidden', background:'var(--surface)' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid var(--border)', background:'var(--bg-2)' }}>
+        <span style={{ fontSize:18 }}>🎼</span>
+        <span style={{ fontWeight:700, fontSize:13, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--text)' }}>{datei.name}</span>
+        {kannLoeschen && <button onClick={onLoeschen} style={{ background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--danger)', padding:4 }}>🗑</button>}
+      </div>
+
+      {laden && <div style={{ padding:32, textAlign:'center', color:'var(--text-3)', fontSize:13 }}>🎼 Lade Notation…</div>}
+      {fehler && <div style={{ padding:20, color:'var(--danger)', fontSize:13 }}>{fehler}</div>}
+
+      {seiten.length > 0 && (
+        <>
+          <div style={{ padding:12, overflowX:'auto', background:'#fff' }}
+            dangerouslySetInnerHTML={{ __html: seiten[seite - 1] }} />
+          {seiten.length > 1 && (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, padding:'8px 14px', borderTop:'1px solid var(--border)', background:'var(--bg-2)' }}>
+              <button onClick={() => setSeite(s => Math.max(1, s - 1))} disabled={seite === 1} style={btnStyle}>‹</button>
+              <span style={{ fontSize:13, color:'var(--text-3)' }}>Seite {seite} / {seiten.length}</span>
+              <button onClick={() => setSeite(s => Math.min(seiten.length, s + 1))} disabled={seite === seiten.length} style={btnStyle}>›</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── PDF Card ─────────────────────────────────────────────────
 function PdfCard({ datei, kannLoeschen, onLoeschen }) {
   const [url, setUrl] = useState(null)
@@ -506,7 +576,8 @@ function DateiUploadModal({ stueckId, onClose, onErfolg }) {
             <label style={s.label}>Dateityp</label>
             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
               {[
-                { key:'noten',    icon:'📄', label:'Noten' },
+                { key:'noten',    icon:'📄', label:'Noten (PDF)' },
+                { key:'musicxml', icon:'🎼', label:'Noten (XML)' },
                 { key:'akkorde',  icon:'🎸', label:'Akkorde' },
                 { key:'audio',    icon:'🎵', label:'Audio' },
                 { key:'dokument', icon:'📋', label:'Dokument' },
@@ -845,7 +916,7 @@ export default function StueckDetail() {
   const [stueck,       setStueck]       = useState(null)
   const [dateien,      setDateien]      = useState([])
   const [laden,        setLaden]        = useState(true)
-  const [tab,          setTab]          = useState('text')
+  const [tab,          setTab]          = useState(() => mob ? '' : 'text')
   const [filterStimme, setFilterStimme] = useState('alle')
   const [bearbeiteText, setBearbeiteText] = useState(false)
   const [bearbeiteMeta, setBearbeiteMeta] = useState(false)
@@ -861,6 +932,8 @@ export default function StueckDetail() {
   const [metronomOffen, setMetronomOffen] = useState(false)
   const [bpLaeuft,    setBpLaeuft]    = useState(false)
   const [bpFehler,    setBpFehler]    = useState('')
+  const [mbLaden,     setMbLaden]     = useState(false)
+  const [mbErgebnisse,setMbErgebnisse]= useState([])
   const tapZeitenEditRef = useRef([])
 
   const kannBearbeiten = rolle === 'admin' || rolle === 'superadmin' || rolle === 'lehrer'
@@ -1001,6 +1074,47 @@ ${html}
     }
   }
 
+  function mbTonart(key) {
+    if (!key) return ''
+    return key
+      .replace('Bb', 'B').replace('Eb', 'Es').replace('Ab', 'As')
+      .replace('Db', 'Des').replace('Gb', 'Ges').replace('Cb', 'Ces')
+      .replace('F#', 'Fis').replace('C#', 'Cis').replace('G#', 'Gis')
+      .replace('D#', 'Dis').replace('A#', 'Ais').replace('E#', 'Eis')
+      .replace(' major', '-Dur').replace(' minor', '-Moll')
+  }
+
+  async function mbSuchen() {
+    const q = metaForm.titel.trim()
+    if (!q) return
+    setMbLaden(true)
+    setMbErgebnisse([])
+    try {
+      const res = await fetch(
+        `https://musicbrainz.org/ws/2/work?query=${encodeURIComponent(q)}&fmt=json&limit=8`,
+        { headers: { 'Accept': 'application/json' } }
+      )
+      const data = await res.json()
+      const treffer = (data.works ?? []).map(w => ({
+        titel:     w.title ?? '',
+        komponist: w.relations?.find(r => r.type === 'composer')?.artist?.name ?? '',
+        tonart:    mbTonart(w.attributes?.find(a => a.type === 'Key')?.value ?? ''),
+      })).filter(t => t.titel)
+      setMbErgebnisse(treffer)
+    } catch { /* silent */ }
+    setMbLaden(false)
+  }
+
+  function mbUebernehmen(t) {
+    setMetaForm(p => ({
+      ...p,
+      titel:     t.titel     || p.titel,
+      komponist: t.komponist || p.komponist,
+      tonart:    t.tonart    || p.tonart,
+    }))
+    setMbErgebnisse([])
+  }
+
   async function dateiLoeschen(dateiId, pfad) {
     if (!await confirm('Datei wirklich löschen?', { confirmLabel: 'Löschen' })) return
     await supabase.storage.from('stueck-dateien').remove([pfad])
@@ -1026,6 +1140,7 @@ ${html}
     filterStimme === 'alle' || d.stimme === filterStimme || d.stimme === 'keine'
   )
   const notenDateien  = gefilterteDateien.filter(d => d.typ === 'noten')
+  const xmlDateien    = gefilterteDateien.filter(d => d.typ === 'musicxml')
   const audioDateien  = gefilterteDateien.filter(d => d.typ === 'audio')
   const akkordDateien = gefilterteDateien.filter(d => d.typ === 'akkorde')
   const dokumente     = gefilterteDateien.filter(d => d.typ === 'dokument' || d.typ === 'sonstiges')
@@ -1033,7 +1148,7 @@ ${html}
   const tabs = [
     { id:'text',    label:'📝 Text',    zeigen: !!stueck.liedtext || kannBearbeiten },
     { id:'akkorde', label:'🎸 Akkorde', zeigen: akkordDateien.length > 0 || !!stueck.notizen || (kannBearbeiten && !!stueck.youtube_url) },
-    { id:'noten',   label:'📄 Noten',   zeigen: notenDateien.length > 0 },
+    { id:'noten',   label:'📄 Noten',   zeigen: notenDateien.length > 0 || xmlDateien.length > 0 },
     { id:'audio',   label:'🎵 Audio',   zeigen: audioDateien.length > 0 },
     { id:'youtube', label:'▶️ Video',   zeigen: !!stueck.youtube_url || kannBearbeiten },
     { id:'spotify', label:'🟢 Spotify', zeigen: !!stueck.spotify_url || kannBearbeiten },
@@ -1041,6 +1156,165 @@ ${html}
   ].filter(t => t.zeigen)
 
   const padContent = mob ? 16 : 28
+
+  function tabInhalt(id) {
+    if (id === 'text') return (
+      <div>
+        {bearbeiteText && kannBearbeiten ? (
+          <LiedtextBearbeiten stueck={stueck} onSpeichern={textSpeichern} onAbbrechen={() => setBearbeiteText(false)} />
+        ) : stueck.liedtext ? (
+          <>
+            <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', flexWrap:'wrap' }}>
+              <button onClick={() => setTextGroesse(g => Math.max(12, g - 2))} style={{ width:36, height:36, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit', fontWeight:700, flexShrink:0 }}>A−</button>
+              <span style={{ fontSize:12, color:'var(--text-3)', minWidth:32, textAlign:'center' }}>{textGroesse}px</span>
+              <button onClick={() => setTextGroesse(g => Math.min(56, g + 2))} style={{ width:36, height:36, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit', fontWeight:700, flexShrink:0 }}>A+</button>
+              <div style={{ flex:1 }} />
+              <button onClick={() => setPdfModal(true)} style={s.btnSek} title="Als PDF drucken">📄 PDF</button>
+              <button onClick={() => setVollbild(true)} style={{ padding:'8px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>{T('piece_fullscreen')}</button>
+              {kannBearbeiten && <button onClick={() => setBearbeiteText(true)} style={s.btnSek}>✏️</button>}
+            </div>
+            {stueck.liedtext_md !== false
+              ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(stueck.liedtext) }} style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', transition:'font-size 0.2s', wordBreak:'break-word' }} />
+              : <pre style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', whiteSpace:'pre-wrap', margin:0, transition:'font-size 0.2s', wordBreak:'break-word' }}>{stueck.liedtext}</pre>
+            }
+          </>
+        ) : kannBearbeiten ? (
+          <div style={{ textAlign:'center', padding:32 }}>
+            <p style={{ color:'var(--text-3)', marginBottom:16 }}>Noch kein Liedtext vorhanden.</p>
+            <button onClick={() => setBearbeiteText(true)} style={s.btnPri}>+ Liedtext hinzufügen</button>
+          </div>
+        ) : <div style={s.leer}>Kein Liedtext vorhanden.</div>}
+      </div>
+    )
+    if (id === 'akkorde') return (
+      <div>
+        <ChordPlayer notizen={stueck.notizen} tempo={stueck.tempo} takt={stueck.takt} />
+        {(stueck.notizen || akkordDateien.length > 0) && (
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, padding:'12px 16px', background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px solid var(--border)', flexWrap:'wrap' }}>
+            <span style={{ fontSize:13, fontWeight:700, color:'var(--text-2)', flexShrink:0 }}>🎵 Transponieren:</span>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <button onClick={() => setHalbtoene(h => h - 1)} style={{ width:34, height:34, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text)', fontSize:18, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>−</button>
+              <div style={{ minWidth:52, textAlign:'center' }}>
+                <div style={{ fontSize:16, fontWeight:800, color: halbtoene !== 0 ? 'var(--accent)' : 'var(--text)' }}>{halbtoene > 0 ? '+' : ''}{halbtoene}</div>
+                <div style={{ fontSize:10, color:'var(--text-3)', marginTop:-2 }}>{T('piece_halftones')}</div>
+              </div>
+              <button onClick={() => setHalbtoene(h => h + 1)} style={{ width:34, height:34, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text)', fontSize:18, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>+</button>
+            </div>
+            <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+              {[-5,-4,-3,-2,-1,1,2,3,4,5].map(n => (
+                <button key={n} onClick={() => setHalbtoene(n)} style={{ padding:'4px 8px', borderRadius:6, border:'1.5px solid var(--border)', background: halbtoene===n ? 'var(--accent)' : 'var(--bg)', color: halbtoene===n ? 'var(--accent-fg)' : 'var(--text-3)', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>{n > 0 ? '+' : ''}{n}</button>
+              ))}
+            </div>
+            {halbtoene !== 0 && <button onClick={() => setHalbtoene(0)} style={{ marginLeft:'auto', padding:'5px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>↺ Reset</button>}
+          </div>
+        )}
+        {stueck.notizen && (
+          <div style={{ marginBottom:24 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+              <div style={s.sectionLabel}>Akkorde</div>
+              {kannBearbeiten && <button onClick={() => { setBearbeiteText(true); setTab('text') }} style={{ ...s.btnSek, fontSize:12, padding:'5px 10px' }}>✏️ Bearbeiten</button>}
+            </div>
+            <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'16px 20px' }}>
+              <ChordPro text={transponiereText(stueck.notizen, halbtoene)} />
+            </div>
+          </div>
+        )}
+        {akkordDateien.map(d => (
+          <div key={d.id} style={{ marginBottom:20 }}>
+            <div style={s.sectionLabel}>{d.name}</div>
+            <AkkordDateiAnzeige datei={d} halbtoene={halbtoene} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />
+          </div>
+        ))}
+        {kannBearbeiten && stueck.youtube_url && (
+          <div style={{ marginTop: stueck.notizen || akkordDateien.length > 0 ? 16 : 0 }}>
+            <button onClick={akkordErkennen} disabled={bpLaeuft} style={{ ...s.btnSek, fontSize:13, padding:'8px 14px', display:'flex', alignItems:'center', gap:6, opacity: bpLaeuft ? 0.6 : 1 }}>
+              {bpLaeuft ? '⏳ Erkenne Akkorde…' : '🎵 Akkorde aus YouTube erkennen'}
+            </button>
+            {bpFehler && <div style={{ fontSize:12, color:'var(--danger)', marginTop:6 }}>{bpFehler}</div>}
+          </div>
+        )}
+        {!stueck.notizen && akkordDateien.length === 0 && (!stueck.youtube_url || !kannBearbeiten) && <div style={s.leer}>Keine Akkorde vorhanden.</div>}
+      </div>
+    )
+    if (id === 'noten') return (
+      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        {xmlDateien.map(d => <VerovioViewer key={d.id} datei={d} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />)}
+        {notenDateien.map(d => <PdfCard key={d.id} datei={d} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />)}
+      </div>
+    )
+    if (id === 'audio') return (
+      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        {audioDateien.map(d => <AudioPlayer key={d.id} datei={d} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />)}
+      </div>
+    )
+    if (id === 'youtube') return (
+      <div>
+        {stueck.youtube_url && !youtubeEdit ? (
+          <>
+            <div style={{ position:'relative', paddingBottom:'56.25%', height:0, overflow:'hidden', borderRadius:'var(--radius)', background:'#000' }}>
+              <iframe style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }} src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_url)}`} title="YouTube" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            </div>
+            <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <a href={stueck.youtube_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'var(--accent)', textDecoration:'none', fontWeight:600 }}>↗ Auf YouTube öffnen</a>
+              {kannBearbeiten && <button onClick={() => { setYoutubeInput(stueck.youtube_url ?? ''); setYoutubeEdit(true) }} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>✎ Link ändern</button>}
+            </div>
+          </>
+        ) : kannBearbeiten ? (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            <p style={{ margin:0, fontSize:14, color:'var(--text-2)' }}>{stueck.youtube_url ? 'YouTube-Link bearbeiten:' : 'YouTube-Link hinzufügen:'}</p>
+            <input type="url" value={youtubeInput} onChange={e => setYoutubeInput(e.target.value)} placeholder="https://youtube.com/watch?v=..." style={{ padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', outline:'none', width:'100%', boxSizing:'border-box' }} />
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              {stueck.youtube_url && <button onClick={() => { setYoutubeInput(''); youtubeSpeichern() }} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🗑 Entfernen</button>}
+              <button onClick={() => setYoutubeEdit(false)} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>Abbrechen</button>
+              <button onClick={youtubeSpeichern} disabled={!youtubeInput.trim()} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>💾 Speichern</button>
+            </div>
+          </div>
+        ) : <div style={s.leer}>Kein Video verlinkt.</div>}
+      </div>
+    )
+    if (id === 'spotify') return (
+      <div>
+        {stueck.spotify_url ? (
+          <>
+            <iframe src={`https://open.spotify.com/embed/track/${spotifyTrackId(stueck.spotify_url)}?utm_source=generator`} width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style={{ borderRadius:12, display:'block' }} />
+            <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+              <a href={stueck.spotify_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'#1DB954', textDecoration:'none', fontWeight:600 }}>↗ Auf Spotify öffnen</a>
+              {kannBearbeiten && (
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => setSpotifyModal(true)} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid #1DB954', background:'transparent', color:'#1DB954', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🔍 Song ändern</button>
+                  <button onClick={() => spotifySpeichern('')} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🗑</button>
+                </div>
+              )}
+            </div>
+          </>
+        ) : kannBearbeiten ? (
+          <div style={{ textAlign:'center', padding:32 }}>
+            <p style={{ color:'var(--text-3)', marginBottom:16, fontSize:14 }}>Noch kein Spotify-Track verknüpft.</p>
+            <button onClick={() => setSpotifyModal(true)} style={{ padding:'10px 24px', borderRadius:'var(--radius)', border:'none', background:'#1DB954', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>🔍 Song auf Spotify suchen</button>
+          </div>
+        ) : <div style={s.leer}>Kein Spotify-Track verlinkt.</div>}
+        {spotifyModal && <SpotifyModal titelVorschlag={stueck.titel} onUebernehmen={url => spotifySpeichern(url)} onSchliessen={() => setSpotifyModal(false)} />}
+      </div>
+    )
+    if (id === 'dateien') return (
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {dokumente.length === 0 ? <div style={s.leer}>Keine allgemeinen Dateien.</div> : dokumente.map(d => (
+          <div key={d.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)' }}>
+            <span style={{ fontSize:24, flexShrink:0 }}>{dateiIcon(d.name)}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</div>
+            </div>
+            <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+              <OeffnenButton pfad={d.bucket_pfad} />
+              <DownloadButton datei={d} label="⬇" />
+              {kannBearbeiten && <button onClick={() => dateiLoeschen(d.id, d.bucket_pfad)} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--danger)', padding:4 }}>🗑</button>}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+    return null
+  }
 
   return (
     <div>
@@ -1054,6 +1328,36 @@ ${html}
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding: mob ? '16px' : '24px', border:'1px solid var(--border)', marginBottom:20, boxShadow:'var(--shadow)' }}>
         {bearbeiteMeta ? (
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+
+            {/* MusicBrainz Metadaten-Suche */}
+            <div>
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                <span style={{ fontSize:12, color:'var(--text-3)', fontWeight:600 }}>🎵 MusicBrainz</span>
+                <button onClick={mbSuchen} disabled={!metaForm.titel.trim() || mbLaden}
+                  style={{ ...s.btnSek, fontSize:12, padding:'4px 12px', opacity: !metaForm.titel.trim() ? 0.45 : 1 }}>
+                  {mbLaden ? '…' : '🔍 Metadaten suchen'}
+                </button>
+                {mbErgebnisse.length > 0 && (
+                  <button onClick={() => setMbErgebnisse([])}
+                    style={{ background:'none', border:'none', fontSize:13, color:'var(--text-3)', cursor:'pointer', padding:'2px 6px' }}>✕</button>
+                )}
+              </div>
+              {mbErgebnisse.length > 0 && (
+                <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:0, background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', overflow:'hidden' }}>
+                  {mbErgebnisse.map((t, i) => (
+                    <button key={i} onClick={() => mbUebernehmen(t)}
+                      style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', background:'none', border:'none', borderBottom: i < mbErgebnisse.length-1 ? '1px solid var(--border)' : 'none', cursor:'pointer', textAlign:'left', fontFamily:'inherit' }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.titel}</div>
+                        <div style={{ fontSize:12, color:'var(--text-3)' }}>{[t.komponist, t.tonart].filter(Boolean).join(' · ') || '—'}</div>
+                      </div>
+                      <span style={{ fontSize:11, color:'var(--accent)', flexShrink:0 }}>↙ übernehmen</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap:10 }}>
               {[
                 { key:'titel',     label:'Titel *',  placeholder:'z.B. Ave Maria' },
@@ -1133,34 +1437,57 @@ ${html}
             </div>
           </div>
         ) : (
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
-            <div style={{ flex:1, minWidth:0 }}>
-              <h1 style={{ margin:'0 0 6px', fontSize: mob ? 20 : 24, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', wordBreak:'break-word' }}>{stueck.titel}</h1>
-              <div style={{ display:'flex', gap:12, flexWrap:'wrap', fontSize:13, color:'var(--text-2)', alignItems:'center' }}>
-                {stueck.komponist && <span>🎼 {stueck.komponist}</span>}
-                {stueck.tonart    && <span>🎵 {stueck.tonart}</span>}
-                {stueck.takt      && <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><span style={{ fontSize:10, color:'var(--text-3)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{T('piece_takt')}</span><span style={{ fontWeight:700, fontVariantNumeric:'tabular-nums' }}>{stueck.takt}</span></span>}
-                {stueck.tempo     && <span>♩ {stueck.tempo}</span>}
-                <button onClick={() => setMetronomOffen(o => !o)}
-                  style={{ padding:'2px 10px', borderRadius:99, border:'1.5px solid var(--border)', background: metronomOffen ? 'var(--primary)' : 'var(--bg-2)', color: metronomOffen ? 'var(--primary-fg)' : 'var(--text-3)', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit', lineHeight:'22px' }}>
-                  ♩ Metronom
-                </button>
-              </div>
-              {stueck.anmerkungen && (
-                <div style={{ marginTop:8, fontSize:13, color:'var(--text-2)', background:'var(--bg)', borderRadius:'var(--radius)', padding:'8px 12px', borderLeft:'3px solid var(--border)', whiteSpace:'pre-wrap' }}>
-                  {stueck.anmerkungen}
-                </div>
-              )}
+          <div>
+            {/* Titel */}
+            <h1 style={{ margin:'0 0 8px', fontSize: mob ? 19 : 22, fontWeight:800, color:'var(--text)', letterSpacing:'-0.4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{stueck.titel}</h1>
+
+            {/* Meta */}
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap', fontSize:13, color:'var(--text-2)', alignItems:'center' }}>
+              {stueck.komponist && <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>🎼 <span>{stueck.komponist}</span></span>}
+              {stueck.tonart    && <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>🎵 <span>{stueck.tonart}</span></span>}
+              {stueck.takt      && <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><span style={{ fontSize:10, color:'var(--text-3)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{T('piece_takt')}</span><span style={{ fontWeight:700, fontVariantNumeric:'tabular-nums' }}>{stueck.takt}</span></span>}
+              {stueck.tempo     && <span>♩ {stueck.tempo}</span>}
+              <button onClick={() => setMetronomOffen(o => !o)}
+                style={{ padding:'2px 10px', borderRadius:99, border:'1.5px solid var(--border)', background: metronomOffen ? 'var(--primary)' : 'var(--bg-2)', color: metronomOffen ? 'var(--primary-fg)' : 'var(--text-3)', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit', lineHeight:'22px' }}>
+                ♩ Metronom
+              </button>
             </div>
-            {kannBearbeiten && (
-              <div style={{ display:'flex', gap:8 }}>
-                <button onClick={metaBearbeitenStarten} style={s.btnSek} title="Metadaten bearbeiten">✏️</button>
-                <button onClick={() => setModal('upload')} style={s.btnPri}>⬆ Upload</button>
-                <button onClick={stueckLoeschen}
-                  style={{ padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  🗑
-                </button>
+
+            {stueck.anmerkungen && (
+              <div style={{ marginTop:8, fontSize:13, color:'var(--text-2)', background:'var(--bg)', borderRadius:'var(--radius)', padding:'8px 12px', borderLeft:'3px solid var(--border)', whiteSpace:'pre-wrap' }}>
+                {stueck.anmerkungen}
               </div>
+            )}
+
+            {/* Stimmen-Filter */}
+            <div style={{ display:'flex', gap:6, marginTop:12, flexWrap:'wrap' }}>
+              {['alle','sopran','alt','tenor','bass'].map(st => (
+                <button key={st} onClick={() => setFilterStimme(st)}
+                  style={{ padding:'4px 12px', borderRadius:99, border:'1.5px solid var(--border)', background: filterStimme===st ? 'var(--primary)' : 'var(--bg-2)', color: filterStimme===st ? 'var(--primary-fg)' : 'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textTransform:'capitalize' }}>
+                  {st === 'alle' ? T('piece_voice_all') : st === 'sopran' ? T('piece_voice_soprano') : st === 'alt' ? T('piece_voice_alto') : st === 'tenor' ? T('piece_voice_tenor') : T('piece_voice_bass')}
+                </button>
+              ))}
+            </div>
+
+            {/* Aktionen */}
+            {kannBearbeiten && (
+              <>
+                <div style={{ borderTop:'1px solid var(--border)', margin:'14px 0 12px' }} />
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                  <button onClick={metaBearbeitenStarten}
+                    style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    ✏️ {T('edit')}
+                  </button>
+                  <button onClick={() => setModal('upload')}
+                    style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    ⬆ Upload
+                  </button>
+                  <button onClick={stueckLoeschen}
+                    style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
+                    🗑 {T('delete')}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -1172,310 +1499,42 @@ ${html}
             onTempoSave={kannBearbeiten ? tempoSpeichernVonMetronom : null}
           />
         )}
+      </div>
 
-        {/* Stimmen-Filter */}
-        <div style={{ display:'flex', gap:6, marginTop:14, flexWrap:'wrap' }}>
-          {['alle','sopran','alt','tenor','bass'].map(st => (
-            <button key={st} onClick={() => setFilterStimme(st)}
-              style={{ padding:'4px 12px', borderRadius:99, border:'1.5px solid var(--border)', background: filterStimme===st ? 'var(--primary)' : 'var(--bg-2)', color: filterStimme===st ? 'var(--primary-fg)' : 'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textTransform:'capitalize' }}>
-              {st === 'alle' ? T('piece_voice_all') : st === 'sopran' ? T('piece_voice_soprano') : st === 'alt' ? T('piece_voice_alto') : st === 'tenor' ? T('piece_voice_tenor') : T('piece_voice_bass')}
-            </button>
+      {/* Tabs / Akkordeon */}
+      {tabs.length > 0 && (mob ? (
+        <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:24 }}>
+          {tabs.map(t => (
+            <div key={t.id} style={{ borderRadius:'var(--radius)', border:`1.5px solid ${tab===t.id ? 'var(--primary)' : 'var(--border)'}`, overflow:'hidden', background:'var(--surface)' }}>
+              <button
+                onClick={() => setTab(tab === t.id ? '' : t.id)}
+                style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px', background: tab===t.id ? 'color-mix(in srgb, var(--primary) 8%, var(--surface))' : 'none', border:'none', cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
+                <span style={{ fontWeight: tab===t.id ? 800 : 600, fontSize:15, color: tab===t.id ? 'var(--primary)' : 'var(--text)' }}>{t.label}</span>
+                <span style={{ fontSize:12, color:'var(--text-3)', transform: tab===t.id ? 'rotate(180deg)' : 'none', transition:'transform 0.2s', display:'inline-block' }}>▼</span>
+              </button>
+              {tab === t.id && (
+                <div style={{ padding:16, borderTop:'1px solid var(--border)' }}>
+                  {tabInhalt(t.id)}
+                </div>
+              )}
+            </div>
           ))}
         </div>
-      </div>
-
-      {/* Tabs */}
-      {tabs.length > 0 && (
-        <div style={{ display:'flex', gap:0, marginBottom:0, borderBottom:'2px solid var(--border)', overflowX:'auto', WebkitOverflowScrolling:'touch', scrollbarWidth:'none' }}>
-          {tabs.map(t => {
-            const [emoji, ...rest] = t.label.split(' ')
-            const label = mob ? emoji : t.label
-            return (
-              <button key={t.id} onClick={() => setTab(t.id)} title={t.label}
-                style={{ padding: mob ? '10px 12px' : '10px 18px', background:'none', border:'none', fontSize: mob ? 18 : 14, cursor:'pointer', fontFamily:'inherit', color: tab===t.id ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===t.id ? 800 : 500, borderBottom:`2px solid ${tab===t.id ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, whiteSpace:'nowrap', flexShrink:0 }}>
-                {label}
+      ) : (
+        <>
+          <div style={{ display:'flex', gap:0, marginBottom:0, borderBottom:'2px solid var(--border)' }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                style={{ padding:'10px 18px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: tab===t.id ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===t.id ? 800 : 500, borderBottom:`2px solid ${tab===t.id ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, whiteSpace:'nowrap' }}>
+                {t.label}
               </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Tab Inhalt */}
-      <div style={{ background:'var(--surface)', borderRadius:'0 0 var(--radius-lg) var(--radius-lg)', padding:padContent, border:'1px solid var(--border)', borderTop:'none', boxShadow:'var(--shadow)', marginBottom:24 }}>
-
-        {/* LIEDTEXT */}
-        {tab === 'text' && (
-          <div>
-            {bearbeiteText && kannBearbeiten ? (
-              <LiedtextBearbeiten stueck={stueck} onSpeichern={textSpeichern} onAbbrechen={() => setBearbeiteText(false)} />
-            ) : stueck.liedtext ? (
-              <>
-                {/* Toolbar */}
-                <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', flexWrap:'wrap' }}>
-                  <button onClick={() => setTextGroesse(g => Math.max(12, g - 2))}
-                    style={{ width:36, height:36, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit', fontWeight:700, flexShrink:0 }}>A−</button>
-                  <span style={{ fontSize:12, color:'var(--text-3)', minWidth:32, textAlign:'center' }}>{textGroesse}px</span>
-                  <button onClick={() => setTextGroesse(g => Math.min(56, g + 2))}
-                    style={{ width:36, height:36, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit', fontWeight:700, flexShrink:0 }}>A+</button>
-                  <div style={{ flex:1 }} />
-                  <button onClick={() => setPdfModal(true)} style={s.btnSek} title="Als PDF drucken">📄 PDF</button>
-                  <button onClick={() => setVollbild(true)}
-                    style={{ padding:'8px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                    {T('piece_fullscreen')}
-                  </button>
-                  {kannBearbeiten && (
-                    <button onClick={() => setBearbeiteText(true)} style={s.btnSek}>✏️</button>
-                  )}
-                </div>
-                {stueck.liedtext_md !== false
-                  ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(stueck.liedtext) }}
-                      style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', transition:'font-size 0.2s', wordBreak:'break-word' }} />
-                  : <pre style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', whiteSpace:'pre-wrap', margin:0, transition:'font-size 0.2s', wordBreak:'break-word' }}>{stueck.liedtext}</pre>
-                }
-              </>
-            ) : kannBearbeiten ? (
-              <div style={{ textAlign:'center', padding:32 }}>
-                <p style={{ color:'var(--text-3)', marginBottom:16 }}>Noch kein Liedtext vorhanden.</p>
-                <button onClick={() => setBearbeiteText(true)} style={s.btnPri}>+ Liedtext hinzufügen</button>
-              </div>
-            ) : (
-              <div style={s.leer}>Kein Liedtext vorhanden.</div>
-            )}
-          </div>
-        )}
-
-        {/* AKKORDE */}
-        {tab === 'akkorde' && (
-          <div>
-            <ChordPlayer notizen={stueck.notizen} tempo={stueck.tempo} takt={stueck.takt} />
-            {/* Transpositions-Leiste */}
-            {(stueck.notizen || akkordDateien.length > 0) && (
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, padding:'12px 16px', background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px solid var(--border)', flexWrap:'wrap' }}>
-                <span style={{ fontSize:13, fontWeight:700, color:'var(--text-2)', flexShrink:0 }}>🎵 Transponieren:</span>
-                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <button onClick={() => setHalbtoene(h => h - 1)}
-                    style={{ width:34, height:34, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text)', fontSize:18, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>−</button>
-                  <div style={{ minWidth:52, textAlign:'center' }}>
-                    <div style={{ fontSize:16, fontWeight:800, color: halbtoene !== 0 ? 'var(--accent)' : 'var(--text)' }}>
-                      {halbtoene > 0 ? '+' : ''}{halbtoene}
-                    </div>
-                    <div style={{ fontSize:10, color:'var(--text-3)', marginTop:-2 }}>{T('piece_halftones')}</div>
-                  </div>
-                  <button onClick={() => setHalbtoene(h => h + 1)}
-                    style={{ width:34, height:34, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text)', fontSize:18, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>+</button>
-                </div>
-                {/* Schnellwahl-Steps */}
-                <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
-                  {[-5,-4,-3,-2,-1,1,2,3,4,5].map(n => (
-                    <button key={n} onClick={() => setHalbtoene(n)}
-                      style={{ padding:'4px 8px', borderRadius:6, border:'1.5px solid var(--border)', background: halbtoene===n ? 'var(--accent)' : 'var(--bg)', color: halbtoene===n ? 'var(--accent-fg)' : 'var(--text-3)', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                      {n > 0 ? '+' : ''}{n}
-                    </button>
-                  ))}
-                </div>
-                {halbtoene !== 0 && (
-                  <button onClick={() => setHalbtoene(0)}
-                    style={{ marginLeft:'auto', padding:'5px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
-                    ↺ Reset
-                  </button>
-                )}
-              </div>
-            )}
-
-            {stueck.notizen && (
-              <div style={{ marginBottom:24 }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-                  <div style={s.sectionLabel}>Akkorde</div>
-                  {kannBearbeiten && <button onClick={() => { setBearbeiteText(true); setTab('text') }} style={{ ...s.btnSek, fontSize:12, padding:'5px 10px' }}>✏️ Bearbeiten</button>}
-                </div>
-                <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'16px 20px' }}>
-                  <ChordPro text={transponiereText(stueck.notizen, halbtoene)} />
-                </div>
-              </div>
-            )}
-            {akkordDateien.map(d => (
-              <div key={d.id} style={{ marginBottom:20 }}>
-                <div style={s.sectionLabel}>{d.name}</div>
-                <AkkordDateiAnzeige datei={d} halbtoene={halbtoene} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />
-              </div>
-            ))}
-            {kannBearbeiten && stueck.youtube_url && (
-              <div style={{ marginTop: stueck.notizen || akkordDateien.length > 0 ? 16 : 0 }}>
-                <button
-                  onClick={akkordErkennen}
-                  disabled={bpLaeuft}
-                  style={{ ...s.btnSek, fontSize:13, padding:'8px 14px', display:'flex', alignItems:'center', gap:6, opacity: bpLaeuft ? 0.6 : 1 }}>
-                  {bpLaeuft ? '⏳ Erkenne Akkorde…' : '🎵 Akkorde aus YouTube erkennen'}
-                </button>
-                {bpFehler && <div style={{ fontSize:12, color:'var(--danger)', marginTop:6 }}>{bpFehler}</div>}
-              </div>
-            )}
-            {!stueck.notizen && akkordDateien.length === 0 && !stueck.youtube_url && (
-              <div style={s.leer}>Keine Akkorde vorhanden.</div>
-            )}
-            {!stueck.notizen && akkordDateien.length === 0 && !!stueck.youtube_url && !kannBearbeiten && (
-              <div style={s.leer}>Keine Akkorde vorhanden.</div>
-            )}
-          </div>
-        )}
-
-        {/* NOTEN */}
-        {tab === 'noten' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {notenDateien.map(d => (
-              <PdfCard key={d.id} datei={d} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />
             ))}
           </div>
-        )}
-
-        {/* AUDIO */}
-        {tab === 'audio' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {audioDateien.map(d => (
-              <AudioPlayer key={d.id} datei={d} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />
-            ))}
+          <div style={{ background:'var(--surface)', borderRadius:'0 0 var(--radius-lg) var(--radius-lg)', padding:padContent, border:'1px solid var(--border)', borderTop:'none', boxShadow:'var(--shadow)', marginBottom:24 }}>
+            {tabInhalt(tab)}
           </div>
-        )}
-
-        {/* YOUTUBE */}
-        {tab === 'youtube' && (
-          <div>
-            {stueck.youtube_url && !youtubeEdit ? (
-              <>
-                <div style={{ position:'relative', paddingBottom:'56.25%', height:0, overflow:'hidden', borderRadius:'var(--radius)', background:'#000' }}>
-                  <iframe
-                    style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
-                    src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_url)}`}
-                    title="YouTube"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-                <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <a href={stueck.youtube_url} target="_blank" rel="noreferrer"
-                    style={{ fontSize:13, color:'var(--accent)', textDecoration:'none', fontWeight:600 }}>
-                    ↗ Auf YouTube öffnen
-                  </a>
-                  {kannBearbeiten && (
-                    <button onClick={() => { setYoutubeInput(stueck.youtube_url ?? ''); setYoutubeEdit(true) }}
-                      style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
-                      ✎ Link ändern
-                    </button>
-                  )}
-                </div>
-              </>
-            ) : kannBearbeiten ? (
-              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                <p style={{ margin:0, fontSize:14, color:'var(--text-2)' }}>
-                  {stueck.youtube_url ? 'YouTube-Link bearbeiten:' : 'YouTube-Link hinzufügen:'}
-                </p>
-                <input
-                  type="url"
-                  value={youtubeInput}
-                  onChange={e => setYoutubeInput(e.target.value)}
-                  placeholder="https://youtube.com/watch?v=..."
-                  style={{ padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', outline:'none', width:'100%', boxSizing:'border-box' }}
-                />
-                <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-                  {stueck.youtube_url && (
-                    <button onClick={() => { setYoutubeInput(''); youtubeSpeichern() }}
-                      style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
-                      🗑 Entfernen
-                    </button>
-                  )}
-                  <button onClick={() => setYoutubeEdit(false)}
-                    style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-                    Abbrechen
-                  </button>
-                  <button onClick={youtubeSpeichern} disabled={!youtubeInput.trim()}
-                    style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                    💾 Speichern
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={s.leer}>Kein Video verlinkt.</div>
-            )}
-          </div>
-        )}
-
-        {/* SPOTIFY */}
-        {tab === 'spotify' && (
-          <div>
-            {stueck.spotify_url ? (
-              <>
-                <iframe
-                  src={`https://open.spotify.com/embed/track/${spotifyTrackId(stueck.spotify_url)}?utm_source=generator`}
-                  width="100%" height="152" frameBorder="0"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                  style={{ borderRadius:12, display:'block' }}
-                />
-                <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
-                  <a href={stueck.spotify_url} target="_blank" rel="noreferrer"
-                    style={{ fontSize:13, color:'#1DB954', textDecoration:'none', fontWeight:600 }}>
-                    ↗ Auf Spotify öffnen
-                  </a>
-                  {kannBearbeiten && (
-                    <div style={{ display:'flex', gap:8 }}>
-                      <button onClick={() => setSpotifyModal(true)}
-                        style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid #1DB954', background:'transparent', color:'#1DB954', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
-                        🔍 Song ändern
-                      </button>
-                      <button onClick={() => spotifySpeichern('')}
-                        style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
-                        🗑
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : kannBearbeiten ? (
-              <div style={{ textAlign:'center', padding:32 }}>
-                <p style={{ color:'var(--text-3)', marginBottom:16, fontSize:14 }}>Noch kein Spotify-Track verknüpft.</p>
-                <button onClick={() => setSpotifyModal(true)}
-                  style={{ padding:'10px 24px', borderRadius:'var(--radius)', border:'none', background:'#1DB954', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  🔍 Song auf Spotify suchen
-                </button>
-              </div>
-            ) : (
-              <div style={s.leer}>Kein Spotify-Track verlinkt.</div>
-            )}
-            {spotifyModal && (
-              <SpotifyModal
-                titelVorschlag={stueck.titel}
-                onUebernehmen={url => spotifySpeichern(url)}
-                onSchliessen={() => setSpotifyModal(false)}
-              />
-            )}
-          </div>
-        )}
-
-        {/* DATEIEN */}
-        {tab === 'dateien' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {dokumente.length === 0 ? (
-              <div style={s.leer}>Keine allgemeinen Dateien.</div>
-            ) : (
-              dokumente.map(d => (
-                <div key={d.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)' }}>
-                  <span style={{ fontSize:24, flexShrink:0 }}>{dateiIcon(d.name)}</span>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</div>
-                  </div>
-                  <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                    <OeffnenButton pfad={d.bucket_pfad} />
-                    <DownloadButton datei={d} label="⬇" />
-                    {kannBearbeiten && (
-                      <button onClick={() => dateiLoeschen(d.id, d.bucket_pfad)} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--danger)', padding:4 }}>🗑</button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+        </>
+      ))}
 
       {modal === 'upload' && (
         <DateiUploadModal stueckId={stueckId} onClose={() => setModal(null)} onErfolg={ladeData} />
