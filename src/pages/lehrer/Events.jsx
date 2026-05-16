@@ -6,7 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { SlidingTabs, EmptyState } from '../../components/SlidingTabs'
 
 const TYP_ICON = { konzert: '🎵', vorspiel: '🎤', pruefung: '📝', veranstaltung: '🎭', vorstandssitzung: '🏛', sonstiges: '📅' }
-const TYPEN = ['konzert', 'vorspiel', 'pruefung', 'veranstaltung', 'vorstandssitzung', 'sonstiges']
+const TYPEN = ['konzert', 'vorspiel', 'pruefung', 'veranstaltung', 'sonstiges']
 
 function formatDatum(ts) {
   if (!ts) return ''
@@ -26,7 +26,7 @@ function toInputVal(ts) {
 const leerForm = { titel: '', typ: 'veranstaltung', beginn: '', ende: '', ort: '', beschreibung: '', oeffentlich: false }
 
 export default function LehrerEvents() {
-  const { profil, rolle, T } = useApp()
+  const { profil, rolle, schule, T } = useApp()
   const navigate = useNavigate()
   const [events,  setEvents]  = useState([])
   const [laden,   setLaden]   = useState(true)
@@ -44,14 +44,15 @@ export default function LehrerEvents() {
     return () => window.removeEventListener('resize', fn)
   }, [])
 
-  useEffect(() => { if (profil) ladeEvents() }, [profil?.id])
+  useEffect(() => { if (schule?.id) ladeEvents() }, [schule?.id])
 
   async function ladeEvents() {
     setLaden(true)
     const { data, error } = await supabase
       .from('events')
       .select('*')
-      .eq('schule_id', profil.schule_id)
+      .eq('schule_id', schule.id)
+      .neq('typ', 'vorstandssitzung')
       .order('beginn', { ascending: true })
     if (error) setFehler(error.message)
     else setEvents(data || [])
@@ -97,7 +98,7 @@ export default function LehrerEvents() {
     if (modal.event) {
       ;({ error } = await supabase.from('events').update(payload).eq('id', modal.event.id))
     } else {
-      ;({ error } = await supabase.from('events').insert({ ...payload, schule_id: profil.schule_id }))
+      ;({ error } = await supabase.from('events').insert({ ...payload, schule_id: schule.id }))
     }
     if (error) setFehler(error.message)
     else { setModal(null); await ladeEvents() }

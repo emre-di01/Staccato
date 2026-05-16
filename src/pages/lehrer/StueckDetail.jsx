@@ -1,50 +1,236 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useIsMobile } from '../../hooks/useWindowWidth'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { safeMarkdown } from '../../lib/markdown'
+import { transponiereAkkord, transponiereText, aktuelleTonartenInfo, youtubeId, dateiIcon } from '../../lib/akkordeUtils'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
-// ─── Transponieren ───────────────────────────────────────────
-const SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
-const FLAT  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B']
+const AudioTranskribierenModal = lazy(() => import('../../components/AudioTranskribierenModal'))
+const FotoOCRModal = lazy(() => import('../../components/FotoOCRModal'))
 
-// Welche Töne "klingen" besser mit b statt #
-const BEVORZUGE_B = new Set(['F','Bb','Eb','Ab','Db','Gb'])
+// ─── Chord Player ─────────────────────────────────────────────
+const NOTEN_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
 
-function noteIndex(note) {
-  const i = SHARP.indexOf(note)
-  return i >= 0 ? i : FLAT.indexOf(note)
+const CHORD_INTERVALS = [
+  ['dim7', [0,3,6,9]],
+  ['maj7', [0,4,7,11]],
+  ['sus4', [0,5,7]],
+  ['sus2', [0,2,7]],
+  ['dim',  [0,3,6]],
+  ['aug',  [0,4,8]],
+  ['m7',   [0,3,7,10]],
+  ['7',    [0,4,7,10]],
+  ['m',    [0,3,7]],
+  ['',     [0,4,7]],
+]
+
+function akkordZuNoten(name) {
+  let root, suffix
+  if (name.length > 1 && name[1] === '#') {
+    root = name.slice(0, 2); suffix = name.slice(2)
+  } else {
+    root = name[0]; suffix = name.slice(1)
+  }
+  const ri = NOTEN_NAMES.indexOf(root)
+  if (ri === -1) return []
+  for (const [s, iv] of CHORD_INTERVALS) {
+    if (suffix === s) {
+      return iv.map(i => NOTEN_NAMES[(ri + i) % 12] + (3 + Math.floor((ri + i) / 12)))
+    }
+  }
+  return []
 }
 
-function transponiereAkkord(akkord, ht) {
-  if (!ht) return akkord
-  // Akkord-Root erkennen: z.B. C, C#, Db, Am, Gmaj7, F#m7 ...
-  const m = akkord.match(/^([A-G][#b]?)(.*)$/)
-  if (!m) return akkord
-  const [, root, suffix] = m
-  const idx = noteIndex(root)
-  if (idx < 0) return akkord
-  const neuIdx = ((idx + ht) % 12 + 12) % 12
-  // Sharp oder Flat je nach Zielton
-  const neuRoot = BEVORZUGE_B.has(SHARP[neuIdx]) ? FLAT[neuIdx] : SHARP[neuIdx]
-  return neuRoot + suffix
+function ChordPlayer({ notizen, tempo, takt }) {
+  const [laeuft,   setLaeuft]   = useState(false)
+  const [aktIdx,   setAktIdx]   = useState(-1)
+  const [geladen,  setGeladen]  = useState(false)
+  const synthRef   = useRef(null)
+  const timerRefs  = useRef([])
+  const ToneRef    = useRef(null)
+
+  const akkorde = useMemo(() => {
+    if (!notizen) return []
+    return [...notizen.matchAll(/\[([^\]]+)\]/g)].map(m => m[1])
+  }, [notizen])
+
+  const bpm = Math.max(40, Math.min(300, parseInt(tempo) || 120))
+  const zaehler = parseInt((takt || '4/4').split('/')[0]) || 4
+  const secPerMeasure = (zaehler / bpm) * 60
+
+  async function toggleAbspielen() {
+    if (laeuft) { stoppen(); return }
+    if (akkorde.length === 0) return
+
+    if (!ToneRef.current) {
+      ToneRef.current = await import('tone')
+      setGeladen(true)
+    }
+    const Tone = ToneRef.current
+    await Tone.start()
+
+    if (!synthRef.current) {
+      synthRef.current = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'triangle8' },
+        envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 1.5 },
+        volume: -8,
+      }).toDestination()
+    }
+
+    const synth    = synthRef.current
+    const noteDur  = secPerMeasure * 0.88
+    const startNow = Tone.now() + 0.05
+
+    akkorde.forEach((name, i) => {
+      const t     = startNow + i * secPerMeasure
+      const noten = akkordZuNoten(name)
+      if (noten.length) synth.triggerAttackRelease(noten, noteDur, t)
+    })
+
+    // UI-Tracking mit setTimeout
+    timerRefs.current.forEach(clearTimeout)
+    timerRefs.current = akkorde.map((_, i) =>
+      setTimeout(() => setAktIdx(i), 50 + i * secPerMeasure * 1000)
+    )
+    timerRefs.current.push(
+      setTimeout(() => { setLaeuft(false); setAktIdx(-1) }, 50 + akkorde.length * secPerMeasure * 1000)
+    )
+
+    setLaeuft(true)
+    setAktIdx(0)
+  }
+
+  function stoppen() {
+    timerRefs.current.forEach(clearTimeout)
+    synthRef.current?.releaseAll?.()
+    setLaeuft(false)
+    setAktIdx(-1)
+  }
+
+  useEffect(() => () => stoppen(), [])
+
+  if (akkorde.length === 0) return null
+
+  const aktAkkord = akkorde[aktIdx]
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px solid var(--border)', marginBottom:16, flexWrap:'wrap' }}>
+      <button
+        onClick={toggleAbspielen}
+        style={{ width:36, height:36, borderRadius:'50%', border:'none', background:'var(--primary)', color:'#fff', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+        {laeuft ? '⏸' : '▶'}
+      </button>
+      <div style={{ fontSize:13, color:'var(--text-2)', flex:1 }}>
+        {laeuft
+          ? <><span style={{ fontWeight:800, color:'var(--primary)', fontSize:15 }}>{aktAkkord}</span><span style={{ color:'var(--text-3)', marginLeft:6 }}>{aktIdx + 1} / {akkorde.length}</span></>
+          : <span>{akkorde.length} Akkorde · {bpm} BPM · {takt || '4/4'}</span>
+        }
+      </div>
+      {laeuft && (
+        <button onClick={stoppen} style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+          ■ Stop
+        </button>
+      )}
+    </div>
+  )
 }
 
-function transponiereText(text, ht) {
-  if (!ht || !text) return text
-  return text.replace(/\[([^\]]+)\]/g, (_, ak) => '[' + transponiereAkkord(ak, ht) + ']')
+// ─── Spotify Suche ────────────────────────────────────────────
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+
+const SPOTIFY_HEADERS = {
+  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
 }
 
-// Welche Tonart ergibt sich aus dem ersten Akkord nach Transposition
-function aktuelleTonartenInfo(text, ht) {
-  const match = text?.match(/\[([A-G][#b]?[^/\]]*)\]/)
-  if (!match) return null
-  const transponiert = transponiereAkkord(match[1].replace(/[^A-Ga-g#b].*/, ''), ht)
-  const schritte = ['0', '+1', '+2', '+3', '+4', '+5', '+6', '-5', '-4', '-3', '-2', '-1']
-  return `${transponiert} (${ht >= 0 ? '+' : ''}${ht} HT)`
+async function spotifySuchen(q) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/spotify-suche?q=${encodeURIComponent(q)}`, {
+    headers: SPOTIFY_HEADERS,
+  })
+  const data = await res.json()
+  return data.tracks ?? []
+}
+
+function spotifyTrackId(url) {
+  return url?.match(/track\/([A-Za-z0-9]+)/)?.[1] ?? null
+}
+
+function SpotifyModal({ titelVorschlag, onUebernehmen, onSchliessen }) {
+  const [query,      setQuery]      = useState(titelVorschlag ?? '')
+  const [ergebnisse, setErgebnisse] = useState([])
+  const [laden,      setLaden]      = useState(false)
+  const [fehler,     setFehler]     = useState('')
+  const [gewaehlter, setGewaehlter] = useState(null)
+
+  async function suchen() {
+    if (!query.trim()) return
+    setLaden(true); setFehler(''); setErgebnisse([]); setGewaehlter(null)
+    try {
+      const tracks = await spotifySuchen(query)
+      setErgebnisse(tracks)
+      if (tracks.length === 0) setFehler('Keine Ergebnisse gefunden.')
+    } catch { setFehler('Fehler bei der Suche.') }
+    setLaden(false)
+  }
+
+  const ms = {
+    overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:1200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 },
+    box:     { background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:24, maxWidth:500, width:'100%', maxHeight:'85vh', display:'flex', flexDirection:'column', gap:14, boxShadow:'var(--shadow-lg)', overflow:'hidden' },
+    input:   { padding:'9px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', outline:'none', flex:1 },
+    track:   (aktiv) => ({ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:'var(--radius)', border:`1.5px solid ${aktiv ? 'var(--primary)' : 'var(--border)'}`, background: aktiv ? 'color-mix(in srgb, var(--primary) 8%, var(--bg-2))' : 'var(--bg-2)', cursor:'pointer' }),
+    btnPri:  { padding:'9px 20px', borderRadius:'var(--radius)', border:'none', background:'#1DB954', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' },
+    btnSek:  { padding:'9px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit' },
+  }
+
+  return createPortal(
+    <div style={ms.overlay} onClick={e => e.target === e.currentTarget && onSchliessen()}>
+      <div style={ms.box}>
+        <div style={{ fontSize:17, fontWeight:800, color:'var(--text)', flexShrink:0 }}>🟢 Spotify-Song verknüpfen</div>
+
+        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+          <input style={ms.input} value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Titel oder Interpret …"
+            onKeyDown={e => e.key === 'Enter' && suchen()} autoFocus />
+          <button onClick={suchen} disabled={laden}
+            style={{ ...ms.btnPri, padding:'9px 16px', opacity: laden ? 0.6 : 1 }}>
+            {laden ? '…' : '🔍'}
+          </button>
+        </div>
+
+        {fehler && <div style={{ fontSize:13, color:'var(--danger)', flexShrink:0 }}>{fehler}</div>}
+
+        {ergebnisse.length > 0 && (
+          <div style={{ overflowY:'auto', display:'flex', flexDirection:'column', gap:6 }}>
+            {ergebnisse.map(t => (
+              <div key={t.id} onClick={() => setGewaehlter(t)} style={ms.track(gewaehlter?.id === t.id)}>
+                {t.cover
+                  ? <img src={t.cover} alt="" style={{ width:40, height:40, borderRadius:4, flexShrink:0 }} />
+                  : <div style={{ width:40, height:40, borderRadius:4, background:'var(--border)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🎵</div>
+                }
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.name}</div>
+                  <div style={{ fontSize:12, color:'var(--text-3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.artist}{t.album ? ` · ${t.album}` : ''}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display:'flex', gap:10, justifyContent:'flex-end', flexShrink:0 }}>
+          <button onClick={onSchliessen} style={ms.btnSek}>Abbrechen</button>
+          <button disabled={!gewaehlter}
+            onClick={() => { onUebernehmen(`https://open.spotify.com/track/${gewaehlter.id}`); onSchliessen() }}
+            style={{ ...ms.btnPri, opacity: !gewaehlter ? 0.4 : 1 }}>
+            Verknüpfen
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
 }
 
 // ─── ChordPro Renderer ────────────────────────────────────────
@@ -66,22 +252,6 @@ function ChordPro({ text }) {
       })}
     </div>
   )
-}
-
-// ─── YouTube ID extrahieren ───────────────────────────────────
-function youtubeId(url) {
-  return url?.match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1]
-}
-
-// ─── Datei-Icon ───────────────────────────────────────────────
-function dateiIcon(name = '') {
-  const ext = name.split('.').pop()?.toLowerCase()
-  if (['pdf'].includes(ext)) return '📄'
-  if (['mp3','wav','ogg','m4a','aac','flac'].includes(ext)) return '🎵'
-  if (['mp4','mov','avi','webm'].includes(ext)) return '🎬'
-  if (['jpg','jpeg','png','gif','webp','svg'].includes(ext)) return '🖼'
-  if (['zip','rar','7z'].includes(ext)) return '🗜'
-  return '📎'
 }
 
 // ─── Signed URL holen ─────────────────────────────────────────
@@ -448,15 +618,22 @@ function MarkdownTooltip() {
 }
 
 function LiedtextBearbeiten({ stueck, onSpeichern, onAbbrechen }) {
+  const mob = useIsMobile()
   const [text,       setText]       = useState(stueck.liedtext ?? '')
   const [akkorde,    setAkkorde]    = useState(stueck.notizen  ?? '')
   const [tab,        setTab]        = useState('text')
   const [vorschau,   setVorschau]   = useState(false)
   const [istMd,      setIstMd]      = useState(stueck.liedtext_md !== false)
+  const [audioModal, setAudioModal] = useState(false)
+  const [fotoModal,  setFotoModal]  = useState(false)
+
+  function kiErgebnisUebernehmen(kiText) {
+    setText(t => t ? t + '\n\n' + kiText : kiText)
+  }
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ display:'flex', alignItems:'center', borderBottom:'2px solid var(--border)', marginBottom:4 }}>
+      <div style={{ display:'flex', alignItems:'center', borderBottom:'2px solid var(--border)', marginBottom:4, flexWrap:'wrap' }}>
         <div style={{ display:'flex', gap:4, flex:1 }}>
           {[['text','📝 Liedtext'],['akkorde','🎸 Akkorde (ChordPro)']].map(([k,l]) => (
             <button key={k} onClick={() => { setTab(k); setVorschau(false) }}
@@ -466,7 +643,7 @@ function LiedtextBearbeiten({ stueck, onSpeichern, onAbbrechen }) {
           ))}
         </div>
         {tab === 'text' && (
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', ...(mob ? { width:'100%', paddingBottom:8, paddingTop:4 } : {}) }}>
             <div style={{ display:'flex', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', overflow:'hidden' }}>
               <button onClick={() => setIstMd(true)}
                 style={{ padding:'4px 10px', background: istMd ? 'var(--primary)' : 'var(--bg-2)', color: istMd ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>MD</button>
@@ -475,9 +652,23 @@ function LiedtextBearbeiten({ stueck, onSpeichern, onAbbrechen }) {
             </div>
             <button onClick={() => setVorschau(v => !v)}
               style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: vorschau ? 'var(--primary)' : 'var(--bg-2)', color: vorschau ? 'var(--primary-fg, #fff)' : 'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-              {vorschau ? '✏️ Bearbeiten' : '👁 Vorschau'}
+              {vorschau ? '✏️' : '👁'}{mob ? '' : (vorschau ? ' Bearbeiten' : ' Vorschau')}
             </button>
             {istMd && <MarkdownTooltip />}
+            {!vorschau && (
+              <>
+                <button onClick={() => setAudioModal(true)}
+                  title="Text aus Audio-Aufnahme transkribieren (Whisper KI)"
+                  style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                  🎤{mob ? '' : ' Audio'}
+                </button>
+                <button onClick={() => setFotoModal(true)}
+                  title="Text aus Foto/Scan extrahieren (OCR)"
+                  style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                  📷{mob ? '' : ' Bild'}
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -511,6 +702,11 @@ function LiedtextBearbeiten({ stueck, onSpeichern, onAbbrechen }) {
         <button onClick={onAbbrechen} style={s.btnSek}>Abbrechen</button>
         <button onClick={() => onSpeichern(text, akkorde, istMd)} style={s.btnPri}>💾 Speichern</button>
       </div>
+
+      <Suspense fallback={null}>
+        {audioModal && <AudioTranskribierenModal onErgebnis={kiErgebnisUebernehmen} onSchliessen={() => setAudioModal(false)} />}
+        {fotoModal  && <FotoOCRModal            onErgebnis={kiErgebnisUebernehmen} onSchliessen={() => setFotoModal(false)}  />}
+      </Suspense>
     </div>
   )
 }
@@ -660,8 +856,11 @@ export default function StueckDetail() {
   const [halbtoene,    setHalbtoene]    = useState(0)
   const [youtubeEdit,  setYoutubeEdit]  = useState(false)
   const [youtubeInput, setYoutubeInput] = useState('')
+  const [spotifyModal, setSpotifyModal] = useState(false)
   const [pdfModal,     setPdfModal]     = useState(false)
   const [metronomOffen, setMetronomOffen] = useState(false)
+  const [bpLaeuft,    setBpLaeuft]    = useState(false)
+  const [bpFehler,    setBpFehler]    = useState('')
   const tapZeitenEditRef = useRef([])
 
   const kannBearbeiten = rolle === 'admin' || rolle === 'superadmin' || rolle === 'lehrer'
@@ -769,6 +968,39 @@ ${html}
     setYoutubeEdit(false)
   }
 
+  async function spotifySpeichern(url) {
+    const val = (url ?? '').trim() || null
+    await supabase.from('stuecke').update({ spotify_url: val }).eq('id', stueckId)
+    setStueck(s => ({ ...s, spotify_url: val }))
+  }
+
+  async function akkordErkennen() {
+    if (!stueck.youtube_url) return
+    setBpLaeuft(true); setBpFehler('')
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/basic-pitch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...SPOTIFY_HEADERS,
+        },
+        body: JSON.stringify({ youtube_url: stueck.youtube_url }),
+      })
+      const data = await res.json()
+      if (data.error) { setBpFehler(data.error); return }
+      if (data.chordpro) {
+        const neueAkkorde = data.chordpro
+        await supabase.from('stuecke').update({ notizen: neueAkkorde }).eq('id', stueckId)
+        setStueck(s => ({ ...s, notizen: neueAkkorde }))
+        toast('Akkorde erkannt und gespeichert!', 'success')
+      }
+    } catch (e) {
+      setBpFehler('Analyse fehlgeschlagen. Bitte später erneut versuchen.')
+    } finally {
+      setBpLaeuft(false)
+    }
+  }
+
   async function dateiLoeschen(dateiId, pfad) {
     if (!await confirm('Datei wirklich löschen?', { confirmLabel: 'Löschen' })) return
     await supabase.storage.from('stueck-dateien').remove([pfad])
@@ -800,10 +1032,11 @@ ${html}
 
   const tabs = [
     { id:'text',    label:'📝 Text',    zeigen: !!stueck.liedtext || kannBearbeiten },
-    { id:'akkorde', label:'🎸 Akkorde', zeigen: akkordDateien.length > 0 || (kannBearbeiten && !!stueck.notizen) },
+    { id:'akkorde', label:'🎸 Akkorde', zeigen: akkordDateien.length > 0 || !!stueck.notizen || (kannBearbeiten && !!stueck.youtube_url) },
     { id:'noten',   label:'📄 Noten',   zeigen: notenDateien.length > 0 },
     { id:'audio',   label:'🎵 Audio',   zeigen: audioDateien.length > 0 },
     { id:'youtube', label:'▶️ Video',   zeigen: !!stueck.youtube_url || kannBearbeiten },
+    { id:'spotify', label:'🟢 Spotify', zeigen: !!stueck.spotify_url || kannBearbeiten },
     { id:'dateien', label:'📁 Dateien', zeigen: dokumente.length > 0 || kannBearbeiten },
   ].filter(t => t.zeigen)
 
@@ -953,13 +1186,17 @@ ${html}
 
       {/* Tabs */}
       {tabs.length > 0 && (
-        <div style={{ display:'flex', gap:0, marginBottom:0, borderBottom:'2px solid var(--border)', overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding: mob ? '10px 14px' : '10px 18px', background:'none', border:'none', fontSize: mob ? 13 : 14, cursor:'pointer', fontFamily:'inherit', color: tab===t.id ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===t.id ? 800 : 500, borderBottom:`2px solid ${tab===t.id ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, whiteSpace:'nowrap', flexShrink:0 }}>
-              {t.label}
-            </button>
-          ))}
+        <div style={{ display:'flex', gap:0, marginBottom:0, borderBottom:'2px solid var(--border)', overflowX:'auto', WebkitOverflowScrolling:'touch', scrollbarWidth:'none' }}>
+          {tabs.map(t => {
+            const [emoji, ...rest] = t.label.split(' ')
+            const label = mob ? emoji : t.label
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)} title={t.label}
+                style={{ padding: mob ? '10px 12px' : '10px 18px', background:'none', border:'none', fontSize: mob ? 18 : 14, cursor:'pointer', fontFamily:'inherit', color: tab===t.id ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===t.id ? 800 : 500, borderBottom:`2px solid ${tab===t.id ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, whiteSpace:'nowrap', flexShrink:0 }}>
+                {label}
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -1010,6 +1247,7 @@ ${html}
         {/* AKKORDE */}
         {tab === 'akkorde' && (
           <div>
+            <ChordPlayer notizen={stueck.notizen} tempo={stueck.tempo} takt={stueck.takt} />
             {/* Transpositions-Leiste */}
             {(stueck.notizen || akkordDateien.length > 0) && (
               <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, padding:'12px 16px', background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px solid var(--border)', flexWrap:'wrap' }}>
@@ -1048,7 +1286,7 @@ ${html}
               <div style={{ marginBottom:24 }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
                   <div style={s.sectionLabel}>Akkorde</div>
-                  {kannBearbeiten && <button onClick={() => setBearbeiteText(true)} style={{ ...s.btnSek, fontSize:12, padding:'5px 10px' }}>✏️ Bearbeiten</button>}
+                  {kannBearbeiten && <button onClick={() => { setBearbeiteText(true); setTab('text') }} style={{ ...s.btnSek, fontSize:12, padding:'5px 10px' }}>✏️ Bearbeiten</button>}
                 </div>
                 <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'16px 20px' }}>
                   <ChordPro text={transponiereText(stueck.notizen, halbtoene)} />
@@ -1061,7 +1299,21 @@ ${html}
                 <AkkordDateiAnzeige datei={d} halbtoene={halbtoene} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />
               </div>
             ))}
-            {!stueck.notizen && akkordDateien.length === 0 && (
+            {kannBearbeiten && stueck.youtube_url && (
+              <div style={{ marginTop: stueck.notizen || akkordDateien.length > 0 ? 16 : 0 }}>
+                <button
+                  onClick={akkordErkennen}
+                  disabled={bpLaeuft}
+                  style={{ ...s.btnSek, fontSize:13, padding:'8px 14px', display:'flex', alignItems:'center', gap:6, opacity: bpLaeuft ? 0.6 : 1 }}>
+                  {bpLaeuft ? '⏳ Erkenne Akkorde…' : '🎵 Akkorde aus YouTube erkennen'}
+                </button>
+                {bpFehler && <div style={{ fontSize:12, color:'var(--danger)', marginTop:6 }}>{bpFehler}</div>}
+              </div>
+            )}
+            {!stueck.notizen && akkordDateien.length === 0 && !stueck.youtube_url && (
+              <div style={s.leer}>Keine Akkorde vorhanden.</div>
+            )}
+            {!stueck.notizen && akkordDateien.length === 0 && !!stueck.youtube_url && !kannBearbeiten && (
               <div style={s.leer}>Keine Akkorde vorhanden.</div>
             )}
           </div>
@@ -1143,6 +1395,58 @@ ${html}
               </div>
             ) : (
               <div style={s.leer}>Kein Video verlinkt.</div>
+            )}
+          </div>
+        )}
+
+        {/* SPOTIFY */}
+        {tab === 'spotify' && (
+          <div>
+            {stueck.spotify_url ? (
+              <>
+                <iframe
+                  src={`https://open.spotify.com/embed/track/${spotifyTrackId(stueck.spotify_url)}?utm_source=generator`}
+                  width="100%" height="152" frameBorder="0"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy"
+                  style={{ borderRadius:12, display:'block' }}
+                />
+                <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+                  <a href={stueck.spotify_url} target="_blank" rel="noreferrer"
+                    style={{ fontSize:13, color:'#1DB954', textDecoration:'none', fontWeight:600 }}>
+                    ↗ Auf Spotify öffnen
+                  </a>
+                  {kannBearbeiten && (
+                    <div style={{ display:'flex', gap:8 }}>
+                      <button onClick={() => setSpotifyModal(true)}
+                        style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid #1DB954', background:'transparent', color:'#1DB954', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                        🔍 Song ändern
+                      </button>
+                      <button onClick={() => spotifySpeichern('')}
+                        style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                        🗑
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : kannBearbeiten ? (
+              <div style={{ textAlign:'center', padding:32 }}>
+                <p style={{ color:'var(--text-3)', marginBottom:16, fontSize:14 }}>Noch kein Spotify-Track verknüpft.</p>
+                <button onClick={() => setSpotifyModal(true)}
+                  style={{ padding:'10px 24px', borderRadius:'var(--radius)', border:'none', background:'#1DB954', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  🔍 Song auf Spotify suchen
+                </button>
+              </div>
+            ) : (
+              <div style={s.leer}>Kein Spotify-Track verlinkt.</div>
+            )}
+            {spotifyModal && (
+              <SpotifyModal
+                titelVorschlag={stueck.titel}
+                onUebernehmen={url => spotifySpeichern(url)}
+                onSchliessen={() => setSpotifyModal(false)}
+              />
             )}
           </div>
         )}
