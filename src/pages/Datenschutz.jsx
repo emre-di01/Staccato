@@ -26,6 +26,7 @@ export default function Datenschutz() {
       <section style={sek}>
         <h2 style={h2}>2. Art der Plattform</h2>
         <p style={p}>Staccato ist eine Musikschul-Verwaltungssoftware, die als privates Hobby-Projekt entwickelt und betrieben wird. Die Plattform wird einzelnen Musikschulen zur Verwaltung ihrer Schüler, Kurse und Lehrpläne bereitgestellt. Die jeweilige Musikschule ist datenschutzrechtlich eigenverantwortlicher Verantwortlicher für die von ihr eingegebenen Daten ihrer Mitglieder.</p>
+        <p style={{ ...p, marginTop: 10 }}>Staccato ist verfügbar als Web-App (<strong>app.staccato-music.de</strong>) sowie als native Android-App im <strong>Google Play Store</strong>. Beide Varianten greifen auf dieselbe Server-Infrastruktur zu und unterliegen denselben Datenschutzbestimmungen.</p>
       </section>
 
       <section style={sek}>
@@ -34,7 +35,7 @@ export default function Datenschutz() {
         <ul style={ul}>
           <li><strong>Stammdaten:</strong> Name, E-Mail-Adresse, Telefonnummer, Geburtsdatum, Adresse</li>
           <li><strong>Nutzungsdaten:</strong> Anwesenheiten, Kurszuordnungen, Repertoire-Fortschritt, Unterrichtsprotokolle</li>
-          <li><strong>Technische Daten:</strong> Login-Zeitpunkte, Sitzungsinformationen (Session-Token), Push-Notification-Token (gerätegebundener Bezeichner für Benachrichtigungen, nur bei aktivierten Push-Benachrichtigungen)</li>
+          <li><strong>Technische Daten:</strong> Login-Zeitpunkte, Sitzungsinformationen (Session-Token), Push-Notification-Token (gerätegebundener Bezeichner für Benachrichtigungen via Web Push oder Firebase Cloud Messaging, nur bei aktivierten Push-Benachrichtigungen)</li>
           <li><strong>Einstellungen:</strong> Sprachpräferenz, Design (lokal im Gerätespeicher, kein Server-Zugriff)</li>
           <li><strong>Dateien:</strong> Hochgeladene Dokumente (z. B. Aufnahmeformulare, Noten, Audiodateien)</li>
         </ul>
@@ -67,17 +68,17 @@ export default function Datenschutz() {
           <li><strong>Sitzungsdaten (Supabase Auth):</strong> Für sichere Anmeldung und Authentifizierung. Werden beim Abmelden gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
           <li><strong>Design-Einstellungen:</strong> Theme, Dark Mode und Sprache (kein Server-Zugriff). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
           <li><strong>Versionsinformation:</strong> Gesehene Changelog-Version (kein Server-Zugriff). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
-          <li><strong>Push-Notification-Token:</strong> Gerätegebundener Token für den Empfang von Push-Benachrichtigungen. Wird auf dem Server gespeichert, solange Push-Benachrichtigungen aktiviert sind. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
+          <li><strong>Push-Notification-Token:</strong> Gerätegebundener Token für den Empfang von Push-Benachrichtigungen (Web Push via OneSignal im Browser; Firebase Cloud Messaging in der Android-App). Wird auf dem Server gespeichert, solange Push-Benachrichtigungen aktiviert sind. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
         </ul>
         <p style={{ ...p, marginTop: 16 }}>Auf der <strong>Marketingwebsite (staccato-music.de)</strong> wird Google Analytics eingesetzt — ausschließlich nach Ihrer ausdrücklichen Einwilligung (Cookie-Banner). Google Analytics setzt Cookies (<code>_ga</code>, <code>_ga_*</code>) zur Analyse des Nutzungsverhaltens. IP-Adressen werden anonymisiert. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO. Sie können Ihre Einwilligung jederzeit widerrufen, indem Sie den Browser-Speicher (localStorage) löschen.</p>
       </section>
 
       <section style={sek}>
-        <h2 style={h2}>7. Weitergabe an Dritte / Google Analytics</h2>
-        <p style={p}>
-          Im Bereich der Web-App findet keine Weitergabe personenbezogener Daten an Dritte statt.<br /><br />
-          Auf der Marketingwebsite staccato-music.de wird <strong>Google Analytics 4</strong> (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Irland) eingesetzt — nur nach Einwilligung. Google verarbeitet die Daten auf Basis eines Auftragsverarbeitungsvertrags (Art. 28 DSGVO). IP-Adressen werden vor der Übertragung anonymisiert. Weitere Informationen: <a href="https://policies.google.com/privacy" style={link} target="_blank" rel="noreferrer">policies.google.com/privacy</a>
-        </p>
+        <h2 style={h2}>7. Drittdienste</h2>
+        <p style={p}><strong>Google Analytics 4</strong> (nur auf staccato-music.de, nach Einwilligung): Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Irland. IP-Adressen werden anonymisiert. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO. Weitere Informationen: <a href="https://policies.google.com/privacy" style={link} target="_blank" rel="noreferrer">policies.google.com/privacy</a></p>
+        <p style={{ ...p, marginTop: 12 }}><strong>Firebase Cloud Messaging (FCM)</strong> (nur Android-App, nur bei aktivierten Push-Benachrichtigungen): Google Ireland Ltd. FCM wird genutzt, um Push-Benachrichtigungen an Android-Geräte zu übermitteln. Dabei wird ein gerätegebundenes FCM-Token erzeugt und auf unserem Server gespeichert. Das Token enthält keine personenbezogenen Daten, ermöglicht jedoch die gezielte Zustellung von Benachrichtigungen an ein bestimmtes Gerät. Das Token wird gelöscht, sobald Push-Benachrichtigungen in den Einstellungen deaktiviert oder das Konto gelöscht wird. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Weitere Informationen: <a href="https://firebase.google.com/support/privacy" style={link} target="_blank" rel="noreferrer">firebase.google.com/support/privacy</a></p>
+        <p style={{ ...p, marginTop: 12 }}><strong>OneSignal</strong> (nur Web-App, nur bei aktivierten Push-Benachrichtigungen): OneSignal, Inc., 2850 S Delaware St, Suite 201, San Mateo, CA 94403, USA. OneSignal wird für die Zustellung von Web-Push-Benachrichtigungen im Browser verwendet. Dabei wird ein Subscription-Token gespeichert. OneSignal verarbeitet Daten auf Basis eines Auftragsverarbeitungsvertrags (Art. 28 DSGVO) und des EU-US Data Privacy Frameworks. Weitere Informationen: <a href="https://onesignal.com/privacy_policy" style={link} target="_blank" rel="noreferrer">onesignal.com/privacy_policy</a></p>
+        <p style={{ ...p, marginTop: 12 }}>Im Bereich der Web-App und der Android-App findet darüber hinaus keine Weitergabe personenbezogener Daten an Dritte statt.</p>
       </section>
 
       <section style={sek}>
