@@ -7,6 +7,7 @@ export default defineConfig({
   optimizeDeps: { exclude: ['@xenova/transformers', 'verovio'] },
   test: {
     environment: 'jsdom',
+    setupFiles: ['src/lib/__tests__/setupIntegration.js'],
     include: ['src/**/__tests__/**/*.test.{js,jsx}'],
     coverage: {
       provider: 'v8',

@@ -1,923 +1,30 @@
-import { useState, useEffect, useRef, useMemo, lazy, Suspense, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import ChordDiagramTooltip from '../../components/ChordDiagramTooltip'
 import { useIsMobile } from '../../hooks/useWindowWidth'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { safeMarkdown } from '../../lib/markdown'
-import { transponiereAkkord, transponiereText, aktuelleTonartenInfo, youtubeId, dateiIcon } from '../../lib/akkordeUtils'
+import { transponiereText, youtubeId, dateiIcon } from '../../lib/akkordeUtils'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
-const AudioTranskribierenModal = lazy(() => import('../../components/AudioTranskribierenModal'))
-const FotoOCRModal = lazy(() => import('../../components/FotoOCRModal'))
+import ChordPlayer from '../../components/stueck/ChordPlayer'
+import SpotifyModal, { spotifyTrackId } from '../../components/stueck/SpotifyModal'
+import ChordPro from '../../components/stueck/ChordProRenderer'
+import { DownloadButton, OeffnenButton } from '../../components/stueck/FileButtons'
+import PdfCard from '../../components/stueck/PdfCard'
+import AudioPlayer from '../../components/stueck/AudioPlayer'
+import VerovioViewer from '../../components/stueck/VerovioViewer'
+import AkkordDateiAnzeige from '../../components/stueck/AkkordDateiAnzeige'
+import Metronom from '../../components/stueck/Metronom'
+import DateiUploadModal from '../../components/stueck/DateiUploadModal'
+import LiedtextBearbeiten from '../../components/stueck/LiedtextBearbeiten'
+import { s } from '../../components/stueck/stueckStyles'
 
-// ─── Chord Player ─────────────────────────────────────────────
-const NOTEN_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
-
-const CHORD_INTERVALS = [
-  ['dim7', [0,3,6,9]],
-  ['maj7', [0,4,7,11]],
-  ['sus4', [0,5,7]],
-  ['sus2', [0,2,7]],
-  ['dim',  [0,3,6]],
-  ['aug',  [0,4,8]],
-  ['m7',   [0,3,7,10]],
-  ['7',    [0,4,7,10]],
-  ['m',    [0,3,7]],
-  ['',     [0,4,7]],
-]
-
-function akkordZuNoten(name) {
-  let root, suffix
-  if (name.length > 1 && name[1] === '#') {
-    root = name.slice(0, 2); suffix = name.slice(2)
-  } else {
-    root = name[0]; suffix = name.slice(1)
-  }
-  const ri = NOTEN_NAMES.indexOf(root)
-  if (ri === -1) return []
-  for (const [s, iv] of CHORD_INTERVALS) {
-    if (suffix === s) {
-      return iv.map(i => NOTEN_NAMES[(ri + i) % 12] + (3 + Math.floor((ri + i) / 12)))
-    }
-  }
-  return []
-}
-
-function ChordPlayer({ notizen, tempo, takt }) {
-  const [laeuft,   setLaeuft]   = useState(false)
-  const [aktIdx,   setAktIdx]   = useState(-1)
-  const [geladen,  setGeladen]  = useState(false)
-  const synthRef   = useRef(null)
-  const timerRefs  = useRef([])
-  const ToneRef    = useRef(null)
-
-  const akkorde = useMemo(() => {
-    if (!notizen) return []
-    return [...notizen.matchAll(/\[([^\]]+)\]/g)].map(m => m[1])
-  }, [notizen])
-
-  const bpm = Math.max(40, Math.min(300, parseInt(tempo) || 120))
-  const zaehler = parseInt((takt || '4/4').split('/')[0]) || 4
-  const secPerMeasure = (zaehler / bpm) * 60
-
-  async function toggleAbspielen() {
-    if (laeuft) { stoppen(); return }
-    if (akkorde.length === 0) return
-
-    if (!ToneRef.current) {
-      ToneRef.current = await import('tone')
-      setGeladen(true)
-    }
-    const Tone = ToneRef.current
-    await Tone.start()
-
-    if (!synthRef.current) {
-      synthRef.current = new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'triangle8' },
-        envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 1.5 },
-        volume: -8,
-      }).toDestination()
-    }
-
-    const synth    = synthRef.current
-    const noteDur  = secPerMeasure * 0.88
-    const startNow = Tone.now() + 0.05
-
-    akkorde.forEach((name, i) => {
-      const t     = startNow + i * secPerMeasure
-      const noten = akkordZuNoten(name)
-      if (noten.length) synth.triggerAttackRelease(noten, noteDur, t)
-    })
-
-    // UI-Tracking mit setTimeout
-    timerRefs.current.forEach(clearTimeout)
-    timerRefs.current = akkorde.map((_, i) =>
-      setTimeout(() => setAktIdx(i), 50 + i * secPerMeasure * 1000)
-    )
-    timerRefs.current.push(
-      setTimeout(() => { setLaeuft(false); setAktIdx(-1) }, 50 + akkorde.length * secPerMeasure * 1000)
-    )
-
-    setLaeuft(true)
-    setAktIdx(0)
-  }
-
-  function stoppen() {
-    timerRefs.current.forEach(clearTimeout)
-    synthRef.current?.releaseAll?.()
-    setLaeuft(false)
-    setAktIdx(-1)
-  }
-
-  useEffect(() => () => stoppen(), [])
-
-  if (akkorde.length === 0) return null
-
-  const aktAkkord = akkorde[aktIdx]
-
-  return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px solid var(--border)', marginBottom:16, flexWrap:'wrap' }}>
-      <button
-        onClick={toggleAbspielen}
-        style={{ width:36, height:36, borderRadius:'50%', border:'none', background:'var(--primary)', color:'#fff', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-        {laeuft ? '⏸' : '▶'}
-      </button>
-      <div style={{ fontSize:13, color:'var(--text-2)', flex:1 }}>
-        {laeuft
-          ? <><span style={{ fontWeight:800, color:'var(--primary)', fontSize:15 }}>{aktAkkord}</span><span style={{ color:'var(--text-3)', marginLeft:6 }}>{aktIdx + 1} / {akkorde.length}</span></>
-          : <span>{akkorde.length} Akkorde · {bpm} BPM · {takt || '4/4'}</span>
-        }
-      </div>
-      {laeuft && (
-        <button onClick={stoppen} style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
-          ■ Stop
-        </button>
-      )}
-    </div>
-  )
-}
-
-// ─── Spotify Suche ────────────────────────────────────────────
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-
-const SPOTIFY_HEADERS = {
+const SUPABASE_HEADERS = {
   'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
   'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-}
-
-async function spotifySuchen(q) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/spotify-suche?q=${encodeURIComponent(q)}`, {
-    headers: SPOTIFY_HEADERS,
-  })
-  const data = await res.json()
-  return data.tracks ?? []
-}
-
-function spotifyTrackId(url) {
-  return url?.match(/track\/([A-Za-z0-9]+)/)?.[1] ?? null
-}
-
-function SpotifyModal({ titelVorschlag, onUebernehmen, onSchliessen }) {
-  const [query,      setQuery]      = useState(titelVorschlag ?? '')
-  const [ergebnisse, setErgebnisse] = useState([])
-  const [laden,      setLaden]      = useState(false)
-  const [fehler,     setFehler]     = useState('')
-  const [gewaehlter, setGewaehlter] = useState(null)
-
-  async function suchen() {
-    if (!query.trim()) return
-    setLaden(true); setFehler(''); setErgebnisse([]); setGewaehlter(null)
-    try {
-      const tracks = await spotifySuchen(query)
-      setErgebnisse(tracks)
-      if (tracks.length === 0) setFehler('Keine Ergebnisse gefunden.')
-    } catch { setFehler('Fehler bei der Suche.') }
-    setLaden(false)
-  }
-
-  const ms = {
-    overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:1200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 },
-    box:     { background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:24, maxWidth:500, width:'100%', maxHeight:'85vh', display:'flex', flexDirection:'column', gap:14, boxShadow:'var(--shadow-lg)', overflow:'hidden' },
-    input:   { padding:'9px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', outline:'none', flex:1 },
-    track:   (aktiv) => ({ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:'var(--radius)', border:`1.5px solid ${aktiv ? 'var(--primary)' : 'var(--border)'}`, background: aktiv ? 'color-mix(in srgb, var(--primary) 8%, var(--bg-2))' : 'var(--bg-2)', cursor:'pointer' }),
-    btnPri:  { padding:'9px 20px', borderRadius:'var(--radius)', border:'none', background:'#1DB954', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' },
-    btnSek:  { padding:'9px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit' },
-  }
-
-  return createPortal(
-    <div style={ms.overlay} onClick={e => e.target === e.currentTarget && onSchliessen()}>
-      <div style={ms.box}>
-        <div style={{ fontSize:17, fontWeight:800, color:'var(--text)', flexShrink:0 }}>🟢 Spotify-Song verknüpfen</div>
-
-        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-          <input style={ms.input} value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Titel oder Interpret …"
-            onKeyDown={e => e.key === 'Enter' && suchen()} autoFocus />
-          <button onClick={suchen} disabled={laden}
-            style={{ ...ms.btnPri, padding:'9px 16px', opacity: laden ? 0.6 : 1 }}>
-            {laden ? '…' : '🔍'}
-          </button>
-        </div>
-
-        {fehler && <div style={{ fontSize:13, color:'var(--danger)', flexShrink:0 }}>{fehler}</div>}
-
-        {ergebnisse.length > 0 && (
-          <div style={{ overflowY:'auto', display:'flex', flexDirection:'column', gap:6 }}>
-            {ergebnisse.map(t => (
-              <div key={t.id} onClick={() => setGewaehlter(t)} style={ms.track(gewaehlter?.id === t.id)}>
-                {t.cover
-                  ? <img src={t.cover} alt="" style={{ width:40, height:40, borderRadius:4, flexShrink:0 }} />
-                  : <div style={{ width:40, height:40, borderRadius:4, background:'var(--border)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🎵</div>
-                }
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.name}</div>
-                  <div style={{ fontSize:12, color:'var(--text-3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.artist}{t.album ? ` · ${t.album}` : ''}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ display:'flex', gap:10, justifyContent:'flex-end', flexShrink:0 }}>
-          <button onClick={onSchliessen} style={ms.btnSek}>Abbrechen</button>
-          <button disabled={!gewaehlter}
-            onClick={() => { onUebernehmen(`https://open.spotify.com/track/${gewaehlter.id}`); onSchliessen() }}
-            style={{ ...ms.btnPri, opacity: !gewaehlter ? 0.4 : 1 }}>
-            Verknüpfen
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  )
-}
-
-// ─── ChordPro Renderer ────────────────────────────────────────
-function ChordPro({ text }) {
-  const [tooltip, setTooltip] = useState(null) // { name, rect }
-
-  if (!text) return null
-
-  function handleChordClick(name, e) {
-    e.stopPropagation()
-    const rect = e.currentTarget.getBoundingClientRect()
-    setTooltip(prev => prev?.name === name ? null : { name, rect })
-  }
-
-  return (
-    <div style={{ fontFamily:'monospace', fontSize:14, lineHeight:2, color:'var(--text)' }}
-      onClick={() => setTooltip(null)}>
-      {text.split('\n').map((zeile, i) => {
-        const teile = zeile.split(/(\[[^\]]+\])/)
-        return (
-          <div key={i} style={{ minHeight:'1.5em' }}>
-            {teile.map((t, j) =>
-              t.startsWith('[') && t.endsWith(']')
-                ? <button key={j} onClick={e => handleChordClick(t.slice(1,-1), e)}
-                    style={{ color:'var(--accent)', marginRight:2, fontSize:12, fontWeight:800,
-                      background: tooltip?.name === t.slice(1,-1) ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'none',
-                      border:'none', cursor:'pointer', fontFamily:'monospace', padding:'0 2px',
-                      borderRadius:4, textDecoration:'underline dotted' }}>
-                    {t.slice(1,-1)}
-                  </button>
-                : <span key={j}>{t}</span>
-            )}
-          </div>
-        )
-      })}
-      {tooltip && (
-        <ChordDiagramTooltip
-          name={tooltip.name}
-          anchorRect={tooltip.rect}
-          onClose={() => setTooltip(null)}
-        />
-      )}
-    </div>
-  )
-}
-
-// ─── Signed URL holen ─────────────────────────────────────────
-async function getSignedUrl(pfad) {
-  const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(pfad, 86400)
-  return data?.signedUrl ?? null
-}
-
-// ─── Download-Button ─────────────────────────────────────────
-function DownloadButton({ datei, label = '⬇ Herunterladen', full = false }) {
-  const [laden, setLaden] = useState(false)
-  async function herunterladen() {
-    setLaden(true)
-    const { data } = await supabase.storage.from('stueck-dateien').download(datei.bucket_pfad)
-    if (data) {
-      const url = URL.createObjectURL(data)
-      const a = document.createElement('a')
-      a.href = url; a.download = datei.name; a.click()
-      URL.revokeObjectURL(url)
-    }
-    setLaden(false)
-  }
-  return (
-    <button onClick={herunterladen} disabled={laden}
-      style={{ padding:'9px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap', ...(full ? { width:'100%' } : {}) }}>
-      {laden ? '…' : label}
-    </button>
-  )
-}
-
-// ─── Im Browser öffnen ────────────────────────────────────────
-function OeffnenButton({ pfad }) {
-  const [laden, setLaden] = useState(false)
-  async function oeffnen() {
-    setLaden(true)
-    const url = await getSignedUrl(pfad)
-    if (url) window.open(url, '_blank')
-    setLaden(false)
-  }
-  return (
-    <button onClick={oeffnen} disabled={laden}
-      style={{ padding:'9px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-      {laden ? '…' : '↗ Öffnen'}
-    </button>
-  )
-}
-
-// ─── PDF Viewer (Canvas-basiert, kein Browser-Viewer-Zoom) ────
-function PdfViewer({ url }) {
-  const [seiten, setSeiten] = useState([])
-  const [laden,  setLaden]  = useState(true)
-  const [fehler, setFehler] = useState(null)
-
-  useEffect(() => {
-    if (!url) return
-    let abgebrochen = false
-    setSeiten([]); setLaden(true); setFehler(null)
-
-    async function render() {
-      try {
-        const pdfjsLib = await import('pdfjs-dist')
-        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
-        const pdf = await pdfjsLib.getDocument({ url }).promise
-        if (abgebrochen) return
-
-        const breite = Math.min(window.innerWidth - 32, 1200)
-        const dpr    = Math.min(window.devicePixelRatio || 1, 2)
-        const liste  = []
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-          if (abgebrochen) return
-          const page  = await pdf.getPage(i)
-          const basis = page.getViewport({ scale: 1 })
-          const vp    = page.getViewport({ scale: (breite / basis.width) * dpr })
-
-          const canvas = document.createElement('canvas')
-          canvas.width  = vp.width
-          canvas.height = vp.height
-          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise
-
-          liste.push({ src: canvas.toDataURL(), w: breite, h: vp.height / dpr })
-          if (!abgebrochen) { setSeiten([...liste]); if (i === 1) setLaden(false) }
-        }
-        if (!abgebrochen) setLaden(false)
-      } catch {
-        if (!abgebrochen) { setFehler('PDF konnte nicht gerendert werden.'); setLaden(false) }
-      }
-    }
-
-    render()
-    return () => { abgebrochen = true }
-  }, [url])
-
-  return (
-    <div style={{ flex:1, overflowY:'auto', background:'#1a1a1a', display:'flex', flexDirection:'column', alignItems:'center', gap:16, padding:'20px 16px', minHeight:0 }}>
-      {laden && <div style={{ color:'rgba(255,255,255,0.4)', fontSize:14, padding:40 }}>Lädt …</div>}
-      {fehler && <div style={{ color:'#f87171', fontSize:14, padding:40 }}>{fehler}</div>}
-      {seiten.map((s, i) => (
-        <img key={i} src={s.src} alt={`Seite ${i + 1}`}
-          style={{ width:s.w, height:s.h, display:'block', borderRadius:6, boxShadow:'0 4px 20px rgba(0,0,0,0.6)' }} />
-      ))}
-    </div>
-  )
-}
-
-// ─── Verovio (MusicXML → SVG) ────────────────────────────────
-let verovioModCache = null
-async function ladeVerovio() {
-  if (verovioModCache) return verovioModCache
-  const [{ default: createMod }, { VerovioToolkit }] = await Promise.all([
-    import('verovio/wasm'),
-    import('verovio/esm'),
-  ])
-  const mod = await createMod()
-  verovioModCache = { mod, VerovioToolkit }
-  return verovioModCache
-}
-
-function VerovioViewer({ datei, kannLoeschen, onLoeschen }) {
-  const [seiten,      setSeiten]      = useState([])
-  const [laden,       setLaden]       = useState(true)
-  const [fehler,      setFehler]      = useState('')
-  const [seite,       setSeite]       = useState(1)
-
-  useEffect(() => { render() }, [])
-
-  async function render() {
-    setLaden(true); setFehler('')
-    try {
-      const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 3600)
-      if (!data?.signedUrl) throw new Error('Signed URL fehlgeschlagen')
-      const xml = await fetch(data.signedUrl).then(r => r.text())
-      const { mod, VerovioToolkit } = await ladeVerovio()
-      const tk = new VerovioToolkit(mod)
-      tk.setOptions({ scale: 40, adjustPageWidth: 1, pageMarginTop: 60, pageMarginBottom: 60, pageMarginLeft: 60, pageMarginRight: 60 })
-      tk.loadData(xml)
-      const count = tk.getPageCount()
-      const svgList = Array.from({ length: count }, (_, i) => tk.renderToSVG(i + 1))
-      setSeiten(svgList)
-    } catch (e) {
-      setFehler(e.message)
-    }
-    setLaden(false)
-  }
-
-  const btnStyle = { padding:'5px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }
-
-  return (
-    <div style={{ borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', overflow:'hidden', background:'var(--surface)' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid var(--border)', background:'var(--bg-2)' }}>
-        <span style={{ fontSize:18 }}>🎼</span>
-        <span style={{ fontWeight:700, fontSize:13, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--text)' }}>{datei.name}</span>
-        {kannLoeschen && <button onClick={onLoeschen} style={{ background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--danger)', padding:4 }}>🗑</button>}
-      </div>
-
-      {laden && <div style={{ padding:32, textAlign:'center', color:'var(--text-3)', fontSize:13 }}>🎼 Lade Notation…</div>}
-      {fehler && <div style={{ padding:20, color:'var(--danger)', fontSize:13 }}>{fehler}</div>}
-
-      {seiten.length > 0 && (
-        <>
-          <div style={{ padding:12, overflowX:'auto', background:'#fff' }}
-            dangerouslySetInnerHTML={{ __html: seiten[seite - 1] }} />
-          {seiten.length > 1 && (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, padding:'8px 14px', borderTop:'1px solid var(--border)', background:'var(--bg-2)' }}>
-              <button onClick={() => setSeite(s => Math.max(1, s - 1))} disabled={seite === 1} style={btnStyle}>‹</button>
-              <span style={{ fontSize:13, color:'var(--text-3)' }}>Seite {seite} / {seiten.length}</span>
-              <button onClick={() => setSeite(s => Math.min(seiten.length, s + 1))} disabled={seite === seiten.length} style={btnStyle}>›</button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  )
-}
-
-// ─── PDF Card ─────────────────────────────────────────────────
-function PdfCard({ datei, kannLoeschen, onLoeschen }) {
-  const [url, setUrl] = useState(null)
-  const [modal, setModal] = useState(false)
-
-  async function vorschauOeffnen() {
-    if (!url) setUrl(await getSignedUrl(datei.bucket_pfad))
-    setModal(true)
-  }
-
-  useEffect(() => {
-    if (!modal) return
-    function onKey(e) { if (e.key === 'Escape') setModal(false) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [modal])
-
-  return (
-    <>
-      <div style={{ borderRadius:'var(--radius)', border:'1px solid var(--border)', overflow:'hidden', background:'var(--bg-2)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px' }}>
-          <span style={{ fontSize:24, flexShrink:0 }}>📄</span>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{datei.name}</div>
-            {datei.stimme && datei.stimme !== 'keine' && (
-              <span style={{ fontSize:11, color:'var(--text-3)', textTransform:'capitalize', marginTop:2, display:'block' }}>Stimme: {datei.stimme}</span>
-            )}
-          </div>
-          <div style={{ display:'flex', gap:6, flexShrink:0, alignItems:'center' }}>
-            <button onClick={vorschauOeffnen}
-              style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-              👁 Vorschau
-            </button>
-            <OeffnenButton pfad={datei.bucket_pfad} />
-            <DownloadButton datei={datei} label="⬇" />
-            {kannLoeschen && (
-              <button onClick={onLoeschen} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--danger)', padding:4 }}>🗑</button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {modal && createPortal(
-        <div style={{ position:'fixed', inset:0, background:'#000', zIndex:2000, display:'flex', flexDirection:'column' }}>
-          {/* PDF — canvas-basiert, fit-to-width */}
-          <PdfViewer url={url} />
-          {/* Steuerleiste unten — immer erreichbar */}
-          <div style={{
-            display:'flex', alignItems:'center', gap:10, padding:'10px 16px',
-            paddingBottom:'calc(10px + env(safe-area-inset-bottom, 0px))',
-            background:'rgba(15,15,15,0.95)', borderTop:'1px solid rgba(255,255,255,0.1)',
-            flexShrink:0,
-          }}>
-            <span style={{ fontSize:16, flexShrink:0 }}>📄</span>
-            <div style={{ flex:1, fontWeight:600, fontSize:13, color:'#ccc', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{datei.name}</div>
-            {url && (
-              <a href={url} target="_blank" rel="noreferrer"
-                style={{ padding:'8px 14px', borderRadius:8, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:13, fontWeight:600, textDecoration:'none', flexShrink:0 }}>
-                ↗ Öffnen
-              </a>
-            )}
-            <DownloadButton datei={datei} label="⬇" />
-            <button onClick={() => setModal(false)}
-              style={{ padding:'8px 18px', borderRadius:8, background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
-              ✕
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
-  )
-}
-
-// ─── Audio Player ─────────────────────────────────────────────
-function AudioPlayer({ datei, kannLoeschen, onLoeschen }) {
-  const [url, setUrl] = useState(null)
-
-  async function ladeUrl() {
-    if (url) return
-    const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 86400)
-    if (data?.signedUrl) setUrl(data.signedUrl)
-  }
-
-  return (
-    <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px solid var(--border)', overflow:'hidden' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px' }}>
-        <span style={{ fontSize:22, flexShrink:0 }}>🎵</span>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{datei.name}</div>
-          {datei.stimme && datei.stimme !== 'keine' && (
-            <span style={{ fontSize:11, color:'var(--text-3)', textTransform:'capitalize' }}>Stimme: {datei.stimme}</span>
-          )}
-        </div>
-        <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-          <DownloadButton datei={datei} label="⬇" />
-          {kannLoeschen && (
-            <button onClick={onLoeschen} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--danger)', padding:4 }}>🗑</button>
-          )}
-        </div>
-      </div>
-      <div style={{ padding:'0 16px 14px' }}>
-        {url
-          ? <audio controls src={url} style={{ width:'100%' }} />
-          : <button onClick={ladeUrl} style={{ fontSize:13, padding:'7px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-2)', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>▶ Abspielen</button>
-        }
-      </div>
-    </div>
-  )
-}
-
-// ─── Upload Modal ─────────────────────────────────────────────
-function DateiUploadModal({ stueckId, onClose, onErfolg }) {
-  const { profil, T } = useApp()
-  const fileRef = useRef()
-  const [form, setForm] = useState({ typ: 'noten', stimme: 'keine', name: '' })
-  const [datei, setDatei] = useState(null)
-  const [laden, setLaden] = useState(false)
-  const [fehler, setFehler] = useState('')
-
-  async function hochladen() {
-    if (!datei) { setFehler('Bitte eine Datei wählen.'); return }
-    if (datei.size > 50 * 1024 * 1024) { setFehler(T('file_too_large').replace('{n}', 50)); return }
-    setLaden(true)
-    const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const pfad = `${stueckId}/${form.typ}/${Date.now()}_${sauberName}`
-    const { error: sErr } = await supabase.storage.from('stueck-dateien').upload(pfad, datei)
-    if (sErr) { setFehler(sErr.message); setLaden(false); return }
-    const { error: dErr } = await supabase.from('stueck_dateien').insert({
-      stueck_id: stueckId, typ: form.typ, stimme: form.stimme,
-      name: form.name || datei.name, bucket_pfad: pfad, hochgeladen_von: profil.id,
-    })
-    if (dErr) setFehler(dErr.message)
-    else { onErfolg(); onClose() }
-    setLaden(false)
-  }
-
-  return createPortal(
-    <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-inner" style={s.modal}>
-        <div style={s.modalHeader}>
-          <h3 style={s.modalTitel}>📎 Datei hochladen</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
-        </div>
-        <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
-          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Dateityp</label>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-              {[
-                { key:'noten',    icon:'📄', label:'Noten (PDF)' },
-                { key:'musicxml', icon:'🎼', label:'Noten (XML)' },
-                { key:'akkorde',  icon:'🎸', label:'Akkorde' },
-                { key:'audio',    icon:'🎵', label:'Audio' },
-                { key:'dokument', icon:'📋', label:'Dokument' },
-              ].map(t => (
-                <button key={t.key} onClick={() => setForm(f => ({ ...f, typ: t.key }))}
-                  style={{ padding:'6px 12px', borderRadius:'var(--radius)', border:`2px solid ${form.typ===t.key ? 'var(--accent)' : 'var(--border)'}`, background: form.typ===t.key ? 'var(--accent)' : 'var(--bg-2)', color: form.typ===t.key ? 'var(--accent-fg)' : 'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-                  {t.icon} {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {(form.typ === 'noten' || form.typ === 'audio') && (
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={s.label}>Stimmgruppe</label>
-              <select style={s.input} value={form.stimme} onChange={e => setForm(f => ({ ...f, stimme: e.target.value }))}>
-                <option value="keine">Alle Stimmen</option>
-                <option value="sopran">Sopran</option>
-                <option value="alt">Alt</option>
-                <option value="tenor">Tenor</option>
-                <option value="bass">Bass</option>
-              </select>
-            </div>
-          )}
-
-          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Datei</label>
-            <div style={{ border:'2px dashed var(--border)', borderRadius:'var(--radius)', padding:24, textAlign:'center', cursor:'pointer', background:'var(--bg-2)' }}
-              onClick={() => fileRef.current.click()}
-              onDragOver={e => e.preventDefault()}
-              onDrop={e => { e.preventDefault(); setDatei(e.dataTransfer.files[0]) }}>
-              {datei
-                ? <span style={{ color:'var(--text)', fontWeight:600 }}>📎 {datei.name}</span>
-                : <span style={{ color:'var(--text-3)' }}>Klicken oder Datei hierher ziehen</span>
-              }
-              <input ref={fileRef} type="file" hidden onChange={e => setDatei(e.target.files[0])} />
-            </div>
-          </div>
-
-          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <label style={s.label}>Anzeigename (optional)</label>
-            <input style={s.input} placeholder={datei?.name ?? 'z.B. Noten Sopran'} value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-          </div>
-
-          {fehler && <p style={{ margin:0, color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
-          <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-            <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
-            <button onClick={hochladen} disabled={laden} style={s.btnPri}>
-              {laden ? 'Hochladen …' : '⬆ Hochladen'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body
-  )
-}
-
-// ─── Liedtext Bearbeiten ─────────────────────────────────────
-const MD_CHEATSHEET = [
-  { syntax: '## Refrain',        desc: 'Abschnittstitel' },
-  { syntax: '### Strophe 1',     desc: 'Kleiner Abschnittstitel' },
-  { syntax: '**fett**',          desc: 'Fetter Text' },
-  { syntax: '*kursiv*',          desc: 'Kursiver Text' },
-  { syntax: '---',               desc: 'Trennlinie (zwischen Strophen)' },
-  { syntax: '> Text',            desc: 'Eingerückter Text' },
-  { syntax: 'Leerzeile',         desc: 'Neuer Absatz' },
-]
-
-const MD_BEISPIEL = `## Strophe 1
-Zeile eins des Liedtexts
-Zeile zwei des Liedtexts
-
----
-
-## Refrain
-La la la, oh oh oh
-La la la, yeah yeah`
-
-function MarkdownTooltip() {
-  const [offen, setOffen] = useState(false)
-  return (
-    <div style={{ position:'relative', display:'inline-block' }}>
-      <button onClick={() => setOffen(o => !o)}
-        style={{ width:24, height:24, borderRadius:'50%', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-3)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', lineHeight:1, flexShrink:0 }}>
-        ?
-      </button>
-      {offen && (
-        <>
-          <div style={{ position:'fixed', inset:0, zIndex:199 }} onClick={() => setOffen(false)} />
-          <div style={{ position:'absolute', top:'calc(100% + 8px)', left:'50%', transform:'translateX(-50%)', zIndex:200, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', boxShadow:'var(--shadow-lg)', padding:'16px 18px', minWidth:300, maxWidth:380 }}>
-            <div style={{ fontSize:12, fontWeight:800, color:'var(--text)', marginBottom:10, textTransform:'uppercase', letterSpacing:'0.06em' }}>Markdown-Hilfe</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14 }}>
-              {MD_CHEATSHEET.map(({ syntax, desc }) => (
-                <div key={syntax} style={{ display:'flex', alignItems:'baseline', gap:10 }}>
-                  <code style={{ fontFamily:'monospace', fontSize:12, color:'var(--accent)', background:'var(--bg-2)', padding:'2px 6px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>{syntax}</code>
-                  <span style={{ fontSize:12, color:'var(--text-3)' }}>{desc}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ fontSize:11, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>Beispiel</div>
-            <pre style={{ fontFamily:'monospace', fontSize:11, color:'var(--text-2)', background:'var(--bg-2)', borderRadius:6, padding:'8px 10px', margin:0, whiteSpace:'pre-wrap', lineHeight:1.7 }}>{MD_BEISPIEL}</pre>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function LiedtextBearbeiten({ stueck, onSpeichern, onAbbrechen }) {
-  const mob = useIsMobile()
-  const [text,       setText]       = useState(stueck.liedtext ?? '')
-  const [akkorde,    setAkkorde]    = useState(stueck.notizen  ?? '')
-  const [tab,        setTab]        = useState('text')
-  const [vorschau,   setVorschau]   = useState(false)
-  const [istMd,      setIstMd]      = useState(stueck.liedtext_md !== false)
-  const [audioModal, setAudioModal] = useState(false)
-  const [fotoModal,  setFotoModal]  = useState(false)
-
-  function kiErgebnisUebernehmen(kiText) {
-    setText(t => t ? t + '\n\n' + kiText : kiText)
-  }
-
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ display:'flex', alignItems:'center', borderBottom:'2px solid var(--border)', marginBottom:4, flexWrap:'wrap' }}>
-        <div style={{ display:'flex', gap:4, flex:1 }}>
-          {[['text','📝 Liedtext'],['akkorde','🎸 Akkorde (ChordPro)']].map(([k,l]) => (
-            <button key={k} onClick={() => { setTab(k); setVorschau(false) }}
-              style={{ padding:'8px 14px', background:'none', border:'none', fontSize:13, cursor:'pointer', fontFamily:'inherit', color: tab===k ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===k ? 700 : 400, borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2 }}>
-              {l}
-            </button>
-          ))}
-        </div>
-        {tab === 'text' && (
-          <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', ...(mob ? { width:'100%', paddingBottom:8, paddingTop:4 } : {}) }}>
-            <div style={{ display:'flex', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', overflow:'hidden' }}>
-              <button onClick={() => setIstMd(true)}
-                style={{ padding:'4px 10px', background: istMd ? 'var(--primary)' : 'var(--bg-2)', color: istMd ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>MD</button>
-              <button onClick={() => setIstMd(false)}
-                style={{ padding:'4px 10px', background: !istMd ? 'var(--primary)' : 'var(--bg-2)', color: !istMd ? 'var(--primary-fg, #fff)' : 'var(--text-3)', border:'none', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Plain</button>
-            </div>
-            <button onClick={() => setVorschau(v => !v)}
-              style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: vorschau ? 'var(--primary)' : 'var(--bg-2)', color: vorschau ? 'var(--primary-fg, #fff)' : 'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-              {vorschau ? '✏️' : '👁'}{mob ? '' : (vorschau ? ' Bearbeiten' : ' Vorschau')}
-            </button>
-            {istMd && <MarkdownTooltip />}
-            {!vorschau && (
-              <>
-                <button onClick={() => setAudioModal(true)}
-                  title="Text aus Audio-Aufnahme transkribieren (Whisper KI)"
-                  style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                  🎤{mob ? '' : ' Audio'}
-                </button>
-                <button onClick={() => setFotoModal(true)}
-                  title="Text aus Foto/Scan extrahieren (OCR)"
-                  style={{ padding:'4px 10px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-3)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                  📷{mob ? '' : ' Bild'}
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-      {tab === 'text' ? (
-        vorschau ? (
-          <div
-            dangerouslySetInnerHTML={{ __html: safeMarkdown(text || '*Kein Text vorhanden.*') }}
-            style={{ fontFamily:'Georgia, serif', fontSize:15, lineHeight:1.9, color:'var(--text)', minHeight:300, padding:'8px 0' }} />
-        ) : (
-          <textarea value={text} onChange={e => setText(e.target.value)}
-            style={{ ...s.input, minHeight:300, fontFamily:'Georgia, serif', fontSize:15, lineHeight:1.9, resize:'vertical' }}
-            placeholder="Liedtext hier eingeben …" />
-        )
-      ) : (
-        <>
-          <textarea value={akkorde} onChange={e => setAkkorde(e.target.value)}
-            style={{ ...s.input, minHeight:200, fontFamily:'monospace', fontSize:14, lineHeight:2, resize:'vertical' }}
-            placeholder="[Am]Hallo [C]Welt" />
-          <div style={{ fontSize:12, color:'var(--text-3)' }}>Format: [Akkord] vor dem Wort, z.B. [Am]Text [G]weiter</div>
-          {akkorde && (
-            <div>
-              <div style={s.sectionLabel}>Vorschau</div>
-              <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'12px 16px', marginTop:6 }}>
-                <ChordPro text={akkorde} />
-              </div>
-            </div>
-          )}
-        </>
-      )}
-      <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-        <button onClick={onAbbrechen} style={s.btnSek}>Abbrechen</button>
-        <button onClick={() => onSpeichern(text, akkorde, istMd)} style={s.btnPri}>💾 Speichern</button>
-      </div>
-
-      <Suspense fallback={null}>
-        {audioModal && <AudioTranskribierenModal onErgebnis={kiErgebnisUebernehmen} onSchliessen={() => setAudioModal(false)} />}
-        {fotoModal  && <FotoOCRModal            onErgebnis={kiErgebnisUebernehmen} onSchliessen={() => setFotoModal(false)}  />}
-      </Suspense>
-    </div>
-  )
-}
-
-// ─── Akkord Datei Anzeige ─────────────────────────────────────
-function AkkordDateiAnzeige({ datei, halbtoene = 0, kannLoeschen, onLoeschen }) {
-  const [text, setText] = useState(null)
-  useEffect(() => {
-    supabase.storage.from('stueck-dateien').download(datei.bucket_pfad)
-      .then(({ data }) => data?.text().then(setText))
-  }, [datei.bucket_pfad])
-  return (
-    <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'16px 20px', border:'1px solid var(--border)', position:'relative' }}>
-      {text ? <ChordPro text={transponiereText(text, halbtoene)} /> : <span style={{ color:'var(--text-3)' }}>Laden …</span>}
-      {kannLoeschen && (
-        <button onClick={onLoeschen} style={{ position:'absolute', top:10, right:10, background:'none', border:'none', fontSize:16, cursor:'pointer', color:'var(--danger)' }}>🗑</button>
-      )}
-    </div>
-  )
-}
-
-// ─── Metronom ─────────────────────────────────────────────────
-function Metronom({ initialBpm, onTempoSave }) {
-  const [bpm, setBpm] = useState(() => { const n = parseInt(initialBpm); return (n >= 20 && n <= 300) ? n : 100 })
-  const [lauft, setLauft] = useState(false)
-  const [beat, setBeat] = useState(false)
-  const ctxRef   = useRef(null)
-  const timerRef = useRef(null)
-  const lauftRef = useRef(false)
-  const bpmRef   = useRef(bpm)
-  const tapRef   = useRef([])
-  bpmRef.current = bpm
-
-  useEffect(() => () => {
-    lauftRef.current = false
-    clearTimeout(timerRef.current)
-    ctxRef.current?.close().catch?.(() => {})
-  }, [])
-
-  function klick() {
-    try {
-      if (!ctxRef.current || ctxRef.current.state === 'closed')
-        ctxRef.current = new (window.AudioContext || window.webkitAudioContext)()
-      if (ctxRef.current.state === 'suspended') ctxRef.current.resume()
-      const ctx = ctxRef.current
-      const osc = ctx.createOscillator(); const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.frequency.value = 880
-      gain.gain.setValueAtTime(0.5, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.05)
-      setBeat(true); setTimeout(() => setBeat(false), 80)
-    } catch (_) {}
-  }
-
-  function schlagLoop() {
-    if (!lauftRef.current) return
-    klick()
-    timerRef.current = setTimeout(schlagLoop, 60000 / bpmRef.current)
-  }
-
-  function toggle() {
-    if (lauftRef.current) { lauftRef.current = false; clearTimeout(timerRef.current); setLauft(false) }
-    else { lauftRef.current = true; setLauft(true); schlagLoop() }
-  }
-
-  function tap() {
-    const now = Date.now()
-    tapRef.current = [...tapRef.current.filter(t => now - t < 3000), now]
-    const arr = tapRef.current
-    if (arr.length >= 2) {
-      const gaps = arr.slice(1).map((t, i) => t - arr[i])
-      const avg = gaps.reduce((a, b) => a + b) / gaps.length
-      const b = Math.round(60000 / avg)
-      if (b >= 20 && b <= 300) setBpm(b)
-    }
-  }
-
-  const label = bpm < 60 ? 'Largo' : bpm < 76 ? 'Adagio' : bpm < 108 ? 'Andante' : bpm < 120 ? 'Moderato' : bpm < 156 ? 'Allegro' : bpm < 176 ? 'Vivace' : 'Presto'
-
-  return (
-    <div style={{ background:'var(--bg-2)', border:'1.5px solid var(--border)', borderRadius:'var(--radius)', padding:'14px 16px', marginTop:14 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-        <button onClick={toggle}
-          style={{ width:44, height:44, borderRadius:'50%', border:'none', background: lauft ? 'var(--danger)' : 'var(--primary)', color:'#fff', fontSize:18, cursor:'pointer', fontFamily:'inherit', flexShrink:0, transition:'background 0.15s' }}>
-          {lauft ? '⏹' : '▶'}
-        </button>
-        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
-          <button onClick={() => setBpm(b => Math.max(20, b - 1))} style={ms.ctrl}>−</button>
-          <div style={{ textAlign:'center', minWidth:56 }}>
-            <div style={{ fontSize:22, fontWeight:900, lineHeight:1, color: beat ? 'var(--primary)' : 'var(--text)', transition:'color 0.05s' }}>{bpm}</div>
-            <div style={{ fontSize:9, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>BPM</div>
-          </div>
-          <button onClick={() => setBpm(b => Math.min(300, b + 1))} style={ms.ctrl}>+</button>
-        </div>
-        <input type="range" min={20} max={300} value={bpm} onChange={e => setBpm(Number(e.target.value))}
-          style={{ flex:1, minWidth:80, accentColor:'var(--primary)', cursor:'pointer' }} />
-        <button onClick={tap} onPointerDown={e => e.preventDefault()}
-          style={{ padding:'10px 14px', minHeight:44, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-2)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', flexShrink:0, userSelect:'none' }}>
-          TAP
-        </button>
-        <div style={{ flexShrink:0, textAlign:'right' }}>
-          <div style={{ fontSize:11, color:'var(--text-3)', fontStyle:'italic' }}>{label}</div>
-          {onTempoSave && (
-            <button onClick={() => onTempoSave(bpm)}
-              style={{ fontSize:11, color:'var(--accent)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0, fontWeight:700, marginTop:2 }}>
-              💾 als Tempo speichern
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-const ms = {
-  ctrl: { width:30, height:30, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text)', fontSize:16, fontWeight:700, cursor:'pointer', fontFamily:'inherit' },
 }
 
 // ─── Hauptkomponente ──────────────────────────────────────────
@@ -930,34 +37,34 @@ export default function StueckDetail() {
 
   const mob = useIsMobile()
   const istEvent = location.pathname.includes('/events/')
-  const rolle_ = location.pathname.split('/')[1]   // admin | lehrer | schueler
+  const rolle_ = location.pathname.split('/')[1]
   const backPfad = istEvent
     ? `/${rolle_}/events/${kursId}/repertoire`
     : kursId
       ? `/${rolle_}/kurse/${kursId}/repertoire`
       : `/${rolle_}/repertoire`
 
-  const [stueck,       setStueck]       = useState(null)
-  const [dateien,      setDateien]      = useState([])
-  const [laden,        setLaden]        = useState(true)
-  const [tab,          setTab]          = useState(() => mob ? '' : 'text')
-  const [filterStimme, setFilterStimme] = useState('alle')
+  const [stueck,        setStueck]        = useState(null)
+  const [dateien,       setDateien]       = useState([])
+  const [laden,         setLaden]         = useState(true)
+  const [tab,           setTab]           = useState(() => mob ? '' : 'text')
+  const [filterStimme,  setFilterStimme]  = useState('alle')
   const [bearbeiteText, setBearbeiteText] = useState(false)
   const [bearbeiteMeta, setBearbeiteMeta] = useState(false)
-  const [metaForm,     setMetaForm]     = useState({ titel:'', komponist:'', tonart:'', tempo:'', takt:'', anmerkungen:'' })
-  const [modal,        setModal]        = useState(null)
-  const [textGroesse,  setTextGroesse]  = useState(18)
-  const [vollbild,     setVollbild]     = useState(false)
-  const [halbtoene,    setHalbtoene]    = useState(0)
-  const [youtubeEdit,  setYoutubeEdit]  = useState(false)
-  const [youtubeInput, setYoutubeInput] = useState('')
-  const [spotifyModal, setSpotifyModal] = useState(false)
-  const [pdfModal,     setPdfModal]     = useState(false)
+  const [metaForm,      setMetaForm]      = useState({ titel:'', komponist:'', tonart:'', tempo:'', takt:'', anmerkungen:'' })
+  const [modal,         setModal]         = useState(null)
+  const [textGroesse,   setTextGroesse]   = useState(18)
+  const [vollbild,      setVollbild]      = useState(false)
+  const [halbtoene,     setHalbtoene]     = useState(0)
+  const [youtubeEdit,   setYoutubeEdit]   = useState(false)
+  const [youtubeInput,  setYoutubeInput]  = useState('')
+  const [spotifyModal,  setSpotifyModal]  = useState(false)
+  const [pdfModal,      setPdfModal]      = useState(false)
   const [metronomOffen, setMetronomOffen] = useState(false)
-  const [bpLaeuft,    setBpLaeuft]    = useState(false)
-  const [bpFehler,    setBpFehler]    = useState('')
-  const [mbLaden,     setMbLaden]     = useState(false)
-  const [mbErgebnisse,setMbErgebnisse]= useState([])
+  const [bpLaeuft,      setBpLaeuft]      = useState(false)
+  const [bpFehler,      setBpFehler]      = useState('')
+  const [mbLaden,       setMbLaden]       = useState(false)
+  const [mbErgebnisse,  setMbErgebnisse]  = useState([])
   const tapZeitenEditRef = useRef([])
 
   const kannBearbeiten = rolle === 'admin' || rolle === 'superadmin' || rolle === 'lehrer'
@@ -1077,10 +184,7 @@ ${html}
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/basic-pitch`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...SPOTIFY_HEADERS,
-        },
+        headers: { 'Content-Type': 'application/json', ...SUPABASE_HEADERS },
         body: JSON.stringify({ youtube_url: stueck.youtube_url }),
       })
       const data = await res.json()
@@ -1089,9 +193,8 @@ ${html}
         const neueAkkorde = data.chordpro
         await supabase.from('stuecke').update({ notizen: neueAkkorde }).eq('id', stueckId)
         setStueck(s => ({ ...s, notizen: neueAkkorde }))
-        toast('Akkorde erkannt und gespeichert!', 'success')
       }
-    } catch (e) {
+    } catch {
       setBpFehler('Analyse fehlgeschlagen. Bitte später erneut versuchen.')
     } finally {
       setBpLaeuft(false)
@@ -1111,8 +214,7 @@ ${html}
   async function mbSuchen() {
     const q = metaForm.titel.trim()
     if (!q) return
-    setMbLaden(true)
-    setMbErgebnisse([])
+    setMbLaden(true); setMbErgebnisse([])
     try {
       const res = await fetch(
         `https://musicbrainz.org/ws/2/work?query=${encodeURIComponent(q)}&fmt=json&limit=8`,
@@ -1148,16 +250,14 @@ ${html}
 
   async function stueckLoeschen() {
     if (!await confirm(`"${stueck.titel}" dauerhaft löschen?`, { sub: 'Das Stück wird aus allen Kursen entfernt und kann nicht wiederhergestellt werden.', confirmLabel: 'Löschen' })) return
-    // Storage-Dateien zuerst entfernen
     const pfade = dateien.map(d => d.bucket_pfad)
     if (pfade.length > 0) await supabase.storage.from('stueck-dateien').remove(pfade)
-    // DB-Eintrag löschen (Kaskade räumt stueck_dateien + unterricht_stuecke auf)
     await supabase.from('stuecke').delete().eq('id', stueckId)
     queryClient.invalidateQueries({ queryKey: ['repertoire'] })
     navigate(backPfad)
   }
 
-  if (laden)  return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
+  if (laden)   return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
   if (!stueck) return <div style={{ padding:40, color:'var(--danger)' }}>Stück nicht gefunden.</div>
 
   const gefilterteDateien = dateien.filter(d =>
@@ -1342,7 +442,6 @@ ${html}
 
   return (
     <div>
-      {/* Zurück */}
       <button onClick={() => navigate(backPfad)}
         style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 14px' }}>
         ← {T('repertoire_title')}
@@ -1352,7 +451,6 @@ ${html}
       <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding: mob ? '16px' : '24px', border:'1px solid var(--border)', marginBottom:20, boxShadow:'var(--shadow)' }}>
         {bearbeiteMeta ? (
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-
             {/* MusicBrainz Metadaten-Suche */}
             <div>
               <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -1417,7 +515,6 @@ ${html}
                   )}
                 </div>
               ))}
-              {/* Takt */}
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                 <label style={s.label}>{T('piece_taktart')}</label>
                 <select style={s.input} value={metaForm.takt} onChange={e => setMetaForm(p => ({ ...p, takt: e.target.value }))}>
@@ -1447,7 +544,6 @@ ${html}
                   </optgroup>
                 </select>
               </div>
-              {/* Anmerkungen */}
               <div style={{ display:'flex', flexDirection:'column', gap:5, gridColumn: mob ? 'span 1' : 'span 2' }}>
                 <label style={s.label}>{T('piece_anmerkungen')}</label>
                 <textarea style={{ ...s.input, minHeight:72, resize:'vertical' }} placeholder={T('piece_anmerkungen_placeholder')}
@@ -1462,10 +558,8 @@ ${html}
           </div>
         ) : (
           <div>
-            {/* Titel */}
             <h1 style={{ margin:'0 0 8px', fontSize: mob ? 19 : 22, fontWeight:800, color:'var(--text)', letterSpacing:'-0.4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{stueck.titel}</h1>
 
-            {/* Meta */}
             <div style={{ display:'flex', gap:10, flexWrap:'wrap', fontSize:13, color:'var(--text-2)', alignItems:'center' }}>
               {stueck.komponist && <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>🎼 <span>{stueck.komponist}</span></span>}
               {stueck.tonart    && <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>🎵 <span>{stueck.tonart}</span></span>}
@@ -1483,7 +577,6 @@ ${html}
               </div>
             )}
 
-            {/* Stimmen-Filter */}
             <div style={{ display:'flex', gap:6, marginTop:12, flexWrap:'wrap' }}>
               {['alle','sopran','alt','tenor','bass'].map(st => (
                 <button key={st} onClick={() => setFilterStimme(st)}
@@ -1493,7 +586,6 @@ ${html}
               ))}
             </div>
 
-            {/* Aktionen */}
             {kannBearbeiten && (
               <>
                 <div style={{ borderTop:'1px solid var(--border)', margin:'14px 0 12px' }} />
@@ -1516,7 +608,6 @@ ${html}
           </div>
         )}
 
-        {/* Metronom */}
         {metronomOffen && !bearbeiteMeta && (
           <Metronom
             initialBpm={stueck.tempo}
@@ -1633,19 +724,4 @@ ${html}
       )}
     </div>
   )
-}
-
-const s = {
-  overlay:     { position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 },
-  modal:       { background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:480, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' },
-  modalHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'28px 32px 0', flexShrink:0 },
-  modalBody:   { overflowY:'auto', flex:1, padding:'24px 32px 28px', overscrollBehavior:'contain' },
-  modalTitel:  { margin:0, fontSize:18, fontWeight:800, color:'var(--text)' },
-  iconBtn:     { background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 },
-  label:       { fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' },
-  sectionLabel:{ fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 },
-  input:       { padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, outline:'none', fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', width:'100%', boxSizing:'border-box' },
-  btnPri:      { padding:'10px 18px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' },
-  btnSek:      { padding:'10px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit' },
-  leer:        { padding:'32px', textAlign:'center', color:'var(--text-3)', fontSize:13, background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px dashed var(--border)' },
 }

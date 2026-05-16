@@ -6,3 +6,4 @@ dist/
 # Android keystore
 android/app/*.jks
 android/app/*.keystore
+.env.test
