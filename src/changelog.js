@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.3.0'
+export const CURRENT_VERSION = '2.3.1'
 
 export const CHANGELOG = [
+  {
+    version: '2.3.1',
+    date: '2026-05-16',
+    features: [
+      {
+        icon: '🎸',
+        de: 'Akkord-Diagramme – Klick auf einen Akkord im ChordPro-Text zeigt Griffbild (Gitarre) und Klaviatur-Ansicht als Tooltip',
+        en: 'Chord diagrams – click any chord in ChordPro text to see a guitar fingering diagram and piano keyboard view as a tooltip',
+        tr: 'Akor diyagramları – ChordPro metnindeki herhangi bir akora tıklayarak gitar parmak izi ve piyano klavyesi görünümünü araç ipucu olarak göster',
+      },
+    ],
+  },
   {
     version: '2.3.0',
     date: '2026-05-16',
