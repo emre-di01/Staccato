@@ -17,8 +17,8 @@ export default function Datenschutz() {
         <p style={p}>
           Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:<br /><br />
           <strong>Emre Dingil</strong><br />
-          Adolf-Leweke-Str. 14<br />
-          60435 Frankfurt am Main<br />
+          Karlstr. 101<br />
+          64285 Darmstadt<br />
           E-Mail: <a href="mailto:staccato@401dev.de" style={link}>staccato@401dev.de</a>
         </p>
       </section>
