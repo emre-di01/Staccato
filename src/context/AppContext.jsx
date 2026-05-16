@@ -104,7 +104,7 @@ export function AppProvider({ children }) {
           // Vollständige Abfrage inkl. neuer Spalten (nach Migration 20260517000001)
           let { data: schuleData, error: schuleErr } = await supabase
             .from('schulen')
-            .select('id, zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix, farbe, ist_demo, demo_expires_at, kuendigungsfrist, plan, max_lehrer, max_schueler, max_storage_mb, hat_vorstand, hat_inventar, abo_status, abo_bis, verein_verifiziert, steuernummer, ustid, steuer_hinweis, rechnungen_prefix, rechtsform, vereinsreg_nr, vereinsreg_gericht, ist_gemeinnuetzig, finanzamt, freistellungsbescheid_datum')
+            .select('id, zeitzone, logo_url, logo_url_dark, name, website, email, telefon, adresse, inventar_prefix, farbe, ist_demo, demo_expires_at, kuendigungsfrist, plan, max_lehrer, max_schueler, max_storage_mb, hat_vorstand, hat_inventar, abo_status, abo_bis, verein_verifiziert, steuernummer, ustid, steuer_hinweis, rechnungen_prefix, rechtsform, vereinsreg_nr, vereinsreg_gericht, ist_gemeinnuetzig, finanzamt, freistellungsbescheid_datum')
             .eq('id', activeSchuleId)
             .single()
 
@@ -112,7 +112,7 @@ export function AppProvider({ children }) {
           if (schuleErr) {
             const { data: fallback } = await supabase
               .from('schulen')
-              .select('id, zeitzone, logo_url, name, website, email, telefon, adresse, inventar_prefix, farbe, ist_demo, demo_expires_at, kuendigungsfrist, plan, max_lehrer, max_schueler, max_storage_mb, hat_vorstand, hat_inventar, abo_status, abo_bis, verein_verifiziert, steuernummer, ustid, steuer_hinweis, rechnungen_prefix')
+              .select('id, zeitzone, logo_url, logo_url_dark, name, website, email, telefon, adresse, inventar_prefix, farbe, ist_demo, demo_expires_at, kuendigungsfrist, plan, max_lehrer, max_schueler, max_storage_mb, hat_vorstand, hat_inventar, abo_status, abo_bis, verein_verifiziert, steuernummer, ustid, steuer_hinweis, rechnungen_prefix')
               .eq('id', activeSchuleId)
               .single()
             schuleData = fallback

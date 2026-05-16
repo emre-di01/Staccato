@@ -36,6 +36,7 @@ export default function AdminEinstellungen() {
   const [form, setForm] = useState({
     name:                       schule?.name                       ?? '',
     logo_url:                   schule?.logo_url                   ?? '',
+    logo_url_dark:              schule?.logo_url_dark              ?? '',
     website:                    schule?.website                    ?? '',
     email:                      schule?.email                      ?? '',
     telefon:                    schule?.telefon                    ?? '',
@@ -68,6 +69,7 @@ export default function AdminEinstellungen() {
     const payload = {
       name:                form.name.trim()                       || schule?.name,
       logo_url:            form.logo_url.trim()                   || null,
+      logo_url_dark:       form.logo_url_dark.trim()              || null,
       website:             form.website.trim()                    || null,
       email:               form.email.trim()                      || null,
       telefon:             form.telefon.trim()                    || null,
@@ -126,20 +128,49 @@ export default function AdminEinstellungen() {
             <label style={sty.label}>
               {T('settings_logo_url')} <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>({T('settings_logo_hint')})</span>
             </label>
-            <input type="url" value={form.logo_url}
-              onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))}
-              placeholder="https://beispiel.de/logo.png" style={sty.input} />
-            {form.logo_url && (
-              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <img src={form.logo_url} alt="Logo"
-                  style={{ maxHeight: 48, maxWidth: 160, objectFit: 'contain', borderRadius: 6, border: '1px solid var(--border)', padding: 4, background: '#fff' }}
-                  onError={e => { e.target.style.display = 'none' }} />
-                <button onClick={() => setForm(f => ({ ...f, logo_url: '' }))}
-                  style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {T('settings_logo_remove')}
-                </button>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Light-Logo */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>☀️ Hell (Standard)</div>
+                <input type="url" value={form.logo_url}
+                  onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))}
+                  placeholder="https://beispiel.de/logo.png" style={sty.input} />
+                {form.logo_url && (
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 6, padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 64, minHeight: 40 }}>
+                      <img src={form.logo_url} alt="Logo hell"
+                        style={{ maxHeight: 40, maxWidth: 120, objectFit: 'contain' }}
+                        onError={e => { e.target.style.display = 'none' }} />
+                    </div>
+                    <button onClick={() => setForm(f => ({ ...f, logo_url: '' }))}
+                      style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {T('settings_logo_remove')}
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+              {/* Dark-Logo */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>🌙 Dunkel (optional)</div>
+                <input type="url" value={form.logo_url_dark}
+                  onChange={e => setForm(f => ({ ...f, logo_url_dark: e.target.value }))}
+                  placeholder="https://beispiel.de/logo-dark.png" style={sty.input} />
+                {form.logo_url_dark && (
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ background: '#1e293b', border: '1px solid var(--border)', borderRadius: 6, padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 64, minHeight: 40 }}>
+                      <img src={form.logo_url_dark} alt="Logo dunkel"
+                        style={{ maxHeight: 40, maxWidth: 120, objectFit: 'contain' }}
+                        onError={e => { e.target.style.display = 'none' }} />
+                    </div>
+                    <button onClick={() => setForm(f => ({ ...f, logo_url_dark: '' }))}
+                      style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {T('settings_logo_remove')}
+                    </button>
+                  </div>
+                )}
+                {!form.logo_url_dark && <div style={{ ...sty.hint, marginTop: 8 }}>Wenn leer, wird das helle Logo auch im Dunkelmodus verwendet.</div>}
+              </div>
+            </div>
           </div>
           <F label="Website"           k="website"  type="url"   placeholder="https://..." />
           <F label={T('email')}        k="email"    type="email" placeholder="info@musikschule.de" />

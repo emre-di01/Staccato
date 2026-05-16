@@ -14,6 +14,7 @@ import OfflineBanner from './OfflineBanner'
 
 export default function AppLayout() {
   const { profil, rolle, schule, abo, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe, darkMode, großeSchrift } = useApp()
+  const logoUrl = darkMode && schule?.logo_url_dark ? schule.logo_url_dark : schule?.logo_url
   const navigate = useNavigate()
   const location = useLocation()
   const swipeStartX = useRef(null)
@@ -219,8 +220,8 @@ export default function AppLayout() {
         position: 'sticky', top: 0, height: '100vh', overflowY: 'auto',
       }} className="desktop-sidebar">
         <div style={{ padding: '0 8px 20px', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
-          {schule?.logo_url
-            ? <img src={schule.logo_url} alt={schule.name ?? 'Logo'} style={{ maxHeight: 40, maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
+          {logoUrl
+            ? <img src={logoUrl} alt={schule?.name ?? 'Logo'} style={{ maxHeight: 40, maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
             : <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.5px' }}>♩ Staccato</div>
           }
           {profil && (
@@ -284,8 +285,8 @@ export default function AppLayout() {
             height: '100%', overflow: 'hidden',
           }}>
             <div style={{ padding: 'calc(20px + env(safe-area-inset-top, 0px)) 12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-              {schule?.logo_url
-                ? <img src={schule.logo_url} alt={schule.name ?? 'Logo'} style={{ maxHeight: 36, maxWidth: 140, objectFit: 'contain' }} />
+              {logoUrl
+                ? <img src={logoUrl} alt={schule?.name ?? 'Logo'} style={{ maxHeight: 36, maxWidth: 140, objectFit: 'contain' }} />
                 : <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
               }
               <button onClick={() => setSidebarOffen(false)} aria-label="Menü schließen" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)', padding: 10, margin: -10, minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -341,8 +342,8 @@ export default function AppLayout() {
           <div style={{ flex: 1 }}>
             <button onClick={() => setSidebarOffen(true)} aria-label="Menü öffnen" aria-expanded={sidebarOffen} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text)', padding: '11px 12px', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '-11px 0' }}>☰</button>
           </div>
-          {schule?.logo_url
-            ? <img src={schule.logo_url} alt={schule.name ?? 'Logo'} style={{ maxHeight: 32, maxWidth: 120, objectFit: 'contain' }} />
+          {logoUrl
+            ? <img src={logoUrl} alt={schule?.name ?? 'Logo'} style={{ maxHeight: 32, maxWidth: 120, objectFit: 'contain' }} />
             : <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
           }
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
