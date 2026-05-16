@@ -1,9 +1,45 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.1.0'
+export const CURRENT_VERSION = '2.2.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.2.0',
+    date: '2026-05-16',
+    features: [
+      {
+        icon: '💶',
+        de: 'Rechnungen – GoBD-konforme Rechnungen nach §14 UStG mit automatischer Nummerierung, Stornierung und PDF-Druck',
+        en: 'Invoicing – GoBD-compliant invoices (§14 UStG) with automatic numbering, cancellation and PDF print',
+        tr: 'Faturalama – GoBD uyumlu, §14 UStG kapsamında otomatik numaralı faturalar, iptal ve PDF yazdırma',
+      },
+      {
+        icon: '📋',
+        de: 'Interessenten-Pipeline – CRM-Timeline mit neuen Status (Kontaktiert, Angebot, Verloren) und Aktivitätsverlauf',
+        en: 'Prospects pipeline – CRM timeline with new statuses (Contacted, Offer, Lost) and activity history',
+        tr: 'Aday boru hattı – yeni durumlar (İletişime geçildi, Teklif, Kaybedildi) ve aktivite geçmişiyle CRM zaman çizelgesi',
+      },
+      {
+        icon: '🔧',
+        de: 'Tools für alle – Stimmgerät, Akkord-Transposer und Kapo-Rechner jetzt für alle Nutzerrollen in der Sidebar',
+        en: 'Tools for everyone – tuner, chord transposer and capo calculator now available to all roles in the sidebar',
+        tr: 'Herkes için araçlar – akort cihazı, akor transposer ve kapo hesaplayıcı artık tüm roller için kenar çubuğunda',
+      },
+      {
+        icon: '🎼',
+        de: 'Stücke: Takt und Anmerkungen – neue Felder für Taktart und freie Notizen pro Stück',
+        en: 'Pieces: time signature and notes – new fields for time signature and free notes per piece',
+        tr: 'Parçalar: ölçü ve notlar – her parça için ölçü ve serbest notlar için yeni alanlar',
+      },
+      {
+        icon: '🧹',
+        de: 'Navigation aufgeräumt – schlankere Sidebar, weniger Einträge pro Gruppe',
+        en: 'Navigation cleaned up – slimmer sidebar, fewer entries per group',
+        tr: 'Gezinti temizlendi – daha sade kenar çubuğu, grup başına daha az giriş',
+      },
+    ],
+  },
   {
     version: '2.1.0',
     date: '2026-05-11',
