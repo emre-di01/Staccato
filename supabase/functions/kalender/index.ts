@@ -17,7 +17,7 @@ serve(async (req) => {
   // resolve user by token
   const { data: profil } = await supabase
     .from('profiles')
-    .select('id, voller_name, rolle, schule_id, schulen(zeitzone)')
+    .select('id, voller_name, rolle, schule_id, schulen!profiles_schule_id_fkey(zeitzone)')
     .eq('kalender_token', token)
     .single()
 
