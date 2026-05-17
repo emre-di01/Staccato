@@ -232,6 +232,323 @@ describe('mein_konto_loeschen RPC', () => {
   }, 15000)
 })
 
+// ─── dashboard_stats RPC ─────────────────────────────────────
+
+describe('dashboard_stats RPC', () => {
+  it('gibt alle erwarteten KPI-Felder zurück', async () => {
+    if (!localReachable) return
+
+    const { data, error } = await admin.rpc('dashboard_stats', { p_schule_id: TEST_SCHULE_ID })
+    expect(error).toBeNull()
+    expect(data).toBeDefined()
+
+    const keys = [
+      'schueler_gesamt', 'lehrer_gesamt', 'unterricht_aktiv',
+      'stunden_heute', 'stunden_woche', 'interessenten',
+      'einnahmen_monat', 'anwesenheit_quote', 'naechste_events',
+    ]
+    for (const key of keys) {
+      expect(data, `KPI-Feld "${key}" fehlt`).toHaveProperty(key)
+    }
+    expect(Array.isArray(data.naechste_events)).toBe(true)
+  })
+})
+
+// ─── meine_daten_exportieren RPC ─────────────────────────────
+
+describe('meine_daten_exportieren RPC', () => {
+  it('gibt DSGVO-Export mit korrekter Struktur zurück', async () => {
+    if (!localReachable) return
+
+    const email = `test-export-${Date.now()}@test.invalid`
+    const pw    = 'TestPasswort123!'
+    const { data: { user } } = await admin.auth.admin.createUser({
+      email, password: pw, email_confirm: true,
+    })
+    await admin.from('profiles').update({
+      rolle: 'schueler', schule_id: TEST_SCHULE_ID, letzte_schule_id: TEST_SCHULE_ID,
+    }).eq('id', user.id)
+
+    const userClient = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    await userClient.auth.signInWithPassword({ email, password: pw })
+
+    const { data, error } = await userClient.rpc('meine_daten_exportieren')
+
+    await admin.auth.admin.deleteUser(user.id)
+
+    expect(error).toBeNull()
+    expect(data).toHaveProperty('exportiert_am')
+    expect(data).toHaveProperty('profil')
+    expect(data).toHaveProperty('kursmitgliedschaften')
+    expect(data).toHaveProperty('anwesenheiten')
+    expect(data).toHaveProperty('nachrichten_gesendet')
+    expect(data).toHaveProperty('nachrichten_empfangen')
+    expect(data).toHaveProperty('event_teilnahmen')
+  }, 20000)
+})
+
+// ─── create_unterricht RPC ────────────────────────────────────
+
+describe('create_unterricht RPC', () => {
+  let lehrerUser, unterrichtId, instrumentId
+
+  beforeAll(async () => {
+    if (!localReachable) return
+    lehrerUser = await testUserAnlegen(`test-lehrer-cu-${Date.now()}@test.invalid`, 'lehrer')
+
+    const { data: instr } = await admin.from('instrumente').insert({
+      schule_id: TEST_SCHULE_ID, name_de: '__Test-Gitarre', icon: '🎸', aktiv: true,
+    }).select('id').single()
+    instrumentId = instr?.id
+  })
+
+  afterAll(async () => {
+    if (!localReachable) return
+    if (unterrichtId) {
+      await admin.from('unterricht_lehrer').delete().eq('unterricht_id', unterrichtId)
+      await admin.from('unterricht').delete().eq('id', unterrichtId)
+    }
+    if (instrumentId) await admin.from('instrumente').delete().eq('id', instrumentId)
+    if (lehrerUser)   await testUserLoeschen(lehrerUser.id)
+  })
+
+  it('legt Kurs an und weist Lehrer zu', async () => {
+    if (!localReachable) return
+    expect(lehrerUser).toBeDefined()
+    expect(instrumentId).toBeDefined()
+
+    const { data: id, error } = await admin.rpc('create_unterricht', {
+      p_name:         '__Test-Unterricht',
+      p_typ:          'einzel',
+      p_instrument_id: instrumentId,
+      p_lehrer_ids:   [lehrerUser.id],
+      p_schule_id:    TEST_SCHULE_ID,
+    })
+    expect(error).toBeNull()
+    expect(typeof id).toBe('string')
+    unterrichtId = id
+
+    const { data: kurs } = await admin.from('unterricht').select('id,name').eq('id', id).single()
+    expect(kurs?.name).toBe('__Test-Unterricht')
+
+    const { data: lehrer } = await admin.from('unterricht_lehrer')
+      .select('lehrer_id, rolle').eq('unterricht_id', id)
+    expect(lehrer).toHaveLength(1)
+    expect(lehrer[0].lehrer_id).toBe(lehrerUser.id)
+    expect(lehrer[0].rolle).toBe('hauptlehrer')
+  })
+})
+
+// ─── paket_stunde_verbrauchen RPC ────────────────────────────
+
+describe('paket_stunde_verbrauchen RPC', () => {
+  let schueler, unterrichtId, paketId
+
+  beforeAll(async () => {
+    if (!localReachable) return
+    schueler = await testUserAnlegen(`test-paket-${Date.now()}@test.invalid`, 'schueler')
+
+    const { data: kurs } = await admin.from('unterricht').insert({
+      name: '__Test-Paket-Kurs', typ: 'einzel', schule_id: TEST_SCHULE_ID,
+      wochentag: 'mo', uhrzeit_von: '10:00', uhrzeit_bis: '11:00',
+    }).select('id').single()
+    unterrichtId = kurs.id
+    await admin.from('unterricht_schueler').insert({
+      unterricht_id: unterrichtId, schueler_id: schueler.id, status: 'aktiv',
+    })
+  })
+
+  afterAll(async () => {
+    if (!localReachable) return
+    if (paketId)      await admin.from('pakete').delete().eq('id', paketId)
+    if (unterrichtId) {
+      await admin.from('unterricht_schueler').delete().eq('unterricht_id', unterrichtId)
+      await admin.from('unterricht').delete().eq('id', unterrichtId)
+    }
+    if (schueler) await testUserLoeschen(schueler.id)
+  })
+
+  it('gibt false zurück wenn kein Paket vorhanden', async () => {
+    if (!localReachable) return
+    const { data, error } = await admin.rpc('paket_stunde_verbrauchen', {
+      p_schueler_id:   schueler.id,
+      p_unterricht_id: unterrichtId,
+    })
+    expect(error).toBeNull()
+    expect(data).toBe(false)
+  })
+
+  it('gibt true zurück und decrementiert Stunden bei vorhandenem Paket', async () => {
+    if (!localReachable) return
+
+    const { data: paket } = await admin.from('pakete').insert({
+      schueler_id:    schueler.id,
+      unterricht_id:  unterrichtId,
+      stunden_gesamt: 5,
+      stunden_genutzt: 0,
+      gekauft_am:     new Date().toISOString().split('T')[0],
+    }).select('id').single()
+    paketId = paket.id
+
+    const { data, error } = await admin.rpc('paket_stunde_verbrauchen', {
+      p_schueler_id:   schueler.id,
+      p_unterricht_id: unterrichtId,
+    })
+    expect(error).toBeNull()
+    expect(data).toBe(true)
+
+    const { data: updated } = await admin.from('pakete').select('stunden_genutzt').eq('id', paketId).single()
+    expect(updated.stunden_genutzt).toBe(1)
+  })
+
+  it('gibt false zurück wenn Paket aufgebraucht', async () => {
+    if (!localReachable) return
+    if (!paketId) return
+
+    await admin.from('pakete').update({ stunden_genutzt: 5 }).eq('id', paketId)
+
+    const { data } = await admin.rpc('paket_stunde_verbrauchen', {
+      p_schueler_id:   schueler.id,
+      p_unterricht_id: unterrichtId,
+    })
+    expect(data).toBe(false)
+  })
+})
+
+// ─── interessenten_verlauf Trigger ───────────────────────────
+
+describe('interessenten_verlauf Trigger', () => {
+  let interessentId
+
+  afterAll(async () => {
+    if (!localReachable || !interessentId) return
+    await admin.from('interessenten').delete().eq('id', interessentId)
+  })
+
+  it('legt Verlaufs-Eintrag beim Erstellen an', async () => {
+    if (!localReachable) return
+
+    const { data: int, error } = await admin.from('interessenten').insert({
+      schule_id:   TEST_SCHULE_ID,
+      voller_name: '__Test-Interessent',
+      status:      'interessent',
+    }).select('id').single()
+
+    expect(error).toBeNull()
+    interessentId = int.id
+
+    const { data: verlauf } = await admin.from('interessenten_verlauf')
+      .select('typ').eq('interessent_id', interessentId)
+    expect(verlauf?.some(v => v.typ === 'erstellt')).toBe(true)
+  })
+
+  it('legt Verlaufs-Eintrag bei Statuswechsel an', async () => {
+    if (!localReachable || !interessentId) return
+
+    await admin.from('interessenten')
+      .update({ status: 'kontaktiert' })
+      .eq('id', interessentId)
+
+    const { data: verlauf } = await admin.from('interessenten_verlauf')
+      .select('typ, alt_wert, neu_wert').eq('interessent_id', interessentId)
+
+    const statusEintrag = verlauf?.find(v => v.typ === 'status_geaendert')
+    expect(statusEintrag).toBeDefined()
+    expect(statusEintrag.alt_wert).toBe('interessent')
+    expect(statusEintrag.neu_wert).toBe('kontaktiert')
+  })
+})
+
+// ─── session_starten / session_beenden ───────────────────────
+
+describe('session_starten und session_beenden RPCs', () => {
+  const LEHRER_EMAIL = `test-session-lehrer-${Date.now()}@test.invalid`
+  const LEHRER_PW    = 'TestPasswort123!'
+  let lehrerUser, lehrerClient, unterrichtId, sessionId
+
+  beforeAll(async () => {
+    if (!localReachable) return
+
+    const { data: { user } } = await admin.auth.admin.createUser({
+      email: LEHRER_EMAIL, password: LEHRER_PW, email_confirm: true,
+    })
+    lehrerUser = user
+    await admin.from('profiles').update({
+      rolle: 'lehrer', schule_id: TEST_SCHULE_ID, letzte_schule_id: TEST_SCHULE_ID,
+    }).eq('id', user.id)
+    await admin.from('schul_mitgliedschaften').insert({
+      user_id: user.id, schule_id: TEST_SCHULE_ID, rolle: 'lehrer',
+    })
+
+    lehrerClient = createClient(LOCAL_URL, LOCAL_ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    await lehrerClient.auth.signInWithPassword({ email: LEHRER_EMAIL, password: LEHRER_PW })
+
+    const { data: kurs } = await admin.from('unterricht').insert({
+      name: '__Test-Session-Kurs', typ: 'einzel', schule_id: TEST_SCHULE_ID,
+      wochentag: 'di', uhrzeit_von: '11:00', uhrzeit_bis: '12:00',
+    }).select('id').single()
+    unterrichtId = kurs.id
+    await admin.from('unterricht_lehrer').insert({
+      unterricht_id: unterrichtId, lehrer_id: user.id, rolle: 'hauptlehrer',
+    })
+  })
+
+  afterAll(async () => {
+    if (!localReachable) return
+    if (sessionId)    await admin.from('unterricht_sessions').delete().eq('id', sessionId)
+    if (unterrichtId) {
+      await admin.from('unterricht_lehrer').delete().eq('unterricht_id', unterrichtId)
+      await admin.from('unterricht').delete().eq('id', unterrichtId)
+    }
+    if (lehrerUser) await testUserLoeschen(lehrerUser.id)
+  })
+
+  it('startet Session und gibt session_id + join_code zurück', async () => {
+    if (!localReachable) return
+
+    const { data: rows, error } = await lehrerClient.rpc('session_starten', {
+      p_unterricht_id: unterrichtId,
+      p_oeffentlich:   false,
+    })
+    expect(error).toBeNull()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].session_id).toBeDefined()
+    expect(rows[0].join_code).toMatch(/^[A-Z0-9]{6}$/)
+    sessionId = rows[0].session_id
+  })
+
+  it('session_beitreten gibt session_id zurück für gültigen Code', async () => {
+    if (!localReachable || !sessionId) return
+
+    const { data: row } = await admin.from('unterricht_sessions')
+      .select('join_code').eq('id', sessionId).single()
+
+    // p_gast_name: null disambiguiert die überladene Funktion (PostgREST PGRST203)
+    const { data: sid, error } = await lehrerClient.rpc('session_beitreten', {
+      p_join_code: row.join_code,
+      p_gast_name: null,
+    })
+    expect(error).toBeNull()
+    expect(sid).toBe(sessionId)
+  })
+
+  it('session_beenden setzt Status auf beendet', async () => {
+    if (!localReachable || !sessionId) return
+
+    // session_beenden verwendet auth.uid() intern → als Lehrer aufrufen
+    const { error } = await lehrerClient.rpc('session_beenden', { p_session_id: sessionId })
+    expect(error).toBeNull()
+
+    const { data: session } = await admin.from('unterricht_sessions')
+      .select('status').eq('id', sessionId).single()
+    expect(session.status).toBe('beendet')
+  })
+})
+
 // ─── stunden_generieren RPC ───────────────────────────────────
 
 describe('stunden_generieren RPC', () => {

@@ -1,0 +1,56 @@
+name: Integration & RLS Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration:
+    name: Vitest Integration + pgTAP RLS
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase
+        run: supabase start
+        # supabase start zieht Docker-Images und läuft Migrationen + seed.sql
+
+      - name: Get Supabase credentials
+        id: supabase
+        run: |
+          eval $(supabase status -o env | sed 's/"//g')
+          echo "url=$API_URL"           >> $GITHUB_OUTPUT
+          echo "anon=$ANON_KEY"         >> $GITHUB_OUTPUT
+          echo "service=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Write .env.test
+        run: |
+          echo "TEST_SUPABASE_URL=${{ steps.supabase.outputs.url }}"        > .env.test
+          echo "TEST_SUPABASE_ANON_KEY=${{ steps.supabase.outputs.anon }}" >> .env.test
+          echo "TEST_SUPABASE_SVC_KEY=${{ steps.supabase.outputs.service }}" >> .env.test
+          echo "TEST_SCHULE_ID=00000000-0000-0000-0000-000000000001"         >> .env.test
+
+      - name: Run integration tests (Vitest)
+        run: npm test -- --reporter=verbose
+        env:
+          VITE_SUPABASE_URL: ${{ steps.supabase.outputs.url }}
+          VITE_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon }}
+
+      - name: Run RLS tests (pgTAP)
+        run: supabase test db

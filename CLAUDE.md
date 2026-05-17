@@ -10,7 +10,12 @@ npm run build     # Production build → dist/
 npm run preview   # Preview production build
 ```
 
-No linting or test commands are configured.
+```bash
+npm test              # Unit + Integration tests (vitest run)
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+supabase test db      # pgTAP RLS-Tests (benötigt laufende lokale Instanz)
+```
 
 ## Production URLs
 
@@ -308,7 +313,7 @@ Staccato is a full music school management platform. Features by area:
 
 **Core:**
 - `profiles` — all users; columns: `id`, `voller_name`, `rolle`, `schule_id`, `sprache`, `telefon`, `adresse`, `geburtsdatum`, `aktiv`, `notizen`, `avatar_url`, `email_benachrichtigungen` (jsonb), `kalender_token` (uuid, unique), `kann_kurse_anlegen` (boolean, default false), `thema` (text, default `'klassik'`), `dark_mode` (boolean, default false), `letzte_schule_id` (uuid), `iban`, `bic`, `kontoinhaber`, `zahlungsweise` (text, CHECK: sepa/ueberweisung/bar), `zahlungsrhythmus` (text, CHECK: monatlich/quartalsweise/halbjaehrlich/jaehrlich), `mitgliedsbeitrag` (numeric 8,2), `erziehungsberechtigter_name`, `erziehungsberechtigter_telefon`, `erziehungsberechtigter_email`, `erstellt_am`, `aktualisiert_am`
-- `schulen` — one row per school; columns: `id`, `name`, `adresse`, `telefon`, `email`, `website`, `logo_url`, `farbe`, `sprachen[]`, `aktiv`, `erstellt_am`, `zeitzone` (default `'Europe/Berlin'`), `inventar_prefix` (default `'INV'`), `kuendigungsfrist` (text)
+- `schulen` — one row per school; columns: `id`, `name`, `adresse`, `telefon`, `email`, `website`, `logo_url`, `logo_url_dark` (dark-mode Logo), `farbe`, `sprachen[]`, `aktiv`, `erstellt_am`, `zeitzone` (default `'Europe/Berlin'`), `inventar_prefix` (default `'INV'`), `kuendigungsfrist` (text), `steuernummer`, `ustid`, `rechtsform` (CHECK: einzelperson/gbr/ev/ggmbh/gmbh/ug/sonstiges), `vereinsreg_nr`, `vereinsreg_gericht`, `ist_gemeinnuetzig` (boolean), `finanzamt`, `freistellungsbescheid_datum` (date), `hat_ki_extraktion` (boolean, Feature-Gate KI-Rechnungserkennung), `anthropic_api_key` (text, schulspezifischer Anthropic Key für KI-Extraktion), `rechnungen_prefix`, `rechnungen_zaehler`
   - RLS: SELECT open to all authenticated; UPDATE via `schulen: sadmin` (superadmin, all ops) + `schulen: admin update` (admin/superadmin for own school)
 - `eltern_schueler` — parent↔student join (`eltern_id`, `schueler_id`)
 
@@ -328,13 +333,13 @@ Staccato is a full music school management platform. Features by area:
 - `pakete` — lesson packages per student/course
 
 **Repertoire:**
-- `stuecke` — pieces; `titel`, `komponist`, `tonart`, `tempo`, `youtube_url`, `liedtext` (Markdown), `notizen` (ChordPro akkorde), `liedtext_md` (boolean, default true — per-piece MD/Plain toggle state), `erstellt_von`
+- `stuecke` — pieces; `titel`, `komponist`, `tonart`, `tempo`, `youtube_url`, `spotify_url`, `liedtext` (Markdown), `notizen` (ChordPro akkorde), `liedtext_md` (boolean, default true — per-piece MD/Plain toggle state), `takt`, `anmerkungen`, `erstellt_von`
 - `unterricht_stuecke` — course↔piece join (`status`, `reihenfolge`)
 - `event_stuecke` — event↔piece join
 - `stueck_dateien` — files per piece; `typ`: `noten/liedtext/audio`; `stimme`: `sopran/alt/tenor/bass` (nullable)
 
 **Events:**
-- `events` — `typ` enum `event_typ`: `konzert/vorspiel/pruefung/veranstaltung/vorstandssitzung/sonstiges`; `oeffentlich` bool; `beginn`/`ende` as `timestamptz`
+- `events` — `typ` enum `event_typ`: `konzert/vorspiel/pruefung/veranstaltung/vorstandssitzung/sonstiges`; `oeffentlich` bool; `beginn`/`ende` as `timestamptz`; `erstellt_von` (FK → profiles) — Lehrer-RLS: nur eigene Events editierbar
 - `event_teilnehmer` — RSVP; column `zusage` of type `zusage_status` enum: `offen/zugesagt/abgesagt`
 - `unterricht_sessions` / `session_teilnehmer` / `session_reaktionen` — live teaching session data; sessions can be `oeffentlich` (guest participants with `gast_name`)
 
@@ -346,7 +351,10 @@ Staccato is a full music school management platform. Features by area:
 - `nachrichten` — messages; `typ` (`nachricht_typ` enum): `direkt/broadcast/kurs`; `kurs_id` uuid (nullable, FK → `unterricht`); `gesendet_von`, `empfaenger_id` (nullable for broadcast/kurs), `betreff`, `inhalt`, `schule_id`
 - `nachricht_gelesen` — read receipts (`nachricht_id`, `user_id`, `gelesen_am`)
 - `nachricht_geloescht` — soft-delete per user (`nachricht_id`, `user_id`, `geloescht_am`)
-- `rechnungen` — invoices (schema ready; UI not yet implemented)
+- `rechnungen` — invoices; `rechnungsnummer` (auto via Trigger), `ausgestellt_am`, `faellig_am`, `bezahlt_am`, `betrag`, `steuersatz` (numeric 4,2, default 0), `typ` (mitgliedsbeitrag/freitext), `positionen` (jsonb), `zahlungsweg` (ueberweisung/sepa/bar/sonstiges), `schueler_id` (nullable, FK → profiles ON DELETE SET NULL), `debitor_id` (FK → debitoren), `empfaenger_name`/`empfaenger_adresse` (Freitext-Fallback), `empfaenger_snapshot`/`schule_snapshot`/`steuer_hinweis_snapshot` (GoBD-Snapshots bei INSERT), `storniert_am`/`storniert_von`. **GoBD §239**: kein DELETE erlaubt; `rechnung_unveraenderlich_trigger` blockiert nachträgliche Änderungen an Rechnungsfeldern (nur `bezahlt_am`, `zahlungsweg`, `storniert_*` änderbar)
+- `ausgaben` — eingehende Rechnungen/Kosten; `empfaenger`, `betrag`, `kategorie` (gehalt/miete/material/versicherung/sonstiges), `belegnummer`, `faellig_am`, `bezahlt_am`, `zahlungsweg`, `kreditor_id` (FK → kreditoren), `lieferanten_rechnung_nr`, `rechnungsdatum`, `beleg_pfad` (Storage-Pfad in `ausgaben-dateien`), GoBD-Stornierung; RLS: admin/superadmin; kein DELETE
+- `debitoren` — Kundenstamm für ausgehende Rechnungen (Mitglieder, externe Firmen, Veranstalter); `name`, `adresse`, `email`, `telefon`, `ustid`, `iban`, `bic`, `notizen`, `profil_id` (FK → profiles); RLS: admin/superadmin
+- `kreditoren` — Lieferantenstamm für eingehende Rechnungen (Vermieter, Lehrer/Honorar); `name`, `adresse`, `email`, `telefon`, `ustid`, `iban`, `bic`, `kategorie` (gehalt/miete/material/versicherung/sonstiges); RLS: admin/superadmin
 - `push_subscriptions` — Web Push subscription endpoints per user
 - `kalender_tokens` — legacy token table (token management now via `kalender_token` column in `profiles`)
 
@@ -372,6 +380,7 @@ Staccato is a full music school management platform. Features by area:
 | `schueler-dateien` | ✗ | Student files |
 | `mitglied-dateien` | ✗ | Member documents (Aufnahmeformular etc.) |
 | `vorstand-dateien` | ✗ | Board meeting protocol attachments |
+| `ausgaben-dateien` | ✗ | Belege/Rechnungen für Ausgaben (Invoice Capture) |
 
 **Enum types:**
 | Enum | Values |
@@ -385,6 +394,7 @@ Staccato is a full music school management platform. Features by area:
 | `sprache` | `de, en, tr` |
 | `nachricht_typ` | `direkt, broadcast, kurs` |
 | `inventar_zustand` | `neu, gut, gebraucht, defekt` |
+| `datei_typ` | `noten, liedtext, audio, musicxml` |
 
 Note: `zahlungsweise` and `zahlungsrhythmus` are plain `text` columns with CHECK constraints, not PostgreSQL enums.
 
@@ -477,6 +487,22 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20260516000003_rechnungen_rechtlich.sql` | §14 UStG Rechnungsnummer (atomarer Trigger), GoBD `storniert_am/von`, §4 Nr. 21 UStG `steuer_hinweis`; `rechnungen_prefix`/`rechnungen_zaehler` auf `schulen` |
 | `20260516000004_rechnungen_freitext.sql` | `typ` (mitgliedsbeitrag/freitext) und `positionen` (jsonb) auf `rechnungen` |
 | `20260516000005_ausgaben.sql` | `ausgaben` Tabelle (Kreditoren): Empfänger, Betrag, Kategorie (gehalt/miete/material/versicherung/sonstiges), Belegnummer, Fälligkeit, GoBD-Stornierung; RLS: admin/superadmin |
+| `20260516000006_datei_typ_musicxml.sql` | Neuer Enum-Wert `musicxml` für `datei_typ` — **separate Datei** wegen PostgreSQL Enum-Einschränkung |
+| `20260516000010_schulen_logo_dark.sql` | `logo_url_dark` Spalte auf `schulen` — alternatives Logo für Dark Mode |
+| `20260517000000_rechnungen_gobdfix.sql` | GoBD §239 + §14 UStG: `steuernummer`/`ustid` auf `schulen`; `ausgestellt_am`, `schule_snapshot`, `empfaenger_snapshot`, `zahlungsweg` auf `rechnungen`; Trigger `rechnungsnummer_vergeben` erstellt Snapshots bei INSERT; granulare RLS ohne DELETE für `rechnungen` und `ausgaben` |
+| `20260517000001_schulen_rechtsform.sql` | Rechtliche Stammdaten auf `schulen`: `rechtsform`, `vereinsreg_nr`, `vereinsreg_gericht`, `ist_gemeinnuetzig`, `finanzamt`, `freistellungsbescheid_datum`; Trigger-Update für erweiterten Schul-Snapshot |
+| `20260517000002_debitoren_table.sql` | `debitoren` Tabelle — Kundenstamm für ausgehende Rechnungen; RLS: admin/superadmin |
+| `20260517000003_kreditoren_table.sql` | `kreditoren` Tabelle — Lieferantenstamm für eingehende Rechnungen; RLS: admin/superadmin |
+| `20260517000004_rechnungen_debitor_fk.sql` | `debitor_id` FK auf `rechnungen`; `schueler_id` nullable; Trigger-Update: Empfänger-Snapshot aus Debitor ODER Profil ODER Freitext; RLS-Anpassung für nullable `schueler_id` |
+| `20260517000005_ausgaben_kreditor_fk.sql` | `kreditor_id` FK auf `ausgaben`; `lieferanten_rechnung_nr`, `rechnungsdatum` Spalten |
+| `20260517000006_ausgaben_beleg.sql` | `beleg_pfad` auf `ausgaben`; neuer privater Storage-Bucket `ausgaben-dateien` inkl. RLS-Policies |
+| `20260517000007_schulen_ki_extraktion.sql` | `hat_ki_extraktion` boolean Feature-Gate auf `schulen` (default false) |
+| `20260517000008_schulen_anthropic_key.sql` | `anthropic_api_key` auf `schulen` — schulspezifischer Key für KI-Rechnungserkennung |
+| `20260517000009_rechnungen_simplifiziert.sql` | `empfaenger_name`/`empfaenger_adresse` Freitext-Fallback + `steuersatz` auf `rechnungen`; Trigger-Update: `logo_url` im Schul-Snapshot |
+| `20260517000010_rechnungen_fk_set_null.sql` | DSGVO Art. 17: FK `rechnungen.schueler_id` von ON DELETE CASCADE auf ON DELETE SET NULL — Rechnungen bleiben bei Kontolöschung erhalten |
+| `20260517000011_rechnung_unveraenderlich.sql` | GoBD §239 Trigger `rechnung_unveraenderlich_trigger` — blockiert nachträgliche Änderung von Rechnungsfeldern (Betrag, Positionen, Empfänger etc.); nur `bezahlt_am`, `zahlungsweg`, `storniert_*` änderbar |
+| `20260517000012_fix_lehrer_events_rls.sql` | RLS-Fix Events: Lehrer sehen nur öffentliche Events, selbst erstellte Events oder Events wo sie Teilnehmer sind; `vorstandssitzung` grundsätzlich ausgeblendet für Lehrer |
+| `20260517000013_stuecke_spotify_url.sql` | `spotify_url` Spalte auf `stuecke` |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

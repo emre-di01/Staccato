@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    groups:
+      # Supabase-Pakete zusammen updaten
+      supabase:
+        patterns:
+          - '@supabase/*'
+      # Vite/Build-Tools zusammen updaten
+      build-tools:
+        patterns:
+          - 'vite'
+          - '@vitejs/*'
+          - 'vitest'
+          - '@vitest/*'
+      # React zusammen updaten
+      react:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - 'react-router-dom'
+          - '@types/react*'

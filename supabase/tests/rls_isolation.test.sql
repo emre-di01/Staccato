@@ -2,7 +2,7 @@
 -- Führe aus mit: supabase test db
 
 BEGIN;
-SELECT plan(25);
+SELECT plan(35);
 
 -- ─── Fixture: Fixtures sauber einfügen ─────────────────────────────────────
 -- Konstanten als Variablen in Temp-Tabelle, damit die UUIDs konsistent bleiben
@@ -15,6 +15,7 @@ INSERT INTO _t VALUES
   ('admin_b',   'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
   ('lehrer_a',  'cccccccc-cccc-cccc-cccc-cccccccccccc'),
   ('schuel_a',  'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+  ('schuel_b2', 'dddddddd-dddd-dddd-dddd-ddddddddddde'),
   ('vorst_a',   'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
   ('sadmin',    'ffffffff-ffff-ffff-ffff-ffffffffffff'),
   ('kurs_a',    '10000000-0000-0000-0000-000000000001'),
@@ -22,7 +23,11 @@ INSERT INTO _t VALUES
   ('event_a',   '10000000-0000-0000-0000-000000000002'),
   ('event_b',   '20000000-0000-0000-0000-000000000002'),
   ('raum_a',    '10000000-0000-0000-0000-000000000003'),
-  ('raum_b',    '20000000-0000-0000-0000-000000000003');
+  ('raum_b',    '20000000-0000-0000-0000-000000000003'),
+  ('stunde_a',  '10000000-0000-0000-0000-000000000004'),
+  ('vziel_a',   '10000000-0000-0000-0000-000000000007'),
+  ('ikat_a',    '10000000-0000-0000-0000-000000000008'),
+  ('mdatei_a',  '10000000-0000-0000-0000-000000000009');
 
 -- Schulen
 INSERT INTO schulen (id, name, aktiv)
@@ -80,6 +85,15 @@ INSERT INTO unterricht (id, schule_id, name, typ, wochentag, uhrzeit_von, uhrzei
   SELECT (SELECT v FROM _t WHERE k='kurs_b'), (SELECT v FROM _t WHERE k='schule_b'), 'Kurs B', 'einzel', 'di', '10:00', '11:00'
   ON CONFLICT (id) DO UPDATE SET schule_id = EXCLUDED.schule_id;
 
+-- Zweiter Schüler (für Anwesenheits-Isolation)
+INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+  SELECT v, 'authenticated', 'authenticated', 'rls_schuel_b2@test.local', '', NOW(), NOW(), NOW() FROM _t WHERE k = 'schuel_b2'
+  ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
+INSERT INTO profiles (id, voller_name, rolle, schule_id, letzte_schule_id)
+  SELECT (SELECT v FROM _t WHERE k='schuel_b2'), 'Schüler B2', 'schueler',
+    (SELECT v FROM _t WHERE k='schule_a'), (SELECT v FROM _t WHERE k='schule_a')
+  ON CONFLICT (id) DO UPDATE SET rolle = 'schueler', schule_id = EXCLUDED.schule_id, letzte_schule_id = EXCLUDED.letzte_schule_id;
+
 -- Lehrer + Schüler zu Kurs A
 INSERT INTO unterricht_lehrer (lehrer_id, unterricht_id)
   SELECT (SELECT v FROM _t WHERE k='lehrer_a'), (SELECT v FROM _t WHERE k='kurs_a')
@@ -87,6 +101,33 @@ INSERT INTO unterricht_lehrer (lehrer_id, unterricht_id)
 INSERT INTO unterricht_schueler (schueler_id, unterricht_id)
   SELECT (SELECT v FROM _t WHERE k='schuel_a'), (SELECT v FROM _t WHERE k='kurs_a')
   ON CONFLICT DO NOTHING;
+
+-- Stunde für Kurs A (für Anwesenheits-Tests)
+INSERT INTO stunden (id, unterricht_id, beginn, ende, status)
+  SELECT (SELECT v FROM _t WHERE k='stunde_a'),
+    (SELECT v FROM _t WHERE k='kurs_a'),
+    NOW(), NOW() + interval '1 hour', 'stattgefunden'
+  ON CONFLICT (id) DO NOTHING;
+
+-- Vorstand-Ziel für Schule A
+INSERT INTO vorstand_ziele (id, schule_id, titel, status)
+  SELECT (SELECT v FROM _t WHERE k='vziel_a'),
+    (SELECT v FROM _t WHERE k='schule_a'), 'RLS-Testziel', 'offen'
+  ON CONFLICT (id) DO NOTHING;
+
+-- Inventar-Kategorie für Schule A
+INSERT INTO inventar_kategorien (id, schule_id, name, icon)
+  SELECT (SELECT v FROM _t WHERE k='ikat_a'),
+    (SELECT v FROM _t WHERE k='schule_a'), 'Testgeräte', '🎸'
+  ON CONFLICT (id) DO NOTHING;
+
+-- Mitglied-Datei für schuel_a (Student kann nur eigene sehen)
+INSERT INTO mitglied_dateien (id, profil_id, schule_id, typ, dateiname, bucket_pfad)
+  SELECT (SELECT v FROM _t WHERE k='mdatei_a'),
+    (SELECT v FROM _t WHERE k='schuel_a'),
+    (SELECT v FROM _t WHERE k='schule_a'),
+    'sonstiges', 'test.pdf', 'mitglied-dateien/test.pdf'
+  ON CONFLICT (id) DO NOTHING;
 
 -- Events
 INSERT INTO events (id, schule_id, titel, typ, beginn)
@@ -323,6 +364,137 @@ SELECT results_eq(
   $$ SELECT COUNT(*)::int FROM unterricht $$,
   ARRAY[0],
   'Anon-User sieht keine Kurse'
+);
+
+-- ─── 11. Anwesenheit — Schüler darf nur eigene Entschuldigung eintragen ──────
+
+SET LOCAL role = authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"dddddddd-dddd-dddd-dddd-dddddddddddd","role":"authenticated"}', true);
+
+SELECT lives_ok(
+  $$ INSERT INTO anwesenheit (schueler_id, stunde_id, status)
+     VALUES (
+       'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid,
+       '10000000-0000-0000-0000-000000000004'::uuid,
+       'entschuldigt'
+     ) $$,
+  'Schüler kann eigene Entschuldigung eintragen'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO anwesenheit (schueler_id, stunde_id, status)
+     VALUES (
+       'dddddddd-dddd-dddd-dddd-ddddddddddde'::uuid,
+       '10000000-0000-0000-0000-000000000004'::uuid,
+       'entschuldigt'
+     ) $$,
+  '42501',
+  NULL,
+  'Schüler kann keine Entschuldigung für anderen Schüler eintragen'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO anwesenheit (schueler_id, stunde_id, status)
+     VALUES (
+       'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid,
+       '10000000-0000-0000-0000-000000000004'::uuid,
+       'anwesend'
+     ) $$,
+  '42501',
+  NULL,
+  'Schüler kann sich nicht selbst als anwesend eintragen'
+);
+
+-- ─── 12. Nachrichten — Schüler kann nicht senden ─────────────────────────────
+
+SELECT throws_ok(
+  $$ INSERT INTO nachrichten (gesendet_von, schule_id, betreff, inhalt, typ)
+     VALUES (
+       'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid,
+       '11111111-1111-1111-1111-111111111111'::uuid,
+       'Test', 'Inhalt', 'broadcast'
+     ) $$,
+  '42501',
+  NULL,
+  'Schüler kann keine Nachrichten senden'
+);
+
+-- ─── 13. Inventar — nur admin/superadmin/vorstand ────────────────────────────
+
+-- Schüler sieht kein Inventar
+SELECT results_eq(
+  $$ SELECT COUNT(*)::int FROM inventar_kategorien $$,
+  ARRAY[0],
+  'Schüler sieht keine Inventar-Kategorien'
+);
+
+-- Lehrer sieht kein Inventar
+SET LOCAL role = authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"cccccccc-cccc-cccc-cccc-cccccccccccc","role":"authenticated"}', true);
+
+SELECT results_eq(
+  $$ SELECT COUNT(*)::int FROM inventar_kategorien $$,
+  ARRAY[0],
+  'Lehrer sieht keine Inventar-Kategorien'
+);
+
+-- Vorstand sieht Inventar der eigenen Schule
+SET LOCAL role = authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","role":"authenticated"}', true);
+
+SELECT results_eq(
+  $$ SELECT COUNT(*)::int FROM inventar_kategorien
+     WHERE schule_id = '11111111-1111-1111-1111-111111111111'::uuid $$,
+  ARRAY[1],
+  'Vorstand sieht Inventar-Kategorien der eigenen Schule'
+);
+
+-- ─── 14. Vorstand-Ziele — nur vorstand/admin/superadmin ─────────────────────
+
+-- Schüler sieht keine Vorstand-Ziele
+SET LOCAL role = authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"dddddddd-dddd-dddd-dddd-dddddddddddd","role":"authenticated"}', true);
+
+SELECT results_eq(
+  $$ SELECT COUNT(*)::int FROM vorstand_ziele $$,
+  ARRAY[0],
+  'Schüler sieht keine Vorstand-Ziele'
+);
+
+-- Vorstand sieht Ziele der eigenen Schule
+SET LOCAL role = authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","role":"authenticated"}', true);
+
+SELECT results_eq(
+  $$ SELECT COUNT(*)::int FROM vorstand_ziele
+     WHERE schule_id = '11111111-1111-1111-1111-111111111111'::uuid $$,
+  ARRAY[1],
+  'Vorstand sieht Vorstand-Ziele der eigenen Schule'
+);
+
+-- ─── 15. Mitglied-Dateien — Schüler sieht nur eigene ────────────────────────
+
+SET LOCAL role = authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"dddddddd-dddd-dddd-dddd-dddddddddddd","role":"authenticated"}', true);
+
+SELECT results_eq(
+  $$ SELECT COUNT(*)::int FROM mitglied_dateien
+     WHERE profil_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid $$,
+  ARRAY[1],
+  'Schüler sieht eigene Mitglied-Datei'
+);
+
+SELECT results_eq(
+  $$ SELECT COUNT(*)::int FROM mitglied_dateien
+     WHERE profil_id != 'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid $$,
+  ARRAY[0],
+  'Schüler sieht keine Dateien anderer Mitglieder'
 );
 
 SELECT * FROM finish();
