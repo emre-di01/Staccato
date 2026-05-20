@@ -403,7 +403,7 @@ SPOTIFY_CLIENT_SECRET = "env(SPOTIFY_CLIENT_SECRET)"
 GETSONGBPM_API_KEY = "env(GETSONGBPM_API_KEY)"
 
 [analytics]
-enabled = true
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
