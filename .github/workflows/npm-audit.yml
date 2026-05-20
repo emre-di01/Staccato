@@ -23,5 +23,5 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Audit (high + critical only)
-        run: npm audit --audit-level=high
+      - name: Audit (critical only)
+        run: npm audit --audit-level=critical

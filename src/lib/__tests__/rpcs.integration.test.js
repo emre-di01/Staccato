@@ -9,9 +9,9 @@ import { createClient } from '@supabase/supabase-js'
 // Lokale Supabase-Credentials aus Umgebungsvariablen.
 // Werte für eine lokale `supabase start`-Instanz in .env.test eintragen
 // (Vorlage: .env.test.example — niemals echte Keys committen).
-const LOCAL_URL      = process.env.TEST_SUPABASE_URL
-const LOCAL_ANON_KEY = process.env.TEST_SUPABASE_ANON_KEY
-const LOCAL_SVC_KEY  = process.env.TEST_SUPABASE_SVC_KEY
+const LOCAL_URL      = process.env.TEST_SUPABASE_URL      ?? 'http://localhost:54321'
+const LOCAL_ANON_KEY = process.env.TEST_SUPABASE_ANON_KEY ?? 'placeholder'
+const LOCAL_SVC_KEY  = process.env.TEST_SUPABASE_SVC_KEY  ?? 'placeholder'
 const TEST_SCHULE_ID = '00000000-0000-0000-0000-000000000001'
 
 // Admin-Client (service role) für Test-Setup und -Teardown
