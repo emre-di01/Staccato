@@ -34,6 +34,9 @@
     "tone": "^15.1.22",
     "verovio": "^6.1.0"
   },
+  "overrides": {
+    "protobufjs": ">=7.5.5"
+  },
   "devDependencies": {
     "@capacitor/cli": "^7.6.5",
     "@eslint/js": "^10.0.1",
