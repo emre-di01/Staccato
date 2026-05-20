@@ -30,6 +30,19 @@ function Abschnitt({ titel, children }) {
   )
 }
 
+function F({ label, k, type = 'text', placeholder = '', mono = false, hint, form, setForm }) {
+  return (
+    <div>
+      <label style={sty.label}>{label}</label>
+      <input type={type} value={form[k]}
+        onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))}
+        placeholder={placeholder}
+        style={{ ...sty.input, ...(mono ? { fontFamily: 'monospace', letterSpacing: '0.03em' } : {}) }} />
+      {hint && <div style={sty.hint}>{hint}</div>}
+    </div>
+  )
+}
+
 export default function AdminEinstellungen() {
   const { profil, schule, setSchule, T } = useApp()
 
@@ -100,19 +113,6 @@ export default function AdminEinstellungen() {
     setTimeout(() => setErfolg(false), 2500)
   }
 
-  function F({ label, k, type = 'text', placeholder = '', mono = false, hint }) {
-    return (
-      <div>
-        <label style={sty.label}>{label}</label>
-        <input type={type} value={form[k]}
-          onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))}
-          placeholder={placeholder}
-          style={{ ...sty.input, ...(mono ? { fontFamily: 'monospace', letterSpacing: '0.03em' } : {}) }} />
-        {hint && <div style={sty.hint}>{hint}</div>}
-      </div>
-    )
-  }
-
   return (
     <div style={{ maxWidth: 640 }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 28 }}>
@@ -123,7 +123,7 @@ export default function AdminEinstellungen() {
 
         {/* ── 1. Allgemein ── */}
         <Abschnitt titel={T('settings_section_allgemein')}>
-          <F label={T('settings_school_name')} k="name" placeholder="Meine Musikschule" />
+          <F form={form} setForm={setForm} label={T('settings_school_name')} k="name" placeholder="Meine Musikschule" />
           <div>
             <label style={sty.label}>
               {T('settings_logo_url')} <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>({T('settings_logo_hint')})</span>
@@ -172,10 +172,10 @@ export default function AdminEinstellungen() {
               </div>
             </div>
           </div>
-          <F label="Website"           k="website"  type="url"   placeholder="https://..." />
-          <F label={T('email')}        k="email"    type="email" placeholder="info@musikschule.de" />
-          <F label={T('profile_phone')} k="telefon" type="tel"   placeholder="+49 ..." />
-          <F label={T('profile_address')} k="adresse"            placeholder="Musterstraße 1, 12345 Stadt" />
+          <F form={form} setForm={setForm} label="Website"           k="website"  type="url"   placeholder="https://..." />
+          <F form={form} setForm={setForm} label={T('email')}        k="email"    type="email" placeholder="info@musikschule.de" />
+          <F form={form} setForm={setForm} label={T('profile_phone')} k="telefon" type="tel"   placeholder="+49 ..." />
+          <F form={form} setForm={setForm} label={T('profile_address')} k="adresse"            placeholder="Musterstraße 1, 12345 Stadt" />
         </Abschnitt>
 
         {/* ── 2. Rechtsform & Register ── */}
@@ -195,14 +195,14 @@ export default function AdminEinstellungen() {
 
           {hatRegister && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <F
+              <F form={form} setForm={setForm}
                 label={T('settings_vereinsreg_nr')}
                 k="vereinsreg_nr"
                 mono
                 placeholder={form.rechtsform === 'ev' ? 'VR 12345' : 'HRB 12345'}
                 hint={T(istHandels ? 'settings_vereinsreg_nr_hint_hb' : 'settings_vereinsreg_nr_hint_ev')}
               />
-              <F
+              <F form={form} setForm={setForm}
                 label={T('settings_vereinsreg_gericht')}
                 k="vereinsreg_gericht"
                 placeholder={T('settings_vereinsreg_gericht_placeholder')}
@@ -214,9 +214,9 @@ export default function AdminEinstellungen() {
         {/* ── 3. Steuerliches & Gemeinnützigkeit ── */}
         <Abschnitt titel={T('settings_section_steuer')}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <F label={T('settings_steuernummer')} k="steuernummer" mono placeholder="12/345/67890"
+            <F form={form} setForm={setForm} label={T('settings_steuernummer')} k="steuernummer" mono placeholder="12/345/67890"
                hint={T('settings_steuernummer_hint')} />
-            <F label={T('settings_ustid')}        k="ustid"        mono placeholder="DE123456789"
+            <F form={form} setForm={setForm} label={T('settings_ustid')}        k="ustid"        mono placeholder="DE123456789"
                hint={T('settings_ustid_hint')} />
           </div>
           <div>
@@ -251,7 +251,7 @@ export default function AdminEinstellungen() {
 
           {form.ist_gemeinnuetzig && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, borderTop: '1px solid var(--border)', paddingTop: 18 }}>
-              <F label={T('settings_finanzamt')} k="finanzamt"
+              <F form={form} setForm={setForm} label={T('settings_finanzamt')} k="finanzamt"
                  placeholder={T('settings_finanzamt_placeholder')} />
               <div>
                 <label style={sty.label}>{T('settings_freistellung_datum')}</label>

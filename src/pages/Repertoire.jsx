@@ -60,6 +60,7 @@ function NeuesStueckModal({ onClose, onErfolg }) {
 
 // ─── Stück-Karte ──────────────────────────────────────────────
 function StueckKarte({ stueck, kurse = [], onClick }) {
+  const { T } = useApp()
   const hatNoten   = stueck.stueck_dateien?.some(d => d.typ === 'noten')
   const hatAudio   = stueck.stueck_dateien?.some(d => d.typ === 'audio')
   const hatAkkorde = stueck.stueck_dateien?.some(d => d.typ === 'akkorde') || stueck.notizen

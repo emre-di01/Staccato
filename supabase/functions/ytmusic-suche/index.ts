@@ -5,31 +5,31 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const INTERNAL_SECRET = Deno.env.get('INTERNAL_SECRET') ?? ''
-const BP_URL = 'http://host.docker.internal:9876/analyse'
+const LYRICA_URL = 'http://lyrica:9877'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {
-    const { youtube_url } = await req.json()
-    if (!youtube_url) {
-      return new Response(JSON.stringify({ error: 'youtube_url fehlt' }), {
+    const { q } = await req.json()
+    if (!q) {
+      return new Response(JSON.stringify({ error: 'q fehlt' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
 
-    const res = await fetch(BP_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${INTERNAL_SECRET}`,
-      },
-      body: JSON.stringify({ youtube_url }),
+    const res = await fetch(`${LYRICA_URL}/search/youtube?q=${encodeURIComponent(q)}`, {
+      signal: AbortSignal.timeout(20000),
     })
-
     const data = await res.json()
-    return new Response(JSON.stringify(data), {
+
+    if (data.status !== 'success') {
+      return new Response(JSON.stringify({ error: 'Suche fehlgeschlagen.' }), {
+        status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    return new Response(JSON.stringify({ tracks: data.tracks }), {
       headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   } catch (e: any) {

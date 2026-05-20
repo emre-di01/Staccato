@@ -10,6 +10,7 @@ import { useApp } from '../../context/AppContext'
 
 import ChordPlayer from '../../components/stueck/ChordPlayer'
 import SpotifyModal, { spotifyTrackId } from '../../components/stueck/SpotifyModal'
+import YtMusicModal from '../../components/stueck/YtMusicModal'
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import { DownloadButton, OeffnenButton } from '../../components/stueck/FileButtons'
 import PdfCard from '../../components/stueck/PdfCard'
@@ -56,16 +57,18 @@ export default function StueckDetail() {
   const [textGroesse,   setTextGroesse]   = useState(18)
   const [vollbild,      setVollbild]      = useState(false)
   const [halbtoene,     setHalbtoene]     = useState(0)
-  const [youtubeEdit,   setYoutubeEdit]   = useState(false)
-  const [youtubeInput,  setYoutubeInput]  = useState('')
+  const [youtubeEdit,    setYoutubeEdit]    = useState(false)
+  const [youtubeInput,   setYoutubeInput]   = useState('')
+  const [ytMusicEdit,    setYtMusicEdit]    = useState(false)
+  const [ytMusicInput,   setYtMusicInput]   = useState('')
+  const [ytMusicModal,   setYtMusicModal]   = useState(false)
   const [spotifyModal,  setSpotifyModal]  = useState(false)
   const [pdfModal,      setPdfModal]      = useState(false)
   const [metronomOffen, setMetronomOffen] = useState(false)
-  const [bpLaeuft,      setBpLaeuft]      = useState(false)
-  const [bpFehler,      setBpFehler]      = useState('')
   const [mbLaden,       setMbLaden]       = useState(false)
   const [mbErgebnisse,  setMbErgebnisse]  = useState([])
   const tapZeitenEditRef = useRef([])
+  const chordproInputRef = useRef(null)
 
   const kannBearbeiten = rolle === 'admin' || rolle === 'superadmin' || rolle === 'lehrer'
 
@@ -172,33 +175,23 @@ ${html}
     setYoutubeEdit(false)
   }
 
+  async function ytMusicSpeichern() {
+    const val = ytMusicInput.trim() || null
+    await supabase.from('stuecke').update({ youtube_music_url: val }).eq('id', stueckId)
+    setStueck(s => ({ ...s, youtube_music_url: val }))
+    setYtMusicEdit(false)
+  }
+
+  async function ytMusicSpeichernDirekt(url) {
+    const val = url?.trim() || null
+    await supabase.from('stuecke').update({ youtube_music_url: val }).eq('id', stueckId)
+    setStueck(s => ({ ...s, youtube_music_url: val }))
+  }
+
   async function spotifySpeichern(url) {
     const val = (url ?? '').trim() || null
     await supabase.from('stuecke').update({ spotify_url: val }).eq('id', stueckId)
     setStueck(s => ({ ...s, spotify_url: val }))
-  }
-
-  async function akkordErkennen() {
-    if (!stueck.youtube_url) return
-    setBpLaeuft(true); setBpFehler('')
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/basic-pitch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...SUPABASE_HEADERS },
-        body: JSON.stringify({ youtube_url: stueck.youtube_url }),
-      })
-      const data = await res.json()
-      if (data.error) { setBpFehler(data.error); return }
-      if (data.chordpro) {
-        const neueAkkorde = data.chordpro
-        await supabase.from('stuecke').update({ notizen: neueAkkorde }).eq('id', stueckId)
-        setStueck(s => ({ ...s, notizen: neueAkkorde }))
-      }
-    } catch {
-      setBpFehler('Analyse fehlgeschlagen. Bitte später erneut versuchen.')
-    } finally {
-      setBpLaeuft(false)
-    }
   }
 
   function mbTonart(key) {
@@ -241,6 +234,15 @@ ${html}
     setMbErgebnisse([])
   }
 
+  async function chordproImportieren(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const text = await file.text()
+    await supabase.from('stuecke').update({ notizen: text }).eq('id', stueckId)
+    setStueck(s => ({ ...s, notizen: text }))
+    e.target.value = ''
+  }
+
   async function dateiLoeschen(dateiId, pfad) {
     if (!await confirm('Datei wirklich löschen?', { confirmLabel: 'Löschen' })) return
     await supabase.storage.from('stueck-dateien').remove([pfad])
@@ -274,8 +276,9 @@ ${html}
     { id:'akkorde', label:'🎸 Akkorde', zeigen: akkordDateien.length > 0 || !!stueck.notizen || (kannBearbeiten && !!stueck.youtube_url) },
     { id:'noten',   label:'📄 Noten',   zeigen: notenDateien.length > 0 || xmlDateien.length > 0 },
     { id:'audio',   label:'🎵 Audio',   zeigen: audioDateien.length > 0 },
-    { id:'youtube', label:'▶️ Video',   zeigen: !!stueck.youtube_url || kannBearbeiten },
-    { id:'spotify', label:'🟢 Spotify', zeigen: !!stueck.spotify_url || kannBearbeiten },
+    { id:'youtube',  label:'▶️ Video',      zeigen: !!stueck.youtube_url       || kannBearbeiten },
+    { id:'ytmusic',  label:'🎵 YT Music',   zeigen: !!stueck.youtube_music_url || kannBearbeiten },
+    { id:'spotify',  label:'🟢 Spotify',    zeigen: !!stueck.spotify_url       || kannBearbeiten },
     { id:'dateien', label:'📁 Dateien', zeigen: dokumente.length > 0 || kannBearbeiten },
   ].filter(t => t.zeigen)
 
@@ -332,11 +335,19 @@ ${html}
             {halbtoene !== 0 && <button onClick={() => setHalbtoene(0)} style={{ marginLeft:'auto', padding:'5px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text-3)', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>↺ Reset</button>}
           </div>
         )}
+        {kannBearbeiten && (
+          <input ref={chordproInputRef} type="file" accept=".cho,.chopro,.chordpro,.txt" style={{ display:'none' }} onChange={chordproImportieren} />
+        )}
         {stueck.notizen && (
           <div style={{ marginBottom:24 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
               <div style={s.sectionLabel}>Akkorde</div>
-              {kannBearbeiten && <button onClick={() => { setBearbeiteText(true); setTab('text') }} style={{ ...s.btnSek, fontSize:12, padding:'5px 10px' }}>✏️ Bearbeiten</button>}
+              {kannBearbeiten && (
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={() => chordproInputRef.current?.click()} style={{ ...s.btnSek, fontSize:12, padding:'5px 10px' }}>📂 Import</button>
+                  <button onClick={() => { setBearbeiteText(true); setTab('text') }} style={{ ...s.btnSek, fontSize:12, padding:'5px 10px' }}>✏️ Bearbeiten</button>
+                </div>
+              )}
             </div>
             <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'16px 20px' }}>
               <ChordPro text={transponiereText(stueck.notizen, halbtoene)} />
@@ -349,15 +360,17 @@ ${html}
             <AkkordDateiAnzeige datei={d} halbtoene={halbtoene} kannLoeschen={kannBearbeiten} onLoeschen={() => dateiLoeschen(d.id, d.bucket_pfad)} />
           </div>
         ))}
-        {kannBearbeiten && stueck.youtube_url && (
-          <div style={{ marginTop: stueck.notizen || akkordDateien.length > 0 ? 16 : 0 }}>
-            <button onClick={akkordErkennen} disabled={bpLaeuft} style={{ ...s.btnSek, fontSize:13, padding:'8px 14px', display:'flex', alignItems:'center', gap:6, opacity: bpLaeuft ? 0.6 : 1 }}>
-              {bpLaeuft ? '⏳ Erkenne Akkorde…' : '🎵 Akkorde aus YouTube erkennen'}
-            </button>
-            {bpFehler && <div style={{ fontSize:12, color:'var(--danger)', marginTop:6 }}>{bpFehler}</div>}
-          </div>
+        {!stueck.notizen && akkordDateien.length === 0 && (
+          kannBearbeiten ? (
+            <div style={{ textAlign:'center', padding:32 }}>
+              <p style={{ color:'var(--text-3)', marginBottom:16 }}>Noch keine Akkorde vorhanden.</p>
+              <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
+                <button onClick={() => chordproInputRef.current?.click()} style={s.btnPri}>📂 .chordpro importieren</button>
+                <button onClick={() => { setBearbeiteText(true); setTab('text') }} style={s.btnSek}>✏️ Manuell eingeben</button>
+              </div>
+            </div>
+          ) : <div style={s.leer}>Keine Akkorde vorhanden.</div>
         )}
-        {!stueck.notizen && akkordDateien.length === 0 && (!stueck.youtube_url || !kannBearbeiten) && <div style={s.leer}>Keine Akkorde vorhanden.</div>}
       </div>
     )
     if (id === 'noten') return (
@@ -379,21 +392,67 @@ ${html}
               <iframe style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }} src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_url)}`} title="YouTube" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
             </div>
             <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <a href={stueck.youtube_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'var(--accent)', textDecoration:'none', fontWeight:600 }}>↗ Auf YouTube öffnen</a>
-              {kannBearbeiten && <button onClick={() => { setYoutubeInput(stueck.youtube_url ?? ''); setYoutubeEdit(true) }} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>✎ Link ändern</button>}
+              <a href={stueck.youtube_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'var(--accent)', textDecoration:'none', fontWeight:600 }}>{T('piece_open_youtube')}</a>
+              {kannBearbeiten && <button onClick={() => { setYoutubeInput(stueck.youtube_url ?? ''); setYoutubeEdit(true) }} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>✎ {T('link_change')}</button>}
             </div>
           </>
         ) : kannBearbeiten ? (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            <p style={{ margin:0, fontSize:14, color:'var(--text-2)' }}>{stueck.youtube_url ? 'YouTube-Link bearbeiten:' : 'YouTube-Link hinzufügen:'}</p>
+            <p style={{ margin:0, fontSize:14, color:'var(--text-2)' }}>{stueck.youtube_url ? T('piece_youtube_link_edit') : T('piece_youtube_link_add')}</p>
             <input type="url" value={youtubeInput} onChange={e => setYoutubeInput(e.target.value)} placeholder="https://youtube.com/watch?v=..." style={{ padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', outline:'none', width:'100%', boxSizing:'border-box' }} />
             <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-              {stueck.youtube_url && <button onClick={() => { setYoutubeInput(''); youtubeSpeichern() }} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🗑 Entfernen</button>}
-              <button onClick={() => setYoutubeEdit(false)} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>Abbrechen</button>
-              <button onClick={youtubeSpeichern} disabled={!youtubeInput.trim()} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>💾 Speichern</button>
+              {stueck.youtube_url && <button onClick={() => { setYoutubeInput(''); youtubeSpeichern() }} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🗑 {T('remove')}</button>}
+              <button onClick={() => setYoutubeEdit(false)} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>{T('cancel')}</button>
+              <button onClick={youtubeSpeichern} disabled={!youtubeInput.trim()} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>💾 {T('save')}</button>
             </div>
           </div>
-        ) : <div style={s.leer}>Kein Video verlinkt.</div>}
+        ) : <div style={s.leer}>{T('piece_no_video')}</div>}
+      </div>
+    )
+    if (id === 'ytmusic') return (
+      <div>
+        {stueck.youtube_music_url && !ytMusicEdit ? (
+          <>
+            <div style={{ position:'relative', paddingBottom:'56.25%', height:0, overflow:'hidden', borderRadius:'var(--radius)', background:'#000' }}>
+              <iframe style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }} src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_music_url)}`} title="YouTube Music" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            </div>
+            <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+              <a href={stueck.youtube_music_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'#FF0000', textDecoration:'none', fontWeight:600 }}>{T('piece_open_ytmusic')}</a>
+              {kannBearbeiten && (
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => { setYtMusicInput(stueck.youtube_music_url ?? ''); setYtMusicEdit(true) }} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>✎ {T('link_change')}</button>
+                  <button onClick={() => { setYtMusicInput(''); ytMusicSpeichern() }} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🗑</button>
+                </div>
+              )}
+            </div>
+          </>
+        ) : kannBearbeiten ? (
+          <div style={{ display:'flex', flexDirection:'column', gap:16, alignItems:'center', padding:32 }}>
+            <p style={{ margin:0, fontSize:14, color:'var(--text-3)' }}>{T('piece_no_ytmusic')}</p>
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
+              <button onClick={() => setYtMusicModal(true)}
+                style={{ padding:'10px 24px', borderRadius:'var(--radius)', border:'none', background:'#FF0000', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                {T('piece_ytmusic_search')}
+              </button>
+              <button onClick={() => { setYtMusicInput(''); setYtMusicEdit(true) }}
+                style={{ padding:'10px 16px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                {T('piece_ytmusic_link_direct')}
+              </button>
+            </div>
+            {ytMusicEdit && (
+              <div style={{ display:'flex', flexDirection:'column', gap:8, width:'100%' }}>
+                <input type="url" value={ytMusicInput} onChange={e => setYtMusicInput(e.target.value)}
+                  placeholder="https://music.youtube.com/watch?v=..."
+                  style={{ padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', outline:'none', width:'100%', boxSizing:'border-box' }} autoFocus />
+                <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                  <button onClick={() => setYtMusicEdit(false)} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>{T('cancel')}</button>
+                  <button onClick={ytMusicSpeichern} disabled={!ytMusicInput.trim()} style={{ padding:'8px 14px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>💾 {T('save')}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : <div style={s.leer}>{T('piece_no_ytmusic')}</div>}
+        {ytMusicModal && <YtMusicModal titelVorschlag={stueck.titel + (stueck.komponist ? ' ' + stueck.komponist : '')} onUebernehmen={url => { setYtMusicInput(url); ytMusicSpeichernDirekt(url) }} onSchliessen={() => setYtMusicModal(false)} />}
       </div>
     )
     if (id === 'spotify') return (

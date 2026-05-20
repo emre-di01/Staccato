@@ -6,13 +6,13 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
 const ZUSTAENDE = [
-  { wert: 'neu',       label: 'Neu',       farbe: 'var(--success)' },
-  { wert: 'gut',       label: 'Gut',       farbe: 'var(--primary)' },
-  { wert: 'gebraucht', label: 'Gebraucht', farbe: 'var(--text-3)'  },
-  { wert: 'defekt',    label: 'Defekt',    farbe: 'var(--danger)'  },
+  { wert: 'neu',       labelKey: 'inv_condition_neu',       farbe: 'var(--success)' },
+  { wert: 'gut',       labelKey: 'inv_condition_gut',       farbe: 'var(--primary)' },
+  { wert: 'gebraucht', labelKey: 'inv_condition_gebraucht', farbe: 'var(--text-3)'  },
+  { wert: 'defekt',    labelKey: 'inv_condition_defekt',    farbe: 'var(--danger)'  },
 ]
 
-const zLabel = z => ZUSTAENDE.find(x => x.wert === z)?.label ?? z
+const zLabel = (z, T) => T('inv_condition_' + z) || z
 const zFarbe = z => ZUSTAENDE.find(x => x.wert === z)?.farbe ?? 'var(--text-3)'
 
 const EMOJI_VORSCHLAEGE = ['📦','🎸','🎹','🎺','🎻','🥁','🎷','🪗','🔧','💡','🖥️','📷','🎙️','🪑','🎤','🔌','📺','🗄️','🎭','🏫']
@@ -29,7 +29,7 @@ function useMobile() {
 
 // ─── Kategorien-Verwaltungs-Modal ─────────────────────────────
 function KategorienModal({ schuleId, onClose, onGeaendert }) {
-  const { confirm } = useApp()
+  const { confirm, T } = useApp()
   const mob = useMobile()
   const [kategorien, setKategorien] = useState([])
   const [counts,     setCounts]     = useState({})
@@ -93,7 +93,7 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
         <div style={{ padding: mob ? '20px 16px 0' : '24px 28px 0', flexShrink:0 }}>
           {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 14px' }} />}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>⚙️ Kategorien verwalten</h3>
+            <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>⚙️ {T('inv_kat_manage')}</h3>
             <button onClick={onClose} style={s.iconBtn}>✕</button>
           </div>
         </div>
@@ -102,7 +102,7 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
         {/* Bestehende Kategorien */}
         <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
           {kategorien.length === 0 && (
-            <div style={{ color:'var(--text-3)', fontSize:13, padding:'12px 0' }}>Noch keine Kategorien erstellt.</div>
+            <div style={{ color:'var(--text-3)', fontSize:13, padding:'12px 0' }}>{T('inv_kat_empty')}</div>
           )}
           {kategorien.map(kat => (
             <div key={kat.id} style={{ background:'var(--bg)', borderRadius:'var(--radius)', border:'1px solid var(--border)', padding:'10px 12px' }}>
@@ -123,8 +123,8 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
                     ))}
                   </div>
                   <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-                    <button onClick={() => setBearbeite(null)} style={s.btnSek}>Abbrechen</button>
-                    <button onClick={() => speichern(kat)} style={s.btnPri}>💾 Speichern</button>
+                    <button onClick={() => setBearbeite(null)} style={s.btnSek}>{T('cancel')}</button>
+                    <button onClick={() => speichern(kat)} style={s.btnPri}>💾 {T('save')}</button>
                   </div>
                 </div>
               ) : (
@@ -142,7 +142,7 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
                     <button onClick={() => setBearbeite({ id: kat.id, name: kat.name, icon: kat.icon })} style={s.btnKlein}>✏️</button>
                     <button onClick={() => loeschen(kat)} disabled={(counts[kat.id] ?? 0) > 0}
                       style={{ ...s.btnKlein, color:(counts[kat.id] ?? 0) > 0 ? 'var(--text-3)' : 'var(--danger)', cursor:(counts[kat.id] ?? 0) > 0 ? 'not-allowed' : 'pointer' }}
-                      title={(counts[kat.id] ?? 0) > 0 ? 'Wird noch verwendet' : 'Löschen'}>🗑</button>
+                      title={(counts[kat.id] ?? 0) > 0 ? T('inv_kat_in_use') : T('delete')}>🗑</button>
                   </div>
                 </div>
               )}
@@ -154,11 +154,11 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
 
         {/* Neue Kategorie */}
         <div style={{ borderTop:'1px solid var(--border)', paddingTop:16 }}>
-          <label style={s.label}>Neue Kategorie</label>
+          <label style={s.label}>{T('inv_kat_new')}</label>
           <div style={{ display:'flex', gap:8, marginTop:8, alignItems:'center' }}>
             <input value={neuIcon} onChange={e => setNeuIcon(e.target.value)}
               style={{ ...s.input, width:52, textAlign:'center', fontSize:18, padding:'8px', flexShrink:0 }} />
-            <input value={neuName} onChange={e => setNeuName(e.target.value)} placeholder="Name der Kategorie"
+            <input value={neuName} onChange={e => setNeuName(e.target.value)} placeholder={T('inv_kat_name_placeholder')}
               style={{ ...s.input, flex:1 }}
               onKeyDown={e => e.key === 'Enter' && erstellen()} />
             <button onClick={erstellen} disabled={laden || !neuName.trim()} style={{ ...s.btnPri, padding:'10px 16px', flexShrink:0 }}>+</button>
@@ -180,6 +180,7 @@ function KategorienModal({ schuleId, onClose, onGeaendert }) {
 
 // ─── Barcode-Eingabe-Modal (Scan → Formularfeld) ──────────────
 function BarcodeEingabeModal({ onGescannt, onClose }) {
+  const { T } = useApp()
   const videoRef  = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
@@ -207,7 +208,7 @@ function BarcodeEingabeModal({ onGescannt, onClose }) {
       }
       scanLoop()
     } catch (e) {
-      setKameraErr('Kamera nicht verfügbar: ' + (e.message ?? String(e)))
+      setKameraErr(T('inv_camera_error') + ' ' + (e.message ?? String(e)))
     }
   }
 
@@ -250,7 +251,7 @@ function BarcodeEingabeModal({ onGescannt, onClose }) {
   return createPortal(
     <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:1200, display:'flex', flexDirection:'column' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', background:'rgba(0,0,0,0.6)' }}>
-        <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>📷 Barcode / EAN scannen</span>
+        <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>📷 {T('inv_barcode_scan_title')}</span>
         <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:4 }}>✕</button>
       </div>
       <div style={{ flex:1, position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -268,7 +269,7 @@ function BarcodeEingabeModal({ onGescannt, onClose }) {
           ))}
         </div>
         <div style={{ position:'absolute', bottom:16, color:'rgba(255,255,255,0.75)', fontSize:13, textAlign:'center', padding:'0 20px' }}>
-          Barcode oder EAN in den Rahmen halten
+          {T('inv_barcode_hint')}
         </div>
         {kameraErr && (
           <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -282,6 +283,7 @@ function BarcodeEingabeModal({ onGescannt, onClose }) {
 
 // ─── Inventar-Modal ───────────────────────────────────────────
 function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
+  const { T } = useApp()
   const istNeu = !item?.id
   const mob = useMobile()
   const [form, setForm] = useState({
@@ -300,7 +302,7 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
   const [barcodeScanner, setBarcodeScanner] = useState(false)
 
   async function speichern() {
-    if (!form.name.trim()) { setFehler('Bezeichnung ist erforderlich.'); return }
+    if (!form.name.trim()) { setFehler(T('inv_label_required')); return }
     setLaden(true)
     const payload = {
       name:             form.name.trim(),
@@ -334,7 +336,7 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
           {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 14px' }} />}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>
-              {istNeu ? '+ Neuer Gegenstand' : 'Gegenstand bearbeiten'}
+              {istNeu ? `+ ${T('inv_item_new')}` : T('inv_item_edit')}
             </h3>
             <button onClick={onClose} style={s.iconBtn}>✕</button>
           </div>
@@ -344,11 +346,11 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
           {/* Kategorie */}
           {kategorien.length > 0 && (
             <div>
-              <label style={s.label}>Kategorie</label>
+              <label style={s.label}>{T('inv_col_cat')}</label>
               <div style={{ display:'flex', gap:6, marginTop:6, flexWrap:'wrap' }}>
                 <button onClick={() => setForm(f => ({ ...f, kategorie_id: '' }))}
                   style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:`1.5px solid ${!form.kategorie_id ? 'var(--primary)' : 'var(--border)'}`, background: !form.kategorie_id ? 'color-mix(in srgb, var(--primary) 12%, transparent)' : 'var(--bg)', color: !form.kategorie_id ? 'var(--primary)' : 'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight: !form.kategorie_id ? 700 : 400 }}>
-                  — Keine
+                  {T('inv_filter_no_cat')}
                 </button>
                 {kategorien.map(k => (
                   <button key={k.id} onClick={() => setForm(f => ({ ...f, kategorie_id: k.id }))}
@@ -362,14 +364,14 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
 
           {/* Name */}
           <div>
-            <label style={s.label}>Bezeichnung *</label>
+            <label style={s.label}>{T('inv_field_name')} *</label>
             <input style={{ ...s.input, marginTop:6 }} placeholder="z.B. Yamaha Flügel" value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
           </div>
 
           {/* Hersteller */}
           <div>
-            <label style={s.label}>Hersteller / Marke</label>
+            <label style={s.label}>{T('inv_field_brand')}</label>
             <input style={{ ...s.input, marginTop:6 }} placeholder="z.B. Yamaha" value={form.hersteller}
               onChange={e => setForm(f => ({ ...f, hersteller: e.target.value }))} />
           </div>
@@ -377,18 +379,18 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
           {/* Seriennummer + Barcode */}
           <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap:12 }}>
             <div>
-              <label style={s.label}>Seriennummer</label>
+              <label style={s.label}>{T('inv_field_serial')}</label>
               <input style={{ ...s.input, marginTop:6 }} placeholder="SN-12345" value={form.seriennummer}
                 onChange={e => setForm(f => ({ ...f, seriennummer: e.target.value }))} />
             </div>
             <div>
-              <label style={s.label}>Barcode / EAN</label>
+              <label style={s.label}>{T('inv_field_barcode')}</label>
               <div style={{ display:'flex', gap:6, marginTop:6 }}>
                 <input style={{ ...s.input, flex:1 }} placeholder="4012345678901" value={form.barcode}
                   onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} />
                 <button type="button" onClick={() => setBarcodeScanner(true)}
                   style={{ padding:'10px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:16, cursor:'pointer', flexShrink:0 }}
-                  title="Barcode scannen">📷</button>
+                  title={T('inv_scan_barcode')}>📷</button>
               </div>
             </div>
           </div>
@@ -396,12 +398,12 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
           {/* Kaufdatum + Wert */}
           <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap:12 }}>
             <div>
-              <label style={s.label}>Kaufdatum</label>
+              <label style={s.label}>{T('inv_field_purchase_date')}</label>
               <input type="date" style={{ ...s.input, marginTop:6 }} value={form.kaufdatum}
                 onChange={e => setForm(f => ({ ...f, kaufdatum: e.target.value }))} />
             </div>
             <div>
-              <label style={s.label}>Anschaffungswert (€)</label>
+              <label style={s.label}>{T('inv_field_value')}</label>
               <input type="number" min="0" step="0.01" style={{ ...s.input, marginTop:6 }} placeholder="0,00"
                 value={form.anschaffungswert} onChange={e => setForm(f => ({ ...f, anschaffungswert: e.target.value }))} />
             </div>
@@ -409,12 +411,12 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
 
           {/* Zustand */}
           <div>
-            <label style={s.label}>Zustand</label>
+            <label style={s.label}>{T('inv_field_condition')}</label>
             <div style={{ display:'flex', gap:6, marginTop:6 }}>
               {ZUSTAENDE.map(z => (
                 <button key={z.wert} onClick={() => setForm(f => ({ ...f, zustand: z.wert }))}
                   style={{ flex:1, padding:'8px 2px', borderRadius:'var(--radius)', border:`1.5px solid ${form.zustand === z.wert ? z.farbe : 'var(--border)'}`, background: form.zustand === z.wert ? `color-mix(in srgb, ${z.farbe} 12%, transparent)` : 'var(--bg)', color: form.zustand === z.wert ? z.farbe : 'var(--text-2)', fontSize: mob ? 12 : 13, cursor:'pointer', fontFamily:'inherit', fontWeight: form.zustand === z.wert ? 700 : 400 }}>
-                  {z.label}
+                  {T(z.labelKey)}
                 </button>
               ))}
             </div>
@@ -422,17 +424,17 @@ function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
 
           {/* Notizen */}
           <div>
-            <label style={s.label}>Notizen</label>
-            <textarea style={{ ...s.input, marginTop:6, minHeight:68, resize:'vertical' }} placeholder="Optionale Anmerkungen …"
+            <label style={s.label}>{T('inv_field_notes')}</label>
+            <textarea style={{ ...s.input, marginTop:6, minHeight:68, resize:'vertical' }} placeholder={T('inv_notes_placeholder')}
               value={form.notizen} onChange={e => setForm(f => ({ ...f, notizen: e.target.value }))} />
           </div>
 
           {fehler && <p style={{ margin:0, color:'var(--danger)', fontSize:13 }}>{fehler}</p>}
 
           <div style={{ display:'flex', gap:10, flexDirection: mob ? 'column-reverse' : 'row', justifyContent:'flex-end', marginTop: mob ? 4 : 0 }}>
-            <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
+            <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
             <button onClick={speichern} disabled={laden} style={s.btnPri}>
-              {laden ? 'Speichere …' : istNeu ? '+ Erstellen' : '💾 Speichern'}
+              {laden ? T('inv_saving') : istNeu ? `+ ${T('inv_create')}` : `💾 ${T('save')}`}
             </button>
           </div>
         </div>
@@ -461,6 +463,7 @@ const LABEL_GROESSEN = [
 
 // ─── Einzel-Etikett-Modal (Labeldruckergröße) ─────────────────
 function EtikettEinzelModal({ item, onClose }) {
+  const { T } = useApp()
   const mob = useMobile()
   const gespeichert = (() => { try { return JSON.parse(localStorage.getItem('staccato_label_size') ?? 'null') } catch { return null } })()
   const [preset,    setPreset]    = useState(gespeichert?.preset ?? 0)
@@ -538,7 +541,7 @@ function EtikettEinzelModal({ item, onClose }) {
         <div style={{ padding: mob ? '20px 16px 0' : '24px 28px 0', flexShrink:0 }}>
           {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 14px' }} />}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>🏷️ Etikett drucken</h3>
+            <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>🏷️ {T('inv_label_print')}</h3>
             <button onClick={onClose} style={s.iconBtn}>✕</button>
           </div>
         </div>
@@ -549,7 +552,7 @@ function EtikettEinzelModal({ item, onClose }) {
 
         {/* Größe */}
         <div style={{ marginBottom:16 }}>
-          <label style={s.label}>Etikettgröße</label>
+          <label style={s.label}>{T('inv_label_size')}</label>
           <select value={preset} onChange={e => setPreset(Number(e.target.value))}
             style={{ ...s.input, marginTop:6 }}>
             {LABEL_GROESSEN.map((g, i) => <option key={i} value={i}>{g.label}</option>)}
@@ -559,12 +562,12 @@ function EtikettEinzelModal({ item, onClose }) {
         {istCustom && (
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
             <div>
-              <label style={s.label}>Breite (mm)</label>
+              <label style={s.label}>{T('inv_label_width')}</label>
               <input type="number" min="10" max="200" value={breite} onChange={e => setBreite(e.target.value)}
                 style={{ ...s.input, marginTop:6 }} />
             </div>
             <div>
-              <label style={s.label}>Höhe (mm)</label>
+              <label style={s.label}>{T('inv_label_height')}</label>
               <input type="number" min="10" max="200" value={hoehe} onChange={e => setHoehe(e.target.value)}
                 style={{ ...s.input, marginTop:6 }} />
             </div>
@@ -587,8 +590,8 @@ function EtikettEinzelModal({ item, onClose }) {
         )}
 
         <div style={{ display:'flex', gap:10, flexDirection: mob ? 'column-reverse' : 'row', justifyContent:'flex-end' }}>
-          <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
-          <button onClick={drucken} disabled={laden} style={s.btnPri}>🖨️ Drucken</button>
+          <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
+          <button onClick={drucken} disabled={laden} style={s.btnPri}>🖨️ {T('inv_print')}</button>
         </div>
         </div>
       </div>
@@ -630,6 +633,7 @@ async function etikettenDrucken(items) {
 
 // ─── Scanner-Modal ────────────────────────────────────────────
 function ScannerModal({ schuleId, onClose, onBearbeiten }) {
+  const { T } = useApp()
   const videoRef   = useRef(null)
   const canvasRef  = useRef(null)
   const streamRef  = useRef(null)
@@ -663,7 +667,7 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
       }
       scanLoop()
     } catch (e) {
-      setKameraErr('Kamera nicht verfügbar: ' + (e.message ?? String(e)))
+      setKameraErr(T('inv_camera_error') + ' ' + (e.message ?? String(e)))
     }
   }
 
@@ -732,7 +736,7 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
   return createPortal(
     <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:2000, display:'flex', flexDirection:'column' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', background:'rgba(0,0,0,0.6)' }}>
-        <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>📷 Inventar scannen</span>
+        <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>📷 {T('inv_scanner_title')}</span>
         <button onClick={onClose} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:4 }}>✕</button>
       </div>
 
@@ -752,7 +756,7 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
             ))}
           </div>
           <div style={{ position:'absolute', bottom:16, color:'rgba(255,255,255,0.75)', fontSize:13 }}>
-            QR-Code in den Rahmen halten
+            {T('inv_scanner_hint')}
           </div>
           {kameraErr && (
             <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -775,12 +779,12 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
               {[
-                ['Nr.',       gefunden.inventarnummer],
-                ['Zustand',   zLabel(gefunden.zustand)],
-                kat                       && ['Kategorie', `${kat.icon} ${kat.name}`],
-                gefunden.seriennummer     && ['Seriennr.',  gefunden.seriennummer],
-                gefunden.kaufdatum        && ['Kaufdatum',  new Date(gefunden.kaufdatum).toLocaleDateString('de-DE')],
-                gefunden.anschaffungswert && ['Wert',       `${Number(gefunden.anschaffungswert).toLocaleString('de-DE')} €`],
+                [T('inv_col_nr'),      gefunden.inventarnummer],
+                [T('inv_field_condition'), zLabel(gefunden.zustand, T)],
+                kat                       && [T('inv_col_cat'),    `${kat.icon} ${kat.name}`],
+                gefunden.seriennummer     && [T('inv_scanner_serial'), gefunden.seriennummer],
+                gefunden.kaufdatum        && [T('inv_field_purchase_date'), new Date(gefunden.kaufdatum).toLocaleDateString('de-DE')],
+                gefunden.anschaffungswert && [T('inv_field_value'), `${Number(gefunden.anschaffungswert).toLocaleString('de-DE')} €`],
               ].filter(Boolean).map(([lbl, val]) => (
                 <div key={lbl} style={{ background:'var(--bg)', borderRadius:'var(--radius)', padding:'8px 12px' }}>
                   <div style={{ fontSize:11, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>{lbl}</div>
@@ -794,8 +798,8 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
               </div>
             )}
             <div style={{ display:'flex', gap:10 }}>
-              <button onClick={nochmal} style={{ ...sScanner.btnSek, flex:1 }}>↩ Nochmal</button>
-              <button onClick={() => { onClose(); onBearbeiten(gefunden) }} style={{ ...sScanner.btnPri, flex:2 }}>✏️ Bearbeiten</button>
+              <button onClick={nochmal} style={{ ...sScanner.btnSek, flex:1 }}>↩ {T('inv_scanner_again')}</button>
+              <button onClick={() => { onClose(); onBearbeiten(gefunden) }} style={{ ...sScanner.btnPri, flex:2 }}>✏️ {T('inv_edit_btn')}</button>
             </div>
           </div>
         </div>
@@ -805,10 +809,10 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
         <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16, padding:24 }}>
           <span style={{ fontSize:40 }}>🔍</span>
           <p style={{ color:'#fff', textAlign:'center', fontSize:14 }}>
-            Kein Artikel gefunden für:<br/>
+            {T('inv_not_found')}<br/>
             <strong style={{ fontFamily:'monospace', fontSize:15 }}>{letzterCode}</strong>
           </p>
-          <button onClick={nochmal} style={sScanner.btnPri}>↩ Nochmal scannen</button>
+          <button onClick={nochmal} style={sScanner.btnPri}>↩ {T('inv_scan_again')}</button>
         </div>
       )}
 
@@ -817,9 +821,9 @@ function ScannerModal({ schuleId, onClose, onBearbeiten }) {
           <div style={{ display:'flex', gap:8 }}>
             <input value={manuell} onChange={e => setManuell(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && manuellSuchen()}
-              placeholder="Inventarnummer manuell eingeben …"
+              placeholder={T('inv_manual_placeholder')}
               style={{ flex:1, padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:14, fontFamily:'inherit', outline:'none' }} />
-            <button onClick={manuellSuchen} style={sScanner.btnPri}>Suchen</button>
+            <button onClick={manuellSuchen} style={sScanner.btnPri}>{T('inv_search_btn')}</button>
           </div>
         </div>
       )}
@@ -834,7 +838,7 @@ const sScanner = {
 
 // ─── Hauptkomponente ──────────────────────────────────────────
 export default function Inventar() {
-  const { profil, confirm } = useApp()
+  const { profil, confirm, T } = useApp()
 
   const [items,         setItems]         = useState([])
   const [kategorien,    setKategorien]    = useState([])
@@ -895,40 +899,40 @@ export default function Inventar() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:12 }}>
         <div>
-          <h1 style={s.h1}>📦 Inventar</h1>
-          <p style={s.sub}>{items.length} Gegenstände erfasst</p>
+          <h1 style={s.h1}>📦 {T('inv_title')}</h1>
+          <p style={s.sub}>{items.length} {T('inv_items_count')}</p>
         </div>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          <button onClick={() => setModal({ typ:'kategorien' })} style={s.btnSek}>⚙️ Kategorien</button>
-          <button onClick={() => setModal({ typ:'scanner' })}   style={s.btnSek}>📷 Scannen</button>
-          <button onClick={() => etikettenDrucken(anzeige)}     style={s.btnSek} disabled={anzeige.length === 0}>🏷️ Etiketten</button>
-          <button onClick={() => setModal({ typ:'neu' })}       style={s.btnPri}>+ Neu</button>
+          <button onClick={() => setModal({ typ:'kategorien' })} style={s.btnSek}>⚙️ {T('inv_categories')}</button>
+          <button onClick={() => setModal({ typ:'scanner' })}   style={s.btnSek}>📷 {T('inv_scan')}</button>
+          <button onClick={() => etikettenDrucken(anzeige)}     style={s.btnSek} disabled={anzeige.length === 0}>🏷️ {T('inv_labels')}</button>
+          <button onClick={() => setModal({ typ:'neu' })}       style={s.btnPri}>+ {T('inv_new')}</button>
         </div>
       </div>
 
       {/* Suche */}
       <input style={{ ...s.input, marginBottom:12 }}
-        placeholder="Suchen (Name, Nr., Seriennr., Barcode …)"
+        placeholder={T('inv_search_placeholder')}
         value={suche} onChange={e => setSuche(e.target.value)} />
 
       {/* Filter — horizontal scrollbar auf Mobile */}
       <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:18 }}>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:2 }}>
-          <button onClick={() => setKatFilter('alle')} style={fBtn(katFilter === 'alle')}>Alle</button>
+          <button onClick={() => setKatFilter('alle')} style={fBtn(katFilter === 'alle')}>{T('inv_filter_all')}</button>
           {kategorien.map(k => (
             <button key={k.id} onClick={() => setKatFilter(k.id)} style={fBtn(katFilter === k.id)}>
               {k.icon} {k.name}
             </button>
           ))}
           {items.some(i => !i.kategorie_id) && (
-            <button onClick={() => setKatFilter('keine')} style={fBtn(katFilter === 'keine')}>— Keine</button>
+            <button onClick={() => setKatFilter('keine')} style={fBtn(katFilter === 'keine')}>{T('inv_filter_no_cat')}</button>
           )}
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:2 }}>
           {ZUSTAENDE.map(z => (
             <button key={z.wert} onClick={() => setZustandFilter(zustandFilter === z.wert ? 'alle' : z.wert)}
               style={{ ...fBtn(zustandFilter === z.wert), color: zustandFilter === z.wert ? 'var(--primary-fg)' : z.farbe, borderColor: zustandFilter === z.wert ? 'var(--primary)' : z.farbe }}>
-              {z.label}
+              {T(z.labelKey)}
             </button>
           ))}
         </div>
@@ -936,12 +940,12 @@ export default function Inventar() {
 
       {/* Liste */}
       {laden ? (
-        <div style={s.leer}>Lade Inventar …</div>
+        <div style={s.leer}>{T('inv_loading')}</div>
       ) : anzeige.length === 0 ? (
         <div style={s.leer}>
           {items.length === 0
-            ? 'Noch keine Gegenstände erfasst. Klick auf "+ Neu".'
-            : 'Keine Einträge mit diesen Filtern.'
+            ? T('inv_empty')
+            : T('inv_empty_filtered')
           }
         </div>
       ) : mob ? (
@@ -957,7 +961,7 @@ export default function Inventar() {
                     {item.inventarnummer}
                   </span>
                   <span style={{ fontSize:11, fontWeight:700, color: zFarbe(item.zustand), background:`color-mix(in srgb, ${zFarbe(item.zustand)} 14%, transparent)`, padding:'2px 8px', borderRadius:99 }}>
-                    {zLabel(item.zustand)}
+                    {zLabel(item.zustand, T)}
                   </span>
                 </div>
                 {/* Zeile 2: Name + Hersteller */}
@@ -973,8 +977,8 @@ export default function Inventar() {
                 </div>
                 {/* Aktionen */}
                 <div style={{ display:'flex', gap:8 }}>
-                  <button onClick={() => setModal({ typ:'bearbeiten', item })} style={{ ...s.btnKlein, flex:1, textAlign:'center' }}>✏️ Bearbeiten</button>
-                  <button onClick={() => setModal({ typ:'etikettEinzel', item })} style={s.btnKlein} title="Etikett drucken">🏷️</button>
+                  <button onClick={() => setModal({ typ:'bearbeiten', item })} style={{ ...s.btnKlein, flex:1, textAlign:'center' }}>✏️ {T('inv_edit_btn')}</button>
+                  <button onClick={() => setModal({ typ:'etikettEinzel', item })} style={s.btnKlein} title={T('inv_label_print')}>🏷️</button>
                   <button onClick={() => loeschen(item)} style={{ ...s.btnKlein, color:'var(--danger)' }}>🗑</button>
                 </div>
               </div>
@@ -986,7 +990,7 @@ export default function Inventar() {
         <div style={{ overflowX:'auto' }}>
           <div style={{ minWidth:700, background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)', overflow:'hidden' }}>
             <div style={{ display:'grid', gridTemplateColumns:cols, padding:'10px 16px', background:'var(--bg-2)', borderBottom:'2px solid var(--border)' }}>
-              {['Nr.','Bezeichnung','Kategorie','Seriennummer','Barcode','Zustand',''].map((h, i) => (
+              {[T('inv_col_nr'), T('inv_col_name'), T('inv_col_cat'), T('inv_col_serial'), T('inv_col_barcode'), T('inv_col_condition'), ''].map((h, i) => (
                 <div key={i} style={{ fontSize:11, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>{h}</div>
               ))}
             </div>
@@ -1006,13 +1010,13 @@ export default function Inventar() {
                 <div style={{ fontSize:12, color:'var(--text-2)', fontFamily:'monospace' }}>{item.barcode ?? '—'}</div>
                 <div>
                   <span style={{ fontSize:12, fontWeight:700, color: zFarbe(item.zustand), background:`color-mix(in srgb, ${zFarbe(item.zustand)} 14%, transparent)`, padding:'3px 9px', borderRadius:'var(--radius)', display:'inline-block', whiteSpace:'nowrap' }}>
-                    {zLabel(item.zustand)}
+                    {zLabel(item.zustand, T)}
                   </span>
                 </div>
                 <div style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
-                  <button onClick={() => setModal({ typ:'bearbeiten', item })} style={s.btnKlein} title="Bearbeiten">✏️</button>
-                  <button onClick={() => setModal({ typ:'etikettEinzel', item })} style={s.btnKlein} title="Etikett drucken">🏷️</button>
-                  <button onClick={() => loeschen(item)} style={{ ...s.btnKlein, color:'var(--danger)' }} title="Löschen">🗑</button>
+                  <button onClick={() => setModal({ typ:'bearbeiten', item })} style={s.btnKlein} title={T('inv_edit_btn')}>✏️</button>
+                  <button onClick={() => setModal({ typ:'etikettEinzel', item })} style={s.btnKlein} title={T('inv_label_print')}>🏷️</button>
+                  <button onClick={() => loeschen(item)} style={{ ...s.btnKlein, color:'var(--danger)' }} title={T('delete')}>🗑</button>
                 </div>
               </div>
             ))}

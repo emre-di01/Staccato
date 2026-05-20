@@ -1,5 +1,6 @@
 -- Erweitert mitglieder_mit_email um Zahlungsdaten und Erziehungsberechtigte
-CREATE OR REPLACE VIEW public.mitglieder_mit_email
+DROP VIEW IF EXISTS public.mitglieder_mit_email;
+CREATE VIEW public.mitglieder_mit_email
 WITH (security_invoker = false)
 AS
 SELECT
