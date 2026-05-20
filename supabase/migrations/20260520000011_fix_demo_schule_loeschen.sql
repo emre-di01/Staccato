@@ -69,11 +69,13 @@ BEGIN
   DELETE FROM rechnungen    WHERE schule_id = p_schule_id;
   DELETE FROM dateien       WHERE schule_id = p_schule_id;
 
-  -- Nur User löschen die AUSSCHLIESSLICH in dieser Schule sind.
-  -- User mit Mitgliedschaft in anderen Schulen bleiben erhalten.
+  -- Nur User löschen die AUSSCHLIESSLICH in dieser Schule sind
+  -- UND keine Superadmins sind (Superadmins werden nie automatisch gelöscht).
   PERFORM delete_auth_user(sm.user_id)
     FROM schul_mitgliedschaften sm
+    JOIN public.profiles p ON p.id = sm.user_id
     WHERE sm.schule_id = p_schule_id
+      AND p.rolle <> 'superadmin'
       AND NOT EXISTS (
         SELECT 1 FROM schul_mitgliedschaften sm2
         WHERE sm2.user_id = sm.user_id
