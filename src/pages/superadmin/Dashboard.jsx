@@ -206,9 +206,15 @@ export default function SuperadminDashboard() {
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
                       👥 {s.mitglieder_anzahl} {T('members_count')}
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                      🕐 {T('last_activity')}: {formatDate(s.letzte_aktivitaet)}
-                    </span>
+                    {s.abo_status === 'trial' && s.demo_expires_at ? (
+                      <span style={{ fontSize: 12, color: '#b45309', fontWeight: 600 }}>
+                        ⏳ Trial bis {formatDate(s.demo_expires_at)}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                        🕐 {T('last_activity')}: {formatDate(s.letzte_aktivitaet)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
