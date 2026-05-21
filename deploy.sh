@@ -74,9 +74,20 @@ deploy_dev() {
     exit 1
   fi
 
+  # Env laden ohne zu exportieren — nur für dieses Script
+  set -a; source .env.dev; set +a
+
+  if [ -z "${SUPABASE_DB_URL:-}" ]; then
+    echo "FEHLER: SUPABASE_DB_URL fehlt in .env.dev"
+    exit 1
+  fi
+
   cp .env.dev .env
-  log "Migrationen auf Supabase Cloud pushen..."
-  supabase db push
+
+  log "Migrationen auf Supabase Cloud pushen (ohne supabase link)..."
+  # Explizite DB-URL — berührt nicht die lokale Prod-Instanz
+  supabase db push --db-url "$SUPABASE_DB_URL"
+
   log "Frontend bauen..."
   npm run build
   log "=== DEV fertig. ==="
