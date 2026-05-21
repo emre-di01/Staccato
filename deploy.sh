@@ -4,6 +4,7 @@ set -euo pipefail
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 MIGRATIONS_DIR="supabase/migrations"
 DB_CONTAINER="supabase_db_staccato"
+EDGE_CONTAINER="supabase_edge_runtime_staccato"
 
 # ─── Hilfsfunktionen ───────────────────────────────────────────────────────────
 
@@ -59,6 +60,8 @@ deploy_prod() {
 
   cp .env.prod .env
   apply_pending_migrations
+  log "Edge Functions neu laden (Container-Restart)..."
+  docker restart "$EDGE_CONTAINER"
   log "Frontend bauen..."
   npm run build
   log "=== PROD fertig. ==="
@@ -86,6 +89,9 @@ deploy_dev() {
 
   log "Migrationen auf Supabase Cloud pushen..."
   supabase db push
+
+  log "Edge Functions auf Supabase Cloud deployen..."
+  supabase functions deploy
 
   log "Frontend bauen (→ dist-dev/)..."
   npx vite build --outDir dist-dev
@@ -125,7 +131,11 @@ case "${1:-auto}" in
   migrate)
     case "$BRANCH" in
       main) apply_pending_migrations ;;
-      dev)  supabase db push ;;
+      dev)
+        set -a; source .env.dev; set +a
+        supabase db push
+        supabase functions deploy
+        ;;
     esac
     ;;
   build)
