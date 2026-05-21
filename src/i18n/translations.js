@@ -983,9 +983,6 @@ export const translations = {
     ausgaben_beleg_aktuell: 'Beleg vorhanden',
     ausgaben_beleg_entfernen: 'Entfernen',
     ausgaben_beleg_anzeigen: 'Beleg anzeigen',
-    settings_ki_extraktion: 'KI-Rechnungserkennung (Invoice Capture)',
-    settings_ki_extraktion_hint: 'Beim Hochladen einer Rechnung werden Felder automatisch per KI erkannt. Ca. 0,001 € pro Extraktion (Anthropic API-Key erforderlich).',
-
     discard: 'Verwerfen',
     apply: 'Übernehmen',
     link_change: 'Link ändern',
@@ -2119,9 +2116,6 @@ export const translations = {
     ausgaben_beleg_aktuell: 'Receipt attached',
     ausgaben_beleg_entfernen: 'Remove',
     ausgaben_beleg_anzeigen: 'View receipt',
-    settings_ki_extraktion: 'AI Invoice Recognition (Invoice Capture)',
-    settings_ki_extraktion_hint: 'Fields are automatically filled by AI when uploading an invoice. Approx. €0.001 per extraction (Anthropic API key required).',
-
     discard: 'Discard',
     apply: 'Apply',
     link_change: 'Change link',
@@ -3258,9 +3252,6 @@ export const translations = {
     ausgaben_beleg_aktuell: 'Makbuz mevcut',
     ausgaben_beleg_entfernen: 'Kaldır',
     ausgaben_beleg_anzeigen: 'Makbuzu görüntüle',
-    settings_ki_extraktion: 'Yapay Zeka Fatura Tanıma (Invoice Capture)',
-    settings_ki_extraktion_hint: 'Fatura yüklendiğinde alanlar YZ tarafından otomatik doldurulur. Yaklaşık €0,001/çıkarım (Anthropic API anahtarı gerekli).',
-
     discard: 'Vazgeç',
     apply: 'Uygula',
     link_change: 'Bağlantıyı değiştir',

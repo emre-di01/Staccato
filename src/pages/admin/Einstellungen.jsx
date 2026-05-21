@@ -66,11 +66,7 @@ export default function AdminEinstellungen() {
     rechnungen_prefix:          schule?.rechnungen_prefix          ?? 'RG',
     inventar_prefix:            schule?.inventar_prefix            ?? 'INV',
     kuendigungsfrist:           schule?.kuendigungsfrist           ?? '',
-    hat_ki_extraktion:          schule?.hat_ki_extraktion          ?? false,
   })
-  // API-Key separat — wir lesen ihn nie aus der DB zurück; leeres Feld = unverändert
-  const [anthropicKey,     setAnthropicKey]     = useState('')
-  const [anthropicKeyGesetzt, setAnthropicKeyGesetzt] = useState(!!schule?.anthropic_api_key)
   const [laden, setLaden] = useState(false)
   const [erfolg, setErfolg] = useState(false)
 
@@ -99,14 +95,8 @@ export default function AdminEinstellungen() {
       rechnungen_prefix:   form.rechnungen_prefix.trim().toUpperCase() || 'RG',
       inventar_prefix:     form.inventar_prefix.trim().toUpperCase()   || 'INV',
       kuendigungsfrist:    form.kuendigungsfrist.trim()           || null,
-      hat_ki_extraktion:   form.hat_ki_extraktion,
-      ...(anthropicKey.trim() ? { anthropic_api_key: anthropicKey.trim() } : {}),
     }
     await supabase.from('schulen').update(payload).eq('id', profil.schule_id)
-    if (anthropicKey.trim()) {
-      setAnthropicKey('')
-      setAnthropicKeyGesetzt(true)
-    }
     setSchule(s => ({ ...s, ...payload }))
     setLaden(false)
     setErfolg(true)
@@ -293,41 +283,6 @@ export default function AdminEinstellungen() {
               onChange={e => setForm(f => ({ ...f, kuendigungsfrist: e.target.value }))}
               placeholder="z.B. 4 Wochen zum Monatsende"
               style={sty.input} />
-          </div>
-          <div>
-            <label style={sty.label}>{T('settings_ki_extraktion')}</label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-              <input type="checkbox" checked={form.hat_ki_extraktion}
-                onChange={e => setForm(f => ({ ...f, hat_ki_extraktion: e.target.checked }))}
-                style={{ width: 16, height: 16, accentColor: 'var(--primary)', cursor: 'pointer' }} />
-              <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{T('settings_ki_extraktion')}</span>
-            </label>
-            <div style={sty.hint}>{T('settings_ki_extraktion_hint')}</div>
-          </div>
-          <div>
-            <label style={sty.label}>Anthropic API Key</label>
-            {anthropicKeyGesetzt && !anthropicKey && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>✓ API Key hinterlegt</span>
-                <button
-                  type="button"
-                  onClick={() => { setAnthropicKeyGesetzt(false); setAnthropicKey('') }}
-                  style={{ fontSize: 12, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                  Ersetzen
-                </button>
-              </div>
-            )}
-            {(!anthropicKeyGesetzt || anthropicKey) && (
-              <input
-                type="password"
-                value={anthropicKey}
-                onChange={e => setAnthropicKey(e.target.value)}
-                placeholder="sk-ant-api03-..."
-                autoComplete="new-password"
-                style={{ ...sty.input, fontFamily: 'monospace' }}
-              />
-            )}
-            <div style={sty.hint}>Wird verschlüsselt gespeichert. Wird nur für die KI-Rechnungserkennung verwendet. Leer lassen um bestehenden Key beizubehalten.</div>
           </div>
         </Abschnitt>
 
