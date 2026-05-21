@@ -244,14 +244,14 @@ ${html}
   }
 
   async function dateiLoeschen(dateiId, pfad) {
-    if (!await confirm('Datei wirklich löschen?', { confirmLabel: 'Löschen' })) return
+    if (!await confirm(T('file_delete_confirm'), { confirmLabel: T('delete') })) return
     await supabase.storage.from('stueck-dateien').remove([pfad])
     await supabase.from('stueck_dateien').delete().eq('id', dateiId)
     setDateien(prev => prev.filter(d => d.id !== dateiId))
   }
 
   async function stueckLoeschen() {
-    if (!await confirm(`"${stueck.titel}" dauerhaft löschen?`, { sub: 'Das Stück wird aus allen Kursen entfernt und kann nicht wiederhergestellt werden.', confirmLabel: 'Löschen' })) return
+    if (!await confirm(T('piece_delete_confirm').replace('{titel}', stueck.titel), { sub: T('piece_delete_sub'), confirmLabel: T('delete') })) return
     const pfade = dateien.map(d => d.bucket_pfad)
     if (pfade.length > 0) await supabase.storage.from('stueck-dateien').remove(pfade)
     await supabase.from('stuecke').delete().eq('id', stueckId)
@@ -260,7 +260,7 @@ ${html}
   }
 
   if (laden)   return <div style={{ padding:40, color:'var(--text-3)' }}>{T('loading')}</div>
-  if (!stueck) return <div style={{ padding:40, color:'var(--danger)' }}>Stück nicht gefunden.</div>
+  if (!stueck) return <div style={{ padding:40, color:'var(--danger)' }}>{T('piece_not_found')}</div>
 
   const gefilterteDateien = dateien.filter(d =>
     filterStimme === 'alle' || d.stimme === filterStimme || d.stimme === 'keine'
@@ -272,14 +272,14 @@ ${html}
   const dokumente     = gefilterteDateien.filter(d => d.typ === 'dokument' || d.typ === 'sonstiges')
 
   const tabs = [
-    { id:'text',    label:'📝 Text',    zeigen: !!stueck.liedtext || kannBearbeiten },
-    { id:'akkorde', label:'🎸 Akkorde', zeigen: akkordDateien.length > 0 || !!stueck.notizen || (kannBearbeiten && !!stueck.youtube_url) },
-    { id:'noten',   label:'📄 Noten',   zeigen: notenDateien.length > 0 || xmlDateien.length > 0 },
-    { id:'audio',   label:'🎵 Audio',   zeigen: audioDateien.length > 0 },
-    { id:'youtube',  label:'▶️ Video',      zeigen: !!stueck.youtube_url       || kannBearbeiten },
-    { id:'ytmusic',  label:'🎵 YT Music',   zeigen: !!stueck.youtube_music_url || kannBearbeiten },
-    { id:'spotify',  label:'🟢 Spotify',    zeigen: !!stueck.spotify_url       || kannBearbeiten },
-    { id:'dateien', label:'📁 Dateien', zeigen: dokumente.length > 0 || kannBearbeiten },
+    { id:'text',    label:`📝 ${T('piece_lyrics')}`,      zeigen: !!stueck.liedtext || kannBearbeiten },
+    { id:'akkorde', label:`🎸 ${T('piece_chords')}`,      zeigen: akkordDateien.length > 0 || !!stueck.notizen || (kannBearbeiten && !!stueck.youtube_url) },
+    { id:'noten',   label:`📄 ${T('piece_notes_label')}`, zeigen: notenDateien.length > 0 || xmlDateien.length > 0 },
+    { id:'audio',   label:`🎵 ${T('piece_audio')}`,       zeigen: audioDateien.length > 0 },
+    { id:'youtube', label:`▶️ ${T('piece_youtube')}`,     zeigen: !!stueck.youtube_url       || kannBearbeiten },
+    { id:'ytmusic', label:`🎵 YT Music`,                  zeigen: !!stueck.youtube_music_url || kannBearbeiten },
+    { id:'spotify', label:`🟢 Spotify`,                   zeigen: !!stueck.spotify_url       || kannBearbeiten },
+    { id:'dateien', label:`📁 ${T('files')}`,             zeigen: dokumente.length > 0 || kannBearbeiten },
   ].filter(t => t.zeigen)
 
   const padContent = mob ? 16 : 28
@@ -307,10 +307,10 @@ ${html}
           </>
         ) : kannBearbeiten ? (
           <div style={{ textAlign:'center', padding:32 }}>
-            <p style={{ color:'var(--text-3)', marginBottom:16 }}>Noch kein Liedtext vorhanden.</p>
-            <button onClick={() => setBearbeiteText(true)} style={s.btnPri}>+ Liedtext hinzufügen</button>
+            <p style={{ color:'var(--text-3)', marginBottom:16 }}>{T('piece_no_lyrics')}</p>
+            <button onClick={() => setBearbeiteText(true)} style={s.btnPri}>{T('piece_add_lyrics')}</button>
           </div>
-        ) : <div style={s.leer}>Kein Liedtext vorhanden.</div>}
+        ) : <div style={s.leer}>{T('piece_no_lyrics')}</div>}
       </div>
     )
     if (id === 'akkorde') return (
@@ -318,7 +318,7 @@ ${html}
         <ChordPlayer notizen={stueck.notizen} tempo={stueck.tempo} takt={stueck.takt} />
         {(stueck.notizen || akkordDateien.length > 0) && (
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, padding:'12px 16px', background:'var(--bg-2)', borderRadius:'var(--radius)', border:'1px solid var(--border)', flexWrap:'wrap' }}>
-            <span style={{ fontSize:13, fontWeight:700, color:'var(--text-2)', flexShrink:0 }}>🎵 Transponieren:</span>
+            <span style={{ fontSize:13, fontWeight:700, color:'var(--text-2)', flexShrink:0 }}>🎵 {T('piece_transpose')}:</span>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <button onClick={() => setHalbtoene(h => h - 1)} style={{ width:34, height:34, borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text)', fontSize:18, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>−</button>
               <div style={{ minWidth:52, textAlign:'center' }}>
@@ -461,10 +461,10 @@ ${html}
           <>
             <iframe src={`https://open.spotify.com/embed/track/${spotifyTrackId(stueck.spotify_url)}?utm_source=generator`} width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style={{ borderRadius:12, display:'block' }} />
             <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
-              <a href={stueck.spotify_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'#1DB954', textDecoration:'none', fontWeight:600 }}>↗ Auf Spotify öffnen</a>
+              <a href={stueck.spotify_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'#1DB954', textDecoration:'none', fontWeight:600 }}>{T('piece_open_spotify')}</a>
               {kannBearbeiten && (
                 <div style={{ display:'flex', gap:8 }}>
-                  <button onClick={() => setSpotifyModal(true)} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid #1DB954', background:'transparent', color:'#1DB954', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🔍 Song ändern</button>
+                  <button onClick={() => setSpotifyModal(true)} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid #1DB954', background:'transparent', color:'#1DB954', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>{T('piece_spotify_change')}</button>
                   <button onClick={() => spotifySpeichern('')} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🗑</button>
                 </div>
               )}
@@ -472,16 +472,16 @@ ${html}
           </>
         ) : kannBearbeiten ? (
           <div style={{ textAlign:'center', padding:32 }}>
-            <p style={{ color:'var(--text-3)', marginBottom:16, fontSize:14 }}>Noch kein Spotify-Track verknüpft.</p>
-            <button onClick={() => setSpotifyModal(true)} style={{ padding:'10px 24px', borderRadius:'var(--radius)', border:'none', background:'#1DB954', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>🔍 Song auf Spotify suchen</button>
+            <p style={{ color:'var(--text-3)', marginBottom:16, fontSize:14 }}>{T('piece_no_spotify')}</p>
+            <button onClick={() => setSpotifyModal(true)} style={{ padding:'10px 24px', borderRadius:'var(--radius)', border:'none', background:'#1DB954', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>{T('piece_spotify_search_btn')}</button>
           </div>
-        ) : <div style={s.leer}>Kein Spotify-Track verlinkt.</div>}
+        ) : <div style={s.leer}>{T('piece_no_spotify')}</div>}
         {spotifyModal && <SpotifyModal titelVorschlag={stueck.titel} onUebernehmen={url => spotifySpeichern(url)} onSchliessen={() => setSpotifyModal(false)} />}
       </div>
     )
     if (id === 'dateien') return (
       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-        {dokumente.length === 0 ? <div style={s.leer}>Keine allgemeinen Dateien.</div> : dokumente.map(d => (
+        {dokumente.length === 0 ? <div style={s.leer}>{T('piece_no_general_files')}</div> : dokumente.map(d => (
           <div key={d.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', borderRadius:'var(--radius)', background:'var(--bg-2)', border:'1px solid var(--border)' }}>
             <span style={{ fontSize:24, flexShrink:0 }}>{dateiIcon(d.name)}</span>
             <div style={{ flex:1, minWidth:0 }}>
@@ -516,7 +516,7 @@ ${html}
                 <span style={{ fontSize:12, color:'var(--text-3)', fontWeight:600 }}>🎵 MusicBrainz</span>
                 <button onClick={mbSuchen} disabled={!metaForm.titel.trim() || mbLaden}
                   style={{ ...s.btnSek, fontSize:12, padding:'4px 12px', opacity: !metaForm.titel.trim() ? 0.45 : 1 }}>
-                  {mbLaden ? '…' : '🔍 Metadaten suchen'}
+                  {mbLaden ? '…' : T('piece_mb_search')}
                 </button>
                 {mbErgebnisse.length > 0 && (
                   <button onClick={() => setMbErgebnisse([])}
@@ -532,7 +532,7 @@ ${html}
                         <div style={{ fontWeight:700, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.titel}</div>
                         <div style={{ fontSize:12, color:'var(--text-3)' }}>{[t.komponist, t.tonart].filter(Boolean).join(' · ') || '—'}</div>
                       </div>
-                      <span style={{ fontSize:11, color:'var(--accent)', flexShrink:0 }}>↙ übernehmen</span>
+                      <span style={{ fontSize:11, color:'var(--accent)', flexShrink:0 }}>↙ {T('apply')}</span>
                     </button>
                   ))}
                 </div>
@@ -541,10 +541,10 @@ ${html}
 
             <div style={{ display:'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap:10 }}>
               {[
-                { key:'titel',     label:'Titel *',  placeholder:'z.B. Ave Maria' },
-                { key:'komponist', label:'Komponist', placeholder:'z.B. Schubert' },
-                { key:'tonart',    label:'Tonart',    placeholder:'z.B. F-Dur' },
-                { key:'tempo',     label:'Tempo',     placeholder:'z.B. Andante / 80 BPM' },
+                { key:'titel',     label:`${T('piece_title_label')} *`, placeholder:'z.B. Ave Maria' },
+                { key:'komponist', label:T('piece_composer'),            placeholder:'z.B. Schubert' },
+                { key:'tonart',    label:T('piece_key'),                 placeholder:'z.B. F-Dur' },
+                { key:'tempo',     label:T('piece_tempo'),               placeholder:'z.B. Andante / 80 BPM' },
               ].map(f => (
                 <div key={f.key} style={{ display:'flex', flexDirection:'column', gap:5, gridColumn: f.key==='titel' ? 'span 2' : 'span 1' }}>
                   <label style={s.label}>{f.label}</label>
@@ -578,22 +578,22 @@ ${html}
                 <label style={s.label}>{T('piece_taktart')}</label>
                 <select style={s.input} value={metaForm.takt} onChange={e => setMetaForm(p => ({ ...p, takt: e.target.value }))}>
                   <option value="">{T('piece_taktart_none')}</option>
-                  <optgroup label="Gerader Takt">
+                  <optgroup label={T('takt_even')}>
                     <option value="4/4">4/4</option>
                     <option value="2/4">2/4</option>
                     <option value="2/2">2/2 (alla breve)</option>
                   </optgroup>
-                  <optgroup label="Ungerader Takt">
+                  <optgroup label={T('takt_triple')}>
                     <option value="3/4">3/4</option>
                     <option value="3/8">3/8</option>
                   </optgroup>
-                  <optgroup label="Zusammengesetzt">
+                  <optgroup label={T('takt_compound')}>
                     <option value="6/8">6/8</option>
                     <option value="6/4">6/4</option>
                     <option value="9/8">9/8</option>
                     <option value="12/8">12/8</option>
                   </optgroup>
-                  <optgroup label="Ungerade">
+                  <optgroup label={T('takt_irregular')}>
                     <option value="5/4">5/4</option>
                     <option value="5/8">5/8</option>
                     <option value="7/8">7/8</option>
@@ -611,8 +611,8 @@ ${html}
               </div>
             </div>
             <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-              <button onClick={() => setBearbeiteMeta(false)} style={s.btnSek}>Abbrechen</button>
-              <button onClick={metaSpeichern} style={s.btnPri}>💾 Speichern</button>
+              <button onClick={() => setBearbeiteMeta(false)} style={s.btnSek}>{T('cancel')}</button>
+              <button onClick={metaSpeichern} style={s.btnPri}>💾 {T('save')}</button>
             </div>
           </div>
         ) : (
@@ -626,7 +626,7 @@ ${html}
               {stueck.tempo     && <span>♩ {stueck.tempo}</span>}
               <button onClick={() => setMetronomOffen(o => !o)}
                 style={{ padding:'2px 10px', borderRadius:99, border:'1.5px solid var(--border)', background: metronomOffen ? 'var(--primary)' : 'var(--bg-2)', color: metronomOffen ? 'var(--primary-fg)' : 'var(--text-3)', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit', lineHeight:'22px' }}>
-                ♩ Metronom
+                {T('piece_metronom')}
               </button>
             </div>
 
@@ -655,7 +655,7 @@ ${html}
                   </button>
                   <button onClick={() => setModal('upload')}
                     style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'var(--bg-2)', color:'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                    ⬆ Upload
+                    ⬆ {T('upload')}
                   </button>
                   <button onClick={stueckLoeschen}
                     style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--danger)', background:'transparent', color:'var(--danger)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
@@ -719,7 +719,7 @@ ${html}
         <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
           onClick={e => { if (e.target === e.currentTarget) setPdfModal(false) }}>
           <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:28, width:'100%', maxWidth:380, boxShadow:'var(--shadow-lg)' }}>
-            <div style={{ fontWeight:800, fontSize:16, marginBottom:16 }}>📄 PDF exportieren</div>
+            <div style={{ fontWeight:800, fontSize:16, marginBottom:16 }}>{T('piece_pdf_export')}</div>
             <div style={{ fontSize:14, color:'var(--text-2)', marginBottom:16 }}>
               <strong style={{ color:'var(--text)' }}>{stueck?.titel}</strong>
               {stueck?.komponist && <span style={{ color:'var(--text-3)' }}> · {stueck.komponist}</span>}
@@ -728,16 +728,16 @@ ${html}
               <div style={{ display:'flex', alignItems:'center', gap:12, background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'10px 14px', marginBottom:20 }}>
                 <img src={schule.logo_url} alt="Logo" style={{ maxHeight:36, maxWidth:100, objectFit:'contain' }}
                   onError={e => { e.target.style.display='none' }} />
-                <span style={{ fontSize:12, color:'var(--text-3)' }}>Schullogo wird eingebettet</span>
+                <span style={{ fontSize:12, color:'var(--text-3)' }}>{T('piece_pdf_logo_hint')}</span>
               </div>
             ) : (
               <div style={{ fontSize:12, color:'var(--text-3)', marginBottom:20, padding:'10px 14px', background:'var(--bg-2)', borderRadius:'var(--radius)' }}>
-                Kein Logo hinterlegt — in den <strong>Schuleinstellungen</strong> konfigurierbar.
+                {T('piece_pdf_no_logo')}
               </div>
             )}
             <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-              <button onClick={() => setPdfModal(false)} style={s.btnSek}>Abbrechen</button>
-              <button onClick={() => { setPdfModal(false); liedtextAlsPdf() }} style={s.btnPri}>🖨️ Drucken</button>
+              <button onClick={() => setPdfModal(false)} style={s.btnSek}>{T('cancel')}</button>
+              <button onClick={() => { setPdfModal(false); liedtextAlsPdf() }} style={s.btnPri}>{T('piece_pdf_print')}</button>
             </div>
           </div>
         </div>,
@@ -755,7 +755,7 @@ ${html}
             <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
               <button onClick={() => setVollbild(false)}
                 style={{ background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', padding:'8px 16px', borderRadius:8, flexShrink:0 }}>
-                ✕ Schließen
+                ✕ {T('close')}
               </button>
             </div>
           </div>

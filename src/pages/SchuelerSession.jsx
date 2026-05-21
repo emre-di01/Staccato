@@ -25,55 +25,42 @@ function ChordPro({ text }) {
   )
 }
 
-const REAKTION_TYPEN = [
-  { typ: 'daumen_hoch',   emoji: '👍', label: 'Gut' },
-  { typ: 'herz',          emoji: '❤️', label: 'Super' },
-  { typ: 'hand_hoch',     emoji: '✋', label: 'Frage' },
-  { typ: 'verwirrung',    emoji: '😕', label: 'Unklar' },
-  { typ: 'daumen_runter', emoji: '👎', label: 'Nochmal' },
-]
-
-const ANSICHT_INFO = {
-  noten:           { icon: '📄', label: 'Noten' },
-  liedtext:        { icon: '📝', label: 'Liedtext' },
-  akkorde:         { icon: '🎸', label: 'Akkorde' },
-  youtube:         { icon: '▶️', label: 'Video' },
-  dateiverwaltung: { icon: '📂', label: 'Dateien' },
-}
-
 function getYouTubeId(url) {
   const m = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?]+)/)
   return m?.[1] ?? ''
 }
 
 function PdfInline({ pfad }) {
+  const { T } = useApp()
   const [url, setUrl] = useState(null)
   const [laden, setLaden] = useState(true)
   useEffect(() => {
     supabase.storage.from('stueck-dateien').createSignedUrl(pfad, 86400)
       .then(({ data }) => { setUrl(data?.signedUrl ?? null); setLaden(false) })
   }, [pfad])
-  if (laden) return <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>Lädt …</div>
-  if (!url)  return <div style={{ padding: 24, textAlign: 'center', color: 'var(--danger)', fontSize: 13 }}>Datei nicht verfügbar</div>
+  if (laden) return <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>{T('loading')}</div>
+  if (!url)  return <div style={{ padding: 24, textAlign: 'center', color: 'var(--danger)', fontSize: 13 }}>{T('file_not_available')}</div>
   return (
     <div>
       <iframe src={url + '#view=FitH&toolbar=0'} style={{ width: '100%', height: '85vh', border: 'none', borderRadius: 'var(--radius)', display: 'block' }} title="Noten" />
-      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 8, textAlign: 'center', fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>↗ In neuem Tab öffnen</a>
+      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 8, textAlign: 'center', fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>{T('open_in_new_tab')}</a>
     </div>
   )
 }
 
 function PlatzhalterBox({ info }) {
+  const { T } = useApp()
   return (
     <div style={{ padding: '40px 24px', textAlign: 'center', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: 14 }}>
       <div style={{ fontSize: 32, marginBottom: 8 }}>{info.icon}</div>
-      Dein Lehrer zeigt: <strong style={{ color: 'var(--text)' }}>{info.label}</strong>
+      {T('teacher_shows')} <strong style={{ color: 'var(--text)' }}>{info.label}</strong>
     </div>
   )
 }
 
 function DateiZeile({ datei }) {
   const [laden, setLaden] = useState(false)
+  const { T } = useApp()
   async function oeffnen() {
     setLaden(true)
     const { data } = await supabase.storage.from('stueck-dateien').createSignedUrl(datei.bucket_pfad, 86400)
@@ -85,7 +72,7 @@ function DateiZeile({ datei }) {
       <span style={{ fontSize: 24 }}>📎</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{datei.name}</div>
-        {datei.stimme && datei.stimme !== 'keine' && <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'capitalize' }}>Stimme: {datei.stimme}</div>}
+        {datei.stimme && datei.stimme !== 'keine' && <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'capitalize' }}>{T('voice_label_prefix')}: {datei.stimme}</div>}
       </div>
       <button onClick={oeffnen} disabled={laden} style={{ padding: '8px 14px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
         {laden ? '…' : '↗ Öffnen'}
@@ -95,12 +82,13 @@ function DateiZeile({ datei }) {
 }
 
 function AkkordText({ pfad }) {
+  const { T } = useApp()
   const [text, setText] = useState(null)
   useEffect(() => {
     supabase.storage.from('stueck-dateien').download(pfad)
       .then(({ data }) => data?.text().then(setText))
   }, [pfad])
-  if (!text) return <div style={{ padding: 16, color: 'var(--text-3)', fontSize: 13 }}>Lädt …</div>
+  if (!text) return <div style={{ padding: 16, color: 'var(--text-3)', fontSize: 13 }}>{T('loading')}</div>
   return (
     <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: 20, border: '1px solid var(--border)', overflowX: 'auto' }}>
       <ChordPro text={text} />
@@ -112,6 +100,21 @@ export default function SchuelerSession() {
   const { code: urlCode } = useParams()
   const navigate = useNavigate()
   const { session: authSession, profil, laden: authLaden, rolle, T } = useApp()
+
+  const REAKTION_TYPEN = [
+    { typ: 'daumen_hoch',   emoji: '👍', label: T('reaction_gut') },
+    { typ: 'herz',          emoji: '❤️', label: T('reaction_super') },
+    { typ: 'hand_hoch',     emoji: '✋', label: T('reaction_frage') },
+    { typ: 'verwirrung',    emoji: '😕', label: T('reaction_unklar') },
+    { typ: 'daumen_runter', emoji: '👎', label: T('reaction_nochmal') },
+  ]
+  const ANSICHT_INFO = {
+    noten:           { icon: '📄', label: T('piece_notes_label') },
+    liedtext:        { icon: '📝', label: T('piece_lyrics') },
+    akkorde:         { icon: '🎸', label: T('piece_chords') },
+    youtube:         { icon: '▶️', label: 'Video' },
+    dateiverwaltung: { icon: '📂', label: T('files') },
+  }
 
   const [phase, setPhase] = useState('eingabe') // eingabe | verbinden | aktiv | beendet
   const [code, setCode] = useState((urlCode ?? '').toUpperCase())
@@ -182,15 +185,15 @@ export default function SchuelerSession() {
 
   async function beitreten(joinCode) {
     const trimmed = (joinCode ?? code).trim().toUpperCase()
-    if (!trimmed) { setFehler('Bitte Code eingeben.'); return }
-    if (istGast && !gastName.trim()) { setFehler('Bitte gib deinen Namen ein.'); return }
+    if (!trimmed) { setFehler(T('join_please_enter_code')); return }
+    if (istGast && !gastName.trim()) { setFehler(T('join_please_enter_name')); return }
     setPhase('verbinden'); setFehler('')
     const { data, error } = await supabase.rpc('session_beitreten', {
       p_join_code: trimmed,
       p_gast_name: istGast ? gastName.trim() : null,
     })
     if (error || !data) {
-      setFehler(error?.message ?? 'Session nicht gefunden oder bereits beendet.')
+      setFehler(error?.message ?? T('session_not_found'))
       setPhase('eingabe'); return
     }
     setSessionId(data)
@@ -248,12 +251,12 @@ export default function SchuelerSession() {
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
         <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
+            {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>{T('back_to_dashboard')}</button>}
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
           </div>
           {istGast && (
             <button onClick={() => navigate('/login')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 12, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '6px 12px' }}>
-              Einloggen
+              {T('login')}
             </button>
           )}
         </div>
@@ -261,14 +264,14 @@ export default function SchuelerSession() {
           <div style={{ fontSize: 48, marginBottom: 16 }}>🎬</div>
           <h2 style={s.h2}>{T('join_title')}</h2>
           <p style={{ color: 'var(--text-3)', marginBottom: 24, textAlign: 'center', fontSize: 14 }}>
-            {istGast ? 'Gib den Session-Code und deinen Namen ein.' : T('join_sub')}
+            {istGast ? T('join_guest_prompt') : T('join_sub')}
           </p>
           {istGast && (
             <input
               value={gastName}
               onChange={e => setGastName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && beitreten(code)}
-              placeholder="Dein Name"
+              placeholder={T('join_guest_name_placeholder')}
               maxLength={50}
               style={{ ...s.input, marginBottom: 10 }}
             />
@@ -295,7 +298,7 @@ export default function SchuelerSession() {
   if (phase === 'beendet') return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
       <div style={{ padding: '16px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
+        {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>{T('back_to_dashboard')}</button>}
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
       </div>
       <div style={{ ...s.center, flex: 1 }}>
@@ -305,7 +308,7 @@ export default function SchuelerSession() {
           {T('join_session_ended')}
         </p>
         {istGast
-          ? <button onClick={() => navigate('/login')} style={s.btnPri}>→ Einloggen</button>
+          ? <button onClick={() => navigate('/login')} style={s.btnPri}>→ {T('login')}</button>
           : <button onClick={() => navigate('/')} style={s.btnPri}>→ {T('dashboard')}</button>
         }
       </div>
@@ -321,11 +324,11 @@ export default function SchuelerSession() {
       {/* Header */}
       <div style={{ padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>← Dashboard</button>}
+          {rolle && <button onClick={() => navigate(startseiteNach(rolle))} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, padding: '4px 8px' }}>{T('back_to_dashboard')}</button>}
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>♩ Staccato</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={refresh} disabled={refreshing} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-3)', padding: '4px 6px', lineHeight: 1 }} title="Aktualisieren">
+          <button onClick={refresh} disabled={refreshing} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-3)', padding: '4px 6px', lineHeight: 1 }} title={T('refresh')}>
             {refreshing ? '…' : '↻'}
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#16a34a', fontWeight: 700 }}>
@@ -380,15 +383,15 @@ export default function SchuelerSession() {
               istGast
                 ? <div style={{ padding: '32px 24px', textAlign: 'center', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: 14 }}>
                     <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
-                    <div>Noten sind nur für eingeloggte Schüler verfügbar.</div>
-                    <button onClick={() => navigate('/login')} style={{ ...s.btnPri, marginTop: 16, fontSize: 13 }}>Einloggen</button>
+                    <div>{T('notes_members_only')}</div>
+                    <button onClick={() => navigate('/login')} style={{ ...s.btnPri, marginTop: 16, fontSize: 13 }}>{T('login')}</button>
                   </div>
                 : dateien.filter(d => d.typ === 'noten').length > 0
                   ? <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                       {dateien.filter(d => d.typ === 'noten').map(d => (
                         <div key={d.id}>
                           {d.stimme && d.stimme !== 'keine' && (
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6, textTransform: 'capitalize' }}>Stimme: {d.stimme}</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6, textTransform: 'capitalize' }}>{T('voice_label_prefix')}: {d.stimme}</div>
                           )}
                           <PdfInline pfad={d.bucket_pfad} />
                         </div>
@@ -409,8 +412,8 @@ export default function SchuelerSession() {
               istGast
                 ? <div style={{ padding: '32px 24px', textAlign: 'center', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: 14 }}>
                     <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
-                    <div>Datei-Downloads sind nur für eingeloggte Schüler verfügbar.</div>
-                    <button onClick={() => navigate('/login')} style={{ ...s.btnPri, marginTop: 16, fontSize: 13 }}>Einloggen</button>
+                    <div>{T('files_members_only')}</div>
+                    <button onClick={() => navigate('/login')} style={{ ...s.btnPri, marginTop: 16, fontSize: 13 }}>{T('login')}</button>
                   </div>
                 : dateien.length > 0
                   ? <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

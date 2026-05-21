@@ -7,7 +7,6 @@ import { useApp } from '../context/AppContext'
 import Hinweis from '../components/Hinweis'
 
 const STATUS_FARBE = { aktuell:'var(--accent)', geplant:'var(--primary)', abgeschlossen:'var(--text-3)', archiviert:'var(--text-3)' }
-const STATUS_LABEL = { aktuell:'Aktuell', geplant:'Geplant', abgeschlossen:'Abgeschlossen', archiviert:'Archiviert' }
 
 // ─── Stück anlegen Modal ──────────────────────────────────────
 function NeuesStueckModal({ onClose, onErfolg }) {
@@ -17,7 +16,7 @@ function NeuesStueckModal({ onClose, onErfolg }) {
   const [fehler, setFehler] = useState('')
 
   async function speichern() {
-    if (!form.titel.trim()) { setFehler('Titel ist erforderlich.'); return }
+    if (!form.titel.trim()) { setFehler(T('title_required')); return }
     setLaden(true)
     const { error } = await supabase.from('stuecke').insert({ ...form, erstellt_von: profil.id, schule_id: schule?.id })
     if (error) { setFehler(error.message); setLaden(false); return }
@@ -28,16 +27,16 @@ function NeuesStueckModal({ onClose, onErfolg }) {
     <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
-          <h3 style={s.modalTitel}>🎵 Neues Stück</h3>
+          <h3 style={s.modalTitel}>{T('repertoire_new_piece')}</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
         <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
           {[
-            { key:'titel',       label:'Titel *',      placeholder:'z.B. Ave Maria' },
-            { key:'komponist',   label:'Komponist',    placeholder:'z.B. Schubert' },
-            { key:'tonart',      label:'Tonart',       placeholder:'z.B. F-Dur' },
-            { key:'tempo',       label:'Tempo',        placeholder:'z.B. Andante / 80 BPM' },
-            { key:'youtube_url', label:'YouTube-Link', placeholder:'https://youtube.com/...' },
+            { key:'titel',       label:`${T('piece_title_label')} *`,  placeholder:'z.B. Ave Maria' },
+            { key:'komponist',   label:T('piece_composer'),             placeholder:'z.B. Schubert' },
+            { key:'tonart',      label:T('piece_key'),                  placeholder:'z.B. F-Dur' },
+            { key:'tempo',       label:T('piece_tempo'),                placeholder:'z.B. Andante / 80 BPM' },
+            { key:'youtube_url', label:T('piece_youtube'),              placeholder:'https://youtube.com/...' },
           ].map(f => (
             <div key={f.key} style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={s.label}>{f.label}</label>
@@ -61,6 +60,7 @@ function NeuesStueckModal({ onClose, onErfolg }) {
 // ─── Stück-Karte ──────────────────────────────────────────────
 function StueckKarte({ stueck, kurse = [], onClick }) {
   const { T } = useApp()
+  const STATUS_LABEL = { aktuell: T('status_aktuell'), geplant: T('status_geplant'), abgeschlossen: T('status_fertig'), archiviert: T('status_archiviert') }
   const hatNoten   = stueck.stueck_dateien?.some(d => d.typ === 'noten')
   const hatAudio   = stueck.stueck_dateien?.some(d => d.typ === 'audio')
   const hatAkkorde = stueck.stueck_dateien?.some(d => d.typ === 'akkorde') || stueck.notizen
@@ -85,13 +85,13 @@ function StueckKarte({ stueck, kurse = [], onClick }) {
 
       {/* Inhalt-Badges */}
       <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
-        {hatNoten   && <span style={s.badge}>📄 Noten</span>}
-        {hatAudio   && <span style={s.badge}>🎵 Audio</span>}
-        {hatAkkorde && <span style={s.badge}>🎸 Akkorde</span>}
-        {hatVideo   && <span style={s.badge}>▶️ Video</span>}
-        {hatText    && <span style={s.badge}>📝 Text</span>}
+        {hatNoten   && <span style={s.badge}>📄 {T('piece_notes_label')}</span>}
+        {hatAudio   && <span style={s.badge}>🎵 {T('piece_audio')}</span>}
+        {hatAkkorde && <span style={s.badge}>🎸 {T('piece_chords')}</span>}
+        {hatVideo   && <span style={s.badge}>▶️ {T('piece_youtube')}</span>}
+        {hatText    && <span style={s.badge}>📝 {T('piece_lyrics')}</span>}
         {!hatNoten && !hatAudio && !hatAkkorde && !hatVideo && !hatText &&
-          <span style={{ ...s.badge, opacity:0.5 }}>Noch leer</span>}
+          <span style={{ ...s.badge, opacity:0.5 }}>{T('piece_empty')}</span>}
       </div>
 
       {/* Kurse */}
@@ -255,7 +255,7 @@ export default function Repertoire() {
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             <button onClick={() => setKursFilter('alle')}
               style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: kursFilter==='alle' ? 'var(--primary)' : 'var(--surface)', color: kursFilter==='alle' ? 'var(--primary-fg)' : 'var(--text-2)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
-              Alle Kurse
+              {T('filter_all_courses')}
             </button>
             {meineKurse.map(k => (
               <button key={k.id} onClick={() => setKursFilter(k.id)}
@@ -268,10 +268,10 @@ export default function Repertoire() {
         {!istSchueler && tab === 'meine' && (
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {[
-              ['alle',          'Alle'],
-              ['aktuell',       '🎵 Aktuell'],
-              ['geplant',       '📅 Geplant'],
-              ['abgeschlossen', '✅ Abgeschlossen'],
+              ['alle',          T('filter_all')],
+              ['aktuell',       `🎵 ${T('status_aktuell')}`],
+              ['geplant',       `📅 ${T('status_geplant')}`],
+              ['abgeschlossen', `✅ ${T('status_fertig')}`],
             ].map(([k, l]) => (
               <button key={k} onClick={() => setStatusFilter(k)}
                 style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: statusFilter===k ? 'var(--primary)' : 'var(--surface)', color: statusFilter===k ? 'var(--primary-fg)' : 'var(--text-2)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
@@ -283,11 +283,11 @@ export default function Repertoire() {
         {!istSchueler && tab === 'bibliothek' && (
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {[
-              ['alle',  'Alle'],
-              ['noten', '📄 Noten'],
-              ['audio', '🎵 Audio'],
-              ['video', '▶️ Video'],
-              ['text',  '📝 Text'],
+              ['alle',  T('filter_all')],
+              ['noten', `📄 ${T('piece_notes_label')}`],
+              ['audio', `🎵 ${T('piece_audio')}`],
+              ['video', `▶️ ${T('piece_youtube')}`],
+              ['text',  `📝 ${T('piece_lyrics')}`],
             ].map(([k, l]) => (
               <button key={k} onClick={() => setFilter(k)}
                 style={{ padding:'7px 12px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background: filter===k ? 'var(--primary)' : 'var(--surface)', color: filter===k ? 'var(--primary-fg)' : 'var(--text-2)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>

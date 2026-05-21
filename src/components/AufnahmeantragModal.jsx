@@ -2,12 +2,27 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useApp } from '../context/AppContext'
 
-function SignaturCanvas({ canvasRef, label }) {
-  const [zeichnet, setZeichnet] = useState(false)
+const isMobile = () => 'ontouchstart' in window
+
+function rotateCanvas90CCW(canvas) {
+  const off = document.createElement('canvas')
+  off.width  = canvas.height
+  off.height = canvas.width
+  const ctx = off.getContext('2d')
+  ctx.translate(0, canvas.width)
+  ctx.rotate(-Math.PI / 2)
+  ctx.drawImage(canvas, 0, 0)
+  return off
+}
+
+function SigFullscreenModal({ label, onFertig, onSchliessen }) {
+  const canvasRef    = useRef(null)
   const letzterPunkt = useRef(null)
+  const [zeichnet,  setZeichnet]  = useState(false)
+  const [hatInhalt, setHatInhalt] = useState(false)
 
   function getPos(e, canvas) {
-    const r = canvas.getBoundingClientRect()
+    const r   = canvas.getBoundingClientRect()
     const src = e.touches ? e.touches[0] : e
     return {
       x: (src.clientX - r.left) * (canvas.width  / r.width),
@@ -18,22 +33,29 @@ function SignaturCanvas({ canvasRef, label }) {
   function start(e) {
     e.preventDefault()
     setZeichnet(true)
-    letzterPunkt.current = getPos(e, canvasRef.current)
+    setHatInhalt(true)
+    const pos = getPos(e, canvasRef.current)
+    letzterPunkt.current = pos
+    const ctx = canvasRef.current.getContext('2d')
+    ctx.beginPath()
+    ctx.arc(pos.x, pos.y, 1.25, 0, Math.PI * 2)
+    ctx.fillStyle = '#1e293b'
+    ctx.fill()
   }
 
   function draw(e) {
     e.preventDefault()
     if (!zeichnet) return
     const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    const pos = getPos(e, canvas)
+    const ctx    = canvas.getContext('2d')
+    const pos    = getPos(e, canvas)
     ctx.beginPath()
     ctx.moveTo(letzterPunkt.current.x, letzterPunkt.current.y)
     ctx.lineTo(pos.x, pos.y)
     ctx.strokeStyle = '#1e293b'
-    ctx.lineWidth = 2.5
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
+    ctx.lineWidth   = 2.5
+    ctx.lineCap     = 'round'
+    ctx.lineJoin    = 'round'
     ctx.stroke()
     letzterPunkt.current = pos
   }
@@ -43,25 +65,157 @@ function SignaturCanvas({ canvasRef, label }) {
   function loeschen() {
     const canvas = canvasRef.current
     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
+    setHatInhalt(false)
+    setZeichnet(false)
+    letzterPunkt.current = null
+  }
+
+  function fertig() {
+    onFertig(rotateCanvas90CCW(canvasRef.current))
+  }
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, background: '#fff', zIndex: 2000, display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ padding: 'max(10px, env(safe-area-inset-top)) 14px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, gap: 8 }}>
+        <button onClick={onSchliessen} style={btnStyle('#e2e8f0', '#64748b')}>Abbrechen</button>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{label}</div>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Von oben nach unten unterschreiben ↓</div>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={loeschen} style={btnStyle('#e2e8f0', '#64748b')}>Neu</button>
+          <button onClick={fertig} disabled={!hatInhalt} style={btnStyle(hatInhalt ? '#1e293b' : '#e2e8f0', hatInhalt ? '#fff' : '#94a3b8', !hatInhalt)}>✓ Fertig</button>
+        </div>
+      </div>
+      {/* Canvas */}
+      <div style={{ flex: 1, position: 'relative', background: '#fafafa' }}>
+        <canvas ref={canvasRef} width={420} height={760}
+          style={{ display: 'block', width: '100%', height: '100%', touchAction: 'none' }}
+          onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
+        {!hatInhalt && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', gap: 8 }}>
+            <div style={{ fontSize: 52, color: '#e2e8f0', lineHeight: 1 }}>↓</div>
+            <div style={{ fontSize: 14, color: '#cbd5e1' }}>Hier unterschreiben</div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+const btnStyle = (bg, color, disabled = false) => ({
+  padding: '8px 14px', borderRadius: 8, border: 'none',
+  background: bg, color, fontSize: 13, fontWeight: 600,
+  cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0,
+})
+
+function SignaturCanvas({ canvasRef, label }) {
+  const [zeichnet,    setZeichnet]    = useState(false)
+  const [fullscreen,  setFullscreen]  = useState(false)
+  const [vorschau,    setVorschau]    = useState(null)
+  const letzterPunkt = useRef(null)
+  const mobil = isMobile()
+
+  function getPos(e, canvas) {
+    const r   = canvas.getBoundingClientRect()
+    const src = e.touches ? e.touches[0] : e
+    return {
+      x: (src.clientX - r.left) * (canvas.width  / r.width),
+      y: (src.clientY - r.top)  * (canvas.height / r.height),
+    }
+  }
+
+  function start(e) {
+    e.preventDefault()
+    setZeichnet(true)
+    const pos = getPos(e, canvasRef.current)
+    letzterPunkt.current = pos
+    const ctx = canvasRef.current.getContext('2d')
+    ctx.beginPath()
+    ctx.arc(pos.x, pos.y, 1.25, 0, Math.PI * 2)
+    ctx.fillStyle = '#1e293b'
+    ctx.fill()
+  }
+
+  function draw(e) {
+    e.preventDefault()
+    if (!zeichnet) return
+    const canvas = canvasRef.current
+    const ctx    = canvas.getContext('2d')
+    const pos    = getPos(e, canvas)
+    ctx.beginPath()
+    ctx.moveTo(letzterPunkt.current.x, letzterPunkt.current.y)
+    ctx.lineTo(pos.x, pos.y)
+    ctx.strokeStyle = '#1e293b'
+    ctx.lineWidth   = 2.5
+    ctx.lineCap     = 'round'
+    ctx.lineJoin    = 'round'
+    ctx.stroke()
+    letzterPunkt.current = pos
+  }
+
+  function stop() { setZeichnet(false) }
+
+  function loeschen() {
+    canvasRef.current.getContext('2d').clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
+    setVorschau(null)
+  }
+
+  function onFertig(rotatedCanvas) {
+    // Rotiertes Bild in den ursprünglichen Canvas zeichnen (600×160)
+    const dst = canvasRef.current
+    const ctx = dst.getContext('2d')
+    ctx.clearRect(0, 0, dst.width, dst.height)
+    ctx.drawImage(rotatedCanvas, 0, 0, dst.width, dst.height)
+    setVorschau(dst.toDataURL('image/png'))
+    setFullscreen(false)
   }
 
   return (
     <div>
       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>{label}</div>
-      <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: '#fff', position: 'relative' }}>
-        <canvas ref={canvasRef} width={600} height={160}
-          style={{ display: 'block', width: '100%', height: 160, cursor: 'crosshair', touchAction: 'none' }}
-          onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
-          onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
-        <button type="button" onClick={loeschen} style={{
-          position: 'absolute', top: 8, right: 10,
-          background: 'rgba(255,255,255,0.85)', border: '1px solid #e2e8f0',
-          borderRadius: 6, fontSize: 11, color: '#64748b', cursor: 'pointer',
-          fontFamily: 'inherit', padding: '3px 8px',
-        }}>
-          Löschen
-        </button>
-      </div>
+
+      {mobil ? (
+        // Mobile: Vorschau + Button
+        <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', background: '#fff', overflow: 'hidden' }}>
+          {vorschau ? (
+            <>
+              <img src={vorschau} style={{ display: 'block', width: '100%', height: 100, objectFit: 'contain', background: '#fff' }} alt="Unterschrift" />
+              <div style={{ borderTop: '1px solid #e2e8f0', padding: '6px 10px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={loeschen} style={{ background: 'transparent', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 10px' }}>
+                  Neu zeichnen
+                </button>
+              </div>
+            </>
+          ) : (
+            <button type="button" onClick={() => setFullscreen(true)} style={{ display: 'block', width: '100%', height: 120, background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, fontFamily: 'inherit' }}>
+              ✍️ Tippen zum Unterschreiben
+            </button>
+          )}
+          {/* Hidden canvas für toDataURL */}
+          <canvas ref={canvasRef} width={600} height={160} style={{ display: 'none' }} />
+        </div>
+      ) : (
+        // Desktop: Canvas direkt
+        <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: '#fff', position: 'relative' }}>
+          <canvas ref={canvasRef} width={600} height={160}
+            style={{ display: 'block', width: '100%', height: 160, cursor: 'crosshair', touchAction: 'none' }}
+            onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop} />
+          <button type="button" onClick={loeschen} style={{ position: 'absolute', top: 8, right: 10, background: 'rgba(255,255,255,0.85)', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 11, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit', padding: '3px 8px' }}>
+            Löschen
+          </button>
+        </div>
+      )}
+
+      {fullscreen && (
+        <SigFullscreenModal
+          label={label}
+          onFertig={onFertig}
+          onSchliessen={() => setFullscreen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -1,0 +1,2 @@
+-- Band-Feature (aufgegeben 2026-05-20, entfernt via 20260520000010_remove_band_feature.sql)
+-- Platzhalter — Migration war bereits in der DB, Datei beim Feature-Rollback gelöscht.

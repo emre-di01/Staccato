@@ -1,0 +1,3 @@
+-- Band-Feature (aufgegeben 2026-05-20, entfernt via 20260520000010_remove_band_feature.sql)
+-- Diese Datei ist ein Platzhalter — die Migration wurde direkt auf der DB ausgeführt,
+-- die Quelldatei wurde beim Verwerfen des Features gelöscht.

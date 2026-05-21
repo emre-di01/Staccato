@@ -401,7 +401,7 @@ function StundenBulkModal({ kurs, onClose, onErfolg }) {
               ⚠️ Kein Wochentag/Uhrzeit definiert. Bitte erst im Kurs eintragen.
             </div>
           )}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:12 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={{ fontSize:12, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>Von</label>
               <input type="date" style={bulkInput} value={von} onChange={e => setVon(e.target.value)} />
@@ -440,7 +440,7 @@ function StundenBulkModal({ kurs, onClose, onErfolg }) {
   , document.body)
 }
 
-const bulkInput = { padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, outline:'none', fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', width:'100%', boxSizing:'border-box' }
+const bulkInput = { padding:'10px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', fontSize:14, outline:'none', fontFamily:'inherit', background:'var(--bg)', color:'var(--text)', boxSizing:'border-box' }
 
 function SchuelerProfilModal({ profil: p, onClose }) {
   const alter = p?.geburtsdatum

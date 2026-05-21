@@ -89,10 +89,9 @@ export default function SchuelerDateien() {
       ) : dateien.length === 0 ? (
         <div style={{ padding:'48px 32px', textAlign:'center', background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)' }}>
           <div style={{ fontSize:40, marginBottom:12 }}>📂</div>
-          <div style={{ fontWeight:700, fontSize:16, color:'var(--text)', marginBottom:6 }}>Noch keine Dateien</div>
+          <div style={{ fontWeight:700, fontSize:16, color:'var(--text)', marginBottom:6 }}>{T('files_empty_title')}</div>
           <div style={{ fontSize:13, color:'var(--text-3)', lineHeight:1.6 }}>
-            Deine Schule stellt hier Dokumente für dich bereit —<br />
-            z.&nbsp;B. Vertrag, SEPA-Mandat oder Einverständniserklärung.
+            {T('files_empty_desc')}
           </div>
         </div>
       ) : (
@@ -105,7 +104,7 @@ export default function SchuelerDateien() {
                   {T(`dok_type_${typ}`) ?? typ}
                 </span>
                 <span style={{ marginLeft:'auto', fontSize:12, color:'var(--text-3)', fontWeight:600 }}>
-                  {gruppen[typ].length} {gruppen[typ].length === 1 ? 'Datei' : 'Dateien'}
+                  {gruppen[typ].length} {gruppen[typ].length === 1 ? T('file_singular') : T('files')}
                 </span>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:8, padding:'12px 14px' }}>

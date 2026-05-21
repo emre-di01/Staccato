@@ -165,7 +165,7 @@ export default function SchuelerDashboard() {
             boxShadow:'var(--shadow-lg)', position:'relative', overflow:'hidden',
           }}>
             <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.75)', textTransform:'uppercase', letterSpacing:'0.09em', marginBottom:6 }}>
-              {istHeute ? '🟢 Nächste Stunde – Heute' : istMorgen ? '📅 Nächste Stunde – Morgen' : `📅 ${beginn.toLocaleDateString('de-DE', { weekday:'long' })}`}
+              {istHeute ? T('dash_next_today') : istMorgen ? T('dash_next_tomorrow') : `📅 ${beginn.toLocaleDateString('de-DE', { weekday:'long' })}`}
             </div>
             <div style={{ fontSize:22, fontWeight:800, color:'var(--primary-fg)', marginBottom:4 }}>{st.unterricht?.name}</div>
             <div style={{ fontSize:14, color:'rgba(255,255,255,0.85)' }}>
@@ -186,7 +186,7 @@ export default function SchuelerDashboard() {
             <div onClick={() => navigate('/schueler/kurse')} style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'20px 24px', border:'1px solid var(--border)', boxShadow:'var(--shadow)', cursor:'pointer' }}>
               <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
                 <div>
-                  <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>Anwesenheit</div>
+                  <div style={{ fontSize:13, color:'var(--text-3)', fontWeight:500, marginBottom:8 }}>{T('attendance')}</div>
                   <div style={{ fontSize:32, fontWeight:800, color:farbe, letterSpacing:'-1px' }}>{anwesenheitsRate}%</div>
                 </div>
                 <span style={{ fontSize:28 }}>📊</span>
@@ -268,7 +268,7 @@ export default function SchuelerDashboard() {
       {/* Hausaufgaben */}
       {(laden || hausaufgaben.length > 0) && (
         <div style={{ marginTop: 8 }}>
-          <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:14 }}>📝 Hausaufgaben</h2>
+          <h2 style={{ fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:14 }}>📝 {T('dash_homework')}</h2>
           {laden ? <SkeletonList rows={2} /> : (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {hausaufgaben.map(st => (

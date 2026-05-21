@@ -58,16 +58,16 @@ function NeuesStueckModal({ kursId, onClose, onErfolg }) {
     <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
-          <h3 style={s.modalTitel}>🎵 Neues Stück</h3>
+          <h3 style={s.modalTitel}>🎵 {T('repertoire_new_piece')}</h3>
           <button onClick={onClose} style={s.iconBtn}>✕</button>
         </div>
         <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
           {[
-            { key:'titel',       label:'Titel *',       placeholder:'z.B. Ave Maria' },
-            { key:'komponist',   label:'Komponist',     placeholder:'z.B. Schubert' },
-            { key:'tonart',      label:'Tonart',        placeholder:'z.B. F-Dur' },
-            { key:'tempo',       label:'Tempo',         placeholder:'z.B. Andante / 80 BPM' },
-            { key:'youtube_url', label:'YouTube-Link',  placeholder:'https://youtube.com/...' },
+            { key:'titel',       label:`${T('piece_title_label')} *`, placeholder:'z.B. Ave Maria' },
+            { key:'komponist',   label:T('piece_composer'),           placeholder:'z.B. Schubert' },
+            { key:'tonart',      label:T('piece_key'),                placeholder:'z.B. F-Dur' },
+            { key:'tempo',       label:T('piece_tempo'),              placeholder:'z.B. Andante / 80 BPM' },
+            { key:'youtube_url', label:T('piece_youtube'),            placeholder:'https://youtube.com/...' },
           ].map(f => (
             <div key={f.key} style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={s.label}>{f.label}</label>
@@ -213,7 +213,7 @@ export default function KursRepertoire() {
   }
 
   async function stueckEntfernen(stueckId) {
-    if (!await confirm(T('piece_remove_confirm'), { confirmLabel: 'Entfernen' })) return
+    if (!await confirm(T('piece_remove_confirm'), { confirmLabel: T('remove') })) return
 
     // Remove from this course's join table
     await supabase.from('unterricht_stuecke').delete()
@@ -251,7 +251,7 @@ export default function KursRepertoire() {
   }
 
   async function dateiLoeschen(datei) {
-    if (!await confirm(T('file_delete_confirm'), { confirmLabel: 'Löschen' })) return
+    if (!await confirm(T('file_delete_confirm'), { confirmLabel: T('delete') })) return
     const bucket = datei.schueler_id ? 'schueler-dateien' : 'kurs-dateien'
     await supabase.storage.from(bucket).remove([datei.bucket_pfad])
     await supabase.from('dateien').delete().eq('id', datei.id)
@@ -317,10 +317,10 @@ export default function KursRepertoire() {
       {tab === 'stuecke' && (
         <div>
           <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:20 }}>
-            <input placeholder="🔍 Stück oder Komponist suchen …" value={suche} onChange={e => setSuche(e.target.value)}
+            <input placeholder={T('kursrep_search')} value={suche} onChange={e => setSuche(e.target.value)}
               style={{ ...s.input, maxWidth:340, margin:0 }} />
             {stuecke.some(us => us.status !== 'abgeschlossen') && (
-              <button onClick={zufaelligesStueck} title="Zufälliges Stück" style={{ ...s.btnSek, padding:'9px 12px', fontSize:18, lineHeight:1 }}>🎲</button>
+              <button onClick={zufaelligesStueck} title={T('kursrep_random_piece')} style={{ ...s.btnSek, padding:'9px 12px', fontSize:18, lineHeight:1 }}>🎲</button>
             )}
           </div>
 
@@ -373,7 +373,7 @@ export default function KursRepertoire() {
                               <option value="geplant">{T('status_geplant')}</option>
                               <option value="abgeschlossen">{T('status_fertig')}</option>
                             </select>
-                            <button onClick={() => stueckEntfernen(us.stueck_id)} style={{ ...s.iconBtn, color:'var(--danger)' }} title="Entfernen">🗑</button>
+                            <button onClick={() => stueckEntfernen(us.stueck_id)} style={{ ...s.iconBtn, color:'var(--danger)' }} title={T('remove')}>🗑</button>
                           </div>
                         )}
                       </div>
@@ -390,7 +390,7 @@ export default function KursRepertoire() {
       {tab === 'dateien' && (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {dateien.length === 0 ? (
-            <div style={s.leer}>{kannBearbeiten ? 'Noch keine Dateien. Klick auf "⬆ Datei" um zu beginnen.' : 'Keine Dateien vorhanden.'}</div>
+            <div style={s.leer}>{kannBearbeiten ? T('kursrep_no_files') : T('kursrep_no_files_ro')}</div>
           ) : (
             dateien.map(d => {
               const sc = schueler.find(s => s.schueler_id === d.schueler_id)
@@ -402,7 +402,7 @@ export default function KursRepertoire() {
                   <div style={{ flex:1 }}>
                     <div style={{ fontWeight:600, fontSize:14, color:'var(--text)' }}>{d.name}</div>
                     <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>
-                      {sc ? `👤 Nur für ${sc.profiles?.voller_name}` : '👥 Für alle Schüler'}
+                      {sc ? T('file_for_one').replace('{name}', sc.profiles?.voller_name ?? '') : T('file_for_all_students')}
                       {' · '}{new Date(d.hochgeladen_am).toLocaleDateString('de-DE')}
                     </div>
                   </div>

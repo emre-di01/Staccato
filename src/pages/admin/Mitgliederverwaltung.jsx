@@ -6,6 +6,7 @@ import SharedModal from '../../components/Modal'
 import Avatar from '../../components/Avatar'
 import AufnahmeantragModal from '../../components/AufnahmeantragModal'
 import KursantragModal from '../../components/KursantragModal'
+import OrtAutocomplete from '../../components/OrtAutocomplete'
 
 const ROLLEN      = ['lehrer', 'schueler', 'eltern', 'vorstand']
 const ALLE_ROLLEN = ['admin', 'lehrer', 'schueler', 'eltern', 'vorstand']
@@ -63,7 +64,13 @@ function Feld({ label, children }) {
 
 function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
   const { profil, rolle: currentRolle } = useApp()
-  const [form, setForm] = useState({ email: '', voller_name: '', passwort: '', rolle: 'schueler', telefon: '', geburtsdatum: '' })
+  const [alleDetails, setAlleDetails] = useState(false)
+  const [form, setForm] = useState({
+    email: '', voller_name: '', passwort: '', rolle: 'schueler',
+    telefon: '', geburtsdatum: '', adresse: '', notizen: '',
+    zahlungsweise: '', zahlungsrhythmus: '', mitgliedsbeitrag: '', kontoinhaber: '', iban: '', bic: '',
+    erziehungsberechtigter_name: '', erziehungsberechtigter_telefon: '', erziehungsberechtigter_email: '',
+  })
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
   const [erfolg, setErfolg] = useState(false)
@@ -83,6 +90,8 @@ function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
       setFehler(T('password_min_error'))
       return
     }
+    if (alleDetails && form.iban && !ibanGueltig(form.iban)) { setFehler('Ungültige IBAN – bitte prüfen.'); return }
+    if (alleDetails && form.bic  && !bicGueltig(form.bic))  { setFehler('Ungültige BIC – bitte prüfen.');  return }
     const limit = limitErreicht(form.rolle)
     if (limit != null) {
       const key = form.rolle === 'lehrer' ? 'plan_limit_lehrer' : 'plan_limit_schueler'
@@ -92,7 +101,7 @@ function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
     setLaden(true)
     setFehler('')
 
-    const { error } = await supabase.rpc('create_user', {
+    const { data: userId, error } = await supabase.rpc('create_user', {
       p_email:       form.email,
       p_passwort:    form.passwort,
       p_voller_name: form.voller_name,
@@ -117,10 +126,27 @@ function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
       return
     }
 
-    // Zusätzliche Felder updaten
-    if (form.telefon || form.geburtsdatum) {
-      const { data: u } = await supabase.from('profiles').select('id').eq('voller_name', form.voller_name).single()
-      if (u) await supabase.from('profiles').update({ telefon: form.telefon, geburtsdatum: form.geburtsdatum || null }).eq('id', u.id)
+    // Profil-Felder updaten
+    const profilUpdate = {
+      telefon:      form.telefon      || null,
+      geburtsdatum: form.geburtsdatum || null,
+      ...(alleDetails && {
+        adresse:       form.adresse       || null,
+        notizen:       form.notizen       || null,
+        zahlungsweise: form.zahlungsweise || null,
+        zahlungsrhythmus: form.zahlungsrhythmus || null,
+        mitgliedsbeitrag: form.mitgliedsbeitrag !== '' ? form.mitgliedsbeitrag : null,
+        kontoinhaber:  form.kontoinhaber  || null,
+        iban:          form.iban          || null,
+        bic:           form.bic           || null,
+        erziehungsberechtigter_name:    form.erziehungsberechtigter_name    || null,
+        erziehungsberechtigter_telefon: form.erziehungsberechtigter_telefon || null,
+        erziehungsberechtigter_email:   form.erziehungsberechtigter_email   || null,
+      }),
+    }
+    const hasUpdate = Object.values(profilUpdate).some(v => v != null)
+    if (hasUpdate && userId) {
+      await supabase.from('profiles').update(profilUpdate).eq('id', userId)
     }
 
     setErfolg(true)
@@ -132,7 +158,7 @@ function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
   }
 
   return (
-    <Modal titel={T('member_new_title')} onClose={onClose}>
+    <Modal titel={T('member_new_title')} onClose={onClose} breit={alleDetails}>
       <div style={s.formGrid}>
         {erfolg ? (
           <div style={s.erfolg}>{T('member_created')}</div>
@@ -167,6 +193,91 @@ function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
                   onChange={e => setForm(f => ({ ...f, geburtsdatum: e.target.value }))} />
               </Feld>
             </div>
+
+            {/* Toggle alle Details */}
+            <button onClick={() => setAlleDetails(v => !v)} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+              {alleDetails ? T('member_less_details') : T('member_all_details')}
+            </button>
+
+            {alleDetails && (<>
+              <Feld label={T('profile_address')}>
+                <OrtAutocomplete value={form.adresse} onChange={v => setForm(f => ({ ...f, adresse: v }))} inputStyle={s.input} />
+              </Feld>
+              <Feld label={T('member_internal_notes')}>
+                <textarea style={{ ...s.input, minHeight: 80, resize: 'vertical' }} value={form.notizen}
+                  onChange={e => setForm(f => ({ ...f, notizen: e.target.value }))} />
+              </Feld>
+
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>{T('member_section_payment')}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                  <Feld label={T('member_zahlungsweise')}>
+                    <select style={s.input} value={form.zahlungsweise} onChange={e => setForm(f => ({ ...f, zahlungsweise: e.target.value }))}>
+                      <option value="">{T('member_select_placeholder')}</option>
+                      <option value="sepa">{T('member_zahlung_sepa')}</option>
+                      <option value="ueberweisung">{T('member_zahlung_ueberweisung')}</option>
+                      <option value="bar">{T('member_zahlung_bar')}</option>
+                    </select>
+                  </Feld>
+                  <Feld label={T('member_zahlungsrhythmus')}>
+                    <select style={s.input} value={form.zahlungsrhythmus} onChange={e => setForm(f => ({ ...f, zahlungsrhythmus: e.target.value }))}>
+                      <option value="">{T('member_select_placeholder')}</option>
+                      <option value="monatlich">{T('member_rhythm_monatlich')}</option>
+                      <option value="quartalsweise">{T('member_rhythm_quartalsweise')}</option>
+                      <option value="halbjaehrlich">{T('member_rhythm_halbjaehrlich')}</option>
+                      <option value="jaehrlich">{T('member_rhythm_jaehrlich')}</option>
+                    </select>
+                  </Feld>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                  <Feld label={T('member_mitgliedsbeitrag')}>
+                    <input type="number" step="0.01" min="0" style={s.input} value={form.mitgliedsbeitrag}
+                      placeholder="z.B. 29.00" onChange={e => setForm(f => ({ ...f, mitgliedsbeitrag: e.target.value }))} />
+                  </Feld>
+                  <Feld label={T('member_kontoinhaber')}>
+                    <input style={s.input} value={form.kontoinhaber} placeholder={T('member_kontoinhaber_placeholder')}
+                      onChange={e => setForm(f => ({ ...f, kontoinhaber: e.target.value }))} />
+                  </Feld>
+                </div>
+                {form.zahlungsweise === 'sepa' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
+                    <Feld label="IBAN">
+                      <input style={{ ...s.input, borderColor: form.iban && !ibanGueltig(form.iban) ? 'var(--danger)' : undefined }}
+                        value={form.iban} placeholder="DE12 3456 7890 1234 5678 90"
+                        onChange={e => setForm(f => ({ ...f, iban: e.target.value.toUpperCase() }))} />
+                      {form.iban && !ibanGueltig(form.iban) && <span style={{ fontSize: 11, color: 'var(--danger)', marginTop: 3 }}>Ungültige IBAN</span>}
+                      {form.iban && ibanGueltig(form.iban) && <span style={{ fontSize: 11, color: 'var(--success)', marginTop: 3 }}>✓ Gültige IBAN</span>}
+                    </Feld>
+                    <Feld label="BIC">
+                      <input style={{ ...s.input, borderColor: form.bic && !bicGueltig(form.bic) ? 'var(--danger)' : undefined }}
+                        value={form.bic} placeholder="XXXXXXXX"
+                        onChange={e => setForm(f => ({ ...f, bic: e.target.value.toUpperCase() }))} />
+                      {form.bic && !bicGueltig(form.bic) && <span style={{ fontSize: 11, color: 'var(--danger)', marginTop: 3 }}>Ungültige BIC</span>}
+                      {form.bic && bicGueltig(form.bic) && <span style={{ fontSize: 11, color: 'var(--success)', marginTop: 3 }}>✓ Gültige BIC</span>}
+                    </Feld>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>{T('member_section_guardian')}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                  <Feld label={T('member_guardian_name')}>
+                    <input style={s.input} value={form.erziehungsberechtigter_name}
+                      onChange={e => setForm(f => ({ ...f, erziehungsberechtigter_name: e.target.value }))} />
+                  </Feld>
+                  <Feld label={T('member_guardian_phone')}>
+                    <input style={s.input} value={form.erziehungsberechtigter_telefon}
+                      onChange={e => setForm(f => ({ ...f, erziehungsberechtigter_telefon: e.target.value }))} />
+                  </Feld>
+                </div>
+                <Feld label={T('member_guardian_email')}>
+                  <input style={s.input} value={form.erziehungsberechtigter_email}
+                    onChange={e => setForm(f => ({ ...f, erziehungsberechtigter_email: e.target.value }))} />
+                </Feld>
+              </div>
+            </>)}
+
             {fehler && <p style={s.fehler}>{fehler}</p>}
             <div style={s.btnRow}>
               <button onClick={onClose} style={s.btnSek}>{T('cancel')}</button>
@@ -351,7 +462,7 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
           </Feld>
         </div>
         <Feld label={T('profile_address')}>
-          <input style={s.input} value={form.adresse} onChange={e => setForm(f => ({ ...f, adresse: e.target.value }))} />
+          <OrtAutocomplete value={form.adresse} onChange={v => setForm(f => ({ ...f, adresse: v }))} inputStyle={s.input} />
         </Feld>
         <Feld label={T('member_internal_notes')}>
           <textarea style={{ ...s.input, minHeight: 80, resize: 'vertical' }} value={form.notizen}
