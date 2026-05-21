@@ -22,11 +22,146 @@ supabase test db      # pgTAP RLS-Tests (benötigt laufende lokale Instanz)
 | Service | URL |
 |---------|-----|
 | Landing Page | `https://staccato-music.de` |
-| App | `https://app.staccato-music.de` |
+| App (Prod) | `https://app.staccato-music.de` |
+| App (Dev/Staging) | `https://dev.staccato-music.de` |
 | Supabase API | `https://api.401dev.de` |
 | Supabase Studio | `http://127.0.0.1:54323` (nur lokal) |
 
 > Die alte Domain `401dev.de` bleibt weiterhin aktiv (parallel).
+
+---
+
+## Deploy & Release Workflow
+
+### Branches und Environments
+
+| Branch | URL | Supabase | Build-Output |
+|--------|-----|----------|--------------|
+| `main` | `https://app.staccato-music.de` | Lokal (self-hosted Docker) | `dist/` |
+| `dev` | `https://dev.staccato-music.de` | Supabase Cloud | `dist-dev/` |
+
+- **`main`** ist immer Production. Nginx serviert `dist/` direkt.
+- **`dev`** ist Staging/Entwicklung. Nginx serviert `dist-dev/`. Datenbank ist die Supabase Cloud Instanz (kein lokaler Docker nötig).
+- Entwicklung findet ausschließlich auf `dev` statt. Auf `main` wird nur gemerged wenn etwas release-ready ist.
+
+### Environment-Dateien
+
+| Datei | Zweck | Tracking |
+|-------|-------|---------|
+| `.env.prod` | Prod-Env: lokale Supabase URL + Anon-Key | gitignored |
+| `.env.dev` | Dev-Env: Cloud-Supabase URL + Anon-Key + `SUPABASE_ACCESS_TOKEN` | gitignored |
+| `.env` | Aktiv geladenes Env — wird von deploy.sh überschrieben | gitignored |
+
+`.env.dev` muss zusätzlich enthalten:
+```
+SUPABASE_ACCESS_TOKEN=<token aus supabase.com/dashboard/account/tokens>
+```
+Dieser Token wird von `supabase db push` benötigt um Migrationen auf die Cloud-Instanz zu pushen.
+
+### deploy.sh — Alle Befehle
+
+```bash
+./deploy.sh           # auto: erkennt Branch (main → prod, dev → dev)
+./deploy.sh prod      # Explizit: Prod-Deploy
+./deploy.sh dev       # Explizit: Dev-Deploy
+./deploy.sh migrate   # Nur Migrationen (kein Frontend-Build)
+./deploy.sh build     # Nur Frontend-Build mit aktuellem .env
+./deploy.sh env prod  # Nur .env.prod → .env kopieren (kein Build, keine Migrationen)
+./deploy.sh env dev   # Nur .env.dev → .env kopieren (kein Build, keine Migrationen)
+```
+
+### Was `./deploy.sh prod` tut (main-Branch)
+
+1. Prüft ob `.env.prod` existiert
+2. Kopiert `.env.prod` → `.env`
+3. Führt ausstehende Migrationen direkt im lokalen Docker-Container `supabase_db_staccato` aus (via `psql`)
+4. Baut das Frontend mit `npm run build` → Output nach `dist/`
+5. Nginx serviert `dist/` sofort — kein Reload nötig
+
+Migrationslogik (Prod): Liest bereits angewendete Versionen aus `supabase_migrations.schema_migrations`, vergleicht mit Dateien in `supabase/migrations/*.sql`, führt nur neue aus.
+
+### Was `./deploy.sh dev` tut (dev-Branch)
+
+1. Prüft ob `.env.dev` existiert und `SUPABASE_ACCESS_TOKEN` gesetzt ist
+2. Kopiert `.env.dev` → `.env`
+3. Führt `supabase db push` aus — pushed alle lokalen Migrationen auf die Cloud-Instanz
+4. Baut das Frontend mit `npx vite build --outDir dist-dev` → Output nach `dist-dev/`
+5. Nginx serviert `dist-dev/` sofort — kein Reload nötig
+
+### Neue Migration erstellen
+
+```bash
+# Dateiname-Konvention: YYYYMMDDNNNNNN_beschreibung.sql
+touch supabase/migrations/$(date +%Y%m%d)000000_mein_feature.sql
+```
+
+Wichtige Regeln für Migrationen:
+- Neue PostgreSQL Enum-Werte **immer in einer separaten Datei** — PostgreSQL erlaubt keine Nutzung eines neuen Enum-Werts in der gleichen Transaktion wo er hinzugefügt wurde
+- Migrationen sind idempotent schreiben wo möglich (`IF NOT EXISTS`, `ON CONFLICT DO NOTHING`, `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$`)
+- Niemals eine bereits angewendete Migration nachträglich ändern — neue Datei anlegen
+
+### Release-Flow: dev → main → Production
+
+```
+1. Feature entwickeln auf dev-Branch
+2. ./deploy.sh dev          # auf dev.staccato-music.de testen
+3. Testen unter https://dev.staccato-music.de
+4. git checkout main
+5. git merge dev
+6. ./deploy.sh prod         # baut dist/ und wendet Migrationen an
+```
+
+Bei Datenbankänderungen: Die Migrationen liegen in `supabase/migrations/` und werden sowohl bei `supabase db push` (Cloud/Dev) als auch bei `apply_pending_migrations` (Prod) aus denselben Dateien angewendet — eine einzige Quelle der Wahrheit.
+
+### Nginx-Konfiguration
+
+Config-Datei: `/etc/nginx/sites-available/staccato-music`
+
+| Domain | Root | Hinweis |
+|--------|------|---------|
+| `staccato-music.de` + `www` | `staccato-landing/dist/` | Landing Page |
+| `app.staccato-music.de` | `staccato/dist/` | Prod App |
+| `dev.staccato-music.de` | `staccato/dist-dev/` | Dev/Staging App |
+
+Nginx nach Config-Änderungen:
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+`dist/` und `dist-dev/` werden von Nginx direkt ausgeliefert (statisch). Nach jedem Deploy sind die Änderungen sofort live — kein Nginx-Reload nötig.
+
+Caching-Strategie (beide App-Domains):
+- `index.html` + Service Worker (`sw.js`, `registerSW.js`): `no-cache` — Browser lädt immer neu
+- JS/CSS/Fonts/Images mit Content-Hash im Dateinamen: 1 Jahr Cache — sicher weil Hash sich bei Änderung ändert
+
+### TLS-Zertifikate (Let's Encrypt / Certbot)
+
+Aktuelles Zertifikat deckt ab: `staccato-music.de`, `www.staccato-music.de`, `app.staccato-music.de`, `dev.staccato-music.de`
+
+Zertifikat erweitern (neue Domain hinzufügen):
+```bash
+sudo certbot --nginx --domains staccato-music.de,www.staccato-music.de,app.staccato-music.de,dev.staccato-music.de
+```
+
+Zertifikat manuell erneuern:
+```bash
+sudo certbot renew
+```
+
+Auto-Renewal läuft via systemd-Timer (`certbot.timer`) — normalerweise kein manueller Eingriff nötig.
+
+Wichtig: Vor `certbot` muss der DNS-A-Record für die neue Domain auf die Server-IP zeigen und propagiert sein, sonst schlägt die ACME-Challenge fehl.
+
+### Supabase lokal starten (für Prod-Migrations-Tests)
+
+```bash
+set -a && source supabase/.env && set +a && supabase start
+```
+
+Die `.env`-Datei muss vor `supabase start` gesourced werden, damit Edge Functions die SMTP-Credentials aus dem Container-Environment lesen können (`[edge_runtime.secrets]` in `config.toml`).
+
+**NIEMALS** `supabase db reset` auf einer laufenden Instanz mit Daten ausführen — löscht alle Daten unwiderruflich.  
+**NIEMALS** `supabase stop --no-backup` — löscht das Volume-Backup, führt zu komplettem Datenverlust beim nächsten Start.
 
 ## Environment Setup
 

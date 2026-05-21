@@ -3,6 +3,7 @@
 .env.dev
 node_modules/
 dist/
+dist-dev/
 *.pem
 
 # Android keystore
