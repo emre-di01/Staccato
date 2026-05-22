@@ -24,7 +24,6 @@ jobs:
           supabase functions deploy accept-invitation
           supabase functions deploy demo-anfragen
           supabase functions deploy demo-genehmigen
-          supabase functions deploy invoice-extract
           supabase functions deploy kalender
           supabase functions deploy lyrics-suche
           supabase functions deploy send-email

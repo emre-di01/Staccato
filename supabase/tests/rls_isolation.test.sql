@@ -122,10 +122,9 @@ INSERT INTO inventar_kategorien (id, schule_id, name, icon)
   ON CONFLICT (id) DO NOTHING;
 
 -- Mitglied-Datei für schuel_a (Student kann nur eigene sehen)
-INSERT INTO mitglied_dateien (id, profil_id, schule_id, typ, dateiname, bucket_pfad)
+INSERT INTO mitglied_dateien (id, profil_id, typ, name, bucket_pfad)
   SELECT (SELECT v FROM _t WHERE k='mdatei_a'),
     (SELECT v FROM _t WHERE k='schuel_a'),
-    (SELECT v FROM _t WHERE k='schule_a'),
     'sonstiges', 'test.pdf', 'mitglied-dateien/test.pdf'
   ON CONFLICT (id) DO NOTHING;
 
