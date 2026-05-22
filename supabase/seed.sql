@@ -119,3 +119,27 @@ GRANT SELECT ON public.mitglieder_mit_email TO authenticated;
 
 -- ─── Admin-User ───────────────────────────────────────────────
 SELECT public.create_user('emre.dingil01@gmail.com', '123456', 'Emre Dingil', 'superadmin');
+
+-- ─── Realtime Broadcast Policies ──────────────────────────────
+-- Supabase Realtime v2 "Broadcast via database" requires INSERT/SELECT
+-- on realtime.messages — without these policies (RLS is enabled)
+-- channel subscriptions get CHANNEL_ERROR and broadcasts are silently dropped.
+DO $$ BEGIN
+  CREATE POLICY "authenticated can insert" ON realtime.messages
+    FOR INSERT TO authenticated WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "authenticated can select" ON realtime.messages
+    FOR SELECT TO authenticated USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "anon can insert" ON realtime.messages
+    FOR INSERT TO anon WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "anon can select" ON realtime.messages
+    FOR SELECT TO anon USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
