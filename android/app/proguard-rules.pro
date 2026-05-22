@@ -5,6 +5,9 @@
 # Firebase / FCM
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }
+# Firebase Kotlin extensions are referenced but not bundled — suppress R8 missing-class errors
+-dontwarn com.google.firebase.ktx.**
+-dontwarn com.google.firebase.installations.ktx.**
 
 # Annotations used by Capacitor plugins
 -keepattributes *Annotation*
