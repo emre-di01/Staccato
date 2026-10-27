@@ -103,7 +103,7 @@ Traffic über `lo` läuft. Der Test muss von einem anderen Rechner kommen, z.B. 
 
 ## Offene Punkte / Empfehlungen
 
-1. **DSGVO Art. 33**: Prüfen, ob eine Meldung an die Aufsichtsbehörde nötig ist. Ein Lesezugriff war möglich,
+1. ~~DSGVO Art. 33~~ → entschieden, siehe „DSGVO-Bewertung“ am Ende. Ursprünglich: Prüfen, ob eine Meldung an die Aufsichtsbehörde nötig ist. Ein Lesezugriff war möglich,
    ist aber nicht belegt. Keine Bankdaten Dritter betroffen; potenziell betroffen sind Namen, E-Mails sowie
    wenige Telefonnummern, Geburtsdaten und Adressen. Frist: 72 h ab Kenntnis (2026-10-27 21:10 UTC → **2026-10-30 21:10 UTC**).
    Die Entscheidung dokumentieren, auch wenn nicht gemeldet wird.
@@ -193,4 +193,23 @@ mosque-signage lief ebenfalls mit dem öffentlichen Default-JWT-Secret. Auf Wuns
 | I | SSH: `PermitRootLogin yes`, Passwort-Login an, kein fail2ban, kein SSH-Key für `edidev` | hoch | **Bewusst zurückgestellt (2026-10-27).** Fertiges Skript: `infra/ssh/harden-ssh.sh` (Stufe 1 Root-Login aus + fail2ban, Stufe 2 `--keys-only`) |
 | J | Öffentlich: Portainer `9443`/`8000` (= Root über Docker), `8080`, `9876` (basic-pitch), `9877` (lyrica), `8082` (zusätzlich zu nginx) | hoch (Portainer) | Firewall-Regel analog `infra/firewall/` |
 | K | `localhost+2-key.pem` (mkcert-Dev-Zertifikat) liegt in Git | niedrig | Aus Repo entfernen, `.gitignore` |
-| L | Durch A und G waren Passwort-Hashes abgreifbar | DSGVO | In die Art.-33-Entscheidung einbeziehen, ggf. Passwort-Reset erzwingen |
+
+## DSGVO-Bewertung (Art. 33 Abs. 5), 2026-10-27
+
+**Entscheidung: keine Meldung an die Aufsichtsbehörde, keine Benachrichtigung der Betroffenen.**
+Begründung: Eine Verletzung im Sinne von Art. 4 Nr. 12 liegt vor (unbefugter DB-Login, öffentlich abrufbarer
+Dump), führt aber voraussichtlich nicht zu einem Risiko für die Betroffenen (Art. 33 Abs. 1):
+
+- Die App wurde nur intern genutzt, um auf Liedtexte zuzugreifen
+- Betroffen sind ca. 34 Konten: Name, E-Mail, Passwort-Hash. Daneben 7 Telefonnummern, 7 Geburtsdaten, 4 Adressen.
+  Keine Bankdaten Dritter (die einzige IBAN gehört dem Betreiber), keine Gesundheitsdaten oder anderen
+  besonderen Kategorien
+- Keine Minderjährigen unter den Betroffenen
+- Alle Passwörter wurden vom Betreiber initial vergeben, kein Nutzer hat eins selbst gewählt. Damit besteht kein
+  Risiko durch Passwörter, die auch woanders verwendet werden
+- Der Angreifer war ein automatisierter Krypto-Mining-Bot, der Code ausführen wollte. Es gibt keinen Hinweis,
+  dass Daten abgerufen wurden, alle Ausführungsversuche sind gescheitert
+- Alle Zugangswege wurden am 2026-10-27 geschlossen (Firewall, Dev-Server, JWT-Secret, RPC-Härtung)
+
+Restmaßnahme: Falls die initialen Passwörter schwach oder nach einem Muster vergeben sind, über die
+Mitgliederverwaltung neu setzen (die Hashes waren über den Dump abgreifbar).
