@@ -157,6 +157,9 @@ site_url = "env(APP_URL)"
 additional_redirect_urls = ["https://127.0.0.1:3000", "env(APP_URL)"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
+# Eigenes Secret statt des öffentlichen Supabase-Defaults (Wert in supabase/.env, gitignored).
+# supabase/.env MUSS vor `supabase start` gesourced sein. Hintergrund: docs/security-incident-2026-10-27.md
+jwt_secret = "env(STACCATO_JWT_SECRET)"
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
@@ -167,7 +170,8 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
-enable_signup = true
+# Aus: Nutzer entstehen nur über create_user / Einladung / Demo (Admin-API, davon unberührt).
+enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
@@ -209,7 +213,7 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-enable_signup = true
+enable_signup = false
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true

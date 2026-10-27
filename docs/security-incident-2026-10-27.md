@@ -151,13 +151,37 @@ unproblematisch. Folgen:
   ca. 1 s Recovery, keine Daten betroffen, Transaktion zurückgerollt).
 - Beim nächsten Supabase-CLI-Update prüfen, ob ein neueres Image den Fehler behebt.
 
+### JWT-Secret gewechselt + Registrierung abgeschaltet (2026-10-27, ca. 21:47–21:51 UTC)
+
+| # | Lücke | Fix |
+|---|-------|-----|
+| G | **JWT-Secret war der öffentliche Supabase-Default.** Mit dem öffentlich bekannten Demo-`service_role`-Key hatte jeder vollen Zugriff über `https://api.401dev.de` (vorher HTTP 200, jetzt 401) | Eigenes Secret: `jwt_secret = "env(STACCATO_JWT_SECRET)"` in `config.toml`, Wert (80 Hex-Zeichen) nur in `supabase/.env`. Neuer anon-Key in `.env.prod`, Frontend neu gebaut |
+| H | Öffentliche Registrierung war aktiv, obwohl die App sie nicht nutzt | `enable_signup = false` in `[auth]` und `[auth.email]`. Admin-API (`create_user`, `accept-invitation`, `demo-genehmigen`) ist davon nicht betroffen |
+
+Ablauf und Folgen:
+- Vorher DB-Backup: `~/backups/staccato-prod/pre_jwt_rotation_20261027_214610.dump` (plus alte `config.toml`, `supabase/.env`, `.env.prod` als `*.pre_jwt`)
+- `supabase stop` (ohne Flags, Daten im Volume) → `supabase start --ignore-health-check`
+- **Ausfall ca. 4 Minuten**, weil der erste Start abbrach: Das CLI prüft `https://api.401dev.de/rest-admin/v1/ready`
+  (wegen `external_url`), und die nginx-Pfadliste antwortet darauf mit 403. Danach stoppt das CLI alle Container.
+  Die Daten waren nicht betroffen. **Künftig immer `supabase start --ignore-health-check`** (siehe CLAUDE.md)
+- Eingeloggte Nutzer bekommen beim nächsten Token-Refresh neue Tokens. Wer noch ein altes PWA-Bundle im Cache hat,
+  muss die Seite einmal neu laden
+- iCal-Abos funktionieren weiter: Der alte Bearer-Header in der Live-nginx-Config wird von der Function ignoriert
+  (`verify_jwt = false`). Er kann bei Gelegenheit raus
+- Geprüft danach: REST, Storage, Auth, iCal, Realtime-WebSocket (101), Cron-Jobs, Daten (34 Profile/Users)
+- Nebenbefund: In `schema_migrations` fehlte `20260517000007`. `deploy.sh prod` hat sie dabei nachgeholt und damit
+  die bereits entfernte Spalte `schulen.hat_ki_extraktion` wieder angelegt. Die Spalte ist wieder gelöscht, und
+  der Eintrag in `schema_migrations` bleibt, damit es nicht noch einmal passiert
+
+**Noch zu tun:** Das GitHub-Secret `VITE_SUPABASE_ANON_KEY` muss auf den neuen Key gesetzt werden (für Build-Check
+und Android-Release). Mit dem vorhandenen Token ging das nicht (403). Die Android-App war noch nicht im Store.
+
 ## Offen
 
 | # | Lücke | Risiko | Fix |
 |---|-------|--------|-----|
-| G | **JWT-Secret ist der öffentliche Supabase-Default** (staccato + mosque-signage). Mit dem öffentlich bekannten Demo-`service_role`-Key hat jeder vollen Zugriff über `https://api.401dev.de` (getestet: HTTP 200) | **kritisch** | Neues Secret in `config.toml`, Supabase neu starten, Frontend mit neuem anon-Key bauen. Nutzer müssen sich ggf. neu einloggen |
-| H | Öffentliche Registrierung aktiv (`enable_signup = true`), wird von der App nicht genutzt (Magic Link mit `shouldCreateUser: false`, Nutzer entstehen per `create_user`/Edge Functions mit Admin-API) | mittel (nach B nur noch Schüler-Konten in der Default-Schule) | `enable_signup = false` in `[auth]` und `[auth.email]`, zusammen mit G |
 | I | SSH: `PermitRootLogin yes`, Passwort-Login an, kein fail2ban | hoch | Nur Key-Login, Root-Login aus, fail2ban |
 | J | Öffentlich: Portainer `9443`/`8000` (= Root über Docker), `8080`, `9876` (basic-pitch), `9877` (lyrica), `8082` (zusätzlich zu nginx) | hoch (Portainer) | Firewall-Regel analog `infra/firewall/` |
 | K | `localhost+2-key.pem` (mkcert-Dev-Zertifikat) liegt in Git | niedrig | Aus Repo entfernen, `.gitignore` |
+| M | **mosque-signage** nutzt ebenfalls den öffentlichen Default-JWT-Secret (`mosque-api.401dev.de`) | kritisch | Gleiches Vorgehen wie G im Projekt `~/dev/mosque-signage` |
 | L | Durch A und G waren Passwort-Hashes abgreifbar | DSGVO | In die Art.-33-Entscheidung einbeziehen, ggf. Passwort-Reset erzwingen |

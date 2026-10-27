@@ -159,10 +159,14 @@ Docker umgeht ufw und veröffentlicht die Supabase-Ports auf `0.0.0.0`. Die Port
 ### Supabase lokal starten (für Prod-Migrations-Tests)
 
 ```bash
-set -a && source supabase/.env && set +a && supabase start
+set -a && source supabase/.env && set +a && supabase start --ignore-health-check
 ```
 
-Die `.env`-Datei muss vor `supabase start` gesourced werden, damit Edge Functions die SMTP-Credentials aus dem Container-Environment lesen können (`[edge_runtime.secrets]` in `config.toml`).
+Die `.env`-Datei muss vor `supabase start` gesourced werden, damit Edge Functions die SMTP-Credentials aus dem Container-Environment lesen können (`[edge_runtime.secrets]` in `config.toml`). **Außerdem enthält sie `STACCATO_JWT_SECRET`** (`jwt_secret = "env(STACCATO_JWT_SECRET)"` in `config.toml`). Ohne gesourcte `.env` starten die Dienste mit falschem Secret, und alle Clients bekommen 401.
+
+`--ignore-health-check` ist nötig: Das CLI prüft beim Start `https://api.401dev.de/rest-admin/v1/ready`, nginx blockt diesen Pfad mit 403, und das CLI stoppt danach alle Container wieder.
+
+Nach einem Wechsel des JWT-Secrets ändert sich der anon-Key (`supabase status -o env`). Dann `.env.prod` und das GitHub-Secret `VITE_SUPABASE_ANON_KEY` anpassen und `./deploy.sh prod` ausführen.
 
 **NIEMALS** `supabase db reset` auf einer laufenden Instanz mit Daten ausführen — löscht alle Daten unwiderruflich.  
 **NIEMALS** `supabase stop --no-backup` — löscht das Volume-Backup, führt zu komplettem Datenverlust beim nächsten Start.
