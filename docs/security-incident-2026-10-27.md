@@ -191,7 +191,7 @@ mosque-signage lief ebenfalls mit dem öffentlichen Default-JWT-Secret. Auf Wuns
 | # | Lücke | Risiko | Fix |
 |---|-------|--------|-----|
 | I | SSH: `PermitRootLogin yes`, Passwort-Login an, kein fail2ban, kein SSH-Key für `edidev` | hoch | **Bewusst zurückgestellt (2026-10-27).** Fertiges Skript: `infra/ssh/harden-ssh.sh` (Stufe 1 Root-Login aus + fail2ban, Stufe 2 `--keys-only`) |
-| J | Öffentlich: Portainer `9443`/`8000` (= Root über Docker), `8080`, `9876` (basic-pitch), `9877` (lyrica), `8082` (zusätzlich zu nginx) | hoch (Portainer) | Firewall-Regel analog `infra/firewall/` |
+| J | Öffentlich: `8080`, `9876` (basic-pitch), `9877` (lyrica), `8082` (awqatsalah, gestoppt). **Portainer** (`9443`/`8000`, = Root über Docker) am 2026-10-27 abgeschaltet: `docker stop portainer`, Restart-Policy `no`. Daten bleiben im Volume `portainer_data`. Wieder starten mit `docker start portainer` | mittel | Bei Bedarf Firewall-Regel analog `infra/firewall/` |
 | K | `localhost+2-key.pem` (mkcert-Dev-Zertifikat) liegt in Git | niedrig | Aus Repo entfernen, `.gitignore` |
 
 ## DSGVO-Bewertung (Art. 33 Abs. 5), 2026-10-27
