@@ -1,0 +1,13 @@
+[Unit]
+Description=Supabase-Ports vom Internet abschotten (DOCKER-USER/INPUT)
+After=docker.service network-online.target
+Wants=network-online.target
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/supabase-firewall.sh
+
+[Install]
+WantedBy=multi-user.target docker.service

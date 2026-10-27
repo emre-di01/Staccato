@@ -152,6 +152,10 @@ Auto-Renewal läuft via systemd-Timer (`certbot.timer`) — normalerweise kein m
 
 Wichtig: Vor `certbot` muss der DNS-A-Record für die neue Domain auf die Server-IP zeigen und propagiert sein, sonst schlägt die ACME-Challenge fehl.
 
+### Firewall: Supabase-Ports nicht öffentlich
+
+Docker umgeht ufw und veröffentlicht die Supabase-Ports auf `0.0.0.0`. Die Ports 54320–54349 (Postgres, Studio, Kong, Inbucket von staccato + mosque-signage) werden deshalb von `infra/firewall/supabase-firewall.sh` auf `venet0` gesperrt (systemd-Unit `supabase-firewall.service`, läuft beim Boot und bei Docker-Neustart). nginx und `deploy.sh` nutzen localhost und sind nicht betroffen. Studio und DB von außen nur per SSH-Tunnel. Hintergrund: `docs/security-incident-2026-10-27.md`.
+
 ### Supabase lokal starten (für Prod-Migrations-Tests)
 
 ```bash
@@ -638,6 +642,7 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20260517000011_rechnung_unveraenderlich.sql` | GoBD §239 Trigger `rechnung_unveraenderlich_trigger` — blockiert nachträgliche Änderung von Rechnungsfeldern (Betrag, Positionen, Empfänger etc.); nur `bezahlt_am`, `zahlungsweg`, `storniert_*` änderbar |
 | `20260517000012_fix_lehrer_events_rls.sql` | RLS-Fix Events: Lehrer sehen nur öffentliche Events, selbst erstellte Events oder Events wo sie Teilnehmer sind; `vorstandssitzung` grundsätzlich ausgeblendet für Lehrer |
 | `20260517000013_stuecke_spotify_url.sql` | `spotify_url` Spalte auf `stuecke` |
+| `20261027000000_security_haertung.sql` | Sicherheits-Härtung: `handle_new_user` ignoriert `rolle` aus user_metadata, Trigger `profil_schutz` (keine Selbst-Eskalation von rolle/schule), Rollen-/Schulprüfung in Admin-RPCs, Helfer `ist_intern()`/`ist_admin_von_schule()`/`darf_nutzer_verwalten()`. **Kein `REVOKE EXECUTE` auf Funktionen** — Postgres-Image segfaultet bei "permission denied for function"; Zugriff immer per `RAISE` in der Funktion prüfen |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

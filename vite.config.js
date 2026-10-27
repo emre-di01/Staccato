@@ -58,7 +58,7 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0',
+    host: '127.0.0.1', // nicht öffentlich: Dev-Server liefert sonst Dateien aus dem Projektordner aus (Zugriff per SSH-Tunnel)
     port: 5173,
   },
 })
