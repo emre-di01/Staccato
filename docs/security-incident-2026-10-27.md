@@ -176,6 +176,16 @@ Ablauf und Folgen:
 **Noch zu tun:** Das GitHub-Secret `VITE_SUPABASE_ANON_KEY` muss auf den neuen Key gesetzt werden (für Build-Check
 und Android-Release). Mit dem vorhandenen Token ging das nicht (403). Die Android-App war noch nicht im Store.
 
+### mosque-signage abgeschaltet (2026-10-27, 21:56 UTC)
+
+mosque-signage lief ebenfalls mit dem öffentlichen Default-JWT-Secret. Auf Wunsch abgeschaltet statt gehärtet:
+- Backup: `~/backups/mosque-signage/pre_shutdown_20261027_215637.dump`
+- `supabase stop` (ohne Flags, Daten bleiben in den Volumes `supabase_*_mosque-signage`), `docker stop awqatsalah`
+  (Restart-Policy `unless-stopped`, bleibt auch nach einem Reboot aus)
+- `mosque-api.401dev.de` liefert 502. `mosque.401dev.de` liefert noch die statische Seite aus (nginx-Site aktiv)
+- **Vor einem Wieder-Einschalten** erst ein eigenes JWT-Secret setzen (Vorgehen wie bei G), sonst ist die API sofort
+  wieder voll angreifbar
+
 ## Offen
 
 | # | Lücke | Risiko | Fix |
@@ -183,5 +193,4 @@ und Android-Release). Mit dem vorhandenen Token ging das nicht (403). Die Androi
 | I | SSH: `PermitRootLogin yes`, Passwort-Login an, kein fail2ban | hoch | Nur Key-Login, Root-Login aus, fail2ban |
 | J | Öffentlich: Portainer `9443`/`8000` (= Root über Docker), `8080`, `9876` (basic-pitch), `9877` (lyrica), `8082` (zusätzlich zu nginx) | hoch (Portainer) | Firewall-Regel analog `infra/firewall/` |
 | K | `localhost+2-key.pem` (mkcert-Dev-Zertifikat) liegt in Git | niedrig | Aus Repo entfernen, `.gitignore` |
-| M | **mosque-signage** nutzt ebenfalls den öffentlichen Default-JWT-Secret (`mosque-api.401dev.de`) | kritisch | Gleiches Vorgehen wie G im Projekt `~/dev/mosque-signage` |
 | L | Durch A und G waren Passwort-Hashes abgreifbar | DSGVO | In die Art.-33-Entscheidung einbeziehen, ggf. Passwort-Reset erzwingen |
