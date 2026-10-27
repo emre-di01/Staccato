@@ -190,7 +190,7 @@ mosque-signage lief ebenfalls mit dem öffentlichen Default-JWT-Secret. Auf Wuns
 
 | # | Lücke | Risiko | Fix |
 |---|-------|--------|-----|
-| I | SSH: `PermitRootLogin yes`, Passwort-Login an, kein fail2ban. Für `edidev` ist **kein SSH-Key** hinterlegt (Login per Passwort) | hoch | `infra/ssh/harden-ssh.sh`. Stufe 1 (`sudo bash infra/ssh/harden-ssh.sh`): Root-Login aus, MaxAuthTries 3, fail2ban (5 Fehlversuche/10 min → 1 h Sperre). Stufe 2 (`--keys-only`): Passwort-Login aus. Das Skript bricht ab, solange kein Key hinterlegt ist und kein Key-Login in `auth.log` steht |
+| I | SSH: `PermitRootLogin yes`, Passwort-Login an, kein fail2ban, kein SSH-Key für `edidev` | hoch | **Bewusst zurückgestellt (2026-10-27).** Fertiges Skript: `infra/ssh/harden-ssh.sh` (Stufe 1 Root-Login aus + fail2ban, Stufe 2 `--keys-only`) |
 | J | Öffentlich: Portainer `9443`/`8000` (= Root über Docker), `8080`, `9876` (basic-pitch), `9877` (lyrica), `8082` (zusätzlich zu nginx) | hoch (Portainer) | Firewall-Regel analog `infra/firewall/` |
 | K | `localhost+2-key.pem` (mkcert-Dev-Zertifikat) liegt in Git | niedrig | Aus Repo entfernen, `.gitignore` |
 | L | Durch A und G waren Passwort-Hashes abgreifbar | DSGVO | In die Art.-33-Entscheidung einbeziehen, ggf. Passwort-Reset erzwingen |
