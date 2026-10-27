@@ -213,7 +213,9 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-enable_signup = false
+# MUSS true bleiben: false setzt GOTRUE_EXTERNAL_EMAIL_ENABLED=false und schaltet den GESAMTEN E-Mail-Login
+# ab (Passwort + Magic Link). Registrierung ist über [auth] enable_signup = false gesperrt.
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true

@@ -156,7 +156,7 @@ unproblematisch. Folgen:
 | # | Lücke | Fix |
 |---|-------|-----|
 | G | **JWT-Secret war der öffentliche Supabase-Default.** Mit dem öffentlich bekannten Demo-`service_role`-Key hatte jeder vollen Zugriff über `https://api.401dev.de` (vorher HTTP 200, jetzt 401) | Eigenes Secret: `jwt_secret = "env(STACCATO_JWT_SECRET)"` in `config.toml`, Wert (80 Hex-Zeichen) nur in `supabase/.env`. Neuer anon-Key in `.env.prod`, Frontend neu gebaut |
-| H | Öffentliche Registrierung war aktiv, obwohl die App sie nicht nutzt | `enable_signup = false` in `[auth]` und `[auth.email]`. Admin-API (`create_user`, `accept-invitation`, `demo-genehmigen`) ist davon nicht betroffen |
+| H | Öffentliche Registrierung war aktiv, obwohl die App sie nicht nutzt | `enable_signup = false` in `[auth]`. Admin-API (`create_user`, `accept-invitation`, `demo-genehmigen`) ist davon nicht betroffen. **Achtung:** `[auth.email] enable_signup = false` schaltet im lokalen Supabase den gesamten E-Mail-Login ab (`GOTRUE_EXTERNAL_EMAIL_ENABLED=false`). Das war zuerst gesetzt, und Magic Link und Passwort-Login lieferten „Email logins are disabled“ (ca. 21:51–22:20 UTC). Zurückgenommen, Supabase neu gestartet (Ausfall ca. 1 min) |
 
 Ablauf und Folgen:
 - Vorher DB-Backup: `~/backups/staccato-prod/pre_jwt_rotation_20261027_214610.dump` (plus alte `config.toml`, `supabase/.env`, `.env.prod` als `*.pre_jwt`)
