@@ -186,6 +186,26 @@ mosque-signage lief ebenfalls mit dem öffentlichen Default-JWT-Secret. Auf Wuns
 - **Vor einem Wieder-Einschalten** erst ein eigenes JWT-Secret setzen (Vorgehen wie bei G), sonst ist die API sofort
   wieder voll angreifbar
 
+### Prod-Drift behoben (2026-10-27)
+
+Beim Schema-Vergleich prod ↔ dev (`supabase db dump --linked` gegen `pg_dump`) gab es auf prod Abweichungen:
+- `public.escalate_priv()`: Event-Trigger-Funktion des Angreifers, die einen Superuser `priv_esc` angelegt hätte.
+  Sie war nie an einen Event-Trigger gebunden (das darf `postgres` nicht), also nie aktiv. Angelegt nach allen
+  Migrationen, aber vor dem 20.10. (laut OID), genauer nicht datierbar, weil die DB-Logs beim Neustart verloren gingen.
+  Definition gesichert als `~/backups/staccato-prod/escalate_priv_definition.sql`
+- `stunden`-Policies ohne Schulfilter (die Migration 20260510000000 war verbucht, aber nicht wirksam)
+- `rechnungen`: zusätzliche Policy `rech: admin` (FOR ALL inkl. DELETE). **Bewusst offen gelassen**, Rechnungen
+  werden derzeit nicht genutzt
+
+Ursache: `deploy.sh` rief `psql` ohne `ON_ERROR_STOP` auf. SQL-Fehler liefen durch, und die Migration wurde
+trotzdem in `schema_migrations` verbucht (siehe auch `20260517000007`). Fix:
+- Migration `20261027000001_fix_prod_drift.sql` (escalate_priv weg, stunden-Policies wie auf dev)
+- `deploy.sh`: jede Migration läuft samt Verbuchung in einer Transaktion mit `ON_ERROR_STOP`. Bei einem Fehler
+  wird zurückgerollt, nichts verbucht und der Deploy abgebrochen
+
+Weiterhin abweichend: Auf dev (Supabase Cloud) ist die öffentliche Registrierung noch an. Das ist eine
+Dashboard-Einstellung und wird von `config.toml` nicht übernommen.
+
 ## Offen
 
 | # | Lücke | Risiko | Fix |

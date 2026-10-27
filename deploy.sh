@@ -22,10 +22,13 @@ apply_migration() {
   version=$(basename "$file" | cut -d_ -f1)
   name=$(basename "$file" .sql | cut -d_ -f2-)
   log "Migration $version ($name)..."
-  docker exec -i "$DB_CONTAINER" psql -U postgres postgres < "$file"
-  docker exec "$DB_CONTAINER" psql -U postgres postgres -c \
-    "INSERT INTO supabase_migrations.schema_migrations (version, name)
-     VALUES ('$version', '$name') ON CONFLICT DO NOTHING;" > /dev/null
+  # Migration + Verbuchung in EINER Transaktion, Abbruch beim ersten Fehler.
+  # Früher liefen Fehler durch und die Migration wurde trotzdem verbucht → Prod-Drift (siehe 20261027000001).
+  if ! { cat "$file"; printf "\nINSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('%s', '%s') ON CONFLICT DO NOTHING;\n" "$version" "$name"; } \
+       | docker exec -i "$DB_CONTAINER" psql -U postgres -v ON_ERROR_STOP=1 --single-transaction -q postgres > /dev/null; then
+    echo "FEHLER: Migration $version ($name) fehlgeschlagen — zurückgerollt, nicht verbucht. Deploy abgebrochen."
+    exit 1
+  fi
 }
 
 apply_pending_migrations() {
