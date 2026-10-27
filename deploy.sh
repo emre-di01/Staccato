@@ -16,6 +16,11 @@ get_applied_versions() {
     | tr -d ' \r'
 }
 
+migration_verbucht() {
+  [ "$(docker exec "$DB_CONTAINER" psql -U postgres -tA -v ON_ERROR_STOP=1 -c \
+      "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version = '$1';")" != "0" ]
+}
+
 apply_migration() {
   local file="$1"
   local version name
@@ -39,7 +44,9 @@ apply_pending_migrations() {
   for f in "$MIGRATIONS_DIR"/*.sql; do
     local version
     version=$(basename "$f" | cut -d_ -f1)
-    if ! echo "$applied" | grep -qx "$version"; then
+    # Here-String statt Pipe (kein SIGPIPE/pipefail-Fehlalarm) + Gegenprobe direkt in der DB:
+    # Fehlalarme haben bereits angewendete Migrationen erneut ausgeführt und Objekte auf alte Stände zurückgesetzt.
+    if ! grep -qx "$version" <<< "$applied" && ! migration_verbucht "$version"; then
       apply_migration "$f"
       count=$((count + 1))
     fi

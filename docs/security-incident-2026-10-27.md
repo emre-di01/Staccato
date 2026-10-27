@@ -203,6 +203,14 @@ trotzdem in `schema_migrations` verbucht (siehe auch `20260517000007`). Fix:
 - `deploy.sh`: jede Migration läuft samt Verbuchung in einer Transaktion mit `ON_ERROR_STOP`. Bei einem Fehler
   wird zurückgerollt, nichts verbucht und der Deploy abgebrochen
 
+Zweiter Fehler in `deploy.sh`: Die Erkennung ausstehender Migrationen (`echo "$applied" | grep -qx`) hat
+sporadisch bereits verbuchte Migrationen als ausstehend gemeldet (Einträge nachweislich aus dem Mai, `xmin`).
+Am 2026-10-27 hat das zweimal ältere Migrationen erneut ausgeführt: `20260517000007` (Spalte
+`hat_ki_extraktion` wieder angelegt, manuell gelöscht) und `20260517000001` (`rechnungsnummer_vergeben()` auf
+einen alten Stand zurückgesetzt, wiederhergestellt per `20261027000002`). Das erklärt vermutlich auch den
+älteren Drift. Fix: Here-String statt Pipe plus Gegenprobe direkt in `schema_migrations`, bevor eine Migration
+läuft. In 40 Trockenläufen ließ sich der Fehler nicht reproduzieren, die Gegenprobe greift unabhängig davon.
+
 Weiterhin abweichend: Auf dev (Supabase Cloud) ist die öffentliche Registrierung noch an. Das ist eine
 Dashboard-Einstellung und wird von `config.toml` nicht übernommen.
 
