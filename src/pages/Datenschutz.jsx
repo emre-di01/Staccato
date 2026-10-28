@@ -1,17 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+import RechtsRahmen, { sek, h2, p, ul, link } from '../neu/seiten/RechtsRahmen'
 
 export default function Datenschutz() {
-  const navigate = useNavigate()
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <button onClick={() => navigate(-1)}
-        style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 24px', display:'block' }}>
-        ← Zurück
-      </button>
-
-      <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>Datenschutzerklärung</h1>
-      <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 32 }}>Stand: Mai 2026</p>
-
+    <RechtsRahmen titel="Datenschutzerklärung" unter="Stand: Mai 2026">
       <section style={sek}>
         <h2 style={h2}>1. Verantwortlicher</h2>
         <p style={p}>
@@ -143,16 +134,6 @@ export default function Datenschutz() {
         <p style={p}>Sofern Schülerinnen und Schüler unter 16 Jahren in der Plattform erfasst werden, erfolgt dies auf Grundlage der Einwilligung der Erziehungsberechtigten durch die jeweilige Musikschule. Erziehungsberechtigte können jederzeit Auskunft, Berichtigung oder Löschung der Daten ihrer Kinder verlangen.</p>
       </section>
 
-      <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid var(--border)', display: 'flex', gap: 20, fontSize: 13, color: 'var(--text-3)' }}>
-        <a href="/impressum" style={link}>Impressum</a>
-        <a href="/lizenzen" style={link}>Open-Source-Lizenzen</a>
-      </div>
-    </div>
+    </RechtsRahmen>
   )
 }
-
-const sek  = { marginBottom: 32 }
-const h2   = { fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid var(--border)' }
-const p    = { fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7, margin: 0 }
-const ul   = { fontSize: 14, color: 'var(--text-2)', lineHeight: 1.8, paddingLeft: 20, margin: '10px 0 0' }
-const link = { color: 'var(--primary)', textDecoration: 'none' }

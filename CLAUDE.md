@@ -226,7 +226,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.0** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.10.0** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -306,7 +306,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/profil` | `ProfilSeite` | all authenticated |
 | `/einstellungen` | `Einstellungen` | all authenticated |
 | `/session/:code` | `SchuelerSession` | public (no auth) |
-| `/beamer` | `BeamerDisplay` | public (no auth) |
+| `/beamer` | `NeuBeamer` (`src/neu/seiten/Beamer.jsx`) | public (no auth) |
 | `/impressum` | `Impressum` | public |
 | `/datenschutz` | `Datenschutz` | public |
 | `/lizenzen` | `Lizenzen` | public |
@@ -433,7 +433,7 @@ Staccato is a full music school management platform. Features by area:
 
 - **FAQ** (`src/pages/schueler/FAQ.jsx`, `src/pages/vorstand/FAQ.jsx`): Role-specific FAQ pages for schueler and vorstand roles.
 
-- **Beamer** (`src/pages/BeamerDisplay.jsx`): Public fullscreen display at `/beamer` for projecting lesson content (liedtext as Markdown or ChordPro, YouTube, QR code). Font size adjustable via A−/A+ buttons. Connects to a live session by code, or displays standalone content. Dark background optimised for projection.
+- **Beamer** (`src/neu/seiten/Beamer.jsx`): Public fullscreen display at `/beamer` (new design, always dark). Shows a 4-char code + QR; the teacher connects from the live lesson and pushes piece + view (liedtext MD/Plain, ChordPro, Noten, YouTube). Font size via −/+ or from the teacher; fullscreen button.
 
 - **Nachrichten** (`src/pages/Nachrichten.jsx`): Messaging for all roles. Three message types: `direkt` (direct 1:1), `broadcast` (school-wide), `kurs` (course group). The same component serves admin, lehrer, schueler, and eltern routes. Features: unread badge in the sidebar nav, compose modal (select type → recipient/course → subject + body), message list with sender avatar/role chip, read-receipt tracking via `nachricht_gelesen`, soft-delete per user (`nachricht_geloescht`). Mobile-optimised: stack navigation (list → detail → compose), bottom-sheet compose. Desktop: persistent popup (bottom-right, hover). Admins and teachers can send all types; students and parents receive only.
 

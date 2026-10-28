@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import RechtsRahmen, { link } from '../neu/seiten/RechtsRahmen'
 
 const PAKETE = [
   {
@@ -147,58 +147,30 @@ const PAKETE = [
   },
 ]
 
-const LIZENZ_FARBEN = {
-  'MIT':        { bg: '#10b98122', text: '#10b981' },
-  'Apache 2.0': { bg: '#f59e0b22', text: '#d97706' },
-}
-
 export default function Lizenzen() {
-  const navigate = useNavigate()
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <button onClick={() => navigate(-1)}
-        style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 24px', display:'block' }}>
-        ← Zurück
-      </button>
-
-      <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>Open-Source-Lizenzen</h1>
-      <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 32 }}>
-        Staccato wurde mit folgenden Open-Source-Bibliotheken gebaut. Wir danken allen Entwicklerinnen und Entwicklern für ihre Arbeit.
-      </p>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {PAKETE.map(p => {
-          const lf = LIZENZ_FARBEN[p.lizenz] ?? { bg: '#6366f122', text: '#6366f1' }
-          return (
-            <div key={p.name} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'16px 20px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4, flexWrap:'wrap' }}>
-                  <a href={p.url} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize:15, fontWeight:700, color:'var(--primary)', textDecoration:'none' }}>
-                    {p.name}
-                  </a>
-                  <span style={{ fontSize:12, color:'var(--text-3)' }}>v{p.version}</span>
-                </div>
-                <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:4 }}>{p.zweck}</div>
-                <div style={{ fontSize:12, color:'var(--text-3)' }}>{p.autor}</div>
+    <RechtsRahmen titel="Open-Source-Lizenzen" unter="Staccato wurde mit folgenden Open-Source-Bibliotheken gebaut. Wir danken allen Entwicklerinnen und Entwicklern für ihre Arbeit.">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {PAKETE.map(paket => (
+          <div key={paket.name} style={{ background: 'var(--n-fill, var(--surface))', borderRadius: 18, padding: '16px 18px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                <a href={paket.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', textDecoration: 'none', overflowWrap: 'anywhere' }}>{paket.name}</a>
+                <span style={{ fontSize: 15, color: 'var(--text-2)' }}>v{paket.version}</span>
               </div>
-              <span style={{ fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:99, background: lf.bg, color: lf.text, whiteSpace:'nowrap', flexShrink:0 }}>
-                {p.lizenz}
-              </span>
+              <div style={{ marginTop: 2, fontSize: 15, color: 'var(--text-2)' }}>{paket.zweck}</div>
+              <div style={{ marginTop: 2, fontSize: 15, color: 'var(--text-2)' }}>{paket.autor}</div>
             </div>
-          )
-        })}
+            <span style={{ fontSize: 13, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: 'var(--n-tint, var(--bg-2))', color: 'var(--n-tint-fg, var(--primary))', whiteSpace: 'nowrap', flexShrink: 0 }}>{paket.lizenz}</span>
+          </div>
+        ))}
       </div>
 
-      <div style={{ marginTop: 40, padding: '20px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', fontSize:13, color:'var(--text-3)', lineHeight:1.7 }}>
-        <strong style={{ color:'var(--text-2)' }}>MIT License</strong> — Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.<br /><br />
-        <strong style={{ color:'var(--text-2)' }}>Apache License 2.0</strong> — Licensed under the Apache License, Version 2.0; you may not use a file except in compliance with the License. You may obtain a copy at <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener noreferrer" style={{ color:'var(--primary)', textDecoration:'none' }}>apache.org/licenses/LICENSE-2.0</a>.
+      <div style={{ marginTop: 32, padding: 20, background: 'var(--n-fill, var(--surface))', borderRadius: 18, fontSize: 15, color: 'var(--text-2)', lineHeight: 1.6 }}>
+        <strong style={{ color: 'var(--text)' }}>MIT License</strong> — Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.<br /><br />
+        <strong style={{ color: 'var(--text)' }}>Apache License 2.0</strong> — Licensed under the Apache License, Version 2.0; you may not use a file except in compliance with the License. You may obtain a copy at <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener noreferrer" style={link}>apache.org/licenses/LICENSE-2.0</a>.
       </div>
 
-      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)', display: 'flex', gap: 20, fontSize: 13, color: 'var(--text-3)' }}>
-        <a href="/impressum" style={{ color:'var(--primary)', textDecoration:'none' }}>Impressum</a>
-        <a href="/datenschutz" style={{ color:'var(--primary)', textDecoration:'none' }}>Datenschutzerklärung</a>
-      </div>
-    </div>
+    </RechtsRahmen>
   )
 }

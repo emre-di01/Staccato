@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext'
 import { DokumentDialog } from './Dialog'
 
 const isMobile = () => 'ontouchstart' in window
+const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
 
 function rotateCanvas90CCW(canvas) {
   const off = document.createElement('canvas')
@@ -17,6 +18,7 @@ function rotateCanvas90CCW(canvas) {
 }
 
 function SigFullscreenModal({ label, onFertig, onSchliessen }) {
+  const { T } = useApp()
   const canvasRef    = useRef(null)
   const letzterPunkt = useRef(null)
   const [zeichnet,  setZeichnet]  = useState(false)
@@ -79,14 +81,14 @@ function SigFullscreenModal({ label, onFertig, onSchliessen }) {
     <div style={{ position: 'fixed', inset: 0, background: '#fff', zIndex: 2000, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ padding: 'max(10px, env(safe-area-inset-top)) 14px 10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, gap: 8 }}>
-        <button onClick={onSchliessen} style={btnStyle('#e2e8f0', '#64748b')}>Abbrechen</button>
+        <button onClick={onSchliessen} style={btnStyle('#e2e8f0', '#64748b')}>{T('cancel')}</button>
         <div style={{ textAlign: 'center', flex: 1 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{label}</div>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Von oben nach unten unterschreiben ↓</div>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{T('ndok_oben_nach_unten')} ↓</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={loeschen} style={btnStyle('#e2e8f0', '#64748b')}>Neu</button>
-          <button onClick={fertig} disabled={!hatInhalt} style={btnStyle(hatInhalt ? '#1e293b' : '#e2e8f0', hatInhalt ? '#fff' : '#94a3b8', !hatInhalt)}>✓ Fertig</button>
+          <button onClick={loeschen} style={btnStyle('#e2e8f0', '#64748b')}>{T('ndok_neu')}</button>
+          <button onClick={fertig} disabled={!hatInhalt} style={btnStyle(hatInhalt ? '#1e293b' : '#e2e8f0', hatInhalt ? '#fff' : '#94a3b8', !hatInhalt)}>✓ {T('ndok_fertig')}</button>
         </div>
       </div>
       {/* Canvas */}
@@ -97,7 +99,7 @@ function SigFullscreenModal({ label, onFertig, onSchliessen }) {
         {!hatInhalt && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', gap: 8 }}>
             <div style={{ fontSize: 52, color: '#e2e8f0', lineHeight: 1 }}>↓</div>
-            <div style={{ fontSize: 14, color: '#cbd5e1' }}>Hier unterschreiben</div>
+            <div style={{ fontSize: 14, color: '#cbd5e1' }}>{T('ndok_hier')}</div>
           </div>
         )}
       </div>
@@ -113,6 +115,7 @@ const btnStyle = (bg, color, disabled = false) => ({
 })
 
 function SignaturCanvas({ canvasRef, label }) {
+  const { T } = useApp()
   const [zeichnet,    setZeichnet]    = useState(false)
   const [fullscreen,  setFullscreen]  = useState(false)
   const [vorschau,    setVorschau]    = useState(null)
@@ -183,16 +186,16 @@ function SignaturCanvas({ canvasRef, label }) {
         <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', background: '#fff', overflow: 'hidden' }}>
           {vorschau ? (
             <>
-              <img src={vorschau} style={{ display: 'block', width: '100%', height: 100, objectFit: 'contain', background: '#fff' }} alt="Unterschrift" />
+              <img src={vorschau} style={{ display: 'block', width: '100%', height: 100, objectFit: 'contain', background: '#fff' }} alt={label} />
               <div style={{ borderTop: '1px solid #e2e8f0', padding: '6px 10px', display: 'flex', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={loeschen} style={{ background: 'transparent', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 10px' }}>
-                  Neu zeichnen
+                  {T('ndok_neu_zeichnen')}
                 </button>
               </div>
             </>
           ) : (
             <button type="button" onClick={() => setFullscreen(true)} style={{ display: 'block', width: '100%', height: 120, background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, fontFamily: 'inherit' }}>
-              ✍️ Tippen zum Unterschreiben
+              ✍️ {T('ndok_tippen')}
             </button>
           )}
           {/* Hidden canvas für toDataURL */}
@@ -205,7 +208,7 @@ function SignaturCanvas({ canvasRef, label }) {
             style={{ display: 'block', width: '100%', height: 160, cursor: 'crosshair', touchAction: 'none' }}
             onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop} />
           <button type="button" onClick={loeschen} style={{ position: 'absolute', top: 8, right: 10, background: 'rgba(255,255,255,0.85)', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 11, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit', padding: '3px 8px' }}>
-            Löschen
+            {T('ndok_loeschen')}
           </button>
         </div>
       )}
@@ -222,7 +225,7 @@ function SignaturCanvas({ canvasRef, label }) {
 }
 
 export default function AufnahmeantragModal({ mitglied, onClose }) {
-  const { schule, T } = useApp()
+  const { schule, T, lang } = useApp()
   const sigMitgliedRef      = useRef(null)
   const sigErziehungRef     = useRef(null)
   const sigVerantwortlichRef = useRef(null)
@@ -383,35 +386,36 @@ export default function AufnahmeantragModal({ mitglied, onClose }) {
   }
 
   return (
-    <DokumentDialog titel={T('nb_aufnahmeantrag')} titelAlt="📋 Aufnahmeantrag" onDrucken={drucken} onClose={onClose}>
+    <DokumentDialog titel={T('nb_aufnahmeantrag')} titelAlt={`📋 ${T('nb_aufnahmeantrag')}`} onDrucken={drucken} onClose={onClose}>
 
       {/* Datenvorschau */}
       <div style={{ background:'var(--bg)', borderRadius:'var(--radius)', padding:'12px 16px', fontSize:13, color:'var(--text-2)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px' }}>
-        <div><span style={{ color:'var(--text-3)' }}>Name: </span>{mitglied.voller_name}</div>
-        <div><span style={{ color:'var(--text-3)' }}>Geburtsdatum: </span>{mitglied.geburtsdatum ? new Date(mitglied.geburtsdatum).toLocaleDateString('de-DE') : '–'}</div>
-        <div><span style={{ color:'var(--text-3)' }}>Telefon: </span>{mitglied.telefon || '–'}</div>
-        <div><span style={{ color:'var(--text-3)' }}>E-Mail: </span>{mitglied.email || '–'}</div>
-        <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>Adresse: </span>{mitglied.adresse || '–'}</div>
-        <div><span style={{ color:'var(--text-3)' }}>Beitrag: </span>{mitglied.mitgliedsbeitrag ? `${Number(mitglied.mitgliedsbeitrag).toFixed(2)} €` : '–'}</div>
-        <div><span style={{ color:'var(--text-3)' }}>Zahlung: </span>{WEISE_LABEL[mitglied.zahlungsweise] ?? '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>{T('ndok_name')}: </span>{mitglied.voller_name}</div>
+        <div><span style={{ color:'var(--text-3)' }}>{T('ndok_geburtsdatum')}: </span>{mitglied.geburtsdatum ? new Date(mitglied.geburtsdatum).toLocaleDateString(LOCALE[lang] ?? 'de-DE') : '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>{T('ndok_telefon')}: </span>{mitglied.telefon || '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>{T('ndok_email')}: </span>{mitglied.email || '–'}</div>
+        <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>{T('ndok_adresse')}: </span>{mitglied.adresse || '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>{T('ndok_beitrag')}: </span>{mitglied.mitgliedsbeitrag ? `${Number(mitglied.mitgliedsbeitrag).toFixed(2)} €` : '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>{T('ndok_zahlung')}: </span>{mitglied.zahlungsweise ? T(`ndok_weise_${mitglied.zahlungsweise}`) : '–'}</div>
         {mitglied.zahlungsweise === 'sepa' && <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>IBAN: </span>{mitglied.iban ?? '–'}</div>}
       </div>
 
       {/* Unterschrift Mitglied */}
-      <SignaturCanvas canvasRef={sigMitgliedRef} label="Unterschrift Mitglied / Schüler" />
+      <SignaturCanvas canvasRef={sigMitgliedRef} label={T('ndok_sig_mitglied')} />
 
       {/* Unterschrift Erziehungsberechtigte */}
       {hatErziehungsberechtigten && (
         <SignaturCanvas canvasRef={sigErziehungRef}
-          label={`Unterschrift Erziehungsberechtigte/r (${mitglied.erziehungsberechtigter_name})`} />
+          label={`${T('ndok_sig_erziehung')} (${mitglied.erziehungsberechtigter_name})`} />
       )}
 
       {/* Unterschrift Verantwortliche/r */}
-      <SignaturCanvas canvasRef={sigVerantwortlichRef} label="Unterschrift Verantwortliche/r (Schule)" />
+      <SignaturCanvas canvasRef={sigVerantwortlichRef} label={T('ndok_sig_verantwortlich')} />
 
       <p style={{ fontSize:12, color:'var(--text-3)', marginTop:-4 }}>
-        Mit Maus oder Finger unterschreiben, dann „Als PDF speichern" klicken.
+        {T('ndok_sig_hinweis')}
       </p>
+      {lang !== 'de' && <p style={{ fontSize:12, color:'var(--text-3)', marginTop:-12 }}>{T('ndok_formular_deutsch')}</p>}
     </DokumentDialog>
   )
 }

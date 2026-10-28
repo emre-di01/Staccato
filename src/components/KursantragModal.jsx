@@ -16,6 +16,7 @@ const WEISE_LABEL = { sepa: 'SEPA-Lastschrift', ueberweisung: 'Überweisung', ba
 const TYP_LABEL   = { einzel: 'Einzelunterricht', gruppe: 'Gruppenunterricht', chor: 'Chor', ensemble: 'Ensemble' }
 
 function SignaturCanvas({ canvasRef, label }) {
+  const { T } = useApp()
   const [zeichnet, setZeichnet] = useState(false)
   const letzterPunkt = useRef(null)
 
@@ -56,14 +57,14 @@ function SignaturCanvas({ canvasRef, label }) {
           background: 'rgba(255,255,255,0.85)', border: '1px solid #e2e8f0',
           borderRadius: 6, fontSize: 11, color: '#64748b', cursor: 'pointer',
           fontFamily: 'inherit', padding: '3px 8px',
-        }}>Löschen</button>
+        }}>{T('ndok_loeschen')}</button>
       </div>
     </div>
   )
 }
 
 export default function KursantragModal({ schueler, kurs, onClose }) {
-  const { schule, T } = useApp()
+  const { schule, T, lang } = useApp()
   const sigSchuelerRef     = useRef(null)
   const sigErziehungRef    = useRef(null)
   const sigSchuleRef       = useRef(null)
@@ -264,30 +265,31 @@ export default function KursantragModal({ schueler, kurs, onClose }) {
   }
 
   return (
-    <DokumentDialog titel={T('nb_kursanmeldung')} titelAlt="📋 Kursanmeldung" onDrucken={drucken} onClose={onClose}>
+    <DokumentDialog titel={T('nb_kursanmeldung')} titelAlt={`📋 ${T('nb_kursanmeldung')}`} onDrucken={drucken} onClose={onClose}>
 
       {/* Datenvorschau */}
       <div style={{ background:'var(--bg)', borderRadius:'var(--radius)', padding:'12px 16px', fontSize:13, color:'var(--text-2)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px' }}>
-        <div><span style={{ color:'var(--text-3)' }}>Schüler/in: </span><strong>{schueler.voller_name}</strong></div>
-        <div><span style={{ color:'var(--text-3)' }}>Kurs: </span><strong>{kurs?.name}</strong></div>
-        {kurs?.instrumente && <div><span style={{ color:'var(--text-3)' }}>Instrument: </span>{kurs.instrumente.icon} {kurs.instrumente.name_de}</div>}
-        {wochentag && <div><span style={{ color:'var(--text-3)' }}>Zeit: </span>{wochentag} {uhrzeit}</div>}
-        {lehrer && <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>Lehrkraft: </span>{lehrer}</div>}
-        {kurs?.abrechnungs_typ && <div><span style={{ color:'var(--text-3)' }}>Abrechnung: </span>{ABRECHNUNG_LABEL[kurs.abrechnungs_typ]}</div>}
-        {profil?.zahlungsweise && <div><span style={{ color:'var(--text-3)' }}>Zahlung: </span>{WEISE_LABEL[profil.zahlungsweise]}</div>}
+        <div><span style={{ color:'var(--text-3)' }}>{T('ndok_schueler')}: </span><strong>{schueler.voller_name}</strong></div>
+        <div><span style={{ color:'var(--text-3)' }}>{T('ndok_kurs')}: </span><strong>{kurs?.name}</strong></div>
+        {kurs?.instrumente && <div><span style={{ color:'var(--text-3)' }}>{T('ndok_instrument')}: </span>{kurs.instrumente.icon} {kurs.instrumente[`name_${lang}`] || kurs.instrumente.name_de}</div>}
+        {wochentag && <div><span style={{ color:'var(--text-3)' }}>{T('ndok_zeit')}: </span>{wochentag} {uhrzeit}</div>}
+        {lehrer && <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>{T('ndok_lehrkraft')}: </span>{lehrer}</div>}
+        {kurs?.abrechnungs_typ && <div><span style={{ color:'var(--text-3)' }}>{T('ndok_abrechnung')}: </span>{T(`ndok_abr_${kurs.abrechnungs_typ}`)}</div>}
+        {profil?.zahlungsweise && <div><span style={{ color:'var(--text-3)' }}>{T('ndok_zahlung')}: </span>{T(`ndok_weise_${profil.zahlungsweise}`)}</div>}
       </div>
 
       {/* Unterschriften */}
-      <SignaturCanvas canvasRef={sigSchuelerRef} label="Unterschrift Schüler/in" />
+      <SignaturCanvas canvasRef={sigSchuelerRef} label={T('ndok_sig_schueler')} />
       {hatErziehung && (
         <SignaturCanvas canvasRef={sigErziehungRef}
-          label={`Unterschrift Erziehungsberechtigte/r (${profil.erziehungsberechtigter_name})`} />
+          label={`${T('ndok_sig_erziehung')} (${profil.erziehungsberechtigter_name})`} />
       )}
-      <SignaturCanvas canvasRef={sigSchuleRef} label="Unterschrift Schule" />
+      <SignaturCanvas canvasRef={sigSchuleRef} label={T('ndok_sig_schule')} />
 
       <p style={{ fontSize:12, color:'var(--text-3)', marginTop:-4 }}>
-        Mit Maus oder Finger unterschreiben, dann „Als PDF speichern" klicken.
+        {T('ndok_sig_hinweis')}
       </p>
+      {lang !== 'de' && <p style={{ fontSize:12, color:'var(--text-3)', marginTop:-12 }}>{T('ndok_formular_deutsch')}</p>}
     </DokumentDialog>
   )
 }

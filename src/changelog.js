@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.0'
+export const CURRENT_VERSION = '2.10.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.10.0',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '🎨',
+        de: 'Schulfarbe: Admins können unter Verwaltung → Schule eine eigene Akzentfarbe wählen – sie wird automatisch gut lesbar angepasst',
+        en: 'School colour: admins can choose their own accent colour under Administration → School – it is adjusted automatically to stay easy to read',
+        tr: 'Okul rengi: yöneticiler Yönetim → Okul altında kendi vurgu rengini seçebilir – okunabilirlik için otomatik olarak ayarlanır',
+      },
+      {
+        icon: '📽',
+        de: 'Der Beamer hat das neue Design: großer Code mit QR, große Schrift, Vollbild-Knopf',
+        en: 'The projector screen has the new design: large code with QR, large text, full-screen button',
+        tr: 'Projeksiyon ekranı yeni tasarımda: QR ile büyük kod, büyük yazı, tam ekran düğmesi',
+      },
+      {
+        icon: '🌍',
+        de: 'Zertifikat, Kursanmeldung und Aufnahmeantrag sind jetzt auch auf Englisch und Türkisch bedienbar; Impressum und Datenschutz im neuen Design',
+        en: 'Certificate, course registration and membership application can now be used in English and Turkish; legal notice and privacy pages in the new design',
+        tr: 'Sertifika, kurs kaydı ve üyelik başvurusu artık İngilizce ve Türkçe de kullanılabilir; künye ve gizlilik sayfaları yeni tasarımda',
+      },
+    ],
+  },
   {
     version: '2.9.0',
     date: '2026-10-28',

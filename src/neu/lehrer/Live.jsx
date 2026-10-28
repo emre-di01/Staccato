@@ -150,7 +150,7 @@ export default function LehrerLive() {
         : []
       beamerRef.current.send({ type: 'broadcast', event: 'state', payload: {
         aktuelles_stueck: st.id, aktuelle_ansicht: ansicht, signed_urls,
-        stueck: { titel: st.titel, komponist: st.komponist, liedtext: st.liedtext, notizen: st.notizen, youtube_url: st.youtube_url },
+        stueck: { titel: st.titel, komponist: st.komponist, liedtext: st.liedtext, liedtext_md: st.liedtext_md, notizen: st.notizen, youtube_url: st.youtube_url },
       } })
     }
   }

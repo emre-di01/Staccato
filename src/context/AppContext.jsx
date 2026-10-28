@@ -4,6 +4,7 @@ import { applyTheme, THEMES } from '../themes/themes'
 import { t as translate } from '../i18n/translations'
 import OneSignal from 'react-onesignal'
 import { NEU_ROLLEN } from '../neu/neuRollen'
+import { schulfarbenTokens } from '../neu/schulfarbe'
 
 const AppContext = createContext(null)
 
@@ -83,8 +84,10 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     if (neuesDesignAktiv) {
-      // Neues Design: ein Farbschema für alle Schulen, keine Schulfarbe
+      // Neues Design: ein Farbschema, Akzent aus der Schulfarbe (falls gesetzt)
       applyTheme('neu2026', darkMode)
+      const akzent = schulfarbenTokens(schule?.farbe, darkMode)
+      if (akzent) Object.entries(akzent).forEach(([k, v]) => document.documentElement.style.setProperty(k, v))
     } else {
       applyTheme(theme, darkMode)
       if (schule?.farbe) document.documentElement.style.setProperty('--primary', schule.farbe)

@@ -32,9 +32,9 @@ export function DokumentDialog({ titel, titelAlt, onDrucken, onClose, maxWidth =
           <span style={{ fontWeight:700, fontSize:15, color:'var(--text)' }}>{titelAlt}</span>
           <div style={{ display:'flex', gap:10 }}>
             <button onClick={onDrucken} style={{ padding:'8px 18px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-              🖨 Als PDF speichern
+              🖨 {T('nb_als_pdf')}
             </button>
-            <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={{ padding:'8px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
+            <button onClick={onClose} aria-label={T('close')} className="modal-schliessen" style={{ padding:'8px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
           </div>
         </div>
         <div style={{ overflowY:'auto', padding:'20px 24px', display:'flex', flexDirection:'column', gap:20 }}>

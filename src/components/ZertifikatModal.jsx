@@ -1,9 +1,11 @@
 import { useApp } from '../context/AppContext'
 import { DokumentDialog } from './Dialog'
 
+const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
+
 export default function ZertifikatModal({ schueler, kurs, onClose }) {
-  const { schule, T } = useApp()
-  const heute = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
+  const { schule, T, lang } = useApp()
+  const heute = new Date().toLocaleDateString(LOCALE[lang] ?? 'de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
 
   function drucken() {
     const logoHtml = schule?.logo_url
@@ -11,10 +13,10 @@ export default function ZertifikatModal({ schueler, kurs, onClose }) {
       : `<div style="font-size:24px;text-align:center;margin-bottom:6px;">🎵</div>`
 
     const html = `<!DOCTYPE html>
-<html lang="de">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8" />
-  <title>Zertifikat</title>
+  <title>${T('nb_zertifikat')}</title>
   <style>
     @page { size: A4 portrait; margin: 12mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -82,30 +84,30 @@ export default function ZertifikatModal({ schueler, kurs, onClose }) {
 <div class="cert">
   <div class="top">
     ${logoHtml}
-    <div class="school-name">${schule?.name ?? 'Musikschule'}</div>
+    <div class="school-name">${schule?.name ?? T('ndok_musikschule')}</div>
   </div>
 
   <div class="mid">
-    <div class="verleiht">verleiht das</div>
-    <div class="title">Teilnahmezertifikat</div>
+    <div class="verleiht">${T('ndok_zert_verleiht')}</div>
+    <div class="title">${T('ndok_zert_titel')}</div>
   </div>
 
   <div class="mid">
-    <div class="an">an</div>
+    <div class="an">${T('ndok_zert_an')}</div>
     <div class="name">${schueler?.voller_name ?? ''}</div>
-    <div class="kurs-label">für die erfolgreiche Teilnahme am Kurs</div>
+    <div class="kurs-label">${T('ndok_zert_kurs')}</div>
     <div class="kurs-name">„${kurs?.name ?? ''}"</div>
   </div>
 
   <div class="footer">
     <div class="sig">
       <div class="sig-space"></div>
-      <div class="sig-line">Datum</div>
+      <div class="sig-line">${T('ndok_datum')}</div>
       <div class="sig-val">${heute}</div>
     </div>
     <div class="sig">
       <div class="sig-space"></div>
-      <div class="sig-line" style="min-width:65mm;">Unterschrift / Stempel</div>
+      <div class="sig-line" style="min-width:65mm;">${T('ndok_zert_stempel')}</div>
     </div>
   </div>
 </div>
@@ -123,16 +125,16 @@ export default function ZertifikatModal({ schueler, kurs, onClose }) {
   }
 
   return (
-    <DokumentDialog titel={T('nb_zertifikat')} titelAlt="🎓 Zertifikat erstellen" onDrucken={drucken} onClose={onClose} maxWidth={560}>
+    <DokumentDialog titel={T('nb_zertifikat')} titelAlt={`🎓 ${T('nb_zertifikat')}`} onDrucken={drucken} onClose={onClose} maxWidth={560}>
       <div>
         <div style={{ background:'#f8f6f2', borderRadius:'var(--radius)', border:'1px solid #d4c5a9', padding:'16px 20px', fontSize:13, color:'#475569', lineHeight:1.7 }}>
           <div style={{ fontWeight:700, color:'#1e293b', marginBottom:6 }}>{schueler?.voller_name}</div>
-          <div>Kurs: <strong>{kurs?.name}</strong></div>
-          <div>Datum: {heute}</div>
-          <div>Schule: {schule?.name}</div>
+          <div>{T('ndok_kurs')}: <strong>{kurs?.name}</strong></div>
+          <div>{T('ndok_datum')}: {heute}</div>
+          <div>{T('ndok_schule')}: {schule?.name}</div>
         </div>
         <p style={{ fontSize:12, color:'var(--text-3)', marginTop:12 }}>
-          Ein neues Fenster öffnet sich mit dem druckfertigen A4-Zertifikat. Im Browser-Druckdialog „Als PDF speichern" wählen.
+          {T('ndok_zert_hinweis')}
         </p>
       </div>
     </DokumentDialog>

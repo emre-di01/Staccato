@@ -1,18 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+import RechtsRahmen, { sek, h2, p, link } from '../neu/seiten/RechtsRahmen'
 
 export default function Impressum() {
-  const navigate = useNavigate()
-  const darkMode = localStorage.getItem('staccato_dark') === 'true'
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <button onClick={() => navigate(-1)}
-        style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:14, cursor:'pointer', fontFamily:'inherit', padding:'0 0 24px', display:'block' }}>
-        ← Zurück
-      </button>
-
-      <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>Impressum</h1>
-      <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 32 }}>Angaben gemäß § 5 TMG</p>
-
+    <RechtsRahmen titel="Impressum" unter="Angaben gemäß § 5 TMG">
       <section style={sek}>
         <h2 style={h2}>Anbieter</h2>
         <p style={p}>
@@ -60,16 +50,6 @@ export default function Impressum() {
         <p style={p}>Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: <a href="https://ec.europa.eu/consumers/odr" style={link}>https://ec.europa.eu/consumers/odr</a>. Ich bin nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
       </section>
 
-      <div style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid var(--border)', display: 'flex', gap: 20, fontSize: 13, color: 'var(--text-3)' }}>
-        <a href="/datenschutz" style={link}>Datenschutzerklärung</a>
-        <a href="/lizenzen" style={link}>Open-Source-Lizenzen</a>
-      </div>
-
-    </div>
+    </RechtsRahmen>
   )
 }
-
-const sek  = { marginBottom: 32 }
-const h2   = { fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid var(--border)' }
-const p    = { fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7, margin: 0 }
-const link = { color: 'var(--primary)', textDecoration: 'none' }

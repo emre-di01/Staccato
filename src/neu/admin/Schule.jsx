@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { Check } from 'lucide-react'
 import { Seite, Abschnitt, Gruppe, Feld, Knopf, SchalterZeile, eingabeStil } from '../../ui'
+import { SCHULFARBEN, gueltigeSchulfarbe } from '../schulfarbe'
 
 const RECHTSFORMEN = ['einzelperson', 'gbr', 'ev', 'ggmbh', 'gmbh', 'ug', 'sonstiges']
 const HAT_REGISTER = ['ev', 'ggmbh', 'gmbh', 'ug']
@@ -41,12 +43,46 @@ function LogoFeld({ label, wert, onChange, dunkel }) {
   )
 }
 
+// Akzentfarbe der Schule: Vorschläge + eigene Farbe; null = Standard-Orange
+function FarbAuswahl({ wert, onChange }) {
+  const { T } = useApp()
+  const eigene = wert && !SCHULFARBEN.includes(wert.toUpperCase())
+  const kreis = (farbe, gewaehlt) => ({
+    width: 44, height: 44, borderRadius: 22, cursor: 'pointer', padding: 0, flexShrink: 0,
+    background: farbe ?? 'linear-gradient(135deg, #FB923C, #C2410C)', color: '#FFFFFF',
+    border: 'none', boxShadow: gewaehlt ? '0 0 0 3px var(--bg), 0 0 0 5px var(--text)' : 'none',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  })
+  return (
+    <Feld label={T('ns_farbe')} hinweis={T('ns_farbe_hinweis')}>
+      <div role="radiogroup" aria-label={T('ns_farbe')} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, paddingTop: 4 }}>
+        {SCHULFARBEN.map(f => {
+          const gewaehlt = f === null ? !wert : wert?.toUpperCase() === f
+          const label = f === null ? T('ns_farbe_standard') : f
+          return (
+            <button key={f ?? 'standard'} type="button" role="radio" aria-checked={gewaehlt} aria-label={label} title={label}
+              onClick={() => onChange(f ?? '')} style={kreis(f, gewaehlt)}>
+              {gewaehlt && <Check size={20} strokeWidth={3} aria-hidden="true" />}
+            </button>
+          )
+        })}
+        <label title={T('ns_farbe_eigene')} style={{ ...kreis(eigene ? wert : 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)', eigene), position: 'relative', overflow: 'hidden' }}>
+          {eigene && <Check size={20} strokeWidth={3} aria-hidden="true" />}
+          <input type="color" aria-label={T('ns_farbe_eigene')} value={wert || '#C2410C'} onChange={e => onChange(e.target.value.toUpperCase())}
+            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', border: 'none' }} />
+        </label>
+      </div>
+    </Feld>
+  )
+}
+
 export default function AdminSchule() {
   const { schule, setSchule, T, toast } = useApp()
   const [form, setForm] = useState(() => ({
     ...Object.fromEntries(FELDER.map(k => [k, schule?.[k] ?? ''])),
     rechnungen_prefix: schule?.rechnungen_prefix ?? 'RG', inventar_prefix: schule?.inventar_prefix ?? 'INV',
     ist_gemeinnuetzig: schule?.ist_gemeinnuetzig ?? false,
+    farbe: gueltigeSchulfarbe(schule?.farbe)?.toUpperCase() ?? '',
   }))
   const [sendet, setSendet] = useState(false)
   const setze = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -62,6 +98,7 @@ export default function AdminSchule() {
       rechnungen_prefix: form.rechnungen_prefix.trim().toUpperCase() || 'RG',
       inventar_prefix: form.inventar_prefix.trim().toUpperCase() || 'INV',
       ist_gemeinnuetzig: form.ist_gemeinnuetzig,
+      farbe: form.farbe || null,
     }
     const { error } = await supabase.from('schulen').update(daten).eq('id', schule.id)
     setSendet(false)
@@ -77,6 +114,7 @@ export default function AdminSchule() {
           <Feld label={T('settings_school_name')}>{eingabe('name')}</Feld>
           <LogoFeld label={T('ns_logo_hell')} wert={form.logo_url} onChange={v => setze('logo_url', v)} />
           <LogoFeld label={T('ns_logo_dunkel')} wert={form.logo_url_dark} onChange={v => setze('logo_url_dark', v)} dunkel />
+          <FarbAuswahl wert={form.farbe} onChange={v => setze('farbe', v)} />
           <Feld label="Website">{eingabe('website', { type: 'url', placeholder: 'https://…' })}</Feld>
           <Zeile2>
             <Feld label={T('email')}>{eingabe('email', { type: 'email' })}</Feld>
