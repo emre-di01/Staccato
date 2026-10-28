@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.3'
+export const CURRENT_VERSION = '2.9.4'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.4',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '📝',
+        de: 'Lied bearbeiten: Umschalter MD | Plain für den Liedtext wieder direkt neben Bearbeiten | Vorschau',
+        en: 'Edit song: MD | Plain switch for the lyrics is back right next to Edit | Preview',
+        tr: 'Şarkıyı düzenle: Şarkı sözü için MD | Plain anahtarı yeniden Düzenle | Önizleme yanında',
+      },
+    ],
+  },
   {
     version: '2.9.3',
     date: '2026-10-28',

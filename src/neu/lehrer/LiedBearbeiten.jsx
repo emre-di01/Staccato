@@ -5,7 +5,7 @@ import { Check, Mic, Camera, Search, FileUp, Upload, Trash2, FileText, Music, Fi
 import { supabase } from '../../lib/supabase'
 import { safeMarkdown } from '../../lib/markdown'
 import { useApp } from '../../context/AppContext'
-import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Feld, Knopf, Segment, SchalterZeile, Leer, Laden, eingabeStil } from '../../ui'
+import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Feld, Knopf, Segment, Leer, Laden, eingabeStil } from '../../ui'
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import DateiHochladenBlatt from './DateiHochladenBlatt'
 import { useNeuLaden } from '../daten'
@@ -191,8 +191,15 @@ function Formular({ stueck, dateien, neuLadenDateien }) {
 
       <Abschnitt titel={T('piece_lyrics')}>
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Segment label={T('piece_lyrics')} wert={textAnsicht} onChange={setTextAnsicht}
-            optionen={[['bearbeiten', T('piece_edit')], ['vorschau', T('piece_preview')]]} />
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Segment label={T('piece_lyrics')} wert={textAnsicht} onChange={setTextAnsicht} style={{ flex: '2 1 200px' }}
+              optionen={[['bearbeiten', T('piece_edit')], ['vorschau', T('piece_preview')]]} />
+            <Segment label={T('nl_formatierung')} wert={form.liedtext_md ? 'md' : 'plain'} onChange={v => setze('liedtext_md', v === 'md')} style={{ flex: '1 1 120px' }}
+              optionen={[['md', 'MD'], ['plain', 'Plain']]} />
+          </div>
+          {form.liedtext_md && textAnsicht === 'bearbeiten' && (
+            <div style={{ fontSize: 15, color: 'var(--text-2)' }}>{T('nl_formatierung_hinweis')}</div>
+          )}
           {textAnsicht === 'vorschau' ? (
             form.liedtext_md
               ? <div className="n-lied-text" dangerouslySetInnerHTML={{ __html: safeMarkdown(form.liedtext || T('piece_lyrics_empty_md')) }} style={{ minHeight: 200, fontSize: 18, lineHeight: 1.7 }} />
@@ -202,9 +209,6 @@ function Formular({ stueck, dateien, neuLadenDateien }) {
               placeholder={T('piece_lyrics_placeholder')} style={{ ...textFeld, fontSize: 17 }} />
           )}
         </div>
-        <Gruppe style={{ marginTop: 14 }}>
-          <SchalterZeile titel={T('nl_formatierung')} untertitel={T('nl_formatierung_hinweis')} an={form.liedtext_md} onChange={v => setze('liedtext_md', v)} />
-        </Gruppe>
 
         {lyrics.treffer && (
           <div style={{ margin: '14px 20px 0', padding: 16, borderRadius: 18, background: 'var(--n-fill)' }}>
