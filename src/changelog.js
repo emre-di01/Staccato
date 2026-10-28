@@ -1,11 +1,11 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.11.0'
+export const CURRENT_VERSION = '2.9.2'
 
 export const CHANGELOG = [
   {
-    version: '2.11.0',
+    version: '2.9.2',
     date: '2026-10-28',
     features: [
       {
@@ -23,7 +23,7 @@ export const CHANGELOG = [
     ],
   },
   {
-    version: '2.10.0',
+    version: '2.9.1',
     date: '2026-10-28',
     features: [
       {
