@@ -18,7 +18,7 @@ function StatusBadge({ status }) {
   )
 }
 
-function ZielModal({ ziel, vorstandMitglieder, schuleId, profilId, onClose, onGespeichert, T }) {
+export function ZielModal({ ziel, vorstandMitglieder, schuleId, profilId, onClose, onGespeichert, T }) {
   const [form, setForm] = useState({
     titel: ziel?.titel ?? '',
     beschreibung: ziel?.beschreibung ?? '',
@@ -101,7 +101,7 @@ function ZielModal({ ziel, vorstandMitglieder, schuleId, profilId, onClose, onGe
   )
 }
 
-function AufgabeModal({ aufgabe, zielId, vorstandMitglieder, schuleId, profilId, onClose, onGespeichert, T }) {
+export function AufgabeModal({ aufgabe, zielId, vorstandMitglieder, schuleId, profilId, onClose, onGespeichert, T }) {
   const [form, setForm] = useState({
     titel: aufgabe?.titel ?? '',
     beschreibung: aufgabe?.beschreibung ?? '',

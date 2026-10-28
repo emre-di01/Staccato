@@ -66,3 +66,18 @@ export function schulZeitZuIso(datum, zeit, tz) {
   ms = wunsch - versatz(ms)   // zweiter Schritt für Tage mit Zeitumstellung
   return new Date(ms).toISOString()
 }
+
+const TAG = 86400000
+
+// 'YYYY-MM-DD' ± n Tage (reine Kalenderrechnung, ohne Zeitzone)
+export function plusTage(key, n) {
+  return new Date(Date.parse(key + 'T00:00:00Z') + n * TAG).toISOString().slice(0, 10)
+}
+export function montagVon(key) {
+  const wt = (new Date(key + 'T00:00:00Z').getUTCDay() + 6) % 7
+  return plusTage(key, -wt)
+}
+// Kalendertag 'YYYY-MM-DD' formatieren (ohne Zeitzonen-Verschiebung)
+export function kalenderFormat(key, lang, opt) {
+  return new Intl.DateTimeFormat(LOCALE[lang] ?? 'de-DE', { ...opt, timeZone: 'UTC' }).format(new Date(key + 'T12:00:00Z'))
+}

@@ -40,6 +40,8 @@ const NEUE_SEITEN = [
   '/schueler/events/:kursId/repertoire/:stueckId', '/lehrer/kurse/:id/unterrichtsmodus',
   '/lehrer/kurse/:id/verwalten', '/lehrer/repertoire/:stueckId/bearbeiten', '/lehrer/stundenplan',
   '/admin', '/admin/unterricht', '/admin/verwaltung', '/admin/ich', '/admin/profil', '/admin/tools', '/admin/mitglieder', '/admin/interessenten', '/admin/nachrichten',
+  '/admin/events', '/admin/raeume', '/admin/instrumente', '/admin/inventar', '/admin/rechnungen', '/admin/einstellungen',
+  '/vorstand/ziele', '/vorstand/protokolle', '/superadmin', '/superadmin/demos',
   '/admin/kurse', '/admin/kurse/:id', '/admin/kurse/:id/verwalten', '/admin/kurse/:id/repertoire', '/admin/kurse/:id/unterrichtsmodus',
   '/admin/stundenplan', '/admin/woche', '/admin/stunde/:id', '/admin/repertoire', '/admin/repertoire/:stueckId', '/admin/repertoire/:stueckId/bearbeiten',
   '/admin/kurse/:kursId/repertoire/:stueckId', '/admin/events/:id/repertoire', '/admin/events/:kursId/repertoire/:stueckId',

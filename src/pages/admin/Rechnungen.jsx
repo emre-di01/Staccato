@@ -23,18 +23,18 @@ const fmtTs = ts => ts
   : '–'
 const fmtE  = v => Number(v || 0).toLocaleString('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' €'
 
-function calcTotals(positionen, steuersatz) {
+export function calcTotals(positionen, steuersatz) {
   const netto = (positionen || []).reduce((s, p) => s + (Number(p.menge) || 0) * (Number(p.einzelpreis) || 0), 0)
   const mwst  = netto * (Number(steuersatz) || 0) / 100
   return { netto, mwst, brutto: netto + mwst }
 }
 
-function empfName(r) {
+export function empfName(r) {
   return r.empfaenger_snapshot?.name ?? r.empfaenger_name ?? '–'
 }
 
 // ─── PDF §14 UStG ─────────────────────────────────────────────────────────────
-function druckeRechnung(r, schule) {
+export function druckeRechnung(r, schule) {
   const snap = r.schule_snapshot ?? {}
   const empf = r.empfaenger_snapshot ?? {}
 
@@ -256,7 +256,7 @@ function Summe({ positionen, steuersatz, style }) {
 }
 
 // ─── Neue Rechnung erstellen ──────────────────────────────────────────────────
-function NeueRechnungModal({ schuleId, onClose, onGespeichert, isMobile }) {
+export function NeueRechnungModal({ schuleId, onClose, onGespeichert, isMobile }) {
   const in14 = new Date(); in14.setDate(in14.getDate() + 14)
 
   const [form, setForm] = useState({

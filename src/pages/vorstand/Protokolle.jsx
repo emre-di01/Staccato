@@ -18,7 +18,7 @@ function TypBadge({ typ }) {
   )
 }
 
-function ProtokolModal({ protokoll, vorstandMitglieder, schuleId, profilId, onClose, onGespeichert, T }) {
+export function ProtokolModal({ protokoll, vorstandMitglieder, schuleId, profilId, onClose, onGespeichert, T }) {
   const [form, setForm] = useState({
     titel: protokoll?.titel ?? '',
     sitzungstyp: protokoll?.sitzungstyp ?? 'vorstandssitzung',

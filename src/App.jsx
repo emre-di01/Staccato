@@ -94,6 +94,16 @@ const NeuAdminStart        = lazy(() => import('./neu/admin/Start'))
 const NeuAdminBereich      = lazy(() => import('./neu/admin/Bereich'))
 const NeuAdminMitglieder   = lazy(() => import('./neu/admin/Mitglieder'))
 const NeuAdminInteressenten = lazy(() => import('./neu/admin/Interessenten'))
+const NeuAdminEvents       = lazy(() => import('./neu/admin/Events'))
+const NeuAdminRaeume       = lazy(() => import('./neu/admin/Raeume'))
+const NeuAdminInstrumente  = lazy(() => import('./neu/admin/Instrumente'))
+const NeuAdminInventar     = lazy(() => import('./neu/admin/Inventar'))
+const NeuAdminFinanzen     = lazy(() => import('./neu/admin/Finanzen'))
+const NeuAdminSchule       = lazy(() => import('./neu/admin/Schule'))
+const NeuAdminZiele        = lazy(() => import('./neu/admin/Ziele'))
+const NeuAdminProtokolle   = lazy(() => import('./neu/admin/Protokolle'))
+const NeuSuperadminSchulen = lazy(() => import('./neu/admin/Schulen'))
+const NeuSuperadminDemos   = lazy(() => import('./neu/admin/Demos'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -146,7 +156,7 @@ function AppRoutes() {
           <Route path="/admin/ich"              element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
           <Route path="/admin/mitglieder"       element={<DesignWahl alt={<Mitgliederverwaltung />} neu={<NeuAdminMitglieder />} />} />
           <Route path="/admin/kurse"            element={<DesignWahl alt={<Kursverwaltung />} neu={<NeuLehrerKurse />} />} />
-          <Route path="/admin/raeume"           element={<Raumverwaltung />} />
+          <Route path="/admin/raeume"           element={<DesignWahl alt={<Raumverwaltung />} neu={<NeuAdminRaeume />} />} />
           <Route path="/admin/stundenplan"      element={<DesignWahl alt={<Stundenplan />} neu={<NeuLehrerTermine />} />} />
           <Route path="/admin/woche"            element={<DesignWahl alt={<Navigate to="/admin/stundenplan" replace />} neu={<NeuLehrerWoche />} />} />
           <Route path="/admin/stunde/:id"       element={<DesignWahl alt={<Navigate to="/admin/stundenplan" replace />} neu={<NeuStundeAbschliessen />} />} />
@@ -154,7 +164,7 @@ function AppRoutes() {
           <Route path="/admin/repertoire"       element={<DesignWahl alt={<Repertoire />} neu={<NeuLehrerLieder />} />} />
           <Route path="/admin/repertoire/:stueckId" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
           <Route path="/admin/repertoire/:stueckId/bearbeiten" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLiedBearbeiten />} />} />
-          <Route path="/admin/events"                                          element={<AdminEvents />} />
+          <Route path="/admin/events"                                          element={<DesignWahl alt={<AdminEvents />} neu={<NeuAdminEvents />} />} />
           <Route path="/admin/events/:id/repertoire"                         element={<DesignWahl alt={<EventRepertoire />} neu={<NeuLiederListe art="event" />} />} />
           <Route path="/admin/events/:kursId/repertoire/:stueckId"           element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
           <Route path="/admin/kurse/:id"                                   element={<DesignWahl alt={<KursDetail />} neu={<NeuLehrerKurs />} />} />
@@ -162,13 +172,13 @@ function AppRoutes() {
           <Route path="/admin/kurse/:id/unterrichtsmodus"                element={<DesignWahl alt={<Unterrichtsmodus />} neu={<NeuLehrerLive />} />} />
           <Route path="/admin/kurse/:id/repertoire"                      element={<DesignWahl alt={<KursRepertoire />} neu={<NeuLiederListe art="kurs" />} />} />
           <Route path="/admin/kurse/:kursId/repertoire/:stueckId"        element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
-          <Route path="/admin/instrumente"      element={<Instrumente />} />
-          <Route path="/admin/inventar"         element={<Inventar />} />
+          <Route path="/admin/instrumente"      element={<DesignWahl alt={<Instrumente />} neu={<NeuAdminInstrumente />} />} />
+          <Route path="/admin/inventar"         element={<DesignWahl alt={<Inventar />} neu={<NeuAdminInventar />} />} />
           <Route path="/admin/interessenten"    element={<DesignWahl alt={<Interessenten />} neu={<NeuAdminInteressenten />} />} />
-          <Route path="/admin/rechnungen"       element={<Rechnungen />} />
+          <Route path="/admin/rechnungen"       element={<DesignWahl alt={<Rechnungen />} neu={<NeuAdminFinanzen />} />} />
           <Route path="/admin/nachrichten"      element={<DesignWahl alt={<Nachrichten />} neu={<NeuNachrichten />} />} />
           <Route path="/admin/tools"            element={<DesignWahl alt={<Tools />} neu={<NeuWerkzeuge />} />} />
-          <Route path="/admin/einstellungen"    element={<AdminEinstellungen />} />
+          <Route path="/admin/einstellungen"    element={<DesignWahl alt={<AdminEinstellungen />} neu={<NeuAdminSchule />} />} />
         </Route>
       </Route>
 
@@ -226,8 +236,8 @@ function AppRoutes() {
       <Route element={<ProtectedRoute erlaubteRollen={['vorstand', 'admin', 'superadmin']} />}>
         <Route element={<LayoutWahl />}>
           <Route path="/vorstand"                       element={<VorstandDashboard />} />
-          <Route path="/vorstand/ziele"                 element={<VorstandZiele />} />
-          <Route path="/vorstand/protokolle"            element={<VorstandProtokolle />} />
+          <Route path="/vorstand/ziele"                 element={<DesignWahl alt={<VorstandZiele />} neu={<NeuAdminZiele />} />} />
+          <Route path="/vorstand/protokolle"            element={<DesignWahl alt={<VorstandProtokolle />} neu={<NeuAdminProtokolle />} />} />
           <Route path="/vorstand/stundenplan"           element={<Stundenplan />} />
           <Route path="/vorstand/kurse"                 element={<SchuelerKurse />} />
           <Route path="/vorstand/kurse/:id"             element={<SchuelerKursDetail />} />
@@ -259,8 +269,8 @@ function AppRoutes() {
       {/* ── Superadmin ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['superadmin']} />}>
         <Route element={<LayoutWahl />}>
-          <Route path="/superadmin" element={<SuperadminDashboard />} />
-          <Route path="/superadmin/demos" element={<SuperadminDemos />} />
+          <Route path="/superadmin" element={<DesignWahl alt={<SuperadminDashboard />} neu={<NeuSuperadminSchulen />} />} />
+          <Route path="/superadmin/demos" element={<DesignWahl alt={<SuperadminDemos />} neu={<NeuSuperadminDemos />} />} />
         </Route>
       </Route>
 

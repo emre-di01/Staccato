@@ -5,7 +5,7 @@ import jsQR from 'jsqr'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 
-const ZUSTAENDE = [
+export const ZUSTAENDE = [
   { wert: 'neu',       labelKey: 'inv_condition_neu',       farbe: 'var(--success)' },
   { wert: 'gut',       labelKey: 'inv_condition_gut',       farbe: 'var(--primary)' },
   { wert: 'gebraucht', labelKey: 'inv_condition_gebraucht', farbe: 'var(--text-3)'  },
@@ -28,7 +28,7 @@ function useMobile() {
 }
 
 // ─── Kategorien-Verwaltungs-Modal ─────────────────────────────
-function KategorienModal({ schuleId, onClose, onGeaendert }) {
+export function KategorienModal({ schuleId, onClose, onGeaendert }) {
   const { confirm, T } = useApp()
   const mob = useMobile()
   const [kategorien, setKategorien] = useState([])
@@ -282,7 +282,7 @@ function BarcodeEingabeModal({ onGescannt, onClose }) {
 }
 
 // ─── Inventar-Modal ───────────────────────────────────────────
-function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
+export function InventarModal({ item, schuleId, kategorien, onClose, onErfolg }) {
   const { T } = useApp()
   const istNeu = !item?.id
   const mob = useMobile()
@@ -462,7 +462,7 @@ const LABEL_GROESSEN = [
 ]
 
 // ─── Einzel-Etikett-Modal (Labeldruckergröße) ─────────────────
-function EtikettEinzelModal({ item, onClose }) {
+export function EtikettEinzelModal({ item, onClose }) {
   const { T } = useApp()
   const mob = useMobile()
   const gespeichert = (() => { try { return JSON.parse(localStorage.getItem('staccato_label_size') ?? 'null') } catch { return null } })()
@@ -600,7 +600,7 @@ function EtikettEinzelModal({ item, onClose }) {
 }
 
 // ─── Etiketten drucken (A4-Grid) ─────────────────────────────
-async function etikettenDrucken(items) {
+export async function etikettenDrucken(items) {
   const labels = await Promise.all(items.map(async item => ({
     ...item,
     qrUrl: await QRCode.toDataURL(item.inventarnummer, { width: 220, margin: 1, color: { dark: '#000000', light: '#ffffff' } }),
@@ -632,7 +632,7 @@ async function etikettenDrucken(items) {
 }
 
 // ─── Scanner-Modal ────────────────────────────────────────────
-function ScannerModal({ schuleId, onClose, onBearbeiten }) {
+export function ScannerModal({ schuleId, onClose, onBearbeiten }) {
   const { T } = useApp()
   const videoRef   = useRef(null)
   const canvasRef  = useRef(null)

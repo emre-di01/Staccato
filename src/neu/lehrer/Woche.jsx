@@ -6,22 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { useBasis, useSchulweit } from '../rolle'
 import { Seite, Gruppe, Trenner, Zeile, Laden, Knopf } from '../../ui'
 import { useLehrerKurse, istOffen } from '../lehrerDaten'
-import { schulZeitZuIso, tagKey, uhrzeit } from '../zeit'
-
-const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
-const TAG = 86400000
-
-// 'YYYY-MM-DD' ± n Tage (reine Kalenderrechnung, ohne Zeitzone)
-function plusTage(key, n) {
-  return new Date(Date.parse(key + 'T00:00:00Z') + n * TAG).toISOString().slice(0, 10)
-}
-function montagVon(key) {
-  const wt = (new Date(key + 'T00:00:00Z').getUTCDay() + 6) % 7
-  return plusTage(key, -wt)
-}
-function format(key, lang, opt) {
-  return new Intl.DateTimeFormat(LOCALE[lang] ?? 'de-DE', { ...opt, timeZone: 'UTC' }).format(new Date(key + 'T12:00:00Z'))
-}
+import { schulZeitZuIso, tagKey, uhrzeit, plusTage, montagVon, kalenderFormat as format } from '../zeit'
 
 // Wochenansicht der Lehrkraft: Stunden der eigenen Kurse und Veranstaltungen, wochenweise blätterbar
 export default function LehrerWoche() {
