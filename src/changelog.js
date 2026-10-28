@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.4.0'
+export const CURRENT_VERSION = '2.5.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.5.0',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '✨',
+        de: 'Neues Design zum Ausprobieren – für Schüler gibt es eine neue, einfachere Ansicht mit vier Bereichen: Start, Termine, Lieder und Ich. Einschalten unter Einstellungen, zurückwechseln jederzeit möglich',
+        en: 'Try the new design – students get a new, simpler view with four sections: Home, Schedule, Songs and Me. Turn it on in Settings and switch back at any time',
+        tr: 'Yeni tasarımı deneyin – öğrenciler için dört bölümlü yeni ve daha sade bir görünüm: Ana sayfa, Randevular, Şarkılar ve Ben. Ayarlar\'dan açın, istediğiniz zaman geri dönün',
+      },
+    ],
+  },
   {
     version: '2.4.0',
     date: '2026-10-28',
