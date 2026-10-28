@@ -20,7 +20,7 @@ const REITER = {
   ],
   lehrer: [
     { to: '/lehrer',             icon: House,        label: 'n_tab_start',   auch: [] },
-    { to: '/lehrer/anwesenheit', icon: CalendarDays, label: 'n_tab_termine', auch: ['/lehrer/events'] },
+    { to: '/lehrer/anwesenheit', icon: CalendarDays, label: 'n_tab_termine', auch: ['/lehrer/events', '/lehrer/stundenplan'] },
     { to: '/lehrer/kurse',       icon: Users,        label: 'nl_tab_kurse',  auch: ['/lehrer/stunde', '/lehrer/schueler'] },
     { to: '/lehrer/repertoire',  icon: Music,        label: 'n_tab_lieder',  auch: [] },
     { to: '/lehrer/ich',         icon: CircleUser,   label: 'n_tab_ich',     auch: ['/lehrer/profil', '/lehrer/nachrichten', '/lehrer/tools', ...GEMEINSAM] },
@@ -32,9 +32,17 @@ const NEUE_SEITEN = [
   '/schueler', '/schueler/stundenplan', '/schueler/events', '/schueler/repertoire', '/schueler/repertoire/:stueckId', '/schueler/ich',
   '/schueler/nachrichten', '/schueler/kurse', '/schueler/kurse/:id', '/schueler/dateien', '/schueler/faq', '/schueler/profil',
   '/lehrer', '/lehrer/kurse', '/lehrer/kurse/:id', '/lehrer/stunde/:id', '/lehrer/ich', '/lehrer/profil',
+  '/lehrer/anwesenheit', '/lehrer/repertoire', '/lehrer/schueler', '/lehrer/nachrichten', '/lehrer/tools', '/schueler/tools',
+  '/lehrer/kurse/:id/repertoire', '/lehrer/events/:id/repertoire', '/schueler/events/:id/repertoire',
+  '/lehrer/repertoire/:stueckId', '/lehrer/kurse/:kursId/repertoire/:stueckId', '/lehrer/events/:kursId/repertoire/:stueckId',
+  '/schueler/events/:kursId/repertoire/:stueckId', '/lehrer/kurse/:id/unterrichtsmodus',
   ...GEMEINSAM,
 ]
-const VOLLBILD = ['/schueler/repertoire/:stueckId']
+const VOLLBILD = [
+  '/schueler/repertoire/:stueckId', '/schueler/events/:kursId/repertoire/:stueckId',
+  '/lehrer/repertoire/:stueckId', '/lehrer/kurse/:kursId/repertoire/:stueckId', '/lehrer/events/:kursId/repertoire/:stueckId',
+  '/lehrer/kurse/:id/unterrichtsmodus',
+]
 
 const passt = (muster, pfad) => muster.some(m => matchPath({ path: m, end: true }, pfad))
 

@@ -44,7 +44,7 @@ export function StundeKarte({ s, titel, onUmschalten, sendet }) {
   )
 }
 
-export function EventKarte({ ev, onAntwort, sendet }) {
+export function EventKarte({ ev, onAntwort, sendet, aktionen }) {
   const { T, lang, zeitzone } = useApp()
   const zeit = ev.ende ? `${uhrzeit(ev.beginn, zeitzone, lang)} – ${uhrzeit(ev.ende, zeitzone, lang)}` : uhrzeit(ev.beginn, zeitzone, lang)
   const ort = ev.ort || ev.raeume?.name
@@ -66,6 +66,7 @@ export function EventKarte({ ev, onAntwort, sendet }) {
           </Knopf>
         </div>
       )}
+      {aktionen}
     </Karte>
   )
 }

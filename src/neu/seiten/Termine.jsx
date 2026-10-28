@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Music } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Leer, Laden } from '../../ui'
@@ -54,7 +56,14 @@ export default function NeuTermine() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {g.eintraege.map(e => e.art === 'stunde'
                 ? <StundeKarte key={e.id} s={e.daten} onUmschalten={() => absage.umschalten(e.daten)} sendet={absage.sendet === e.id} />
-                : <EventKarte key={e.id} ev={e.daten} onAntwort={z => antworten(e.daten, z)} sendet={sendet === e.id} />)}
+                : <EventKarte key={e.id} ev={e.daten} onAntwort={z => antworten(e.daten, z)} sendet={sendet === e.id}
+                    aktionen={e.daten.event_stuecke?.length > 0 && (
+                      <div style={{ display: 'flex' }}>
+                        <Link to={`/schueler/events/${e.id}/repertoire`} style={{ minHeight: 44, padding: '0 14px', borderRadius: 22, background: 'var(--bg)', color: 'var(--text)', fontSize: 16, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                          <Music aria-hidden="true" size={18} />{T('n_tab_lieder')}
+                        </Link>
+                      </div>
+                    )} />)}
             </div>
           </section>
         ))}

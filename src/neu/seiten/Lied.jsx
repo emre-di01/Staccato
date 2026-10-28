@@ -15,6 +15,7 @@ import AudioPlayer from '../../components/stueck/AudioPlayer'
 import EigeneDateienNeu from '../EigeneDateienNeu'
 import { getSignedUrl, OeffnenButton, DownloadButton } from '../../components/stueck/FileButtons'
 import { VorschlagModal } from '../../components/LiedVorschlaege'
+import { useBasis } from '../rolle'
 
 const GROESSEN = [22, 27, 33]
 
@@ -27,7 +28,9 @@ export default function NeuLied() {
   const { stueckId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { T, darkMode } = useApp()
+  const { T, darkMode, rolle } = useApp()
+  const basis = useBasis()
+  const lehrer = rolle === 'lehrer'
   const [tab, setTab] = useState(null)
   const [stufe, setStufe] = useState(() => {
     const s = parseInt(localStorage.getItem('staccato_lied_groesse') ?? '0', 10)
@@ -59,7 +62,7 @@ export default function NeuLied() {
   // Dateien-Bereich: zurück auf die normalen Farben des neuen Designs
   const { globalCss, ...normal } = darkMode ? NEU_THEME.dark : NEU_THEME.light
 
-  const zurueck = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/schueler/repertoire'))
+  const zurueck = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(`${basis}/repertoire`))
 
   if (isLoading) return <div style={{ minHeight: '100dvh', background: farbe }} aria-busy="true" />
   if (!data?.stueck) return (
@@ -88,7 +91,7 @@ export default function NeuLied() {
   const pos = liste.findIndex(l => l.id === stueckId)
   const vorher = pos > 0 ? liste[pos - 1] : null
   const nachher = pos >= 0 && pos < liste.length - 1 ? liste[pos + 1] : null
-  const gehe = l => navigate(`/schueler/repertoire/${l.id}`, { state: location.state, replace: true })
+  const gehe = l => navigate(`${basis}/repertoire/${l.id}`, { state: location.state, replace: true })
 
   const meta = [stueck.komponist, stueck.tonart, stueck.takt].filter(Boolean).join(' · ')
   const anhoeren = [
@@ -105,9 +108,16 @@ export default function NeuLied() {
           <button onClick={zurueck} style={{ height: 44, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 2, fontSize: 17, fontWeight: 600, background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer', fontFamily: 'inherit' }}>
             <ChevronLeft aria-hidden="true" size={24} strokeWidth={2.2} />{T('n_tab_lieder')}
           </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+          {lehrer && (
+            <button onClick={() => navigate(`/lehrer/repertoire/${stueckId}/bearbeiten`)} style={{ height: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: 'rgba(255,255,255,0.16)', color: '#FFFFFF', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Pencil aria-hidden="true" size={18} />{T('edit')}
+            </button>
+          )}
           <button onClick={() => setStufe(s => (s + 1) % 3)} aria-label={T('n_schrift_aendern')} style={{ height: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: 'rgba(255,255,255,0.16)', color: '#FFFFFF', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer' }}>
             Aa · {[T('n_normal'), T('n_gross'), T('n_sehr_gross')][stufe]}
           </button>
+          </div>
         </div>
 
         <header style={{ padding: '14px 20px 0' }}>
@@ -141,9 +151,9 @@ export default function NeuLied() {
             {stueck.liedtext_md !== false
               ? <div className="n-lied-text" style={{ fontSize: GROESSEN[stufe], lineHeight: 1.5, fontWeight: 600, overflowWrap: 'break-word' }} dangerouslySetInnerHTML={{ __html: safeMarkdown(stueck.liedtext) }} />
               : <div style={{ fontSize: GROESSEN[stufe], lineHeight: 1.5, fontWeight: 600, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>{stueck.liedtext}</div>}
-            <button onClick={() => setVorschlagOffen(true)} style={{ marginTop: 28, minHeight: 44, padding: '0 16px', borderRadius: 22, border: '1.5px solid rgba(255,255,255,0.45)', background: 'transparent', color: '#FFFFFF', fontFamily: 'inherit', fontSize: 16, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            {!lehrer && <button onClick={() => setVorschlagOffen(true)} style={{ marginTop: 28, minHeight: 44, padding: '0 16px', borderRadius: 22, border: '1.5px solid rgba(255,255,255,0.45)', background: 'transparent', color: '#FFFFFF', fontFamily: 'inherit', fontSize: 16, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <Pencil aria-hidden="true" size={18} />{T('vorschlag_text_btn')}
-            </button>
+            </button>}
           </div>
         )}
 
@@ -156,7 +166,7 @@ export default function NeuLied() {
 
         {aktiv === 'dateien' && (
           <div style={{ margin: '24px 12px 0', padding: '20px 0', borderRadius: 24, background: 'var(--bg)', color: 'var(--text)', ...normal }}>
-            {!stueck.liedtext && (
+            {!stueck.liedtext && !lehrer && (
               <div style={{ padding: '0 20px 20px' }}>
                 <button onClick={() => setVorschlagOffen(true)} style={{ minHeight: 48, padding: '0 18px', borderRadius: 14, border: 'none', background: 'var(--n-tint)', color: 'var(--n-tint-fg)', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <Pencil aria-hidden="true" size={18} />{T('vorschlag_text_add')}

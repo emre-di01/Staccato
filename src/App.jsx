@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/queryClient'
 import { AppProvider, useApp } from './context/AppContext'
@@ -79,6 +79,13 @@ const NeuLehrerStart       = lazy(() => import('./neu/lehrer/Start'))
 const NeuLehrerKurse       = lazy(() => import('./neu/lehrer/Kurse'))
 const NeuLehrerKurs        = lazy(() => import('./neu/lehrer/Kurs'))
 const NeuStundeAbschliessen = lazy(() => import('./neu/lehrer/StundeAbschliessen'))
+const NeuLehrerTermine     = lazy(() => import('./neu/lehrer/Termine'))
+const NeuLehrerLieder      = lazy(() => import('./neu/lehrer/Lieder'))
+const NeuLehrerSchueler    = lazy(() => import('./neu/lehrer/Schueler'))
+const NeuLehrerLive        = lazy(() => import('./neu/lehrer/Live'))
+const NeuLiederListe       = lazy(() => import('./neu/seiten/LiederListe'))
+const NeuSession           = lazy(() => import('./neu/seiten/Session'))
+const NeuWerkzeuge         = lazy(() => import('./neu/seiten/Werkzeuge'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -99,6 +106,17 @@ function LayoutWahl() {
 
 function DesignWahl({ alt, neu }) {
   return useNeuesDesignAktiv() ? neu : alt
+}
+
+// Live-Sitzung (öffentlich): neues Design auch für Gäste; klassisch nur, wer es eingeschaltet hat
+function SessionWahl() {
+  const { rolle, neuesDesign } = useApp()
+  return rolle && !(neuesDesign && NEU_ROLLEN.includes(rolle)) ? <SchuelerSession /> : <NeuSession />
+}
+
+function KursUmleitung() {
+  const { id } = useParams()
+  return <Navigate to={`/schueler/kurse/${id}`} replace />
 }
 
 function AppRoutes() {
@@ -147,18 +165,20 @@ function AppRoutes() {
           <Route path="/lehrer/kurse/:id"       element={<DesignWahl alt={<KursDetail />} neu={<NeuLehrerKurs />} />} />
           <Route path="/lehrer/kurse/:id/verwalten" element={<KursDetail />} />
           <Route path="/lehrer/stunde/:id"      element={<DesignWahl alt={<Navigate to="/lehrer" replace />} neu={<NeuStundeAbschliessen />} />} />
-          <Route path="/lehrer/kurse/:id/repertoire" element={<KursRepertoire />} />
-          <Route path="/lehrer/kurse/:kursId/repertoire/:stueckId" element={<StueckDetail />} />
-          <Route path="/lehrer/kurse/:id/unterrichtsmodus" element={<Unterrichtsmodus />} />
-          <Route path="/lehrer/schueler"        element={<LehrerSchueler />} />
-          <Route path="/lehrer/anwesenheit"     element={<Stundenplan />} />
-          <Route path="/lehrer/repertoire"      element={<Repertoire />} />
-          <Route path="/lehrer/repertoire/:stueckId" element={<StueckDetail />} />
-          <Route path="/lehrer/events"                                         element={<LehrerEvents />} />
-          <Route path="/lehrer/events/:id/repertoire"                        element={<EventRepertoire />} />
-          <Route path="/lehrer/events/:kursId/repertoire/:stueckId"          element={<StueckDetail />} />
-          <Route path="/lehrer/nachrichten"     element={<Nachrichten />} />
-          <Route path="/lehrer/tools"           element={<Tools />} />
+          <Route path="/lehrer/kurse/:id/repertoire" element={<DesignWahl alt={<KursRepertoire />} neu={<NeuLiederListe art="kurs" />} />} />
+          <Route path="/lehrer/kurse/:kursId/repertoire/:stueckId" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
+          <Route path="/lehrer/kurse/:id/unterrichtsmodus" element={<DesignWahl alt={<Unterrichtsmodus />} neu={<NeuLehrerLive />} />} />
+          <Route path="/lehrer/schueler"        element={<DesignWahl alt={<LehrerSchueler />} neu={<NeuLehrerSchueler />} />} />
+          <Route path="/lehrer/anwesenheit"     element={<DesignWahl alt={<Stundenplan />} neu={<NeuLehrerTermine />} />} />
+          <Route path="/lehrer/stundenplan"     element={<Stundenplan />} />
+          <Route path="/lehrer/repertoire"      element={<DesignWahl alt={<Repertoire />} neu={<NeuLehrerLieder />} />} />
+          <Route path="/lehrer/repertoire/:stueckId" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
+          <Route path="/lehrer/repertoire/:stueckId/bearbeiten" element={<StueckDetail />} />
+          <Route path="/lehrer/events"                                         element={<DesignWahl alt={<LehrerEvents />} neu={<Navigate to="/lehrer/anwesenheit" replace />} />} />
+          <Route path="/lehrer/events/:id/repertoire"                        element={<DesignWahl alt={<EventRepertoire />} neu={<NeuLiederListe art="event" />} />} />
+          <Route path="/lehrer/events/:kursId/repertoire/:stueckId"          element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
+          <Route path="/lehrer/nachrichten"     element={<DesignWahl alt={<Nachrichten />} neu={<NeuNachrichten />} />} />
+          <Route path="/lehrer/tools"           element={<DesignWahl alt={<Tools />} neu={<NeuWerkzeuge />} />} />
           <Route path="/lehrer/ich"             element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
           <Route path="/lehrer/profil"          element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
         </Route>
@@ -172,15 +192,15 @@ function AppRoutes() {
           <Route path="/schueler/ich"                 element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
           <Route path="/schueler/kurse"               element={<DesignWahl alt={<SchuelerKurse />} neu={<NeuKurse />} />} />
           <Route path="/schueler/kurse/:id"           element={<DesignWahl alt={<SchuelerKursDetail />} neu={<NeuKurs />} />} />
-          <Route path="/schueler/kurse/:id/anwesenheit" element={<SchuelerAnwesenheit />} />
+          <Route path="/schueler/kurse/:id/anwesenheit" element={<DesignWahl alt={<SchuelerAnwesenheit />} neu={<KursUmleitung />} />} />
           <Route path="/schueler/dateien"             element={<DesignWahl alt={<SchuelerDateien />} neu={<NeuDokumente />} />} />
           <Route path="/schueler/events"                                       element={<DesignWahl alt={<SchuelerEvents />} neu={<NeuTermine />} />} />
-          <Route path="/schueler/events/:id/repertoire"                      element={<EventRepertoire />} />
-          <Route path="/schueler/events/:kursId/repertoire/:stueckId"        element={<StueckDetail />} />
+          <Route path="/schueler/events/:id/repertoire"                      element={<DesignWahl alt={<EventRepertoire />} neu={<NeuLiederListe art="event" />} />} />
+          <Route path="/schueler/events/:kursId/repertoire/:stueckId"        element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
           <Route path="/schueler/repertoire"         element={<DesignWahl alt={<Repertoire />} neu={<NeuLieder />} />} />
           <Route path="/schueler/repertoire/:stueckId" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
           <Route path="/schueler/nachrichten"         element={<DesignWahl alt={<Nachrichten />} neu={<NeuNachrichten />} />} />
-          <Route path="/schueler/tools"              element={<Tools />} />
+          <Route path="/schueler/tools"              element={<DesignWahl alt={<Tools />} neu={<NeuWerkzeuge />} />} />
           <Route path="/schueler/faq"                element={<DesignWahl alt={<SchuelerFAQ />} neu={<NeuHilfe />} />} />
           <Route path="/schueler/profil"              element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
         </Route>
@@ -234,7 +254,7 @@ function AppRoutes() {
       </Route>
 
       {/* Session beitreten */}
-      <Route path="/session/:code" element={<SchuelerSession />} />
+      <Route path="/session/:code" element={<SessionWahl />} />
 
       {/* Beamer-Anzeige */}
       <Route path="/beamer" element={<BeamerDisplay />} />

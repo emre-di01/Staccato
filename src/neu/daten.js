@@ -102,7 +102,7 @@ export function useMeineEvents() {
     queryFn: async () => {
       const heute = new Date(); heute.setHours(0, 0, 0, 0)
       const { data, error } = await supabase.from('events')
-        .select('id, titel, typ, beginn, ende, ort, raeume(name), event_teilnehmer(zusage, profil_id)')
+        .select('id, titel, typ, beginn, ende, ort, beschreibung, oeffentlich, erstellt_von, raeume(name), event_teilnehmer(zusage, profil_id), event_stuecke(stueck_id)')
         .eq('schule_id', schule.id)
         .gte('beginn', heute.toISOString())
         .lte('beginn', new Date(Date.now() + 180 * TAG).toISOString())

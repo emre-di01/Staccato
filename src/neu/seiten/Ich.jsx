@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut, Users, CalendarDays } from 'lucide-react'
+import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut, Users, CalendarDays, Wrench } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Segment, Schalter } from '../../ui'
 import JoinSessionModal from '../../components/layout/JoinSessionModal'
@@ -29,12 +29,14 @@ export default function NeuIch() {
     <Zeile key="schueler" icon={Users} titel={T('my_students')} to="/lehrer/schueler" />,
     <Zeile key="events" icon={CalendarDays} titel={T('events')} to="/lehrer/events" />,
     <Zeile key="dateien" icon={FolderOpen} titel={T('eigene_meine')} to="/meine-dateien" />,
+    <Zeile key="werkzeuge" icon={Wrench} titel={T('tools_title')} untertitel={T('n_werkzeuge_untertitel')} to="/lehrer/tools" />,
   ] : [
     nachrichten,
     <Zeile key="dateien" icon={FolderOpen} titel={T('eigene_meine')} to="/meine-dateien" />,
     <Zeile key="kurse" icon={Music} titel={T('my_classes')} untertitel={T('n_kurse_untertitel')} to="/schueler/kurse" />,
     <Zeile key="dokumente" icon={FileText} titel={T('n_dokumente')} untertitel={T('n_dokumente_untertitel')} to="/schueler/dateien" />,
     <Zeile key="live" icon={Radio} titel={T('n_live_beitreten')} untertitel={T('n_live_untertitel')} onClick={() => setJoinOffen(true)} />,
+    <Zeile key="werkzeuge" icon={Wrench} titel={T('tools_title')} untertitel={T('n_werkzeuge_untertitel')} to="/schueler/tools" />,
   ]
   const weitere = [
     ...(schulenListe?.length > 1 ? [<Zeile key="schule" icon={School} titel={T('n_schule_wechseln')} untertitel={schule?.name} to="/schulen" />] : []),

@@ -70,7 +70,7 @@ export default function LehrerKurs() {
         <Link to={`/lehrer/kurse/${id}/unterrichtsmodus`} style={{ ...knopf, background: 'var(--primary)', color: 'var(--primary-fg)', fontWeight: 700 }}>
           <Play aria-hidden="true" size={16} fill="currentColor" />{T('nl_unterricht_starten')}
         </Link>
-        <Link to="/lehrer/nachrichten" style={{ ...knopf, background: 'var(--n-fill)', color: 'var(--text)', fontWeight: 600 }}>
+        <Link to={`/lehrer/nachrichten?neu=kurs&kurs=${id}`} style={{ ...knopf, background: 'var(--n-fill)', color: 'var(--text)', fontWeight: 600 }}>
           <MessageCircle aria-hidden="true" size={18} />{T('n_nachricht')}
         </Link>
       </div>

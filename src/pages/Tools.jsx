@@ -54,7 +54,7 @@ function getCents(f, m) {
 }
 
 // ── Kapo Tab ─────────────────────────────────────────────────────
-function KapoTab() {
+export function KapoTab() {
   const { T } = useApp()
   const [kapo, setKapo] = useState(0)
 
@@ -129,7 +129,7 @@ function KapoTab() {
 }
 
 // ── Tuner Tab ─────────────────────────────────────────────────────
-function TunerTab() {
+export function TunerTab() {
   const { toast, T } = useApp()
   const [aktiv, setAktiv] = useState(false)
   const [note, setNote] = useState(null) // { name, oktave, cents, freq }
@@ -251,7 +251,7 @@ function TunerTab() {
 }
 
 // ── BPM Tab ───────────────────────────────────────────────────────
-function BpmTab() {
+export function BpmTab() {
   const { T } = useApp()
   const [bpm, setBpm] = useState(null)
   const [taps, setTaps] = useState(0)
