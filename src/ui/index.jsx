@@ -62,7 +62,7 @@ export function TextLink({ to, children, onClick }) {
 // ─── Gruppierte Liste (iOS-Stil) ──────────────────────────────
 export function Gruppe({ children, style }) {
   return (
-    <div style={{ margin: '0 20px', borderRadius: 18, background: 'var(--n-fill)', overflow: 'hidden', ...style }}>
+    <div className="n-glas" style={{ margin: '0 20px', borderRadius: 18, background: 'var(--n-fill)', overflow: 'hidden', ...style }}>
       {children}
     </div>
   )
@@ -298,7 +298,7 @@ export function Blatt({ titel, onClose, children }) {
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--n-overlay)', display: 'flex' }}>
       <div role="dialog" aria-modal="true" aria-labelledby={titelId} className="n-blatt"
         style={{ background: 'var(--bg)', color: 'var(--text)', width: '100%', maxHeight: '90dvh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
-        <div style={{ position: 'sticky', top: 0, background: 'var(--bg)', padding: '10px 20px 8px', zIndex: 1 }}>
+        <div className="n-blatt-kopf" style={{ position: 'sticky', top: 0, background: 'var(--bg)', padding: '10px 20px 8px', zIndex: 1 }}>
           <div className="n-blatt-griff" aria-hidden="true" style={{ width: 40, height: 5, borderRadius: 3, background: 'var(--n-fill-2)', margin: '0 auto 10px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <h2 id={titelId} style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{titel}</h2>
@@ -325,6 +325,7 @@ export const UI_CSS = `
     .n-blatt-griff { display: none; }
   }
   .n-seite { animation: nRein .22s ease both; }
+  .n-regler { width: 100%; height: 44px; margin: 0; accent-color: var(--primary); cursor: pointer; }
   .n-lied-text h1, .n-lied-text h2, .n-lied-text h3 { font-size: .62em; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .85; margin: 1.4em 0 .4em; }
   .n-lied-text p { margin: 0 0 1em; }
   .n-lied-text hr { border: none; border-top: 1px solid rgba(255,255,255,.25); margin: 1.2em 0; }

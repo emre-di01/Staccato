@@ -55,6 +55,11 @@ export function AppProvider({ children }) {
     return localStorage.getItem('staccato_grosse_schrift') === 'true' ? 1 : 0
   })
   const großeSchrift = schriftStufe > 0
+  // Glas-Effekt („Liquid“) der neuen Oberfläche: 0 = aus … 100 = stark
+  const [liquid, setLiquidState] = useState(() => {
+    const l = parseInt(localStorage.getItem('staccato_liquid') ?? '', 10)
+    return l >= 0 && l <= 100 ? l : 50
+  })
   // Farbmodus hell | dunkel | auto (auto folgt dem Gerät)
   const [farbmodus, setFarbmodusState] = useState(() => {
     const m = localStorage.getItem('staccato_farbmodus')
@@ -105,6 +110,21 @@ export function AppProvider({ children }) {
     localStorage.setItem('staccato_schriftstufe', String(schriftStufe))
     localStorage.setItem('staccato_grosse_schrift', String(schriftStufe > 0))
   }, [schriftStufe])
+
+  useEffect(() => {
+    const root = document.documentElement
+    // Gerät wünscht weniger Transparenz → Effekt aus
+    const reduziert = window.matchMedia?.('(prefers-reduced-transparency: reduce)').matches
+    const staerke = reduziert ? 0 : liquid
+    if (staerke > 0) {
+      root.setAttribute('data-liquid', '')
+      root.style.setProperty('--n-liquid', String(staerke / 100))
+    } else {
+      root.removeAttribute('data-liquid')
+      root.style.removeProperty('--n-liquid')
+    }
+    localStorage.setItem('staccato_liquid', String(liquid))
+  }, [liquid])
 
   useEffect(() => {
     if (schule?.name) document.title = `Staccato – ${schule.name}`
@@ -258,6 +278,10 @@ export function AppProvider({ children }) {
     setSchriftStufeState(s => (s > 0 ? 0 : 1))
   }
 
+  function setLiquid(wert) {
+    setLiquidState(Math.max(0, Math.min(100, Math.round(wert))))
+  }
+
   function setSchriftStufe(stufe) {
     setSchriftStufeState(Math.max(0, Math.min(2, stufe)))
   }
@@ -298,7 +322,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       session, profil, rolle, laden,
       theme, darkMode, lang, zeitzone,
-      großeSchrift, toggleGrosseSchrift, schriftStufe, setSchriftStufe,
+      großeSchrift, toggleGrosseSchrift, schriftStufe, setSchriftStufe, liquid, setLiquid,
       farbmodus, setFarbmodus,
       neuesDesign: neuesDesignAktiv, setNeuesDesign,
       schule, setSchule, abo,

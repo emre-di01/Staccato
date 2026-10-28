@@ -226,7 +226,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.8.0** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.0** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 

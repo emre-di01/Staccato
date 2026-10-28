@@ -369,6 +369,42 @@ const NEU_GLOBAL_CSS = `
     background: var(--n-fill) !important; color: var(--text) !important; font-size: 16px !important;
     display: flex; align-items: center; justify-content: center;
   }
+
+  /* ── Liquid Glass (Ich → Darstellung → Glas-Effekt) ──
+     Aktiv über html[data-liquid]; Stärke 0…1 in --n-liquid (AppContext).
+     Flächen werden durchscheinend, dahinter liegt ein ruhiger Farbverlauf, der durch das Glas schimmert. */
+  html[data-theme="neu2026"][data-liquid] {
+    --n-fill: color-mix(in srgb, var(--n-fill-solid) calc(100% - var(--n-liquid) * 58%), transparent) !important;
+    --n-bar: color-mix(in srgb, var(--bg) calc(78% - var(--n-liquid) * 38%), transparent) !important;
+    --n-glas-filter: blur(calc(10px + var(--n-liquid) * 22px)) saturate(calc(1.3 + var(--n-liquid) * 0.7));
+    --n-glas-kante: inset 0 1px 0 rgba(var(--n-glas-licht), calc((0.25 + var(--n-liquid) * 0.5) * var(--n-glas-licht-a))),
+                    inset 0 0 0 1px rgba(var(--n-glas-licht), calc((0.08 + var(--n-liquid) * 0.22) * var(--n-glas-licht-a))),
+                    0 calc(4px + var(--n-liquid) * 8px) calc(14px + var(--n-liquid) * 26px) rgba(0,0,0, calc(var(--n-liquid) * var(--n-glas-schatten)));
+  }
+  html[data-theme="neu2026"][data-liquid] body { background: var(--bg); }
+  html[data-theme="neu2026"][data-liquid] body::before {
+    content: ''; position: fixed; inset: -10%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(40% 35% at 12% 8%,  var(--n-glas-b1), transparent 70%),
+      radial-gradient(45% 40% at 92% 22%, var(--n-glas-b2), transparent 70%),
+      radial-gradient(50% 45% at 30% 78%, var(--n-glas-b3), transparent 70%),
+      radial-gradient(40% 35% at 88% 92%, var(--n-glas-b1), transparent 70%);
+    opacity: calc(0.35 + var(--n-liquid) * 0.65);
+    filter: blur(20px);
+  }
+  html[data-theme="neu2026"][data-liquid] .n-shell { background: transparent !important; }
+  html[data-theme="neu2026"][data-liquid] :is(.n-glas, [style*="background: var(--n-fill)"][style*="border-radius: 18px"]) {
+    backdrop-filter: var(--n-glas-filter); -webkit-backdrop-filter: var(--n-glas-filter);
+    box-shadow: var(--n-glas-kante);
+  }
+  html[data-theme="neu2026"][data-liquid] :is(.n-blatt, .n-blatt-kopf, .modal-inner) {
+    background: color-mix(in srgb, var(--bg) calc(92% - var(--n-liquid) * 30%), transparent) !important;
+  }
+  html[data-theme="neu2026"][data-liquid] :is(.n-blatt, .modal-inner) {
+    backdrop-filter: var(--n-glas-filter); -webkit-backdrop-filter: var(--n-glas-filter);
+    box-shadow: var(--n-glas-kante), var(--shadow-lg) !important;
+  }
+  html[data-theme="neu2026"][data-liquid] .n-blatt-kopf { backdrop-filter: var(--n-glas-filter); -webkit-backdrop-filter: var(--n-glas-filter); }
   @media (max-width: 899px) {
     html[data-theme="neu2026"] .modal-overlay:has(> .modal-inner) { align-items: flex-end !important; padding: 0 !important; }
     html[data-theme="neu2026"] .modal-inner {
@@ -390,6 +426,8 @@ export const NEU_THEME = {
     '--n-tint': '#FBE3D9', '--n-tint-fg': '#9A3412', '--n-chev': '#8E8E96',
     '--n-hero': '#C2410C', '--n-hero-2': '#A3360A', '--n-hero-sub': '#FFE4D6', '--n-hero-btn-fg': '#9A3412',
     '--n-bar': 'rgba(250,250,252,0.88)', '--n-overlay': 'rgba(17,17,20,0.4)',
+    '--n-fill-solid': '#F2F2F5', '--n-glas-licht': '255,255,255', '--n-glas-licht-a': '1', '--n-glas-schatten': '0.10',
+    '--n-glas-b1': 'rgba(251,146,60,0.45)', '--n-glas-b2': 'rgba(244,114,182,0.32)', '--n-glas-b3': 'rgba(96,165,250,0.30)',
     globalCss: NEU_GLOBAL_CSS,
   },
   dark: {
@@ -404,6 +442,8 @@ export const NEU_THEME = {
     '--n-tint': '#3A2418', '--n-tint-fg': '#FDBA74', '--n-chev': '#8E8E96',
     '--n-hero': '#C2410C', '--n-hero-2': '#A3360A', '--n-hero-sub': '#FFE4D6', '--n-hero-btn-fg': '#9A3412',
     '--n-bar': 'rgba(22,22,24,0.88)', '--n-overlay': 'rgba(0,0,0,0.6)',
+    '--n-fill-solid': '#1C1C1E', '--n-glas-licht': '255,255,255', '--n-glas-licht-a': '0.35', '--n-glas-schatten': '0.45',
+    '--n-glas-b1': 'rgba(234,88,12,0.38)', '--n-glas-b2': 'rgba(190,24,93,0.28)', '--n-glas-b3': 'rgba(37,99,235,0.28)',
     globalCss: NEU_GLOBAL_CSS,
   },
 }

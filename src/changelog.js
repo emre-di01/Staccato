@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.8.0'
+export const CURRENT_VERSION = '2.9.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.0',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '🫧',
+        de: 'Neuer Glas-Effekt: Flächen und Menüleiste wirken jetzt wie durchscheinendes Glas. Die Stärke lässt sich unter „Ich“ → Darstellung einstellen oder ganz ausschalten',
+        en: 'New glass effect: surfaces and the menu bar now look like translucent glass. Adjust its strength or turn it off under “Me” → Appearance',
+        tr: 'Yeni cam efekti: yüzeyler ve menü çubuğu artık yarı saydam cam gibi görünüyor. Gücünü “Ben” → Görünüm altında ayarlayabilir veya kapatabilirsiniz',
+      },
+    ],
+  },
   {
     version: '2.8.0',
     date: '2026-10-28',

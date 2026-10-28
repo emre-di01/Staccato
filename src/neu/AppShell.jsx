@@ -181,10 +181,24 @@ const SHELL_CSS = `
     background: var(--n-bar); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
     border-top: 1px solid var(--n-sep);
   }
+  /* Glas-Effekt: schwebende Reiterleiste wie eine Glaskapsel */
+  html[data-liquid] .n-reiterleiste {
+    left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); padding: 6px 8px;
+    border-radius: 32px; border-top: none; backdrop-filter: var(--n-glas-filter); -webkit-backdrop-filter: var(--n-glas-filter);
+    box-shadow: var(--n-glas-kante);
+  }
+  html[data-liquid] .n-inhalt:not(.n-vollbild) { padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
   @media (min-width: 900px) {
     .n-seitenleiste { display: block; position: fixed; top: 0; bottom: 0; left: 0; width: 260px; border-right: 1px solid var(--n-sep); background: var(--bg); overflow-y: auto; }
     .n-inhalt { margin-left: 260px; padding-bottom: 40px; padding-top: 24px; }
     .n-inhalt.n-vollbild { padding-top: 0; }
     .n-reiterleiste { display: none; }
+    html[data-liquid] .n-seitenleiste {
+      top: 12px; bottom: 12px; left: 12px; width: 248px; border-right: none; border-radius: 28px;
+      background: var(--n-bar); backdrop-filter: var(--n-glas-filter); -webkit-backdrop-filter: var(--n-glas-filter);
+      box-shadow: var(--n-glas-kante);
+    }
+    html[data-liquid] .n-inhalt:not(.n-vollbild) { padding-bottom: 40px; }
+    html[data-liquid] .n-inhalt { margin-left: 272px; }
   }
 `

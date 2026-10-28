@@ -8,7 +8,7 @@ import { useUngelesen } from '../daten'
 import { useBasis } from '../rolle'
 
 export default function NeuIch() {
-  const { profil, rolle, schule, schulenListe, T, farbmodus, setFarbmodus, schriftStufe, setSchriftStufe, setNeuesDesign, abmelden } = useApp()
+  const { profil, rolle, schule, schulenListe, T, farbmodus, setFarbmodus, schriftStufe, setSchriftStufe, liquid, setLiquid, setNeuesDesign, abmelden } = useApp()
   const navigate = useNavigate()
   const { data: ungelesen = [] } = useUngelesen()
   const [joinOffen, setJoinOffen] = useState(false)
@@ -90,6 +90,19 @@ export default function NeuIch() {
               <div aria-live="polite" style={{ flex: 1, textAlign: 'center', fontSize: [17, 20, 23][schriftStufe], fontWeight: 600 }}>{[T('n_normal'), T('n_gross'), T('n_sehr_gross')][schriftStufe]}</div>
               <button onClick={() => setSchriftStufe(schriftStufe + 1)} disabled={schriftStufe === 2} aria-label={T('n_schrift_groesser')} style={schriftKnopf(22, schriftStufe === 2)}>A+</button>
             </div>
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+              <label htmlFor="n-glas-regler" style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-2)' }}>{T('n_glas_effekt')}</label>
+              <span aria-hidden="true" style={{ fontSize: 16, fontWeight: 700 }}>{liquid === 0 ? T('n_glas_aus') : `${liquid} %`}</span>
+            </div>
+            <input id="n-glas-regler" className="n-regler" type="range" min={0} max={100} step={10} value={liquid}
+              onChange={e => setLiquid(Number(e.target.value))}
+              aria-valuetext={liquid === 0 ? T('n_glas_aus') : `${liquid} %`} />
+            <div aria-hidden="true" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-2)', marginTop: 4 }}>
+              <span>{T('n_glas_aus')}</span><span>{T('n_glas_stark')}</span>
+            </div>
+            <div style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 8, lineHeight: 1.45 }}>{T('n_glas_hinweis')}</div>
           </div>
         </Gruppe>
       </Abschnitt>
