@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarPlus, CalendarRange, Printer, Download, UserPlus, FileText, Award, Trash2 } from 'lucide-react'
+import { CalendarPlus, CalendarRange, Printer, Download, UserPlus, FileText, Award, Trash2, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
-import { useBasis } from '../rolle'
+import { useBasis, useSchulweit } from '../rolle'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Blatt, Feld, Knopf, Suchfeld, Leer, Laden, eingabeStil } from '../../ui'
 import ZertifikatModal from '../../components/ZertifikatModal'
 import KursantragModal from '../../components/KursantragModal'
 import { useNeuLaden } from '../daten'
 import { schulZeitZuIso, tagKey, tagLabel, uhrzeit } from '../zeit'
 import { kursZeit } from './kursZeit'
+import KursBlatt from './KursBlatt'
 
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
 
@@ -44,11 +45,12 @@ const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&
 
 export default function KursVerwalten() {
   const basis = useBasis()
+  const schulweit = useSchulweit()
   const { id } = useParams()
   const { T, lang, zeitzone, toast, confirm } = useApp()
   const { data, isLoading } = useKursVerwalten(id)
   const neuLaden = useNeuLaden()
-  const [blatt, setBlatt] = useState(null)       // 'einzel' | 'zeitraum' | 'hinzufuegen' | { person }
+  const [blatt, setBlatt] = useState(null)       // 'bearbeiten' | 'einzel' | 'zeitraum' | 'hinzufuegen' | { person }
   const [dokument, setDokument] = useState(null) // { art: 'zertifikat' | 'antrag', person }
 
   if (isLoading) return <Seite zurueck={{ to: `${basis}/kurse/${id}`, label: T('nl_tab_kurse') }}><div style={{ marginTop: 24 }}><Laden hoehe={300} /></div></Seite>
@@ -123,6 +125,12 @@ ${st.hausaufgaben ? `<div class="label">${T('nl_bis_naechstes_mal')}</div><p cla
 
   return (
     <Seite zurueck={{ to: `${basis}/kurse/${id}`, label: kurs.name }} ueber={kurs.name} titel={T('nl_kurs_verwalten')}>
+      {schulweit && (
+        <Gruppe style={{ marginTop: 24 }}>
+          <Zeile icon={Pencil} titel={T('nl_kurs_bearbeiten')} untertitel={T('nl_kurs_bearbeiten_hinweis')} onClick={() => setBlatt('bearbeiten')} />
+        </Gruppe>
+      )}
+
       <Abschnitt titel={T('nl_stunden')} style={{ marginTop: 24 }}>
         <Gruppe>
           <Zeile icon={CalendarPlus} titel={T('nl_kv_einzelstunde')} untertitel={T('nl_kv_einzelstunde_hinweis')} onClick={() => setBlatt('einzel')} />
@@ -158,10 +166,11 @@ ${st.hausaufgaben ? `<div class="label">${T('nl_bis_naechstes_mal')}</div><p cla
               </div>
             ))}
           </Gruppe>
-          <div style={{ margin: '10px 20px 0', fontSize: 15, color: 'var(--text-2)' }}>{T('nl_kv_verwaltung_hinweis')}</div>
+          {!schulweit && <div style={{ margin: '10px 20px 0', fontSize: 15, color: 'var(--text-2)' }}>{T('nl_kv_verwaltung_hinweis')}</div>}
         </Abschnitt>
       )}
 
+      {blatt === 'bearbeiten' && <KursBlatt kurs={kurs} onClose={() => setBlatt(null)} onFertig={() => { setBlatt(null); aktualisieren() }} />}
       {blatt === 'einzel' && <EinzelStundeBlatt kurs={kurs} onClose={() => setBlatt(null)} onFertig={() => { setBlatt(null); aktualisieren() }} />}
       {blatt === 'zeitraum' && <ZeitraumBlatt kurs={kurs} onClose={() => setBlatt(null)} onFertig={aktualisieren} />}
       {blatt === 'hinzufuegen' && <HinzufuegenBlatt kursId={id} vorhanden={teilnehmer} onClose={() => setBlatt(null)} onFertig={aktualisieren} />}
