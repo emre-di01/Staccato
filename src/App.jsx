@@ -7,7 +7,7 @@ import PageErrorBoundary from './components/PageErrorBoundary'
 import ProtectedRoute, { startseiteNach } from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 import AppShell from './neu/AppShell'
-import { NEU_ROLLEN } from './neu/rolle'
+import { DESIGN_ROLLEN } from './neu/rolle'
 import ConsentBanner from './components/ConsentBanner'
 import WhatsNewModal from './components/WhatsNewModal'
 
@@ -89,6 +89,9 @@ const NeuWerkzeuge         = lazy(() => import('./neu/seiten/Werkzeuge'))
 const NeuKursVerwalten     = lazy(() => import('./neu/lehrer/KursVerwalten'))
 const NeuLiedBearbeiten    = lazy(() => import('./neu/lehrer/LiedBearbeiten'))
 const NeuLehrerWoche       = lazy(() => import('./neu/lehrer/Woche'))
+// Neues Design, Phase 4: Admin/Superadmin (Opt-in)
+const NeuAdminStart        = lazy(() => import('./neu/admin/Start'))
+const NeuAdminBereich      = lazy(() => import('./neu/admin/Bereich'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -97,10 +100,10 @@ function RollenWeiterleitung() {
   return <Navigate to={startseiteNach(rolle)} replace />
 }
 
-// Neues Design: für die Rollen in NEU_ROLLEN, nur wenn im Profil eingeschaltet
+// Neues Design: Standard für NEU_ROLLEN, Opt-in für OPTIN_ROLLEN (Admin/Superadmin)
 function useNeuesDesignAktiv() {
   const { neuesDesign, rolle } = useApp()
-  return neuesDesign && NEU_ROLLEN.includes(rolle)
+  return neuesDesign && DESIGN_ROLLEN.includes(rolle)
 }
 
 function LayoutWahl() {
@@ -114,7 +117,7 @@ function DesignWahl({ alt, neu }) {
 // Live-Sitzung (öffentlich): neues Design auch für Gäste; klassisch nur, wer es eingeschaltet hat
 function SessionWahl() {
   const { rolle, neuesDesign } = useApp()
-  return rolle && !(neuesDesign && NEU_ROLLEN.includes(rolle)) ? <SchuelerSession /> : <NeuSession />
+  return rolle && !(neuesDesign && DESIGN_ROLLEN.includes(rolle)) ? <SchuelerSession /> : <NeuSession />
 }
 
 function KursUmleitung() {
@@ -134,13 +137,16 @@ function AppRoutes() {
 
       {/* ── Admin / Superadmin ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin']} />}>
-        <Route element={<AppLayout />}>
-          <Route path="/admin"                  element={<AdminDashboard />} />
+        <Route element={<LayoutWahl />}>
+          <Route path="/admin"                  element={<DesignWahl alt={<AdminDashboard />} neu={<NeuAdminStart />} />} />
+          <Route path="/admin/unterricht"       element={<DesignWahl alt={<Navigate to="/admin/kurse" replace />} neu={<NeuAdminBereich bereich="unterricht" />} />} />
+          <Route path="/admin/verwaltung"       element={<DesignWahl alt={<Navigate to="/admin" replace />} neu={<NeuAdminBereich bereich="verwaltung" />} />} />
+          <Route path="/admin/ich"              element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
           <Route path="/admin/mitglieder"       element={<Mitgliederverwaltung />} />
           <Route path="/admin/kurse"            element={<Kursverwaltung />} />
           <Route path="/admin/raeume"           element={<Raumverwaltung />} />
           <Route path="/admin/stundenplan"      element={<Stundenplan />} />
-          <Route path="/admin/profil"            element={<ProfilSeite />} />
+          <Route path="/admin/profil"            element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
           <Route path="/admin/repertoire"       element={<Repertoire />} />
           <Route path="/admin/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/admin/events"                                          element={<AdminEvents />} />
@@ -154,7 +160,7 @@ function AppRoutes() {
           <Route path="/admin/interessenten"    element={<Interessenten />} />
           <Route path="/admin/rechnungen"       element={<Rechnungen />} />
           <Route path="/admin/nachrichten"      element={<Nachrichten />} />
-          <Route path="/admin/tools"            element={<Tools />} />
+          <Route path="/admin/tools"            element={<DesignWahl alt={<Tools />} neu={<NeuWerkzeuge />} />} />
           <Route path="/admin/einstellungen"    element={<AdminEinstellungen />} />
         </Route>
       </Route>
@@ -211,7 +217,7 @@ function AppRoutes() {
 
       {/* ── Vorstand ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['vorstand', 'admin', 'superadmin']} />}>
-        <Route element={<AppLayout />}>
+        <Route element={<LayoutWahl />}>
           <Route path="/vorstand"                       element={<VorstandDashboard />} />
           <Route path="/vorstand/ziele"                 element={<VorstandZiele />} />
           <Route path="/vorstand/protokolle"            element={<VorstandProtokolle />} />
@@ -245,7 +251,7 @@ function AppRoutes() {
 
       {/* ── Superadmin ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['superadmin']} />}>
-        <Route element={<AppLayout />}>
+        <Route element={<LayoutWahl />}>
           <Route path="/superadmin" element={<SuperadminDashboard />} />
           <Route path="/superadmin/demos" element={<SuperadminDemos />} />
         </Route>

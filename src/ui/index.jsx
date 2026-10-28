@@ -12,9 +12,10 @@ import { useApp } from '../context/AppContext'
 // ─── Seite mit großem Titel ───────────────────────────────────
 // `zurueck`: { to, label } → Link über dem Titel (Unterseiten); { onClick, label } → Knopf
 const zurueckStil = { display: 'inline-flex', alignItems: 'center', gap: 2, minHeight: 44, margin: '8px 0 -12px 10px', padding: '0 10px 0 0', fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }
-export function Seite({ titel, ueber, rechts, zurueck, children }) {
+// `breit`: für Verwaltungsseiten am Computer (mehrspaltig)
+export function Seite({ titel, ueber, rechts, zurueck, breit, children }) {
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', paddingBottom: 32 }}>
+    <div style={{ maxWidth: breit ? 1100 : 760, margin: '0 auto', paddingBottom: 32 }}>
       {zurueck && (zurueck.onClick ? (
         <button onClick={zurueck.onClick} style={{ ...zurueckStil, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
           <ChevronLeft aria-hidden="true" size={24} />{zurueck.label}

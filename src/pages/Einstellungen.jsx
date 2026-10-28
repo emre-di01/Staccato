@@ -5,13 +5,14 @@ import { useApp } from '../context/AppContext'
 import { THEMES, THEME_KEYS } from '../themes/themes'
 import { ONBOARDING_LS_KEY } from '../components/OnboardingModal'
 import { usePushAbo } from '../hooks/usePushAbo'
-import { NEU_ROLLEN } from '../neu/rolle'
+import { NEU_ROLLEN, OPTIN_ROLLEN } from '../neu/rolle'
 
 const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL ?? ''
 
 export default function Einstellungen() {
   const { profil, ladeProfil, T, rolle, lang, setLang, theme, darkMode, changeTheme, toggleDark, großeSchrift, toggleGrosseSchrift, neuesDesign, setNeuesDesign } = useApp()
   const neuesDesignMoeglich = NEU_ROLLEN.includes(rolle)
+  const neuesDesignOptin = OPTIN_ROLLEN.includes(rolle)
   const navigate = useNavigate()
 
   const DEFAULT_NOTIF = { event_invite: true, new_piece: true, new_message: true, lesson_reminder: false }
@@ -73,6 +74,23 @@ export default function Einstellungen() {
             </div>
             <div style={{ width: 42, height: 24, borderRadius: 99, background: !neuesDesign ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
               <div style={{ position: 'absolute', top: 3, left: !neuesDesign ? 21 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.2)', transition: 'left 0.2s' }} />
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Neues Design ausprobieren (Opt-in) – für Admin/Superadmin, solange es im Aufbau ist */}
+      {neuesDesignOptin && (
+        <div style={s.card}>
+          <button onClick={() => setNeuesDesign(true)} role="switch" aria-checked={false}
+            style={{ ...s.toggleRow, border: '1.5px solid var(--border)', background: 'var(--bg)' }}>
+            <span style={{ fontSize: 18 }}>✨</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{T('n_neues_design_ausprobieren')}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 2 }}>{T('n_neues_design_admin_hinweis')}</div>
+            </div>
+            <div style={{ width: 42, height: 24, borderRadius: 99, background: 'var(--border)', position: 'relative', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: 3, left: 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.2)' }} />
             </div>
           </button>
         </div>

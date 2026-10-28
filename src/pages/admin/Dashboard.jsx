@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { supabase } from '../../lib/supabase'
 import { SlidingTabs } from '../../components/SlidingTabs'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
+import NeuesDesignHinweis from '../../neu/NeuesDesignHinweis'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -172,6 +173,8 @@ export default function AdminDashboard() {
           {profil?.voller_name}
         </h1>
       </div>
+
+      <NeuesDesignHinweis />
 
       {/* Tabs */}
       <div style={{ marginBottom: 28 }}>

@@ -8,6 +8,8 @@ import OfflineBanner from '../components/layout/OfflineBanner'
 import { GLOBAL_CSS } from '../components/layout/globalCss'
 import { UI_CSS } from '../ui'
 import { useUngelesen } from './daten'
+import { adminReiter } from './admin/navigation'
+import AdminSeitenleiste from './admin/Seitenleiste'
 
 // Reiter der neuen Oberfläche je Rolle. `auch` = weitere Pfade, bei denen der Reiter aktiv ist.
 const GEMEINSAM = ['/einstellungen', '/profil', '/meine-dateien']
@@ -37,6 +39,7 @@ const NEUE_SEITEN = [
   '/lehrer/repertoire/:stueckId', '/lehrer/kurse/:kursId/repertoire/:stueckId', '/lehrer/events/:kursId/repertoire/:stueckId',
   '/schueler/events/:kursId/repertoire/:stueckId', '/lehrer/kurse/:id/unterrichtsmodus',
   '/lehrer/kurse/:id/verwalten', '/lehrer/repertoire/:stueckId/bearbeiten', '/lehrer/stundenplan',
+  '/admin', '/admin/unterricht', '/admin/verwaltung', '/admin/ich', '/admin/profil', '/admin/tools',
   ...GEMEINSAM,
 ]
 const VOLLBILD = [
@@ -54,8 +57,9 @@ function istAktiv(reiter, pfad, erster) {
 }
 
 export default function AppShell() {
-  const { T, rolle, toasts, removeToast, confirmState, resolveConfirm } = useApp()
-  const reiter = REITER[rolle] ?? REITER.schueler
+  const { T, rolle, abo, toasts, removeToast, confirmState, resolveConfirm } = useApp()
+  const istAdmin = rolle === 'admin' || rolle === 'superadmin'
+  const reiter = istAdmin ? adminReiter(abo) : (REITER[rolle] ?? REITER.schueler)
   const { pathname } = useLocation()
   const { data: ungelesen = [] } = useUngelesen()
   const neueSeite = passt(NEUE_SEITEN, pathname)
@@ -71,6 +75,7 @@ export default function AppShell() {
 
       {/* Computer: Seitenleiste */}
       <aside className="n-seitenleiste" aria-label={T('n_hauptmenue')}>
+        {istAdmin ? <AdminSeitenleiste ungelesen={ungelesen.length} /> : <>
         <div style={{ padding: '28px 20px 24px', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Staccato</div>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '0 12px' }}>
           {reiter.map((r, i) => {
@@ -90,6 +95,7 @@ export default function AppShell() {
             )
           })}
         </nav>
+        </>}
       </aside>
 
       <main id="n-inhalt" className={`n-inhalt${vollbild ? ' n-vollbild' : ''}`}>

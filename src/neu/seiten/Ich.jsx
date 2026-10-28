@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut, Users, CalendarDays, Wrench } from 'lucide-react'
+import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut, Users, CalendarDays, Wrench, Building2, Inbox } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Segment, Schalter } from '../../ui'
 import JoinSessionModal from '../../components/layout/JoinSessionModal'
@@ -14,6 +14,7 @@ export default function NeuIch() {
   const [joinOffen, setJoinOffen] = useState(false)
   const basis = useBasis()
   const lehrer = rolle === 'lehrer'
+  const admin = rolle === 'admin' || rolle === 'superadmin'
 
   const name = profil?.voller_name ?? ''
   const initial = (name[0] ?? '?').toUpperCase()
@@ -24,7 +25,15 @@ export default function NeuIch() {
   }
 
   const nachrichten = <Zeile key="nachrichten" icon={MessageCircle} titel={T('messages')} wert={ungelesen.length ? T('n_x_neu').replace('{n}', ungelesen.length) : null} wertFarbe="var(--primary)" to={`${basis}/nachrichten`} />
-  const eintraege = lehrer ? [
+  const eintraege = admin ? [
+    nachrichten,
+    ...(rolle === 'superadmin' ? [
+      <Zeile key="schulen" icon={Building2} titel={T('all_schools')} to="/superadmin" />,
+      <Zeile key="demos" icon={Inbox} titel={T('na_demo_anfragen')} to="/superadmin/demos" />,
+    ] : []),
+    <Zeile key="dateien" icon={FolderOpen} titel={T('eigene_meine')} to="/meine-dateien" />,
+    <Zeile key="werkzeuge" icon={Wrench} titel={T('tools_title')} untertitel={T('n_werkzeuge_untertitel')} to="/admin/tools" />,
+  ] : lehrer ? [
     nachrichten,
     <Zeile key="schueler" icon={Users} titel={T('my_students')} to="/lehrer/schueler" />,
     <Zeile key="events" icon={CalendarDays} titel={T('events')} to="/lehrer/events" />,
@@ -41,7 +50,7 @@ export default function NeuIch() {
   const weitere = [
     ...(schulenListe?.length > 1 ? [<Zeile key="schule" icon={School} titel={T('n_schule_wechseln')} untertitel={schule?.name} to="/schulen" />] : []),
     <Zeile key="einstellungen" icon={Settings} titel={T('n_weitere_einstellungen')} untertitel={T('n_einstellungen_untertitel')} to="/einstellungen" />,
-    ...(lehrer ? [] : [<Zeile key="faq" icon={CircleHelp} titel={T('n_hilfe')} to="/schueler/faq" />]),
+    ...(lehrer || admin ? [] : [<Zeile key="faq" icon={CircleHelp} titel={T('n_hilfe')} to="/schueler/faq" />]),
   ]
 
   return (
@@ -81,10 +90,10 @@ export default function NeuIch() {
 
       <Gruppe style={{ marginTop: 24, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 600 }}>{T('n_klassisches_design')}</div>
-          <div style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 2 }}>{T('n_klassisches_design_hinweis')}</div>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{admin ? T('n_neues_design') : T('n_klassisches_design')}</div>
+          <div style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 2 }}>{admin ? T('na_neues_design_hinweis') : T('n_klassisches_design_hinweis')}</div>
         </div>
-        <Schalter an={false} label={T('n_klassisches_design')} onChange={zurAltenAnsicht} />
+        <Schalter an={admin} label={admin ? T('n_neues_design') : T('n_klassisches_design')} onChange={zurAltenAnsicht} />
       </Gruppe>
 
       <Gruppe style={{ marginTop: 24 }}>
