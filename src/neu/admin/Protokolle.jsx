@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Suchfeld, Chips, Gruppe, Trenner, Zeile, Knopf, Leer, Laden } from '../../ui'
 import { useNeuLaden } from '../daten'
-import { ProtokolModal } from '../../pages/vorstand/Protokolle'
+import { ProtokollBlatt } from './VorstandBlaetter'
 import { useBreit, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
@@ -186,7 +186,7 @@ export default function AdminProtokolle() {
         </>} />
 
       {modal && (
-        <ProtokolModal protokoll={modal.protokoll ?? null} vorstandMitglieder={mitglieder} schuleId={schule?.id} profilId={profil?.id} T={T}
+        <ProtokollBlatt protokoll={modal.protokoll ?? null} vorstandMitglieder={mitglieder} schuleId={schule?.id} profilId={profil?.id}
           onClose={() => setModal(null)} onGespeichert={() => { setModal(null); aktualisieren() }} />
       )}
     </Seite>

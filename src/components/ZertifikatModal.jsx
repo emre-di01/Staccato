@@ -1,8 +1,8 @@
-import { createPortal } from 'react-dom'
 import { useApp } from '../context/AppContext'
+import { DokumentDialog } from './Dialog'
 
 export default function ZertifikatModal({ schueler, kurs, onClose }) {
-  const { schule } = useApp()
+  const { schule, T } = useApp()
   const heute = new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
 
   function drucken() {
@@ -122,34 +122,19 @@ export default function ZertifikatModal({ schueler, kurs, onClose }) {
     if (win) { win.document.write(html); win.document.close() }
   }
 
-  return createPortal(
-    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:560, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
-
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid var(--border)' }}>
-          <span style={{ fontWeight:700, fontSize:15, color:'var(--text)' }}>🎓 Zertifikat erstellen</span>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={drucken} style={{ padding:'8px 18px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-              🖨 Als PDF speichern
-            </button>
-            <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={{ padding:'8px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
-          </div>
+  return (
+    <DokumentDialog titel={T('nb_zertifikat')} titelAlt="🎓 Zertifikat erstellen" onDrucken={drucken} onClose={onClose} maxWidth={560}>
+      <div>
+        <div style={{ background:'#f8f6f2', borderRadius:'var(--radius)', border:'1px solid #d4c5a9', padding:'16px 20px', fontSize:13, color:'#475569', lineHeight:1.7 }}>
+          <div style={{ fontWeight:700, color:'#1e293b', marginBottom:6 }}>{schueler?.voller_name}</div>
+          <div>Kurs: <strong>{kurs?.name}</strong></div>
+          <div>Datum: {heute}</div>
+          <div>Schule: {schule?.name}</div>
         </div>
-
-        <div style={{ padding:'20px 24px' }}>
-          <div style={{ background:'#f8f6f2', borderRadius:'var(--radius)', border:'1px solid #d4c5a9', padding:'16px 20px', fontSize:13, color:'#475569', lineHeight:1.7 }}>
-            <div style={{ fontWeight:700, color:'#1e293b', marginBottom:6 }}>{schueler?.voller_name}</div>
-            <div>Kurs: <strong>{kurs?.name}</strong></div>
-            <div>Datum: {heute}</div>
-            <div>Schule: {schule?.name}</div>
-          </div>
-          <p style={{ fontSize:12, color:'var(--text-3)', marginTop:12 }}>
-            Ein neues Fenster öffnet sich mit dem druckfertigen A4-Zertifikat. Im Browser-Druckdialog „Als PDF speichern" wählen.
-          </p>
-        </div>
+        <p style={{ fontSize:12, color:'var(--text-3)', marginTop:12 }}>
+          Ein neues Fenster öffnet sich mit dem druckfertigen A4-Zertifikat. Im Browser-Druckdialog „Als PDF speichern" wählen.
+        </p>
       </div>
-    </div>,
-    document.body
+    </DokumentDialog>
   )
 }

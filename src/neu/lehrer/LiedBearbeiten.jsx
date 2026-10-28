@@ -7,7 +7,7 @@ import { safeMarkdown } from '../../lib/markdown'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Feld, Knopf, Segment, SchalterZeile, Leer, Laden, eingabeStil } from '../../ui'
 import ChordPro from '../../components/stueck/ChordProRenderer'
-import DateiUploadModal from '../../components/stueck/DateiUploadModal'
+import DateiHochladenBlatt from './DateiHochladenBlatt'
 import { useNeuLaden } from '../daten'
 import { useBasis } from '../rolle'
 
@@ -292,7 +292,7 @@ function Formular({ stueck, dateien, neuLadenDateien }) {
         <Knopf voll variante="gefahr" icon={Trash2} onClick={liedLoeschen}>{T('nl_lied_loeschen')}</Knopf>
       </div>
 
-      {upload && <DateiUploadModal stueckId={stueck.id} onClose={() => setUpload(false)} onErfolg={() => { neuLadenDateien(); neuLaden('n-lied') }} />}
+      {upload && <DateiHochladenBlatt stueckId={stueck.id} onClose={() => setUpload(false)} onErfolg={() => { neuLadenDateien(); neuLaden('n-lied') }} />}
       <Suspense fallback={null}>
         {kiModal === 'audio' && <AudioTranskribierenModal onErgebnis={textAnhaengen} onSchliessen={() => setKiModal(null)} />}
         {kiModal === 'foto' && <FotoOCRModal onErgebnis={textAnhaengen} onSchliessen={() => setKiModal(null)} />}

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useApp } from '../context/AppContext'
+import { DokumentDialog } from './Dialog'
 
 const isMobile = () => 'ontouchstart' in window
 
@@ -221,7 +222,7 @@ function SignaturCanvas({ canvasRef, label }) {
 }
 
 export default function AufnahmeantragModal({ mitglied, onClose }) {
-  const { schule } = useApp()
+  const { schule, T } = useApp()
   const sigMitgliedRef      = useRef(null)
   const sigErziehungRef     = useRef(null)
   const sigVerantwortlichRef = useRef(null)
@@ -381,53 +382,36 @@ export default function AufnahmeantragModal({ mitglied, onClose }) {
     if (win) { win.document.write(html); win.document.close() }
   }
 
-  return createPortal(
-    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:600, maxHeight:'92vh', display:'flex', flexDirection:'column', boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+  return (
+    <DokumentDialog titel={T('nb_aufnahmeantrag')} titelAlt="📋 Aufnahmeantrag" onDrucken={drucken} onClose={onClose}>
 
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
-          <span style={{ fontWeight:700, fontSize:15, color:'var(--text)' }}>📋 Aufnahmeantrag</span>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={drucken} style={{ padding:'8px 18px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-              🖨 Als PDF speichern
-            </button>
-            <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={{ padding:'8px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
-          </div>
-        </div>
-
-        <div style={{ overflowY:'auto', padding:'20px 24px', display:'flex', flexDirection:'column', gap:20 }}>
-
-          {/* Datenvorschau */}
-          <div style={{ background:'var(--bg)', borderRadius:'var(--radius)', padding:'12px 16px', fontSize:13, color:'var(--text-2)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px' }}>
-            <div><span style={{ color:'var(--text-3)' }}>Name: </span>{mitglied.voller_name}</div>
-            <div><span style={{ color:'var(--text-3)' }}>Geburtsdatum: </span>{mitglied.geburtsdatum ? new Date(mitglied.geburtsdatum).toLocaleDateString('de-DE') : '–'}</div>
-            <div><span style={{ color:'var(--text-3)' }}>Telefon: </span>{mitglied.telefon || '–'}</div>
-            <div><span style={{ color:'var(--text-3)' }}>E-Mail: </span>{mitglied.email || '–'}</div>
-            <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>Adresse: </span>{mitglied.adresse || '–'}</div>
-            <div><span style={{ color:'var(--text-3)' }}>Beitrag: </span>{mitglied.mitgliedsbeitrag ? `${Number(mitglied.mitgliedsbeitrag).toFixed(2)} €` : '–'}</div>
-            <div><span style={{ color:'var(--text-3)' }}>Zahlung: </span>{WEISE_LABEL[mitglied.zahlungsweise] ?? '–'}</div>
-            {mitglied.zahlungsweise === 'sepa' && <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>IBAN: </span>{mitglied.iban ?? '–'}</div>}
-          </div>
-
-          {/* Unterschrift Mitglied */}
-          <SignaturCanvas canvasRef={sigMitgliedRef} label="Unterschrift Mitglied / Schüler" />
-
-          {/* Unterschrift Erziehungsberechtigte */}
-          {hatErziehungsberechtigten && (
-            <SignaturCanvas canvasRef={sigErziehungRef}
-              label={`Unterschrift Erziehungsberechtigte/r (${mitglied.erziehungsberechtigter_name})`} />
-          )}
-
-          {/* Unterschrift Verantwortliche/r */}
-          <SignaturCanvas canvasRef={sigVerantwortlichRef} label="Unterschrift Verantwortliche/r (Schule)" />
-
-          <p style={{ fontSize:12, color:'var(--text-3)', marginTop:-4 }}>
-            Mit Maus oder Finger unterschreiben, dann „Als PDF speichern" klicken.
-          </p>
-        </div>
+      {/* Datenvorschau */}
+      <div style={{ background:'var(--bg)', borderRadius:'var(--radius)', padding:'12px 16px', fontSize:13, color:'var(--text-2)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px' }}>
+        <div><span style={{ color:'var(--text-3)' }}>Name: </span>{mitglied.voller_name}</div>
+        <div><span style={{ color:'var(--text-3)' }}>Geburtsdatum: </span>{mitglied.geburtsdatum ? new Date(mitglied.geburtsdatum).toLocaleDateString('de-DE') : '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>Telefon: </span>{mitglied.telefon || '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>E-Mail: </span>{mitglied.email || '–'}</div>
+        <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>Adresse: </span>{mitglied.adresse || '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>Beitrag: </span>{mitglied.mitgliedsbeitrag ? `${Number(mitglied.mitgliedsbeitrag).toFixed(2)} €` : '–'}</div>
+        <div><span style={{ color:'var(--text-3)' }}>Zahlung: </span>{WEISE_LABEL[mitglied.zahlungsweise] ?? '–'}</div>
+        {mitglied.zahlungsweise === 'sepa' && <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>IBAN: </span>{mitglied.iban ?? '–'}</div>}
       </div>
-    </div>,
-    document.body
+
+      {/* Unterschrift Mitglied */}
+      <SignaturCanvas canvasRef={sigMitgliedRef} label="Unterschrift Mitglied / Schüler" />
+
+      {/* Unterschrift Erziehungsberechtigte */}
+      {hatErziehungsberechtigten && (
+        <SignaturCanvas canvasRef={sigErziehungRef}
+          label={`Unterschrift Erziehungsberechtigte/r (${mitglied.erziehungsberechtigter_name})`} />
+      )}
+
+      {/* Unterschrift Verantwortliche/r */}
+      <SignaturCanvas canvasRef={sigVerantwortlichRef} label="Unterschrift Verantwortliche/r (Schule)" />
+
+      <p style={{ fontSize:12, color:'var(--text-3)', marginTop:-4 }}>
+        Mit Maus oder Finger unterschreiben, dann „Als PDF speichern" klicken.
+      </p>
+    </DokumentDialog>
   )
 }

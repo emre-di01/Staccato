@@ -32,6 +32,12 @@ export const CHANGELOG = [
         en: 'Forms and dialogs now match the new design: larger fields and buttons, shown as a sheet from the bottom on phones',
         tr: 'Formlar ve pencereler yeni tasarıma uyum sağlıyor: daha büyük alanlar ve düğmeler, telefonda alttan açılan sayfa olarak',
       },
+      {
+        icon: '🔑',
+        de: 'Anmeldung, Passwort zurücksetzen, Schulwahl und Einladungen im neuen Design',
+        en: 'Sign-in, password reset, school selection and invitations in the new design',
+        tr: 'Giriş, şifre sıfırlama, okul seçimi ve davetler yeni tasarımda',
+      },
     ],
   },
   {

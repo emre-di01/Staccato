@@ -200,6 +200,28 @@ export function Feld({ label, hinweis, children }) {
   )
 }
 
+// Fehlermeldung unter einem Formular
+export function FehlerText({ children }) {
+  return <div role="alert" style={{ fontSize: 16, fontWeight: 600, color: 'var(--danger)' }}>{children}</div>
+}
+
+// Mehrfachauswahl als Chips (z. B. Teilnehmende); `wert` ist ein Array von IDs
+export function AuswahlChips({ optionen, wert, onChange, label }) {
+  return (
+    <div role="group" aria-label={label} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {optionen.map(([id, text]) => {
+        const aktiv = wert.includes(id)
+        return (
+          <button key={id} type="button" aria-pressed={aktiv} onClick={() => onChange(aktiv ? wert.filter(x => x !== id) : [...wert, id])} style={{
+            minHeight: 44, padding: '0 16px', borderRadius: 22, border: 'none', fontFamily: 'inherit', fontSize: 16, fontWeight: 600, cursor: 'pointer',
+            background: aktiv ? 'var(--primary)' : 'var(--n-fill)', color: aktiv ? 'var(--primary-fg)' : 'var(--text)',
+          }}>{text}</button>
+        )
+      })}
+    </div>
+  )
+}
+
 // Zeile mit Schalter (Einstellungen)
 export function SchalterZeile({ titel, untertitel, an, onChange, disabled }) {
   return (

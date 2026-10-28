@@ -58,6 +58,10 @@ const Datenschutz          = lazy(() => import('./pages/Datenschutz'))
 const Lizenzen             = lazy(() => import('./pages/Lizenzen'))
 const SchulWaehler         = lazy(() => import('./pages/SchulWaehler'))
 const Einladung            = lazy(() => import('./pages/Einladung'))
+const NeuLogin             = lazy(() => import('./neu/auth/Login'))
+const NeuPasswortZuruecksetzen = lazy(() => import('./neu/auth/PasswortNeu'))
+const NeuSchulWahl         = lazy(() => import('./neu/auth/SchulWahl'))
+const NeuEinladung         = lazy(() => import('./neu/auth/Einladung'))
 const SuperadminDashboard  = lazy(() => import('./pages/superadmin/Dashboard'))
 const SuperadminDemos      = lazy(() => import('./pages/superadmin/Demos'))
 // Neues Design (Opt-in, Phase 2: Schüler)
@@ -145,6 +149,11 @@ function SessionWahl() {
   return rolle && !(neuesDesign && DESIGN_ROLLEN.includes(rolle)) ? <SchuelerSession /> : <NeuSession />
 }
 
+// Seiten ohne App-Hülle (Anmeldung, Schulwahl, Einladung): neu, außer wer das klassische Design gewählt hat
+function AuthWahl({ alt, neu }) {
+  return useApp().neuesDesign ? neu : alt
+}
+
 function KursUmleitung() {
   const { id } = useParams()
   return <Navigate to={`/schueler/kurse/${id}`} replace />
@@ -156,8 +165,8 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/passwort-zuruecksetzen" element={<PasswortZuruecksetzen />} />
+      <Route path="/login" element={<AuthWahl alt={<LoginPage />} neu={<NeuLogin />} />} />
+      <Route path="/passwort-zuruecksetzen" element={<AuthWahl alt={<PasswortZuruecksetzen />} neu={<NeuPasswortZuruecksetzen />} />} />
       <Route path="/" element={<RollenWeiterleitung />} />
 
       {/* ── Admin / Superadmin ── */}
@@ -296,7 +305,7 @@ function AppRoutes() {
 
       {/* ── Schul-Wähler (multi-tenant) ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern','vorstand']} />}>
-        <Route path="/schulen" element={<SchulWaehler />} />
+        <Route path="/schulen" element={<AuthWahl alt={<SchulWaehler />} neu={<NeuSchulWahl />} />} />
       </Route>
 
       {/* Session beitreten */}
@@ -306,7 +315,7 @@ function AppRoutes() {
       <Route path="/beamer" element={<BeamerDisplay />} />
 
       {/* Einladungslink */}
-      <Route path="/einladung/:token" element={<Einladung />} />
+      <Route path="/einladung/:token" element={<AuthWahl alt={<Einladung />} neu={<NeuEinladung />} />} />
 
       {/* Öffentliche Seiten */}
       <Route path="/impressum"   element={<Impressum />} />

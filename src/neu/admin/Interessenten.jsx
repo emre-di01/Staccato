@@ -5,7 +5,7 @@ import { Plus, Pencil, GraduationCap, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Chips, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, eingabeStil } from '../../ui'
-import { InteressentModal, KonvertierenModal } from '../../pages/admin/Interessenten'
+import { InteressentBlatt, KonvertierenBlatt } from './InteressentBlaetter'
 import { useNeuLaden } from '../daten'
 import { useBreit, Avatar, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
@@ -241,8 +241,8 @@ export default function AdminInteressenten() {
           </div>
         </>} />
 
-      {modal?.typ === 'bearbeiten' && <InteressentModal item={modal.it} onClose={() => setModal(null)} onErfolg={aktualisieren} />}
-      {modal?.typ === 'konvertieren' && <KonvertierenModal item={modal.it} onClose={() => setModal(null)} onErfolg={() => { setGewaehltId(null); neuLaden('na-mitglieder'); aktualisieren() }} />}
+      {modal?.typ === 'bearbeiten' && <InteressentBlatt item={modal.it} onClose={() => setModal(null)} onErfolg={aktualisieren} />}
+      {modal?.typ === 'konvertieren' && <KonvertierenBlatt item={modal.it} onClose={() => setModal(null)} onErfolg={() => { setGewaehltId(null); neuLaden('na-mitglieder'); aktualisieren() }} />}
     </Seite>
   )
 }

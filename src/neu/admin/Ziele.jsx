@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Chips, Trenner, Knopf, Leer, Laden } from '../../ui'
 import { useNeuLaden } from '../daten'
-import { ZielModal, AufgabeModal } from '../../pages/vorstand/Ziele'
+import { ZielBlatt, AufgabeBlatt } from './VorstandBlaetter'
 
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
 const STATUS = {
@@ -145,10 +145,10 @@ export default function AdminZiele() {
       </div>
 
       {modal?.typ === 'ziel' && (
-        <ZielModal ziel={modal.ziel} vorstandMitglieder={mitglieder} schuleId={schule?.id} profilId={profil?.id} T={T} onClose={() => setModal(null)} onGespeichert={fertig} />
+        <ZielBlatt ziel={modal.ziel} vorstandMitglieder={mitglieder} schuleId={schule?.id} profilId={profil?.id} onClose={() => setModal(null)} onGespeichert={fertig} />
       )}
       {modal?.typ === 'aufgabe' && (
-        <AufgabeModal aufgabe={modal.aufgabe} zielId={modal.zielId} vorstandMitglieder={mitglieder} schuleId={schule?.id} profilId={profil?.id} T={T} onClose={() => setModal(null)} onGespeichert={fertig} />
+        <AufgabeBlatt aufgabe={modal.aufgabe} zielId={modal.zielId} vorstandMitglieder={mitglieder} schuleId={schule?.id} profilId={profil?.id} onClose={() => setModal(null)} onGespeichert={fertig} />
       )}
     </Seite>
   )

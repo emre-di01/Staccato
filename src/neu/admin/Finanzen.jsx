@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Printer, CircleCheck, Ban, TriangleAlert } from 'lucide-react'
+import { Plus, Printer, CircleCheck, Ban, TriangleAlert, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
-import { Seite, Suchfeld, Chips, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt, Feld, eingabeStil } from '../../ui'
+import { Seite, Suchfeld, Chips, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt, Feld, Segment, FehlerText, eingabeStil } from '../../ui'
 import { useNeuLaden } from '../daten'
-import { calcTotals, empfName, druckeRechnung, NeueRechnungModal } from '../../pages/admin/Rechnungen'
+import { calcTotals, empfName, druckeRechnung } from '../../pages/admin/Rechnungen'
 import { useBreit, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
@@ -73,6 +73,121 @@ function BezahltBlatt({ r, onClose, onFertig }) {
     </Blatt>
   )
 }
+
+// Neue Freitext-Rechnung (Logik wie NeueRechnungModal in pages/admin/Rechnungen.jsx)
+function NeueRechnungBlatt({ schuleId, onClose, onGespeichert }) {
+  const { T } = useApp()
+  const { euro } = useFormat()
+  const in14 = new Date(); in14.setDate(in14.getDate() + 14)
+  const [form, setForm] = useState({
+    empfaenger_name: '', empfaenger_adresse: '',
+    positionen: [{ beschreibung: '', menge: 1, einzelpreis: '' }],
+    steuersatz: '0', faellig_am: in14.toISOString().slice(0, 10), notizen: '',
+  })
+  const setze = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const [sendet, setSendet] = useState(false)
+  const [fehler, setFehler] = useState('')
+  const { netto, mwst, brutto } = calcTotals(form.positionen, form.steuersatz)
+
+  const posSetzen = (i, k, v) => setze('positionen', form.positionen.map((p, j) => j === i ? { ...p, [k]: v } : p))
+  const posEntfernen = i => setze('positionen', form.positionen.filter((_, j) => j !== i))
+  const posHinzu = () => setze('positionen', [...form.positionen, { beschreibung: '', menge: 1, einzelpreis: '' }])
+
+  async function speichern() {
+    if (!form.empfaenger_name.trim()) return setFehler(T('nf_fehler_empfaenger'))
+    if (form.positionen.some(p => !p.beschreibung.trim() || !String(p.einzelpreis).trim())) return setFehler(T('nf_fehler_positionen'))
+    if (brutto <= 0) return setFehler(T('nf_fehler_betrag'))
+    setSendet(true); setFehler('')
+    const { error } = await supabase.from('rechnungen').insert({
+      schule_id: schuleId,
+      empfaenger_name: form.empfaenger_name.trim(),
+      empfaenger_adresse: form.empfaenger_adresse.trim() || null,
+      positionen: form.positionen,
+      betrag: brutto,
+      steuersatz: Number(form.steuersatz),
+      faellig_am: form.faellig_am || null,
+      notizen: form.notizen.trim() || null,
+      typ: 'freitext',
+    })
+    setSendet(false)
+    if (error) return setFehler(error.message)
+    onGespeichert()
+  }
+
+  const klein = { fontSize: 15, fontWeight: 600, color: 'var(--text-2)' }
+  const satz = Number(form.steuersatz)
+
+  return (
+    <Blatt titel={T('nf_neue_rechnung')} onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Feld label={T('nf_empfaenger')}>
+          <input value={form.empfaenger_name} onChange={e => setze('empfaenger_name', e.target.value)} placeholder={T('nf_empfaenger_beispiel')} style={eingabeStil} />
+        </Feld>
+        <Feld label={T('nf_adresse')}>
+          <textarea rows={2} value={form.empfaenger_adresse} onChange={e => setze('empfaenger_adresse', e.target.value)} style={{ ...eingabeStil, resize: 'vertical' }} />
+        </Feld>
+
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>{T('nf_positionen')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {form.positionen.map((p, i) => (
+              <div key={i} style={{ padding: 14, borderRadius: 16, background: 'var(--n-fill)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input aria-label={T('nf_beschreibung')} placeholder={T('nf_beschreibung')} value={p.beschreibung} onChange={e => posSetzen(i, 'beschreibung', e.target.value)} style={{ ...eingabeStil, flex: 1 }} />
+                  {form.positionen.length > 1 && (
+                    <button onClick={() => posEntfernen(i)} aria-label={T('nf_position_entfernen')} style={{ width: 44, height: 52, flexShrink: 0, border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={20} /></button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={klein}>{T('nf_menge')}</span>
+                    <input type="number" inputMode="decimal" min="0" step="0.01" value={p.menge} onChange={e => posSetzen(i, 'menge', e.target.value)} style={eingabeStil} />
+                  </label>
+                  <label style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={klein}>{T('nf_einzelpreis')}</span>
+                    <input type="number" inputMode="decimal" min="0" step="0.01" value={p.einzelpreis} onChange={e => posSetzen(i, 'einzelpreis', e.target.value)} style={eingabeStil} />
+                  </label>
+                  <div style={{ flex: 1.3, textAlign: 'right', paddingBottom: 14, fontSize: 17, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    {euro((Number(p.menge) || 0) * (Number(p.einzelpreis) || 0))}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Knopf variante="tint" icon={Plus} onClick={posHinzu}>{T('nf_zeile_hinzu')}</Knopf>
+          </div>
+        </div>
+
+        <Feld label={T('nf_steuersatz')}>
+          <Segment label={T('nf_steuersatz')} wert={form.steuersatz} onChange={v => setze('steuersatz', v)}
+            optionen={[['0', T('nf_steuerbefreit')], ['7', '7 %'], ['19', '19 %']]} />
+        </Feld>
+
+        <Gruppe style={{ margin: 0 }}>
+          {satz > 0 && (
+            <>
+              <div style={summenZeile}><span style={{ color: 'var(--text-2)' }}>{T('nf_netto')}</span><span>{euro(netto)}</span></div>
+              <Trenner />
+              <div style={summenZeile}><span style={{ color: 'var(--text-2)' }}>{T('nf_mwst').replace('{n}', form.steuersatz)}</span><span>{euro(mwst)}</span></div>
+              <Trenner />
+            </>
+          )}
+          <div style={{ ...summenZeile, fontSize: 20, fontWeight: 800 }}><span>{T('nf_gesamt')}</span><span>{euro(brutto)}</span></div>
+        </Gruppe>
+
+        <Feld label={T('nf_faellig')}>
+          <input type="date" value={form.faellig_am} onChange={e => setze('faellig_am', e.target.value)} style={eingabeStil} />
+        </Feld>
+        <Feld label={T('nf_notizen_rechnung')}>
+          <textarea rows={2} value={form.notizen} onChange={e => setze('notizen', e.target.value)} placeholder={T('nf_notizen_beispiel')} style={{ ...eingabeStil, resize: 'vertical' }} />
+        </Feld>
+        {fehler && <FehlerText>{fehler}</FehlerText>}
+        <Knopf voll onClick={speichern} disabled={sendet}>{sendet ? T('saving') : T('nf_rechnung_erstellen')}</Knopf>
+      </div>
+    </Blatt>
+  )
+}
+
+const summenZeile = { display: 'flex', justifyContent: 'space-between', gap: 12, padding: '12px 16px', fontSize: 17 }
 
 function Detail({ r, onBezahlt, onStorno }) {
   const { T, schule } = useApp()
@@ -222,7 +337,7 @@ export default function AdminFinanzen() {
         </>} />
 
       {modal === 'neu' && (
-        <NeueRechnungModal schuleId={schule?.id} isMobile={!breit} onClose={() => setModal(null)}
+        <NeueRechnungBlatt schuleId={schule?.id} onClose={() => setModal(null)}
           onGespeichert={() => { setModal(null); aktualisieren(); toast(T('nf_erstellt_ok'), 'success') }} />
       )}
       {modal === 'bezahlt' && gewaehlt && <BezahltBlatt r={gewaehlt} onClose={() => setModal(null)} onFertig={() => { setModal(null); aktualisieren() }} />}

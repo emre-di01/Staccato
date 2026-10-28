@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
+import { DokumentDialog } from './Dialog'
 
 const ABRECHNUNG_LABEL = {
   einzeln:   'Pro Unterrichtsstunde',
@@ -63,7 +63,7 @@ function SignaturCanvas({ canvasRef, label }) {
 }
 
 export default function KursantragModal({ schueler, kurs, onClose }) {
-  const { schule } = useApp()
+  const { schule, T } = useApp()
   const sigSchuelerRef     = useRef(null)
   const sigErziehungRef    = useRef(null)
   const sigSchuleRef       = useRef(null)
@@ -263,48 +263,31 @@ export default function KursantragModal({ schueler, kurs, onClose }) {
     if (win) { win.document.write(html); win.document.close() }
   }
 
-  return createPortal(
-    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:600, maxHeight:'92vh', display:'flex', flexDirection:'column', boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+  return (
+    <DokumentDialog titel={T('nb_kursanmeldung')} titelAlt="📋 Kursanmeldung" onDrucken={drucken} onClose={onClose}>
 
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
-          <span style={{ fontWeight:700, fontSize:15, color:'var(--text)' }}>📋 Kursanmeldung</span>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={drucken} style={{ padding:'8px 18px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-              🖨 Als PDF speichern
-            </button>
-            <button onClick={onClose} style={{ padding:'8px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
-          </div>
-        </div>
-
-        <div style={{ overflowY:'auto', padding:'20px 24px', display:'flex', flexDirection:'column', gap:20 }}>
-
-          {/* Datenvorschau */}
-          <div style={{ background:'var(--bg)', borderRadius:'var(--radius)', padding:'12px 16px', fontSize:13, color:'var(--text-2)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px' }}>
-            <div><span style={{ color:'var(--text-3)' }}>Schüler/in: </span><strong>{schueler.voller_name}</strong></div>
-            <div><span style={{ color:'var(--text-3)' }}>Kurs: </span><strong>{kurs?.name}</strong></div>
-            {kurs?.instrumente && <div><span style={{ color:'var(--text-3)' }}>Instrument: </span>{kurs.instrumente.icon} {kurs.instrumente.name_de}</div>}
-            {wochentag && <div><span style={{ color:'var(--text-3)' }}>Zeit: </span>{wochentag} {uhrzeit}</div>}
-            {lehrer && <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>Lehrkraft: </span>{lehrer}</div>}
-            {kurs?.abrechnungs_typ && <div><span style={{ color:'var(--text-3)' }}>Abrechnung: </span>{ABRECHNUNG_LABEL[kurs.abrechnungs_typ]}</div>}
-            {profil?.zahlungsweise && <div><span style={{ color:'var(--text-3)' }}>Zahlung: </span>{WEISE_LABEL[profil.zahlungsweise]}</div>}
-          </div>
-
-          {/* Unterschriften */}
-          <SignaturCanvas canvasRef={sigSchuelerRef} label="Unterschrift Schüler/in" />
-          {hatErziehung && (
-            <SignaturCanvas canvasRef={sigErziehungRef}
-              label={`Unterschrift Erziehungsberechtigte/r (${profil.erziehungsberechtigter_name})`} />
-          )}
-          <SignaturCanvas canvasRef={sigSchuleRef} label="Unterschrift Schule" />
-
-          <p style={{ fontSize:12, color:'var(--text-3)', marginTop:-4 }}>
-            Mit Maus oder Finger unterschreiben, dann „Als PDF speichern" klicken.
-          </p>
-        </div>
+      {/* Datenvorschau */}
+      <div style={{ background:'var(--bg)', borderRadius:'var(--radius)', padding:'12px 16px', fontSize:13, color:'var(--text-2)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px' }}>
+        <div><span style={{ color:'var(--text-3)' }}>Schüler/in: </span><strong>{schueler.voller_name}</strong></div>
+        <div><span style={{ color:'var(--text-3)' }}>Kurs: </span><strong>{kurs?.name}</strong></div>
+        {kurs?.instrumente && <div><span style={{ color:'var(--text-3)' }}>Instrument: </span>{kurs.instrumente.icon} {kurs.instrumente.name_de}</div>}
+        {wochentag && <div><span style={{ color:'var(--text-3)' }}>Zeit: </span>{wochentag} {uhrzeit}</div>}
+        {lehrer && <div style={{ gridColumn:'1/-1' }}><span style={{ color:'var(--text-3)' }}>Lehrkraft: </span>{lehrer}</div>}
+        {kurs?.abrechnungs_typ && <div><span style={{ color:'var(--text-3)' }}>Abrechnung: </span>{ABRECHNUNG_LABEL[kurs.abrechnungs_typ]}</div>}
+        {profil?.zahlungsweise && <div><span style={{ color:'var(--text-3)' }}>Zahlung: </span>{WEISE_LABEL[profil.zahlungsweise]}</div>}
       </div>
-    </div>,
-    document.body
+
+      {/* Unterschriften */}
+      <SignaturCanvas canvasRef={sigSchuelerRef} label="Unterschrift Schüler/in" />
+      {hatErziehung && (
+        <SignaturCanvas canvasRef={sigErziehungRef}
+          label={`Unterschrift Erziehungsberechtigte/r (${profil.erziehungsberechtigter_name})`} />
+      )}
+      <SignaturCanvas canvasRef={sigSchuleRef} label="Unterschrift Schule" />
+
+      <p style={{ fontSize:12, color:'var(--text-3)', marginTop:-4 }}>
+        Mit Maus oder Finger unterschreiben, dann „Als PDF speichern" klicken.
+      </p>
+    </DokumentDialog>
   )
 }

@@ -70,11 +70,11 @@ export function AppProvider({ children }) {
   const loadedUidRef = useRef(null)
   const profilIdRef  = useRef(null)
 
-  // Vor dem Laden des Profils ist die Rolle unbekannt → letzter bekannter Stand
+  // Vor dem Laden des Profils ist die Rolle unbekannt → letzter bekannter Stand (Standard: neu)
   const rolleGeladen = profil?.rolle ?? null
   const neuesDesignAktiv = rolleGeladen
     ? NEU_ROLLEN.includes(rolleGeladen) && !altesDesign
-    : localStorage.getItem('staccato_neues_design_aktiv') === 'true'
+    : localStorage.getItem('staccato_neues_design_aktiv') !== 'false'
 
   useEffect(() => {
     if (neuesDesignAktiv) {

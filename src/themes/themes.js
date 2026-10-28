@@ -341,7 +341,7 @@ const NEU_GLOBAL_CSS = `
     background: var(--bg);
     -webkit-font-smoothing: antialiased;
   }
-  /* Ältere Formular-Dialoge (Modal.jsx und eigene .modal-overlay/.modal-inner) an die neue Oberfläche angleichen:
+  /* Ältere Formular-Dialoge (Modal.jsx, eigene .modal-overlay/.modal-inner, Inhalt in .n-dialog) an die neue Oberfläche angleichen:
      Blatt-Optik, große Eingabefelder und Knöpfe. Inline-Stile der alten Dialoge erfordern !important. */
   @keyframes nModalHoch { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
   html[data-theme="neu2026"] .modal-overlay:has(> .modal-inner) { background: var(--n-overlay) !important; }
@@ -350,17 +350,17 @@ const NEU_GLOBAL_CSS = `
     box-shadow: var(--shadow-lg) !important; animation: nModalHoch .25s cubic-bezier(.2,.8,.2,1) both;
   }
   html[data-theme="neu2026"] .modal-inner :is(h2, h3) { font-size: 22px !important; font-weight: 800 !important; letter-spacing: -0.01em; }
-  html[data-theme="neu2026"] .modal-inner label { font-size: 15px !important; }
-  html[data-theme="neu2026"] .modal-inner :is(input:not([type=checkbox], [type=radio], [type=range], [type=file], [type=color]), select, textarea) {
+  html[data-theme="neu2026"] :is(.modal-inner, .n-dialog) label { font-size: 15px !important; }
+  html[data-theme="neu2026"] :is(.modal-inner, .n-dialog) :is(input:not([type=checkbox], [type=radio], [type=range], [type=file], [type=color]), select, textarea) {
     min-height: 48px; padding: 11px 14px !important; border-radius: 12px !important; font-size: 17px !important;
     border: 1.5px solid var(--n-fill-2) !important; background: var(--bg) !important; color: var(--text) !important;
   }
-  html[data-theme="neu2026"] .modal-inner textarea { min-height: 96px; }
-  html[data-theme="neu2026"] .modal-inner :is(input[type=checkbox], input[type=radio]) { width: 20px; height: 20px; accent-color: var(--primary); }
-  html[data-theme="neu2026"] .modal-inner button[style*="background: var(--primary)"] {
+  html[data-theme="neu2026"] :is(.modal-inner, .n-dialog) textarea { min-height: 96px; }
+  html[data-theme="neu2026"] :is(.modal-inner, .n-dialog) :is(input[type=checkbox], input[type=radio]) { width: 20px; height: 20px; accent-color: var(--primary); }
+  html[data-theme="neu2026"] :is(.modal-inner, .n-dialog) button[style*="background: var(--primary)"] {
     min-height: 48px; padding: 0 20px !important; border-radius: 14px !important; font-size: 17px !important; font-weight: 700 !important;
   }
-  html[data-theme="neu2026"] .modal-inner button[style*="border: 1.5px solid var(--border)"] {
+  html[data-theme="neu2026"] :is(.modal-inner, .n-dialog) button[style*="border: 1.5px solid var(--border)"] {
     min-height: 48px; border-radius: 14px !important; font-size: 16px !important; font-weight: 600 !important;
     border-color: transparent !important; background: var(--n-fill) !important; color: var(--text) !important;
   }

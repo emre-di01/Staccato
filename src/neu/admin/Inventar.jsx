@@ -5,7 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Suchfeld, Chips, Gruppe, Trenner, Zeile, Knopf, Leer, Laden } from '../../ui'
 import { useNeuLaden } from '../daten'
-import { ZUSTAENDE, KategorienModal, InventarModal, EtikettEinzelModal, ScannerModal, etikettenDrucken } from '../../pages/admin/Inventar'
+import { ZUSTAENDE, etikettenDrucken } from '../../pages/admin/Inventar'
+import { KategorienBlatt, InventarBlatt, EtikettBlatt, ScannerVollbild } from './InventarBlaetter'
 import { useBreit, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
@@ -150,12 +151,12 @@ export default function AdminInventar() {
         </>} />
 
       {(modal?.typ === 'neu' || modal?.typ === 'bearbeiten') && (
-        <InventarModal item={modal.item ?? null} schuleId={schule?.id} kategorien={kategorien} onClose={zu} onErfolg={aktualisieren} />
+        <InventarBlatt item={modal.item ?? null} schuleId={schule?.id} kategorien={kategorien} onClose={zu} onErfolg={aktualisieren} />
       )}
-      {modal?.typ === 'kategorien' && <KategorienModal schuleId={schule?.id} onClose={zu} onGeaendert={aktualisieren} />}
-      {modal?.typ === 'etikettEinzel' && <EtikettEinzelModal item={modal.item} onClose={zu} />}
+      {modal?.typ === 'kategorien' && <KategorienBlatt schuleId={schule?.id} onClose={zu} onGeaendert={aktualisieren} />}
+      {modal?.typ === 'etikettEinzel' && <EtikettBlatt item={modal.item} onClose={zu} />}
       {modal?.typ === 'scanner' && (
-        <ScannerModal schuleId={schule?.id} onClose={zu} onBearbeiten={item => { setGewaehltId(item.id); setModal({ typ: 'bearbeiten', item }) }} />
+        <ScannerVollbild schuleId={schule?.id} onClose={zu} onBearbeiten={item => { setGewaehltId(item.id); setModal({ typ: 'bearbeiten', item }) }} />
       )}
     </Seite>
   )

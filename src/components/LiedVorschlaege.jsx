@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
-import Modal from './Modal'
+import Dialog from './Dialog'
 import Hinweis from './Hinweis'
 
 const STATUS_FARBE = { offen:'var(--primary)', angenommen:'var(--success)', abgelehnt:'var(--text-3)' }
@@ -104,7 +104,7 @@ export function VorschlagModal({ vorschlag, zielStueck, onClose, onErfolg }) {
   }
 
   if (istText) return (
-    <Modal titel={`${T(originalText ? 'vorschlag_text_btn' : 'vorschlag_text_add')}: ${form.titel}`} onClose={onClose} maxWidth={640}>
+    <Dialog titel={`${T(originalText ? 'vorschlag_text_btn' : 'vorschlag_text_add')}: ${form.titel}`} onClose={onClose} maxWidth={640}>
       <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
         <p style={{ margin:0, fontSize:16, color:'var(--text-2)', lineHeight:1.5 }}>{T('vorschlag_text_hint')}</p>
         <Feld label={T('piece_lyrics')}>
@@ -122,20 +122,20 @@ export function VorschlagModal({ vorschlag, zielStueck, onClose, onErfolg }) {
           </button>
         </div>
       </div>
-    </Modal>
+    </Dialog>
   )
 
   if (!vorschlag && !kurseLaden && kurse.length === 0) return (
-    <Modal titel={T('vorschlag_new')} onClose={onClose}>
+    <Dialog titel={T('vorschlag_new')} onClose={onClose}>
       <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
         <p style={{ margin:0, fontSize:16, color:'var(--text)', lineHeight:1.5 }}>{T('vorschlag_keine_kurse')}</p>
         <button onClick={onClose} style={{ ...s.btnSek, alignSelf:'flex-end' }}>{T('cancel')}</button>
       </div>
-    </Modal>
+    </Dialog>
   )
 
   return (
-    <Modal titel={vorschlag ? T('vorschlag_edit_title') : T('vorschlag_new')} onClose={onClose} maxWidth={560}>
+    <Dialog titel={vorschlag ? T('vorschlag_edit_title') : T('vorschlag_new')} onClose={onClose} maxWidth={560}>
       <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
         <Feld label={`${T('vorschlag_course')} *`}>
           <select style={s.input} value={kursId} onChange={e => setze('unterricht_id', e.target.value)}>
@@ -167,7 +167,7 @@ export function VorschlagModal({ vorschlag, zielStueck, onClose, onErfolg }) {
           </button>
         </div>
       </div>
-    </Modal>
+    </Dialog>
   )
 }
 
@@ -192,7 +192,7 @@ function EntscheidenModal({ vorschlag, annehmen, onClose, onErfolg }) {
   const annehmenLabel = istText ? 'vorschlag_text_accept' : 'vorschlag_accept'
 
   return (
-    <Modal titel={T(!annehmen ? 'vorschlag_reject_title' : istText ? 'vorschlag_text_accept_title' : 'vorschlag_accept_title')} onClose={onClose}>
+    <Dialog titel={T(!annehmen ? 'vorschlag_reject_title' : istText ? 'vorschlag_text_accept_title' : 'vorschlag_accept_title')} onClose={onClose}>
       <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
         <div style={{ fontSize:17, fontWeight:700, color:'var(--text)' }}>
           {vorschlag.titel}{vorschlag.komponist && <span style={{ fontWeight:400, color:'var(--text-2)' }}> · {vorschlag.komponist}</span>}
@@ -208,7 +208,7 @@ function EntscheidenModal({ vorschlag, annehmen, onClose, onErfolg }) {
           </button>
         </div>
       </div>
-    </Modal>
+    </Dialog>
   )
 }
 

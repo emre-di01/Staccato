@@ -6,11 +6,11 @@ import { s } from './stueckStyles'
 
 const BILD_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/heic', 'image/heif']
 
-function istBild(datei) {
+export function istBild(datei) {
   return BILD_MIME.includes(datei.type) || /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(datei.name)
 }
 
-async function bildDataUrl(datei) {
+export async function bildDataUrl(datei) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = e => resolve(e.target.result)
@@ -19,7 +19,7 @@ async function bildDataUrl(datei) {
   })
 }
 
-async function bilderNachPdf(bilder, basisName) {
+export async function bilderNachPdf(bilder, basisName) {
   const { default: jsPDF } = await import('jspdf')
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
