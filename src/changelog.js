@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.2'
+export const CURRENT_VERSION = '2.9.3'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.3',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '🔑',
+        de: 'Mitgliederverwaltung: Link zum Passwort-Zurücksetzen per E-Mail an ein Mitglied senden',
+        en: 'Member management: send a member a password reset link by email',
+        tr: 'Üye yönetimi: üyeye e-posta ile şifre sıfırlama bağlantısı gönder',
+      },
+    ],
+  },
   {
     version: '2.9.2',
     date: '2026-10-28',

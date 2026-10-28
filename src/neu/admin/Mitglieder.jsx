@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Plus, Mail, Download, Pencil, AtSign, KeyRound, Link2, FileText, ClipboardList, FolderOpen, Building2, Trash2, MessageCircle,
+  Plus, Mail, Download, Pencil, AtSign, KeyRound, Link2, FileText, ClipboardList, FolderOpen, Building2, Trash2, MessageCircle, Send,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -51,7 +51,7 @@ function useMitgliedKurse(id) {
 
 // Detailansicht: rechts neben der Liste (breiter Bildschirm) oder im Blatt
 function Detail({ m, onAktion }) {
-  const { T, lang, rolle } = useApp()
+  const { T, lang, rolle, confirm, toast } = useApp()
   const navigate = useNavigate()
   const { data: kurse = [], isLoading } = useMitgliedKurse(m.id)
   const kannBearbeiten = m.rolle !== 'admin' || rolle === 'superadmin'
@@ -64,10 +64,19 @@ function Detail({ m, onAktion }) {
   ].filter(Boolean).join(' · ')
   const hatEltern = m.erziehungsberechtigter_name || m.erziehungsberechtigter_telefon || m.erziehungsberechtigter_email
 
+  // Supabase verschickt den Link; das Mitglied landet auf /passwort-zuruecksetzen
+  async function resetLinkSenden() {
+    if (!await confirm(T('nm_reset_frage').replace('{email}', m.email), { confirmLabel: T('nm_reset_senden') })) return
+    const { error } = await supabase.auth.resetPasswordForEmail(m.email, { redirectTo: window.location.origin + '/passwort-zuruecksetzen' })
+    if (error) toast(T('nm_reset_fehler') + ': ' + error.message, 'error')
+    else toast(T('nm_reset_gesendet').replace('{email}', m.email), 'success')
+  }
+
   const aktion = (typ, icon, titel, farbe) => ({ typ, icon, titel, farbe })
   const aktionen = kannBearbeiten ? [
     aktion('email', AtSign, T('nm_email_aendern')),
     aktion('passwort', KeyRound, T('nm_passwort_setzen')),
+    ...(m.email ? [aktion('reset', Send, T('nm_reset_link'))] : []),
     ...(m.rolle === 'lehrer' || m.rolle === 'schueler' ? [aktion('zuordnung', Link2, T('nm_kurszuordnungen'))] : []),
     aktion('antrag', FileText, T('nm_aufnahmeantrag')),
     ...(m.rolle === 'schueler' ? [aktion('kursantrag', ClipboardList, T('nm_kursanmeldung'))] : []),
@@ -148,7 +157,7 @@ function Detail({ m, onAktion }) {
         <DetailTitel>{T('nm_weiteres')}</DetailTitel>
         <DetailGruppe>
           {aktionen.map((a, i) => (
-            <div key={a.typ}>{i > 0 && <Trenner />}<Zeile icon={a.icon} titel={a.titel} onClick={() => onAktion(a.typ)} /></div>
+            <div key={a.typ}>{i > 0 && <Trenner />}<Zeile icon={a.icon} titel={a.titel} onClick={() => a.typ === 'reset' ? resetLinkSenden() : onAktion(a.typ)} /></div>
           ))}
         </DetailGruppe>
         <div style={{ marginTop: 20 }}>
