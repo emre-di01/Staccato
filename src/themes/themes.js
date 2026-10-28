@@ -381,7 +381,12 @@ const NEU_GLOBAL_CSS = `
                     inset 0 0 0 1px rgba(var(--n-glas-licht), calc((0.08 + var(--n-liquid) * 0.22) * var(--n-glas-licht-a))),
                     0 calc(4px + var(--n-liquid) * 8px) calc(14px + var(--n-liquid) * 26px) rgba(0,0,0, calc(var(--n-liquid) * var(--n-glas-schatten)));
   }
-  html[data-theme="neu2026"][data-liquid] body { background: var(--bg); }
+  /* index.html setzt vor React eine Hintergrundfarbe inline auf html + body (alte Theme-Farbe).
+     Ein deckender body liegt über dem Verlauf (z-index -1) und ist nur so hoch wie der Bildschirm
+     → beim Scrollen oben weiß, unten Verlauf. Darum: Farbe aufs html, body durchsichtig. */
+  html[data-theme="neu2026"] { background-color: var(--bg) !important; }
+  html[data-theme="neu2026"] body { background-color: var(--bg) !important; }
+  html[data-theme="neu2026"][data-liquid] body { background: transparent !important; }
   html[data-theme="neu2026"][data-liquid] body::before {
     content: ''; position: fixed; inset: -10%; z-index: -1; pointer-events: none;
     background:
@@ -393,8 +398,10 @@ const NEU_GLOBAL_CSS = `
     filter: blur(20px);
   }
   html[data-theme="neu2026"][data-liquid] .n-shell { background: transparent !important; }
+  /* Karten und Listen liegen nur über dem ruhigen Verlauf – dort braucht es keinen backdrop-filter.
+     Auf hohen Elementen (lange Listen) rechnet iOS-Safari den Hintergrund sonst nur teilweise mit
+     → harte weiße Kante beim Scrollen. Unschärfe bleibt bei schwebenden Flächen (Leisten, Blätter). */
   html[data-theme="neu2026"][data-liquid] :is(.n-glas, [style*="background: var(--n-fill)"][style*="border-radius: 18px"]) {
-    backdrop-filter: var(--n-glas-filter); -webkit-backdrop-filter: var(--n-glas-filter);
     box-shadow: var(--n-glas-kante);
   }
   html[data-theme="neu2026"][data-liquid] :is(.n-blatt, .n-blatt-kopf, .modal-inner) {
