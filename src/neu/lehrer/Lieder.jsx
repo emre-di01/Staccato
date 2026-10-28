@@ -10,13 +10,14 @@ import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
 import { liedInhalt } from '../daten'
 import { useLehrerKurse } from '../lehrerDaten'
 
-// Lieder der Lehrkraft: ganze Bibliothek der Schule, Filter je eigenem Kurs, Vorschläge prüfen
+// Lieder der Lehrkraft: Standard = Lieder der eigenen Kurse (+ selbst angelegte), Filter je Kurs,
+// ganze Bibliothek der Schule als eigener Filter, Vorschläge prüfen
 export default function LehrerLieder() {
-  const { T } = useApp()
+  const { T, profil } = useApp()
   const [params] = useSearchParams()
   const { data: kurse = [] } = useLehrerKurse()
   const { data: offeneVorschlaege = 0 } = useOffeneVorschlaege()
-  const [filter, setFilter] = useState(params.get('tab') === 'vorschlaege' ? 'vorschlaege' : 'alle')
+  const [filter, setFilter] = useState(params.get('tab') === 'vorschlaege' ? 'vorschlaege' : 'meine')
   const [suche, setSuche] = useState('')
   const [neuOffen, setNeuOffen] = useState(false)
 
@@ -25,7 +26,7 @@ export default function LehrerLieder() {
     queryFn: async () => {
       const ids = kurse.map(k => k.id)
       const [alle, us] = await Promise.all([
-        supabase.from('stuecke').select('id, titel, komponist, liedtext, notizen, stueck_dateien(typ)').order('titel'),
+        supabase.from('stuecke').select('id, titel, komponist, liedtext, notizen, erstellt_von, stueck_dateien(typ)').order('titel'),
         ids.length ? supabase.from('unterricht_stuecke').select('stueck_id, unterricht_id, status').in('unterricht_id', ids) : { data: [] },
       ])
       if (alle.error) throw alle.error
@@ -37,20 +38,23 @@ export default function LehrerLieder() {
 
   const q = suche.trim().toLowerCase()
   const imKurs = id => new Set(zuordnung.filter(z => z.unterricht_id === id).map(z => z.stueck_id))
-  const kursSet = filter !== 'alle' && filter !== 'vorschlaege' ? imKurs(filter) : null
+  const kursSet = !['meine', 'bibliothek', 'vorschlaege'].includes(filter) ? imKurs(filter) : null
+  const meineIds = new Set(zuordnung.map(z => z.stueck_id))
+  const istMeins = st => meineIds.has(st.id) || st.erstellt_von === profil?.id
   const liste = stuecke
-    .filter(st => !kursSet || kursSet.has(st.id))
+    .filter(st => filter === 'bibliothek' || (kursSet ? kursSet.has(st.id) : istMeins(st)))
     .filter(st => !q || st.titel.toLowerCase().includes(q) || (st.komponist ?? '').toLowerCase().includes(q))
   const navState = { liste: liste.map(st => ({ id: st.id, titel: st.titel })) }
 
-  const aktuelleIds = new Set(zuordnung.filter(z => z.status === 'aktuell' && (!kursSet || z.unterricht_id === filter)).map(z => z.stueck_id))
+  const aktuelleIds = new Set(filter === 'bibliothek' ? [] : zuordnung.filter(z => z.status === 'aktuell' && (!kursSet || z.unterricht_id === filter)).map(z => z.stueck_id))
   const aktuell = stuecke.filter(st => aktuelleIds.has(st.id))
   const aktuellState = { liste: aktuell.map(st => ({ id: st.id, titel: st.titel })) }
 
   const kurseMitLiedern = kurse.filter(k => zuordnung.some(z => z.unterricht_id === k.id))
   const chips = [
-    ['alle', T('n_alle')],
+    ['meine', T('nl_meine_lieder')],
     ...kurseMitLiedern.map(k => [k.id, k.name]),
+    ['bibliothek', T('nl_bibliothek')],
     ['vorschlaege', offeneVorschlaege ? `${T('vorschlag_tab')} (${offeneVorschlaege})` : T('vorschlag_tab')],
   ]
 
@@ -82,7 +86,7 @@ export default function LehrerLieder() {
               </Regal>
             </Abschnitt>
           )}
-          <Abschnitt titel={filter === 'alle' ? T('nl_bibliothek') : T('n_alle_lieder')} style={{ marginTop: 26 }}>
+          <Abschnitt titel={filter === 'bibliothek' ? T('nl_bibliothek') : filter === 'meine' ? T('nl_meine_lieder') : T('n_alle_lieder')} style={{ marginTop: 26 }}>
             {liste.length === 0 ? (
               <Leer text={q ? T('n_kein_lied_gefunden') : T('n_noch_keine_lieder')} />
             ) : (
