@@ -226,7 +226,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.1.0** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.6.0** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -648,6 +648,8 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20260517000013_stuecke_spotify_url.sql` | `spotify_url` Spalte auf `stuecke` |
 | `20261027000000_security_haertung.sql` | Sicherheits-Härtung: `handle_new_user` ignoriert `rolle` aus user_metadata, Trigger `profil_schutz` (keine Selbst-Eskalation von rolle/schule), Rollen-/Schulprüfung in Admin-RPCs, Helfer `ist_intern()`/`ist_admin_von_schule()`/`darf_nutzer_verwalten()`. **Kein `REVOKE EXECUTE` auf Funktionen** — Postgres-Image segfaultet bei "permission denied for function"; Zugriff immer per `RAISE` in der Funktion prüfen |
 | `20261027000001_fix_prod_drift.sql` | Prod-Drift: entfernt Angreifer-Funktion `escalate_priv()`, stunden-Policies mit Schulfilter (wie dev). `deploy.sh` wendet Migrationen seitdem transaktional mit `ON_ERROR_STOP` an |
+| `20261028000003_profil_neues_design.sql` | `neues_design` auf `profiles` (Opt-in v2.5.0, seit v2.6.0 nicht mehr gelesen) |
+| `20261028000004_profil_altes_design.sql` | `altes_design` auf `profiles` (default false) — seit v2.6.0 ist das neue Design (`src/neu/`) Standard für Schüler und Lehrer (`NEU_ROLLEN` in `src/neu/neuRollen.js`); `altes_design = true` schaltet das klassische Design ein |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, Outlet, useLocation, matchPath } from 'react-router-dom'
-import { House, CalendarDays, Music, CircleUser } from 'lucide-react'
+import { House, CalendarDays, Music, CircleUser, Users } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { ToastContainer } from '../components/Toast'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -9,31 +9,44 @@ import { GLOBAL_CSS } from '../components/layout/globalCss'
 import { UI_CSS } from '../ui'
 import { useUngelesen } from './daten'
 
-// Reiter der neuen Oberfläche (Phase 2: Schüler). `auch` = weitere Pfade, bei denen der Reiter aktiv ist.
-const REITER = [
-  { to: '/schueler',             icon: House,        label: 'n_tab_start',   auch: [] },
-  { to: '/schueler/stundenplan', icon: CalendarDays, label: 'n_tab_termine', auch: ['/schueler/events'] },
-  { to: '/schueler/repertoire',  icon: Music,        label: 'n_tab_lieder',  auch: [] },
-  { to: '/schueler/ich',         icon: CircleUser,   label: 'n_tab_ich',     auch: ['/schueler/profil', '/schueler/nachrichten', '/schueler/kurse', '/schueler/dateien', '/schueler/faq', '/einstellungen', '/profil', '/meine-dateien'] },
-]
+// Reiter der neuen Oberfläche je Rolle. `auch` = weitere Pfade, bei denen der Reiter aktiv ist.
+const GEMEINSAM = ['/einstellungen', '/profil', '/meine-dateien']
+const REITER = {
+  schueler: [
+    { to: '/schueler',             icon: House,        label: 'n_tab_start',   auch: [] },
+    { to: '/schueler/stundenplan', icon: CalendarDays, label: 'n_tab_termine', auch: ['/schueler/events'] },
+    { to: '/schueler/repertoire',  icon: Music,        label: 'n_tab_lieder',  auch: [] },
+    { to: '/schueler/ich',         icon: CircleUser,   label: 'n_tab_ich',     auch: ['/schueler/profil', '/schueler/nachrichten', '/schueler/kurse', '/schueler/dateien', '/schueler/faq', ...GEMEINSAM] },
+  ],
+  lehrer: [
+    { to: '/lehrer',             icon: House,        label: 'n_tab_start',   auch: [] },
+    { to: '/lehrer/anwesenheit', icon: CalendarDays, label: 'n_tab_termine', auch: ['/lehrer/events'] },
+    { to: '/lehrer/kurse',       icon: Users,        label: 'nl_tab_kurse',  auch: ['/lehrer/stunde', '/lehrer/schueler'] },
+    { to: '/lehrer/repertoire',  icon: Music,        label: 'n_tab_lieder',  auch: [] },
+    { to: '/lehrer/ich',         icon: CircleUser,   label: 'n_tab_ich',     auch: ['/lehrer/profil', '/lehrer/nachrichten', '/lehrer/tools', ...GEMEINSAM] },
+  ],
+}
 
 // Seiten, die schon im neuen Design gebaut sind (bringen eigene Abstände mit)
 const NEUE_SEITEN = [
   '/schueler', '/schueler/stundenplan', '/schueler/events', '/schueler/repertoire', '/schueler/repertoire/:stueckId', '/schueler/ich',
   '/schueler/nachrichten', '/schueler/kurse', '/schueler/kurse/:id', '/schueler/dateien', '/schueler/faq', '/schueler/profil',
-  '/profil', '/einstellungen', '/meine-dateien',
+  '/lehrer', '/lehrer/kurse', '/lehrer/kurse/:id', '/lehrer/stunde/:id', '/lehrer/ich', '/lehrer/profil',
+  ...GEMEINSAM,
 ]
 const VOLLBILD = ['/schueler/repertoire/:stueckId']
 
 const passt = (muster, pfad) => muster.some(m => matchPath({ path: m, end: true }, pfad))
 
-function istAktiv(reiter, pfad) {
-  if (reiter.to === '/schueler') return pfad === '/schueler'
+// Erster Reiter (Start) nur bei exaktem Pfad, sonst auch für Unterseiten
+function istAktiv(reiter, pfad, erster) {
+  if (erster) return pfad === reiter.to
   return [reiter.to, ...reiter.auch].some(p => pfad === p || pfad.startsWith(p + '/'))
 }
 
 export default function AppShell() {
-  const { T, toasts, removeToast, confirmState, resolveConfirm } = useApp()
+  const { T, rolle, toasts, removeToast, confirmState, resolveConfirm } = useApp()
+  const reiter = REITER[rolle] ?? REITER.schueler
   const { pathname } = useLocation()
   const { data: ungelesen = [] } = useUngelesen()
   const neueSeite = passt(NEUE_SEITEN, pathname)
@@ -41,7 +54,7 @@ export default function AppShell() {
 
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
 
-  const badgeFuer = r => (r.to === '/schueler/ich' ? ungelesen.length : 0)
+  const badgeFuer = r => (r.label === 'n_tab_ich' ? ungelesen.length : 0)
 
   return (
     <div className="n-shell" style={{ minHeight: '100dvh', background: 'var(--bg)', color: 'var(--text)' }}>
@@ -51,8 +64,8 @@ export default function AppShell() {
       <aside className="n-seitenleiste" aria-label={T('n_hauptmenue')}>
         <div style={{ padding: '28px 20px 24px', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Staccato</div>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '0 12px' }}>
-          {REITER.map(r => {
-            const aktiv = istAktiv(r, pathname)
+          {reiter.map((r, i) => {
+            const aktiv = istAktiv(r, pathname, i === 0)
             const Icon = r.icon
             const badge = badgeFuer(r)
             return (
@@ -80,8 +93,8 @@ export default function AppShell() {
       {/* Handy: Reiterleiste */}
       {!vollbild && (
         <nav className="n-reiterleiste" aria-label={T('n_hauptmenue')}>
-          {REITER.map(r => {
-            const aktiv = istAktiv(r, pathname)
+          {reiter.map((r, i) => {
+            const aktiv = istAktiv(r, pathname, i === 0)
             const Icon = r.icon
             const badge = badgeFuer(r)
             return (

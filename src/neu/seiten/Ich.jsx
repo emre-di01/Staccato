@@ -1,27 +1,36 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut } from 'lucide-react'
+import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut, Users, CalendarDays } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Segment, Schalter } from '../../ui'
 import JoinSessionModal from '../../components/layout/JoinSessionModal'
 import { useUngelesen } from '../daten'
+import { useBasis } from '../rolle'
 
 export default function NeuIch() {
-  const { profil, schule, schulenListe, T, farbmodus, setFarbmodus, schriftStufe, setSchriftStufe, setNeuesDesign, abmelden } = useApp()
+  const { profil, rolle, schule, schulenListe, T, farbmodus, setFarbmodus, schriftStufe, setSchriftStufe, setNeuesDesign, abmelden } = useApp()
   const navigate = useNavigate()
   const { data: ungelesen = [] } = useUngelesen()
   const [joinOffen, setJoinOffen] = useState(false)
+  const basis = useBasis()
+  const lehrer = rolle === 'lehrer'
 
   const name = profil?.voller_name ?? ''
   const initial = (name[0] ?? '?').toUpperCase()
 
   function zurAltenAnsicht() {
     setNeuesDesign(false)
-    navigate('/schueler')
+    navigate(basis)
   }
 
-  const eintraege = [
-    <Zeile key="nachrichten" icon={MessageCircle} titel={T('messages')} wert={ungelesen.length ? T('n_x_neu').replace('{n}', ungelesen.length) : null} wertFarbe="var(--primary)" to="/schueler/nachrichten" />,
+  const nachrichten = <Zeile key="nachrichten" icon={MessageCircle} titel={T('messages')} wert={ungelesen.length ? T('n_x_neu').replace('{n}', ungelesen.length) : null} wertFarbe="var(--primary)" to={`${basis}/nachrichten`} />
+  const eintraege = lehrer ? [
+    nachrichten,
+    <Zeile key="schueler" icon={Users} titel={T('my_students')} to="/lehrer/schueler" />,
+    <Zeile key="events" icon={CalendarDays} titel={T('events')} to="/lehrer/events" />,
+    <Zeile key="dateien" icon={FolderOpen} titel={T('eigene_meine')} to="/meine-dateien" />,
+  ] : [
+    nachrichten,
     <Zeile key="dateien" icon={FolderOpen} titel={T('eigene_meine')} to="/meine-dateien" />,
     <Zeile key="kurse" icon={Music} titel={T('my_classes')} untertitel={T('n_kurse_untertitel')} to="/schueler/kurse" />,
     <Zeile key="dokumente" icon={FileText} titel={T('n_dokumente')} untertitel={T('n_dokumente_untertitel')} to="/schueler/dateien" />,
@@ -30,7 +39,7 @@ export default function NeuIch() {
   const weitere = [
     ...(schulenListe?.length > 1 ? [<Zeile key="schule" icon={School} titel={T('n_schule_wechseln')} untertitel={schule?.name} to="/schulen" />] : []),
     <Zeile key="einstellungen" icon={Settings} titel={T('n_weitere_einstellungen')} untertitel={T('n_einstellungen_untertitel')} to="/einstellungen" />,
-    <Zeile key="faq" icon={CircleHelp} titel={T('n_hilfe')} to="/schueler/faq" />,
+    ...(lehrer ? [] : [<Zeile key="faq" icon={CircleHelp} titel={T('n_hilfe')} to="/schueler/faq" />]),
   ]
 
   return (
@@ -43,7 +52,7 @@ export default function NeuIch() {
           <div style={{ fontSize: 22, fontWeight: 700, overflowWrap: 'anywhere' }}>{name}</div>
           {schule?.name && <div style={{ fontSize: 16, color: 'var(--text-2)' }}>{schule.name}</div>}
         </div>
-        <Link to="/schueler/profil" style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, background: 'var(--n-fill)', color: 'var(--text)', display: 'flex', alignItems: 'center', fontSize: 16, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>{T('edit')}</Link>
+        <Link to={`${basis}/profil`} style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, background: 'var(--n-fill)', color: 'var(--text)', display: 'flex', alignItems: 'center', fontSize: 16, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>{T('edit')}</Link>
       </div>
 
       <Gruppe style={{ marginTop: 24 }}>
@@ -70,10 +79,10 @@ export default function NeuIch() {
 
       <Gruppe style={{ marginTop: 24, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 600 }}>{T('n_neues_design')}</div>
-          <div style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 2 }}>{T('n_neues_design_aus_hinweis')}</div>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{T('n_klassisches_design')}</div>
+          <div style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 2 }}>{T('n_klassisches_design_hinweis')}</div>
         </div>
-        <Schalter an label={T('n_neues_design')} onChange={zurAltenAnsicht} />
+        <Schalter an={false} label={T('n_klassisches_design')} onChange={zurAltenAnsicht} />
       </Gruppe>
 
       <Gruppe style={{ marginTop: 24 }}>

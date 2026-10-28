@@ -5,12 +5,13 @@ import { useApp } from '../context/AppContext'
 import { THEMES, THEME_KEYS } from '../themes/themes'
 import { ONBOARDING_LS_KEY } from '../components/OnboardingModal'
 import { usePushAbo } from '../hooks/usePushAbo'
+import { NEU_ROLLEN } from '../neu/rolle'
 
 const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL ?? ''
 
 export default function Einstellungen() {
   const { profil, ladeProfil, T, rolle, lang, setLang, theme, darkMode, changeTheme, toggleDark, großeSchrift, toggleGrosseSchrift, neuesDesign, setNeuesDesign } = useApp()
-  const neuesDesignMoeglich = rolle === 'schueler'
+  const neuesDesignMoeglich = NEU_ROLLEN.includes(rolle)
   const navigate = useNavigate()
 
   const DEFAULT_NOTIF = { event_invite: true, new_piece: true, new_message: true, lesson_reminder: false }
@@ -60,18 +61,18 @@ export default function Einstellungen() {
     <div style={{ maxWidth: 600 }}>
       <h1 style={s.h1}>⚙️ {T('settings')}</h1>
 
-      {/* Neues Design (Opt-in, vorerst Schüler) */}
+      {/* Klassisches Design (Legacy, Opt-in) – für Rollen in NEU_ROLLEN ist das neue Design Standard */}
       {neuesDesignMoeglich && (
         <div style={s.card}>
-          <button onClick={() => setNeuesDesign(!neuesDesign)} role="switch" aria-checked={neuesDesign}
-            style={{ ...s.toggleRow, border: `1.5px solid ${neuesDesign ? 'var(--primary)' : 'var(--border)'}`, background: neuesDesign ? 'color-mix(in srgb, var(--primary) 6%, transparent)' : 'var(--bg)' }}>
-            <span style={{ fontSize: 18 }}>✨</span>
+          <button onClick={() => setNeuesDesign(!neuesDesign)} role="switch" aria-checked={!neuesDesign}
+            style={{ ...s.toggleRow, border: `1.5px solid ${!neuesDesign ? 'var(--primary)' : 'var(--border)'}`, background: !neuesDesign ? 'color-mix(in srgb, var(--primary) 6%, transparent)' : 'var(--bg)' }}>
+            <span style={{ fontSize: 18 }}>🕰️</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{T('n_neues_design_ausprobieren')}</div>
-              <div style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 2 }}>{T('n_neues_design_beschreibung')}</div>
+              <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{T('n_klassisches_design')}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 2 }}>{T('n_klassisches_design_alt_hinweis')}</div>
             </div>
-            <div style={{ width: 42, height: 24, borderRadius: 99, background: neuesDesign ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-              <div style={{ position: 'absolute', top: 3, left: neuesDesign ? 21 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.2)', transition: 'left 0.2s' }} />
+            <div style={{ width: 42, height: 24, borderRadius: 99, background: !neuesDesign ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: 3, left: !neuesDesign ? 21 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.2)', transition: 'left 0.2s' }} />
             </div>
           </button>
         </div>

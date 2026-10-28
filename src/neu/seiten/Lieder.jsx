@@ -21,12 +21,14 @@ export default function NeuLieder() {
     .filter(l => filter === 'alle' || l.kurse.some(k => k.id === filter))
     .filter(l => !q || l.stueck.titel.toLowerCase().includes(q) || (l.stueck.komponist ?? '').toLowerCase().includes(q))
   const navState = { liste: liste.map(l => ({ id: l.stueck.id, titel: l.stueck.titel })) }
-  const aktuell = lieder.filter(l => l.kurse.some(k => k.status === 'aktuell'))
+  const aktuell = lieder.filter(l => l.kurse.some(k => k.status === 'aktuell' && (filter === 'alle' || k.id === filter)))
   const aktuellState = { liste: aktuell.map(l => ({ id: l.stueck.id, titel: l.stueck.titel })) }
 
+  // Filter je Kurs, sobald der Kurs Lieder hat – auch bei nur einem Kurs
+  const kurseMitLiedern = kurse.filter(k => lieder.some(l => l.kurse.some(lk => lk.id === k.id)))
   const chips = [
     ['alle', T('n_alle')],
-    ...(kurse.length > 1 ? kurse.map(k => [k.id, k.name]) : []),
+    ...kurseMitLiedern.map(k => [k.id, k.name]),
     ['vorschlaege', T('n_meine_vorschlaege')],
   ]
 
@@ -51,7 +53,7 @@ export default function NeuLieder() {
         <div style={{ marginTop: 24 }}><Laden hoehe={200} /></div>
       ) : (
         <>
-          {filter === 'alle' && !q && aktuell.length > 0 && (
+          {!q && aktuell.length > 0 && (
             <Abschnitt titel={T('n_aktuell_geprobt')} style={{ marginTop: 26 }}>
               <Regal>
                 {aktuell.map(l => <LiedKachel key={l.stueck.id} stueck={l.stueck} to={`/schueler/repertoire/${l.stueck.id}`} state={aktuellState} />)}

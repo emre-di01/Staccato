@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.5.0'
+export const CURRENT_VERSION = '2.6.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.6.0',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '✨',
+        de: 'Das neue Design ist jetzt Standard für Schüler und Lehrer – einfacher, größer, übersichtlicher. Wer lieber mit der bisherigen Ansicht arbeitet, schaltet unter „Ich“ das klassische Design ein',
+        en: 'The new design is now the default for students and teachers – simpler, larger, clearer. If you prefer the previous view, turn on the classic design under “Me”',
+        tr: 'Yeni tasarım artık öğrenciler ve öğretmenler için varsayılan – daha sade, daha büyük, daha anlaşılır. Önceki görünümü tercih ederseniz “Ben” altında klasik tasarımı açın',
+      },
+      {
+        icon: '✅',
+        de: 'Für Lehrer: Auf der Startseite stehen die nächste Stunde und alles, was noch zu erledigen ist. Anwesenheit, Notizen und Hausaufgaben trägst du mit „Stunde abschließen“ in einem Schritt ein',
+        en: 'For teachers: the home page shows your next lesson and everything still to do. Record attendance, notes and homework in one step with “Finish lesson”',
+        tr: 'Öğretmenler için: Ana sayfada bir sonraki ders ve yapılacak her şey görünür. Yoklama, notlar ve ödevleri “Dersi tamamla” ile tek adımda girin',
+      },
+      {
+        icon: '🎵',
+        de: 'Lieder nach Kurs filtern – unter „Lieder“ siehst du mit einem Tipp nur die Lieder eines Kurses',
+        en: 'Filter songs by course – under “Songs”, one tap shows only the songs of a course',
+        tr: 'Şarkıları kursa göre filtreleyin – “Şarkılar” altında tek dokunuşla yalnızca bir kursun şarkılarını görün',
+      },
+    ],
+  },
   {
     version: '2.5.0',
     date: '2026-10-28',

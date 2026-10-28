@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { SkeletonStatCard, SkeletonList, SkeletonStyle } from '../../components/Skeleton'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
+import NeuesDesignHinweis from '../../neu/NeuesDesignHinweis'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -128,6 +129,8 @@ export default function LehrerDashboard() {
           {profil?.voller_name}
         </h1>
       </div>
+
+      <NeuesDesignHinweis />
 
       {/* Heute */}
       {!laden && heuteStunden.length > 0 && (

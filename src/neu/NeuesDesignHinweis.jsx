@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
+import { NEU_ROLLEN } from './rolle'
 
-// Hinweis in der alten Oberfläche: lädt Schüler zum Ausprobieren des neuen Designs ein
+// Hinweis in der alten Oberfläche: lädt Schüler und Lehrer zum Ausprobieren des neuen Designs ein
 const LS_KEY = 'staccato_neu_hinweis_weg'
 
 export default function NeuesDesignHinweis() {
   const { T, rolle, neuesDesign, setNeuesDesign } = useApp()
   const [weg, setWeg] = useState(() => { try { return localStorage.getItem(LS_KEY) === '1' } catch { return false } })
-  if (rolle !== 'schueler' || neuesDesign || weg) return null
+  if (!NEU_ROLLEN.includes(rolle) || neuesDesign || weg) return null
 
   function spaeter() {
     try { localStorage.setItem(LS_KEY, '1') } catch { /* privat */ }

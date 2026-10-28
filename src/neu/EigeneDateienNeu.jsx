@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext'
 import { Gruppe, Trenner, Zeile, Knopf, Segment, Suchfeld, Leer, Laden, Blatt, Feld, eingabeStil } from '../ui'
 import { useEigeneDateien, useStueckAuswahl, groesseText, SICHTBARKEITEN } from '../components/stueck/useEigeneDateien'
 import { tagLabel } from './zeit'
+import { useBasis } from './rolle'
 
 const SICHT_ICON = { privat: Lock, lehrer: GraduationCap, alle: Users }
 
@@ -19,6 +20,7 @@ function dateiIcon(mime = '', name = '') {
 // Eigene Dateien im neuen Design. Mit `stueck`: Dateien dieses Lieds, sonst alle (Seite „Meine Dateien“).
 export default function EigeneDateienNeu({ stueck }) {
   const { profil, T, lang, zeitzone } = useApp()
+  const basis = useBasis()
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const istGlobal = !stueck
@@ -145,7 +147,7 @@ export default function EigeneDateienNeu({ stueck }) {
               </div>
               <Knopf voll onClick={() => ed.oeffnen(d)}>{T('n_oeffnen')}</Knopf>
               {istGlobal && d.stueck && (
-                <Knopf voll variante="sekundaer" icon={Music} onClick={() => navigate(`/schueler/repertoire/${d.stueck.id}`)}>{d.stueck.titel}</Knopf>
+                <Knopf voll variante="sekundaer" icon={Music} onClick={() => navigate(`${basis}/repertoire/${d.stueck.id}`)}>{d.stueck.titel}</Knopf>
               )}
               {eigene
                 ? <SichtWahl wert={d.sichtbarkeit} onChange={v => ed.sichtbarkeitAendern(d, v)} />

@@ -7,6 +7,7 @@ import PageErrorBoundary from './components/PageErrorBoundary'
 import ProtectedRoute, { startseiteNach } from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 import AppShell from './neu/AppShell'
+import { NEU_ROLLEN } from './neu/rolle'
 import ConsentBanner from './components/ConsentBanner'
 import WhatsNewModal from './components/WhatsNewModal'
 
@@ -73,6 +74,11 @@ const NeuMeineDateien      = lazy(() => import('./neu/seiten/MeineDateien'))
 const NeuProfil            = lazy(() => import('./neu/seiten/Profil'))
 const NeuEinstellungen     = lazy(() => import('./neu/seiten/Einstellungen'))
 const NeuHilfe             = lazy(() => import('./neu/seiten/Hilfe'))
+// Neues Design, Phase 3: Lehrer
+const NeuLehrerStart       = lazy(() => import('./neu/lehrer/Start'))
+const NeuLehrerKurse       = lazy(() => import('./neu/lehrer/Kurse'))
+const NeuLehrerKurs        = lazy(() => import('./neu/lehrer/Kurs'))
+const NeuStundeAbschliessen = lazy(() => import('./neu/lehrer/StundeAbschliessen'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -81,10 +87,10 @@ function RollenWeiterleitung() {
   return <Navigate to={startseiteNach(rolle)} replace />
 }
 
-// Neues Design: vorerst nur für Schüler, nur wenn im Profil eingeschaltet
+// Neues Design: für die Rollen in NEU_ROLLEN, nur wenn im Profil eingeschaltet
 function useNeuesDesignAktiv() {
   const { neuesDesign, rolle } = useApp()
-  return neuesDesign && rolle === 'schueler'
+  return neuesDesign && NEU_ROLLEN.includes(rolle)
 }
 
 function LayoutWahl() {
@@ -134,10 +140,13 @@ function AppRoutes() {
 
       {/* ── Lehrer ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['lehrer', 'admin', 'superadmin']} />}>
-        <Route element={<AppLayout />}>
-          <Route path="/lehrer"                 element={<LehrerDashboard />} />
-          <Route path="/lehrer/kurse"           element={<LehrerKurse />} />
-          <Route path="/lehrer/kurse/:id"       element={<KursDetail />} />
+        <Route element={<LayoutWahl />}>
+          <Route path="/lehrer"                 element={<DesignWahl alt={<LehrerDashboard />} neu={<NeuLehrerStart />} />} />
+          <Route path="/lehrer/kurse"           element={<DesignWahl alt={<LehrerKurse />} neu={<NeuLehrerKurse />} />} />
+          <Route path="/lehrer/kurse/alt"       element={<LehrerKurse />} />
+          <Route path="/lehrer/kurse/:id"       element={<DesignWahl alt={<KursDetail />} neu={<NeuLehrerKurs />} />} />
+          <Route path="/lehrer/kurse/:id/verwalten" element={<KursDetail />} />
+          <Route path="/lehrer/stunde/:id"      element={<DesignWahl alt={<Navigate to="/lehrer" replace />} neu={<NeuStundeAbschliessen />} />} />
           <Route path="/lehrer/kurse/:id/repertoire" element={<KursRepertoire />} />
           <Route path="/lehrer/kurse/:kursId/repertoire/:stueckId" element={<StueckDetail />} />
           <Route path="/lehrer/kurse/:id/unterrichtsmodus" element={<Unterrichtsmodus />} />
@@ -150,7 +159,8 @@ function AppRoutes() {
           <Route path="/lehrer/events/:kursId/repertoire/:stueckId"          element={<StueckDetail />} />
           <Route path="/lehrer/nachrichten"     element={<Nachrichten />} />
           <Route path="/lehrer/tools"           element={<Tools />} />
-          <Route path="/lehrer/profil"          element={<ProfilSeite />} />
+          <Route path="/lehrer/ich"             element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
+          <Route path="/lehrer/profil"          element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
         </Route>
       </Route>
 

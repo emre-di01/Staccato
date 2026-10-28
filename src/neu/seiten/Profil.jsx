@@ -4,9 +4,11 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import OrtAutocomplete from '../../components/OrtAutocomplete'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Knopf, Blatt, Feld, eingabeStil } from '../../ui'
+import { useBasis } from '../rolle'
 
 export default function NeuProfil() {
   const { profil, ladeProfil, T, toast, confirm } = useApp()
+  const basis = useBasis()
   const fileRef = useRef(null)
   const [form, setForm] = useState({
     voller_name:  profil?.voller_name  ?? '',
@@ -80,7 +82,7 @@ export default function NeuProfil() {
   const name = profil?.voller_name ?? ''
 
   return (
-    <Seite titel={T('profile_title')} zurueck={{ to: '/schueler/ich', label: T('n_tab_ich') }}>
+    <Seite titel={T('profile_title')} zurueck={{ to: `${basis}/ich`, label: T('n_tab_ich') }}>
       {/* Foto */}
       <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 112, height: 112, borderRadius: 56, background: 'var(--n-tint)', color: 'var(--n-tint-fg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44, fontWeight: 700, overflow: 'hidden', opacity: bildLaedt ? 0.5 : 1 }}>

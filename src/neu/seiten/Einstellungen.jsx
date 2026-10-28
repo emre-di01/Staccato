@@ -4,12 +4,14 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { usePushAbo } from '../../hooks/usePushAbo'
 import { Seite, Abschnitt, Gruppe, Trenner, Segment, SchalterZeile, Knopf } from '../../ui'
+import { useBasis } from '../rolle'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? ''
 const EMAIL_STANDARD = { event_invite: true, new_piece: true, new_message: true, lesson_reminder: false }
 
 export default function NeuEinstellungen() {
   const { profil, ladeProfil, T, lang, setLang, toast, confirm } = useApp()
+  const basis = useBasis()
   const push = usePushAbo(profil)
   const [email, setEmail] = useState({ ...EMAIL_STANDARD, ...(profil?.email_benachrichtigungen ?? {}) })
   const [token, setToken] = useState(null)
@@ -68,7 +70,7 @@ export default function NeuEinstellungen() {
   ]
 
   return (
-    <Seite titel={T('settings')} zurueck={{ to: '/schueler/ich', label: T('n_tab_ich') }}>
+    <Seite titel={T('settings')} zurueck={{ to: `${basis}/ich`, label: T('n_tab_ich') }}>
       <Abschnitt titel={T('language')} style={{ marginTop: 24 }}>
         <Segment label={T('language')} wert={lang} onChange={setLang} style={{ margin: '0 20px' }}
           optionen={[['de', 'Deutsch'], ['en', 'English'], ['tr', 'Türkçe']]} />

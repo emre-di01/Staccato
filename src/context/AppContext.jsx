@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { applyTheme, THEMES } from '../themes/themes'
 import { t as translate } from '../i18n/translations'
 import OneSignal from 'react-onesignal'
+import { NEU_ROLLEN } from '../neu/neuRollen'
 
 const AppContext = createContext(null)
 
@@ -62,14 +63,21 @@ export function AppProvider({ children }) {
     return d === null ? 'auto' : d === 'true' ? 'dunkel' : 'hell'
   })
   const farbmodusRef = useRef(farbmodus)
-  // Neues Design (Opt-in, im Profil gespeichert; localStorage nur für den ersten Paint)
-  const [neuesDesign, setNeuesDesignState] = useState(() => localStorage.getItem('staccato_neues_design') === 'true')
+  // Klassisches Design (Opt-in, im Profil gespeichert; localStorage nur für den ersten Paint).
+  // Standard ist die neue Oberfläche – für die Rollen in NEU_ROLLEN.
+  const [altesDesign, setAltesDesignState] = useState(() => localStorage.getItem('staccato_altes_design') === 'true')
 
   const loadedUidRef = useRef(null)
   const profilIdRef  = useRef(null)
 
+  // Vor dem Laden des Profils ist die Rolle unbekannt → letzter bekannter Stand
+  const rolleGeladen = profil?.rolle ?? null
+  const neuesDesignAktiv = rolleGeladen
+    ? !altesDesign && NEU_ROLLEN.includes(rolleGeladen)
+    : localStorage.getItem('staccato_neues_design_aktiv') === 'true'
+
   useEffect(() => {
-    if (neuesDesign) {
+    if (neuesDesignAktiv) {
       // Neues Design: ein Farbschema für alle Schulen, keine Schulfarbe
       applyTheme('neu2026', darkMode)
     } else {
@@ -78,8 +86,9 @@ export function AppProvider({ children }) {
     }
     localStorage.setItem('staccato_theme', theme)
     localStorage.setItem('staccato_dark', darkMode)
-    localStorage.setItem('staccato_neues_design', String(neuesDesign))
-  }, [theme, darkMode, schule?.farbe, neuesDesign])
+    localStorage.setItem('staccato_altes_design', String(altesDesign))
+    if (rolleGeladen) localStorage.setItem('staccato_neues_design_aktiv', String(neuesDesignAktiv))
+  }, [theme, darkMode, schule?.farbe, altesDesign, neuesDesignAktiv, rolleGeladen])
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
@@ -121,7 +130,7 @@ export function AppProvider({ children }) {
         if (data.sprache)   setLangState(data.sprache)
         if (data.thema)     setThemeKey(data.thema)
         if (data.dark_mode != null && farbmodusRef.current !== 'auto') setDarkMode(data.dark_mode)
-        if (data.neues_design != null) setNeuesDesignState(data.neues_design)
+        if (data.altes_design != null) setAltesDesignState(data.altes_design)
 
         const activeSchuleId = data.letzte_schule_id ?? data.schule_id
         if (activeSchuleId) {
@@ -254,8 +263,8 @@ export function AppProvider({ children }) {
   }
 
   function setNeuesDesign(an) {
-    setNeuesDesignState(an)
-    saveToProfile({ neues_design: an })
+    setAltesDesignState(!an)
+    saveToProfile({ altes_design: !an })
   }
 
   function setLang(l) {
@@ -291,7 +300,7 @@ export function AppProvider({ children }) {
       theme, darkMode, lang, zeitzone,
       großeSchrift, toggleGrosseSchrift, schriftStufe, setSchriftStufe,
       farbmodus, setFarbmodus,
-      neuesDesign, setNeuesDesign,
+      neuesDesign: !altesDesign, setNeuesDesign,
       schule, setSchule, abo,
       schulenListe,
       schuleWechseln,
