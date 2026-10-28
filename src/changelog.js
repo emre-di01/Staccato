@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.10.0'
+export const CURRENT_VERSION = '2.11.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.11.0',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '🎼',
+        de: 'Noten auf dem Beamer vom Handy steuern: weiterblättern, vergrößern und den Ausschnitt mit dem Finger verschieben',
+        en: 'Control sheet music on the projector from your phone: turn pages, zoom in and move the visible area with your finger',
+        tr: 'Projeksiyondaki notaları telefondan yönet: sayfa çevir, yakınlaştır ve görünen alanı parmağınla kaydır',
+      },
+      {
+        icon: '📷',
+        de: 'Live-Unterricht per QR-Code beitreten: Der Beamer zeigt Code und QR-Code jetzt immer an, und unter „Live-Unterricht beitreten“ gibt es einen Scanner',
+        en: 'Join live lessons by QR code: the projector now always shows the code and QR code, and “Join live lesson” has a scanner',
+        tr: 'Canlı derse QR kodla katıl: projeksiyon artık kodu ve QR kodu hep gösteriyor, “Canlı derse katıl” bölümünde tarayıcı var',
+      },
+    ],
+  },
   {
     version: '2.10.0',
     date: '2026-10-28',

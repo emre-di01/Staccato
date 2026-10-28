@@ -11,6 +11,7 @@ import { liedFarbe } from '../../ui'
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import { useNeuLaden } from '../daten'
 import { uhrzeit, tagKey } from '../zeit'
+import { NotenSteuerung } from '../beamerNoten'
 
 // Feste dunkle Farben: im Raum blendet nichts, unabhängig von hell/dunkel
 const F = { bg: '#0B0B0D', karte: '#1C1C21', linie: '#2A2A30', text: '#F5F5F7', text2: '#A1A1AA', akzent: '#FB923C', gruen: '#4ADE80' }
@@ -55,6 +56,8 @@ export default function LehrerLive() {
   const [beamerEingabe, setBeamerEingabe] = useState(false)
   const [beamerSchrift, setBeamerSchrift] = useState(28)
   const [gestartet, setGestartet] = useState(null)
+  const [notenUrls, setNotenUrls] = useState([])     // Notendateien, die der Beamer gerade hat
+  const [notenStatus, setNotenStatus] = useState(null) // Ansicht, die der Beamer zurückmeldet
   const broadcastRef = useRef(null)
   const beamerRef = useRef(null)
 
@@ -143,13 +146,14 @@ export default function LehrerLive() {
     broadcastRef.current?.send({ type: 'broadcast', event: 'state', payload: { aktuelles_stueck: st.id, aktuelle_ansicht: ansicht } })
     if (beamerRef.current) {
       const signed_urls = ansicht === 'noten'
-        ? await Promise.all((st.stueck_dateien ?? []).filter(d => d.typ === 'noten').map(async d => {
+        ? (await Promise.all((st.stueck_dateien ?? []).filter(d => d.typ === 'noten').map(async d => {
           const { data: u } = await supabase.storage.from('stueck-dateien').createSignedUrl(d.bucket_pfad, 3600)
           return { stimme: d.stimme, url: u?.signedUrl ?? null }
-        }))
+        }))).filter(f => f.url)
         : []
+      setNotenUrls(signed_urls); setNotenStatus(null)
       beamerRef.current.send({ type: 'broadcast', event: 'state', payload: {
-        aktuelles_stueck: st.id, aktuelle_ansicht: ansicht, signed_urls,
+        aktuelles_stueck: st.id, aktuelle_ansicht: ansicht, signed_urls, join_code: session.join_code,
         stueck: { titel: st.titel, komponist: st.komponist, liedtext: st.liedtext, liedtext_md: st.liedtext_md, notizen: st.notizen, youtube_url: st.youtube_url },
       } })
     }
@@ -159,10 +163,19 @@ export default function LehrerLive() {
     const code = beamerCode.trim().toUpperCase()
     if (code.length !== 4) return
     beamerRef.current?.unsubscribe()
-    beamerRef.current = supabase.channel(`beamer-${code}`).subscribe()
+    beamerRef.current = supabase.channel(`beamer-${code}`)
+      .on('broadcast', { event: 'noten_status' }, ({ payload }) => setNotenStatus(payload))
+      .subscribe()
     setBeamerAn(true); setBeamerEingabe(false)
     const st = stuecke.find(s => s.id === liveStueck)
-    if (st && liveAnsicht) setTimeout(() => zeigen(st, liveAnsicht), 800)
+    // Beamer zeigt den Beitritts-Code, bis ein Lied gezeigt wird
+    setTimeout(() => st && liveAnsicht
+      ? zeigen(st, liveAnsicht)
+      : beamerRef.current?.send({ type: 'broadcast', event: 'state', payload: { join_code: session.join_code } }), 800)
+  }
+
+  function notenBefehl(payload) {
+    beamerRef.current?.send({ type: 'broadcast', event: 'noten_befehl', payload })
   }
 
   function beamerSchriftAendern(d) {
@@ -271,6 +284,12 @@ export default function LehrerLive() {
                       <button key={a} onClick={() => zeigen(aktuell, a)} aria-pressed={liveAnsicht === a} style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: liveAnsicht === a ? '#FFFFFF' : 'rgba(0,0,0,0.28)', color: liveAnsicht === a ? '#111114' : '#FFFFFF', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>{T(label)}</button>
                     ))}
                   </div>
+                  {liveAnsicht === 'noten' && beamerAn && notenUrls.length > 0 && (
+                    <div style={{ marginTop: 18, padding: 14, borderRadius: 18, background: 'rgba(0,0,0,0.32)' }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{T('nbn_titel')}</div>
+                      <NotenSteuerung dateien={notenUrls} status={notenStatus} befehl={notenBefehl} />
+                    </div>
+                  )}
                   {liveAnsicht === 'liedtext' && aktuell.liedtext && (
                     <div className="n-lied-text" style={{ marginTop: 18, fontSize: 18, lineHeight: 1.5, fontWeight: 600, ...(aktuell.liedtext_md === false ? { whiteSpace: 'pre-wrap' } : {}) }}
                       {...(aktuell.liedtext_md === false ? { children: aktuell.liedtext } : { dangerouslySetInnerHTML: { __html: safeMarkdown(aktuell.liedtext) } })} />
