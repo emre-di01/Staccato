@@ -1,9 +1,39 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.3.1'
+export const CURRENT_VERSION = '2.4.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.4.0',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '🎤',
+        de: 'Lieder vorschlagen – Schüler schlagen Lieder für ihren Kurs vor, gern mit Liedtext. Die Lehrkraft entscheidet, ob das Lied ins Repertoire kommt',
+        en: 'Suggest songs – students suggest songs for their course, ideally with lyrics. The teacher decides whether the song goes into the repertoire',
+        tr: 'Şarkı öner – öğrenciler kursları için, mümkünse sözleriyle birlikte şarkı önerir. Repertuvara eklenip eklenmeyeceğine öğretmen karar verir',
+      },
+      {
+        icon: '📝',
+        de: 'Textänderungen vorschlagen – Fehler im Liedtext entdeckt? Einfach korrigieren und vorschlagen. Die Lehrkraft sieht die Änderungen farbig markiert',
+        en: 'Suggest text changes – found a mistake in the lyrics? Just correct it and suggest it. The teacher sees the changes highlighted in colour',
+        tr: 'Metin değişikliği öner – sözlerde hata mı buldunuz? Düzeltip önerin. Öğretmen değişiklikleri renkli olarak görür',
+      },
+      {
+        icon: '📂',
+        de: 'Meine Dateien – eigene Dateien wie Übe-Aufnahmen oder Noten mit Notizen ablegen, mit oder ohne Stück. Du bestimmst, wer sie sehen darf',
+        en: 'My files – store your own files such as practice recordings or annotated sheet music, with or without a piece. You decide who can see them',
+        tr: 'Dosyalarım – çalışma kayıtları veya notlu partisyonlar gibi kendi dosyalarınızı parçalı ya da parçasız saklayın. Kimin görebileceğine siz karar verirsiniz',
+      },
+      {
+        icon: '🔔',
+        de: 'Für Lehrkräfte: offene Vorschläge als rote Zahl am Repertoire, als Kachel im Dashboard und als Hinweis direkt am Stück',
+        en: 'For teachers: open suggestions shown as a red badge on Repertoire, as a dashboard tile and as a notice on the piece itself',
+        tr: 'Öğretmenler için: bekleyen öneriler Repertuvar’da kırmızı rozet, panoda kutucuk ve doğrudan parçada uyarı olarak gösterilir',
+      },
+    ],
+  },
   {
     version: '2.3.1',
     date: '2026-05-16',

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { supabase } from '../../lib/supabase'
 import { SlidingTabs } from '../../components/SlidingTabs'
+import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -68,6 +69,7 @@ function StatCard({ icon, label, value, color = 'var(--primary)', sub, onClick }
 export default function AdminDashboard() {
   const { profil, schule, T } = useApp()
   const navigate = useNavigate()
+  const { data: offeneVorschlaege = 0 } = useOffeneVorschlaege()
   const [tab, setTab] = useState('uebersicht')
   const [stats, setStats] = useState(null)
   const [vorstandStats, setVorstandStats] = useState(null)
@@ -194,6 +196,7 @@ export default function AdminDashboard() {
             <StatCard icon="📊" label={T('attendance_rate')} value={laden ? '…' : stats?.anwesenheit_quote ? `${stats.anwesenheit_quote}%` : '–'} color="var(--accent)" onClick={() => navigate('/admin/stundenplan')} />
             <StatCard icon="💰" label={T('revenue_month')}   value={laden ? '…' : stats?.einnahmen_monat ? `€${stats.einnahmen_monat}` : '€0'} color="var(--success)" />
             <StatCard icon="📋" label={T('prospects_open')}  value={laden ? '…' : stats?.interessenten}     color="var(--primary)"  onClick={() => navigate('/admin/interessenten')} />
+            {offeneVorschlaege > 0 && <StatCard icon="🎤" label={T('dash_open_suggestions')} value={offeneVorschlaege} color="var(--danger)" onClick={() => navigate('/admin/repertoire?tab=vorschlaege')} />}
             <StatCard icon="📅" label={T('lessons_week')}    value={laden ? '…' : stats?.stunden_woche}     color="var(--text-2)"   onClick={() => navigate('/admin/stundenplan')} />
             <StatCard icon="📦" label="Inventarwert"         value={laden || inventarWert === null ? '…' : inventarWert.toLocaleString('de-DE', { style:'currency', currency:'EUR', maximumFractionDigits:0 })} color="var(--text-2)" onClick={() => navigate('/admin/inventar')} />
           </div>

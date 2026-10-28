@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 export function NavItem({ item, mobile = false, setSidebarOffen, ungelesen = 0, pillMode = false }) {
+  const badge = item.nachrichten ? ungelesen : (item.badge ?? 0)
   return (
     <div style={{ position: 'relative', zIndex: pillMode ? 1 : 'auto', ...(mobile ? { flex: 1, display: 'flex' } : {}) }}>
       <NavLink
@@ -28,9 +29,9 @@ export function NavItem({ item, mobile = false, setSidebarOffen, ungelesen = 0, 
       >
         <span style={{ position: 'relative', display: 'inline-flex', lineHeight: 1 }}>
           <span style={{ fontSize: mobile ? 20 : 16 }}>{item.icon}</span>
-          {item.nachrichten && ungelesen > 0 && (
+          {badge > 0 && (
             <span className="nav-badge" style={{ position: 'absolute', top: -4, right: -7, minWidth: 14, height: 14, borderRadius: 7, background: 'var(--danger)', color: '#fff', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: '0 3px', zIndex: 1 }}>
-              {ungelesen > 9 ? '9+' : ungelesen}
+              {badge > 9 ? '9+' : badge}
             </span>
           )}
         </span>

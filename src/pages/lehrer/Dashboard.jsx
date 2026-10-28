@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { SkeletonStatCard, SkeletonList, SkeletonStyle } from '../../components/Skeleton'
+import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -65,6 +66,7 @@ function StatCard({ icon, label, wert, farbe = 'var(--primary)', onClick }) {
 export default function LehrerDashboard() {
   const { profil, T } = useApp()
   const navigate = useNavigate()
+  const { data: offeneVorschlaege = 0 } = useOffeneVorschlaege()
 
   const jetzt = new Date()
   const stunde = jetzt.getHours()
@@ -173,6 +175,7 @@ export default function LehrerDashboard() {
         <StatCard icon="🎵" label={T('dash_my_courses')}      wert={kurse.length}          farbe="var(--primary)" onClick={() => navigate('/lehrer/kurse')} />
         <StatCard icon="👥" label={T('dash_active_students')} wert={aktiveSchueler}         farbe="var(--accent)"  onClick={() => navigate('/lehrer/schueler')} />
         <StatCard icon="📅" label={T('dash_next_lessons')}    wert={naechsteStunden.length} farbe="var(--success)" onClick={() => navigate('/lehrer/anwesenheit')} />
+        {offeneVorschlaege > 0 && <StatCard icon="🎤" label={T('dash_open_suggestions')} wert={offeneVorschlaege} farbe="var(--danger)" onClick={() => navigate('/lehrer/repertoire?tab=vorschlaege')} />}
         </>}
       </div>
 

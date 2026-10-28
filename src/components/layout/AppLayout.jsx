@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { startseiteNach } from '../ProtectedRoute'
 import { supabase } from '../../lib/supabase'
+import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
 import { version } from '../../../package.json'
 import { ToastContainer } from '../Toast'
 import { ConfirmModal } from '../ConfirmModal'
@@ -31,7 +32,9 @@ export default function AppLayout() {
   const [installPrompt, setInstallPrompt]       = useState(null)
   const [keyboardOffen, setKeyboardOffen]       = useState(false)
 
-  const navConfig = getNavConfig(rolle, T, abo)
+  const { data: offeneVorschlaege = 0 } = useOffeneVorschlaege()
+  const mitBadge  = item => item.vorschlaege ? { ...item, badge: offeneVorschlaege } : item
+  const navConfig = getNavConfig(rolle, T, abo).map(e => e.gruppe ? { ...e, items: e.items.map(mitBadge) } : mitBadge(e))
   const navItems  = flattenNav(navConfig)
 
   const ladeUngelesen = useCallback(async () => {

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import Hinweis from '../components/Hinweis'
+import LiedVorschlaege, { VorschlagModal } from '../components/LiedVorschlaege'
+import { useOffeneVorschlaege } from '../hooks/useOffeneVorschlaege'
 
 const STATUS_FARBE = { aktuell:'var(--accent)', geplant:'var(--primary)', abgeschlossen:'var(--text-3)', archiviert:'var(--text-3)' }
 
@@ -116,13 +118,19 @@ export default function Repertoire() {
   const rolle_    = location.pathname.split('/')[1]   // admin | lehrer | schueler
   const istAdmin   = rolle === 'admin' || rolle === 'superadmin'
   const istSchueler = rolle === 'schueler'
+  const darfVorschlagen = istSchueler || rolle === 'vorstand'
+  const darfEntscheiden = istAdmin || rolle === 'lehrer'
 
-  const [tab,        setTab]        = useState(istSchueler ? 'meine' : 'bibliothek')
+  // ?tab=vorschlaege&vorschlag=<id>: Sprung aus Menü-Badge, Dashboard oder Stück-Seite
+  const [searchParams] = useSearchParams()
+  const fokusVorschlag = searchParams.get('vorschlag')
+  const [tab,        setTab]        = useState(searchParams.get('tab') === 'vorschlaege' ? 'vorschlaege' : istSchueler ? 'meine' : 'bibliothek')
   const [suche,      setSuche]      = useState('')
   const [filter,     setFilter]     = useState('alle')  // alle | noten | audio | video | text
   const [kursFilter,   setKursFilter]   = useState('alle')
   const [statusFilter, setStatusFilter] = useState('alle')
   const [modal,      setModal]      = useState(false)
+  const [vorschlagModal, setVorschlagModal] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -184,6 +192,16 @@ export default function Repertoire() {
     },
   })
 
+  const { data: offeneVorschlaege = 0 } = useOffeneVorschlaege()
+
+  const tabs = [
+    ...(!istSchueler ? [['bibliothek', `${T('repertoire_library')} (${data?.bibliothek?.length ?? 0})`]] : []),
+    ['meine', `${T('repertoire_mine')} (${data?.meineStuecke?.length ?? 0})`],
+    ...(darfVorschlagen || darfEntscheiden
+      ? [['vorschlaege', `🎤 ${T('vorschlag_tab')}${darfEntscheiden && offeneVorschlaege ? ` (${offeneVorschlaege})` : ''}`]]
+      : []),
+  ]
+
   const bibliothek   = data?.bibliothek   ?? []
   const meineStuecke = data?.meineStuecke ?? []
 
@@ -225,18 +243,17 @@ export default function Repertoire() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:12 }}>
         <h1 style={{ margin:0, fontSize:26, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px' }}>🎼 {T('repertoire_title')}</h1>
-        {!istSchueler && <button onClick={() => setModal(true)} style={s.btnPri}>{T('repertoire_new_piece')}</button>}
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+          {darfVorschlagen && <button onClick={() => setVorschlagModal(true)} style={{ ...s.btnPri, fontSize:16, padding:'12px 20px' }}>{T('vorschlag_new')}</button>}
+          {!istSchueler && <button onClick={() => setModal(true)} style={s.btnPri}>{T('repertoire_new_piece')}</button>}
+        </div>
       </div>
 
-      {istSchueler && <Hinweis text={T('hint_repertoire')} style={{ marginBottom:20 }} />}
+      {istSchueler && tab !== 'vorschlaege' && <Hinweis text={T('hint_repertoire')} style={{ marginBottom:20 }} />}
 
-      {/* Tabs (nur für Admin/Lehrer) */}
-      {!istSchueler && (
-        <div style={{ display:'flex', gap:0, borderBottom:'2px solid var(--border)', marginBottom:20 }}>
-          {[
-            ['bibliothek', `${T('repertoire_library')} (${bibliothek.length})`],
-            ['meine',      `${T('repertoire_mine')} (${meineStuecke.length})`],
-          ].map(([k, l]) => (
+      {tabs.length > 1 && (
+        <div style={{ display:'flex', gap:0, borderBottom:'2px solid var(--border)', marginBottom:20, overflowX:'auto' }}>
+          {tabs.map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setStatusFilter('alle') }}
               style={{ padding:'10px 20px', background:'none', border:'none', fontSize:14, cursor:'pointer', fontFamily:'inherit', color: tab===k ? 'var(--text)' : 'var(--text-3)', fontWeight: tab===k ? 800 : 500, borderBottom:`2px solid ${tab===k ? 'var(--primary)' : 'transparent'}`, marginBottom:-2, whiteSpace:'nowrap' }}>
               {l}
@@ -246,7 +263,7 @@ export default function Repertoire() {
       )}
 
       {/* Suche + Filter */}
-      <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap', alignItems:'center' }}>
+      {tab !== 'vorschlaege' && <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap', alignItems:'center' }}>
         <input
           placeholder={T('repertoire_search')}
           value={suche} onChange={e => setSuche(e.target.value)}
@@ -296,9 +313,11 @@ export default function Repertoire() {
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
-      {laden ? (
+      {tab === 'vorschlaege' ? (
+        <LiedVorschlaege modus={darfEntscheiden ? 'lehrer' : 'schueler'} rollePfad={rolle_} fokusId={fokusVorschlag} />
+      ) : laden ? (
         <div style={s.leer}>{T('repertoire_loading')}</div>
       ) : tab === 'bibliothek' ? (
 
@@ -325,6 +344,11 @@ export default function Repertoire() {
             ))}
           </div>
         )
+      )}
+
+      {vorschlagModal && (
+        <VorschlagModal onClose={() => setVorschlagModal(false)}
+          onErfolg={() => { setVorschlagModal(false); setTab('vorschlaege'); queryClient.invalidateQueries({ queryKey: ['lied-vorschlaege'] }) }} />
       )}
 
       {modal && (

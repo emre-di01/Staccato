@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useIsMobile } from '../../hooks/useWindowWidth'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { safeMarkdown } from '../../lib/markdown'
 import { transponiereText, youtubeId, dateiIcon } from '../../lib/akkordeUtils'
 import { supabase } from '../../lib/supabase'
@@ -21,6 +21,8 @@ import Metronom from '../../components/stueck/Metronom'
 import DateiUploadModal from '../../components/stueck/DateiUploadModal'
 import LiedtextBearbeiten from '../../components/stueck/LiedtextBearbeiten'
 import { s } from '../../components/stueck/stueckStyles'
+import { VorschlagModal } from '../../components/LiedVorschlaege'
+import EigeneDateien from '../../components/stueck/EigeneDateien'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_HEADERS = {
@@ -56,6 +58,7 @@ export default function StueckDetail() {
   const [modal,         setModal]         = useState(null)
   const [textGroesse,   setTextGroesse]   = useState(18)
   const [vollbild,      setVollbild]      = useState(false)
+  const [textVorschlag, setTextVorschlag] = useState(false)
   const [halbtoene,     setHalbtoene]     = useState(0)
   const [youtubeEdit,    setYoutubeEdit]    = useState(false)
   const [youtubeInput,   setYoutubeInput]   = useState('')
@@ -71,6 +74,18 @@ export default function StueckDetail() {
   const chordproInputRef = useRef(null)
 
   const kannBearbeiten = rolle === 'admin' || rolle === 'superadmin' || rolle === 'lehrer'
+  const darfTextVorschlagen = rolle === 'schueler' || rolle === 'vorstand'
+
+  // Offene Textänderungen zu diesem Stück (für Lehrkräfte als Hinweisbalken im Liedtext-Tab)
+  const { data: offeneTextVorschlaege = [] } = useQuery({
+    queryKey: ['lied-vorschlaege', 'stueck', stueckId],
+    enabled: kannBearbeiten && !!stueckId,
+    queryFn: async () => {
+      const { data } = await supabase.from('lied_vorschlaege').select('id')
+        .eq('ziel_stueck_id', stueckId).eq('status', 'offen').order('erstellt_am')
+      return data ?? []
+    },
+  })
 
   useEffect(() => {
     function handleKey(e) { if (e.key === 'Escape') setVollbild(false) }
@@ -272,7 +287,7 @@ ${html}
   const dokumente     = gefilterteDateien.filter(d => d.typ === 'dokument' || d.typ === 'sonstiges')
 
   const tabs = [
-    { id:'text',    label:`📝 ${T('piece_lyrics')}`,      zeigen: !!stueck.liedtext || kannBearbeiten },
+    { id:'text',    label:`📝 ${T('piece_lyrics')}`,      zeigen: !!stueck.liedtext || kannBearbeiten || darfTextVorschlagen },
     { id:'akkorde', label:`🎸 ${T('piece_chords')}`,      zeigen: akkordDateien.length > 0 || !!stueck.notizen || (kannBearbeiten && !!stueck.youtube_url) },
     { id:'noten',   label:`📄 ${T('piece_notes_label')}`, zeigen: notenDateien.length > 0 || xmlDateien.length > 0 },
     { id:'audio',   label:`🎵 ${T('piece_audio')}`,       zeigen: audioDateien.length > 0 },
@@ -280,6 +295,7 @@ ${html}
     { id:'ytmusic', label:`🎵 YT Music`,                  zeigen: !!stueck.youtube_music_url || kannBearbeiten },
     { id:'spotify', label:`🟢 Spotify`,                   zeigen: !!stueck.spotify_url       || kannBearbeiten },
     { id:'dateien', label:`📁 ${T('files')}`,             zeigen: dokumente.length > 0 || kannBearbeiten },
+    { id:'eigene',  label:T('eigene_tab'),                zeigen: true },
   ].filter(t => t.zeigen)
 
   const padContent = mob ? 16 : 28
@@ -287,6 +303,15 @@ ${html}
   function tabInhalt(id) {
     if (id === 'text') return (
       <div>
+        {offeneTextVorschlaege.length > 0 && (
+          <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap', padding:'14px 18px', marginBottom:16, borderRadius:'var(--radius)', background:'color-mix(in srgb, var(--primary) 10%, transparent)', border:'1.5px solid var(--primary)' }}>
+            <span style={{ flex:1, minWidth:200, fontSize:16, fontWeight:600, color:'var(--text)' }}>
+              {offeneTextVorschlaege.length === 1 ? T('vorschlag_banner_eins') : T('vorschlag_banner_mehr').replace('{n}', offeneTextVorschlaege.length)}
+            </span>
+            <button onClick={() => navigate(`/${rolle_ === 'superadmin' ? 'admin' : rolle_}/repertoire?tab=vorschlaege&vorschlag=${offeneTextVorschlaege[0].id}`)}
+              style={{ ...s.btnPri, fontSize:16, minHeight:44 }}>{T('vorschlag_banner_btn')}</button>
+          </div>
+        )}
         {bearbeiteText && kannBearbeiten ? (
           <LiedtextBearbeiten stueck={stueck} onSpeichern={textSpeichern} onAbbrechen={() => setBearbeiteText(false)} />
         ) : stueck.liedtext ? (
@@ -299,6 +324,7 @@ ${html}
               <button onClick={() => setPdfModal(true)} style={s.btnSek} title="Als PDF drucken">📄 PDF</button>
               <button onClick={() => setVollbild(true)} style={{ padding:'8px 16px', borderRadius:'var(--radius)', border:'none', background:'var(--accent)', color:'var(--accent-fg)', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>{T('piece_fullscreen')}</button>
               {kannBearbeiten && <button onClick={() => setBearbeiteText(true)} style={s.btnSek}>✏️</button>}
+              {darfTextVorschlagen && <button onClick={() => setTextVorschlag(true)} style={{ ...s.btnSek, fontSize:15, minHeight:44 }}>✏️ {T('vorschlag_text_btn')}</button>}
             </div>
             {stueck.liedtext_md !== false
               ? <div dangerouslySetInnerHTML={{ __html: safeMarkdown(stueck.liedtext) }} style={{ fontFamily:'Georgia, serif', fontSize:textGroesse, lineHeight:1.9, color:'var(--text)', transition:'font-size 0.2s', wordBreak:'break-word' }} />
@@ -310,7 +336,16 @@ ${html}
             <p style={{ color:'var(--text-3)', marginBottom:16 }}>{T('piece_no_lyrics')}</p>
             <button onClick={() => setBearbeiteText(true)} style={s.btnPri}>{T('piece_add_lyrics')}</button>
           </div>
+        ) : darfTextVorschlagen ? (
+          <div style={{ textAlign:'center', padding:32 }}>
+            <p style={{ color:'var(--text-2)', fontSize:16, marginBottom:16 }}>{T('piece_no_lyrics')}</p>
+            <button onClick={() => setTextVorschlag(true)} style={{ ...s.btnPri, fontSize:16, minHeight:44 }}>✏️ {T('vorschlag_text_add')}</button>
+          </div>
         ) : <div style={s.leer}>{T('piece_no_lyrics')}</div>}
+        {textVorschlag && (
+          <VorschlagModal zielStueck={stueck} onClose={() => setTextVorschlag(false)}
+            onErfolg={() => { setTextVorschlag(false); queryClient.invalidateQueries({ queryKey: ['lied-vorschlaege'] }) }} />
+        )}
       </div>
     )
     if (id === 'akkorde') return (
@@ -479,6 +514,7 @@ ${html}
         {spotifyModal && <SpotifyModal titelVorschlag={stueck.titel} onUebernehmen={url => spotifySpeichern(url)} onSchliessen={() => setSpotifyModal(false)} />}
       </div>
     )
+    if (id === 'eigene') return <EigeneDateien stueck={stueck} />
     if (id === 'dateien') return (
       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
         {dokumente.length === 0 ? <div style={s.leer}>{T('piece_no_general_files')}</div> : dokumente.map(d => (

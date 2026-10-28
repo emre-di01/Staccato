@@ -44,6 +44,7 @@ const VorstandZiele        = lazy(() => import('./pages/vorstand/Ziele'))
 const VorstandProtokolle   = lazy(() => import('./pages/vorstand/Protokolle'))
 const ProfilSeite          = lazy(() => import('./pages/ProfilSeite'))
 const Einstellungen        = lazy(() => import('./pages/Einstellungen'))
+const MeineDateien         = lazy(() => import('./pages/MeineDateien'))
 const Stundenplan          = lazy(() => import('./pages/Stundenplan'))
 const Platzhalter          = lazy(() => import('./pages/Platzhalter'))
 const SchuelerSession      = lazy(() => import('./pages/SchuelerSession'))
@@ -211,6 +212,7 @@ function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route path="/profil"         element={<ProfilSeite />} />
           <Route path="/einstellungen"  element={<Einstellungen />} />
+          <Route path="/meine-dateien"  element={<MeineDateien />} />
         </Route>
       </Route>
 
