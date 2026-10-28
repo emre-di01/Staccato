@@ -30,7 +30,7 @@ export default function NeuLied() {
   const location = useLocation()
   const { T, darkMode, rolle } = useApp()
   const basis = useBasis()
-  const lehrer = rolle === 'lehrer'
+  const lehrer = ['lehrer', 'admin', 'superadmin'].includes(rolle)
   const [tab, setTab] = useState(null)
   const [stufe, setStufe] = useState(() => {
     const s = parseInt(localStorage.getItem('staccato_lied_groesse') ?? '0', 10)
@@ -110,7 +110,7 @@ export default function NeuLied() {
           </button>
           <div style={{ display: 'flex', gap: 8 }}>
           {lehrer && (
-            <button onClick={() => navigate(`/lehrer/repertoire/${stueckId}/bearbeiten`, { state: { vonLied: true } })} style={{ height: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: 'rgba(255,255,255,0.16)', color: '#FFFFFF', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => navigate(`${basis}/repertoire/${stueckId}/bearbeiten`, { state: { vonLied: true } })} style={{ height: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: 'rgba(255,255,255,0.16)', color: '#FFFFFF', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Pencil aria-hidden="true" size={18} />{T('edit')}
             </button>
           )}

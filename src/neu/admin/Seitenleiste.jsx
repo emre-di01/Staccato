@@ -6,10 +6,10 @@ import { adminBereiche, SUPERADMIN_EINTRAEGE } from './navigation'
 
 const aktivBei = (to, pfad) => pfad === to || pfad.startsWith(to + '/')
 
-function Eintrag({ to, icon: Icon, label, badge, gross }) {
+function Eintrag({ to, icon: Icon, label, badge, gross, auch = [] }) {
   const { T } = useApp()
   const { pathname } = useLocation()
-  const aktiv = to === '/admin' ? pathname === to : aktivBei(to, pathname)
+  const aktiv = to === '/admin' ? pathname === to : [to, ...auch].some(p => aktivBei(p, pathname))
   return (
     <Link to={to} aria-current={aktiv ? 'page' : undefined} style={{
       display: 'flex', alignItems: 'center', gap: 14, minHeight: gross ? 48 : 44, padding: '0 14px', borderRadius: gross ? 14 : 12, textDecoration: 'none',
@@ -28,7 +28,7 @@ function Gruppe({ titel, eintraege }) {
   return (
     <>
       <div style={{ margin: '18px 14px 6px', fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-2)' }}>{T(titel)}</div>
-      {eintraege.map(e => <Eintrag key={e.to} to={e.to} label={e.label} />)}
+      {eintraege.map(e => <Eintrag key={e.to} to={e.to} label={e.label} auch={e.auch} />)}
     </>
   )
 }

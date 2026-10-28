@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Play, MessageCircle, Settings2, ListMusic } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
+import { useBasis } from '../rolle'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Segment, LiedCover, Leer, Laden } from '../../ui'
 import { Karte } from '../karten'
 import { useLehrerKurs, useLehrerStunden, istOffen } from '../lehrerDaten'
@@ -11,18 +12,19 @@ import { kursZeit } from './kursZeit'
 const knopf = { flex: '1 1 140px', height: 50, borderRadius: 14, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }
 
 export default function LehrerKurs() {
+  const basis = useBasis()
   const { id } = useParams()
   const { T, lang, zeitzone } = useApp()
   const { data, isLoading } = useLehrerKurs(id)
   const { data: stunden = [], isLoading: stundenLaden } = useLehrerStunden({ kursId: id, zurueck: 90, tage: 60 })
   const [reiter, setReiter] = useState('stunden')
-  const zurueck = { to: '/lehrer/kurse', label: T('nl_tab_kurse') }
+  const zurueck = { to: `${basis}/kurse`, label: T('nl_tab_kurse') }
 
   if (isLoading) return <Seite zurueck={zurueck}><div style={{ marginTop: 24 }}><Laden hoehe={300} /></div></Seite>
   if (!data) return <Seite zurueck={zurueck}><div style={{ marginTop: 24 }}><Leer text={T('nl_kurs_nicht_gefunden')} /></div></Seite>
 
   const { kurs, teilnehmer, lieder } = data
-  const hierher = { zurueck: { to: `/lehrer/kurse/${id}`, label: kurs.name } }
+  const hierher = { zurueck: { to: `${basis}/kurse/${id}`, label: kurs.name } }
   const jetzt = Date.now()
   const kommend = stunden.filter(s => new Date(s.ende) > jetzt).slice(0, 4)
   const vergangen = stunden.filter(s => new Date(s.ende) <= jetzt).reverse().slice(0, 10)
@@ -42,7 +44,7 @@ export default function LehrerKurs() {
           {liste.map(s => {
             const [text, farbe] = info(s)
             return (
-              <Link key={s.id} to={`/lehrer/stunde/${s.id}`} state={hierher} style={{ color: 'inherit', textDecoration: 'none' }}>
+              <Link key={s.id} to={`${basis}/stunde/${s.id}`} state={hierher} style={{ color: 'inherit', textDecoration: 'none' }}>
                 <Karte beginn={s.beginn} titel={`${tagLabel(s.beginn, zeitzone, lang, T)} · ${uhrzeit(s.beginn, zeitzone, lang)}`}
                   unter={s.raum} status={text} statusFarbe={farbe} />
               </Link>
@@ -67,10 +69,10 @@ export default function LehrerKurs() {
       </header>
 
       <div style={{ margin: '18px 20px 0', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Link to={`/lehrer/kurse/${id}/unterrichtsmodus`} style={{ ...knopf, background: 'var(--primary)', color: 'var(--primary-fg)', fontWeight: 700 }}>
+        <Link to={`${basis}/kurse/${id}/unterrichtsmodus`} style={{ ...knopf, background: 'var(--primary)', color: 'var(--primary-fg)', fontWeight: 700 }}>
           <Play aria-hidden="true" size={16} fill="currentColor" />{T('nl_unterricht_starten')}
         </Link>
-        <Link to={`/lehrer/nachrichten?neu=kurs&kurs=${id}`} style={{ ...knopf, background: 'var(--n-fill)', color: 'var(--text)', fontWeight: 600 }}>
+        <Link to={`${basis}/nachrichten?neu=kurs&kurs=${id}`} style={{ ...knopf, background: 'var(--n-fill)', color: 'var(--text)', fontWeight: 600 }}>
           <MessageCircle aria-hidden="true" size={18} />{T('n_nachricht')}
         </Link>
       </div>
@@ -112,17 +114,17 @@ export default function LehrerKurs() {
                 <Zeile bild={<LiedCover id={l.stuecke.id} groesse={44} radius={10} />} titel={l.stuecke.titel} untertitel={l.stuecke.komponist}
                   wert={l.status === 'aktuell' ? T('nl_aktuell') : l.status === 'geplant' ? T('nl_geplant') : null}
                   wertFarbe={l.status === 'aktuell' ? 'var(--primary)' : 'var(--text-2)'}
-                  to={`/lehrer/kurse/${id}/repertoire/${l.stuecke.id}`} />
+                  to={`${basis}/kurse/${id}/repertoire/${l.stuecke.id}`} />
                 <Trenner />
               </div>
             ))}
-            <Zeile icon={ListMusic} titel={lieder.length ? T('nl_lieder_verwalten') : T('nl_lied_hinzufuegen')} to={`/lehrer/kurse/${id}/repertoire`} />
+            <Zeile icon={ListMusic} titel={lieder.length ? T('nl_lieder_verwalten') : T('nl_lied_hinzufuegen')} to={`${basis}/kurse/${id}/repertoire`} />
           </Gruppe>
         </div>
       )}
 
       <Gruppe style={{ marginTop: 32 }}>
-        <Zeile icon={Settings2} iconFarbe="var(--text-2)" titel={T('nl_kurs_verwalten')} untertitel={T('nl_kurs_verwalten_hinweis')} to={`/lehrer/kurse/${id}/verwalten`} />
+        <Zeile icon={Settings2} iconFarbe="var(--text-2)" titel={T('nl_kurs_verwalten')} untertitel={T('nl_kurs_verwalten_hinweis')} to={`${basis}/kurse/${id}/verwalten`} />
       </Gruppe>
     </Seite>
   )

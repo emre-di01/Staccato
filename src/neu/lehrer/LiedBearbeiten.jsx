@@ -9,6 +9,7 @@ import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Feld, Knopf, Segment, Schalte
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import DateiUploadModal from '../../components/stueck/DateiUploadModal'
 import { useNeuLaden } from '../daten'
+import { useBasis } from '../rolle'
 
 const AudioTranskribierenModal = lazy(() => import('../../components/AudioTranskribierenModal'))
 const FotoOCRModal             = lazy(() => import('../../components/FotoOCRModal'))
@@ -29,6 +30,7 @@ const TAKTE = [
 const DATEI_ICON = { noten: FileText, musicxml: FileMusic, audio: Music, akkorde: FileText }
 
 export default function LiedBearbeiten() {
+  const basis = useBasis()
   const { stueckId } = useParams()
   const { T } = useApp()
   const { data, isLoading, refetch } = useQuery({
@@ -42,7 +44,7 @@ export default function LiedBearbeiten() {
       return { stueck: st.data, dateien: d.data ?? [] }
     },
   })
-  const zurueck = { to: '/lehrer/repertoire', label: T('n_tab_lieder') }
+  const zurueck = { to: `${basis}/repertoire`, label: T('n_tab_lieder') }
 
   if (isLoading) return <Seite zurueck={zurueck}><div style={{ marginTop: 24 }}><Laden hoehe={320} /></div></Seite>
   if (!data) return <Seite zurueck={zurueck}><div style={{ marginTop: 24 }}><Leer text={T('piece_not_found')} /></div></Seite>
@@ -50,6 +52,7 @@ export default function LiedBearbeiten() {
 }
 
 function Formular({ stueck, dateien, neuLadenDateien }) {
+  const basis = useBasis()
   const navigate = useNavigate()
   const { state } = useLocation()
   const { T, toast, confirm } = useApp()
@@ -69,7 +72,7 @@ function Formular({ stueck, dateien, neuLadenDateien }) {
   const chordproRef = useRef(null)
   const setze = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const lied = `/lehrer/repertoire/${stueck.id}`
+  const lied = `${basis}/repertoire/${stueck.id}`
   const fertig = () => state?.vonLied ? navigate(-1) : navigate(lied, { replace: true })
 
   function tap() {
@@ -142,7 +145,7 @@ function Formular({ stueck, dateien, neuLadenDateien }) {
     const { error } = await supabase.from('stuecke').delete().eq('id', stueck.id)
     if (error) { toast(error.message, 'error'); return }
     neuLaden('nl-lieder', 'n-lieder', 'repertoire')
-    navigate('/lehrer/repertoire', { replace: true })
+    navigate(`${basis}/repertoire`, { replace: true })
   }
 
   const textFeld = { ...eingabeStil, resize: 'vertical', lineHeight: 1.6 }

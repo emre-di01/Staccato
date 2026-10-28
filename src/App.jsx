@@ -92,6 +92,8 @@ const NeuLehrerWoche       = lazy(() => import('./neu/lehrer/Woche'))
 // Neues Design, Phase 4: Admin/Superadmin (Opt-in)
 const NeuAdminStart        = lazy(() => import('./neu/admin/Start'))
 const NeuAdminBereich      = lazy(() => import('./neu/admin/Bereich'))
+const NeuAdminMitglieder   = lazy(() => import('./neu/admin/Mitglieder'))
+const NeuAdminInteressenten = lazy(() => import('./neu/admin/Interessenten'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -142,24 +144,29 @@ function AppRoutes() {
           <Route path="/admin/unterricht"       element={<DesignWahl alt={<Navigate to="/admin/kurse" replace />} neu={<NeuAdminBereich bereich="unterricht" />} />} />
           <Route path="/admin/verwaltung"       element={<DesignWahl alt={<Navigate to="/admin" replace />} neu={<NeuAdminBereich bereich="verwaltung" />} />} />
           <Route path="/admin/ich"              element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
-          <Route path="/admin/mitglieder"       element={<Mitgliederverwaltung />} />
-          <Route path="/admin/kurse"            element={<Kursverwaltung />} />
+          <Route path="/admin/mitglieder"       element={<DesignWahl alt={<Mitgliederverwaltung />} neu={<NeuAdminMitglieder />} />} />
+          <Route path="/admin/kurse"            element={<DesignWahl alt={<Kursverwaltung />} neu={<NeuLehrerKurse />} />} />
           <Route path="/admin/raeume"           element={<Raumverwaltung />} />
-          <Route path="/admin/stundenplan"      element={<Stundenplan />} />
+          <Route path="/admin/stundenplan"      element={<DesignWahl alt={<Stundenplan />} neu={<NeuLehrerTermine />} />} />
+          <Route path="/admin/woche"            element={<DesignWahl alt={<Navigate to="/admin/stundenplan" replace />} neu={<NeuLehrerWoche />} />} />
+          <Route path="/admin/stunde/:id"       element={<DesignWahl alt={<Navigate to="/admin/stundenplan" replace />} neu={<NeuStundeAbschliessen />} />} />
           <Route path="/admin/profil"            element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
-          <Route path="/admin/repertoire"       element={<Repertoire />} />
-          <Route path="/admin/repertoire/:stueckId" element={<StueckDetail />} />
+          <Route path="/admin/repertoire"       element={<DesignWahl alt={<Repertoire />} neu={<NeuLehrerLieder />} />} />
+          <Route path="/admin/repertoire/:stueckId" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
+          <Route path="/admin/repertoire/:stueckId/bearbeiten" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLiedBearbeiten />} />} />
           <Route path="/admin/events"                                          element={<AdminEvents />} />
-          <Route path="/admin/events/:id/repertoire"                         element={<EventRepertoire />} />
-          <Route path="/admin/events/:kursId/repertoire/:stueckId"           element={<StueckDetail />} />
-          <Route path="/admin/kurse/:id"                                   element={<KursDetail />} />
-          <Route path="/admin/kurse/:id/repertoire"                      element={<KursRepertoire />} />
-          <Route path="/admin/kurse/:kursId/repertoire/:stueckId"        element={<StueckDetail />} />
+          <Route path="/admin/events/:id/repertoire"                         element={<DesignWahl alt={<EventRepertoire />} neu={<NeuLiederListe art="event" />} />} />
+          <Route path="/admin/events/:kursId/repertoire/:stueckId"           element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
+          <Route path="/admin/kurse/:id"                                   element={<DesignWahl alt={<KursDetail />} neu={<NeuLehrerKurs />} />} />
+          <Route path="/admin/kurse/:id/verwalten"                       element={<DesignWahl alt={<KursDetail />} neu={<NeuKursVerwalten />} />} />
+          <Route path="/admin/kurse/:id/unterrichtsmodus"                element={<DesignWahl alt={<Unterrichtsmodus />} neu={<NeuLehrerLive />} />} />
+          <Route path="/admin/kurse/:id/repertoire"                      element={<DesignWahl alt={<KursRepertoire />} neu={<NeuLiederListe art="kurs" />} />} />
+          <Route path="/admin/kurse/:kursId/repertoire/:stueckId"        element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
           <Route path="/admin/instrumente"      element={<Instrumente />} />
           <Route path="/admin/inventar"         element={<Inventar />} />
-          <Route path="/admin/interessenten"    element={<Interessenten />} />
+          <Route path="/admin/interessenten"    element={<DesignWahl alt={<Interessenten />} neu={<NeuAdminInteressenten />} />} />
           <Route path="/admin/rechnungen"       element={<Rechnungen />} />
-          <Route path="/admin/nachrichten"      element={<Nachrichten />} />
+          <Route path="/admin/nachrichten"      element={<DesignWahl alt={<Nachrichten />} neu={<NeuNachrichten />} />} />
           <Route path="/admin/tools"            element={<DesignWahl alt={<Tools />} neu={<NeuWerkzeuge />} />} />
           <Route path="/admin/einstellungen"    element={<AdminEinstellungen />} />
         </Route>

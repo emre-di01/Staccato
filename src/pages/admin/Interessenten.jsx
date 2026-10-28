@@ -212,8 +212,8 @@ function DetailModal({ item, onClose, onErfolg, onEdit, onKonvertieren, onLoesch
 }
 
 // ─── Interessent anlegen / bearbeiten ─────────────────────────
-function InteressentModal({ item, onClose, onErfolg }) {
-  const { T, profil } = useApp()
+export function InteressentModal({ item, onClose, onErfolg }) {
+  const { T, schule } = useApp()
   const istNeu = !item?.id
   const [form, setForm] = useState({
     voller_name:  item?.voller_name  ?? '',
@@ -258,7 +258,7 @@ function InteressentModal({ item, onClose, onErfolg }) {
       notizen:       form.notizen       || null,
       email:         form.email         || null,
       telefon:       form.telefon       || null,
-      ...(istNeu && { schule_id: profil?.schule_id }),
+      ...(istNeu && { schule_id: schule?.id }),
     }
     const { error } = istNeu
       ? await supabase.from('interessenten').insert(payload)
@@ -352,7 +352,7 @@ function InteressentModal({ item, onClose, onErfolg }) {
 }
 
 // ─── Zu Mitglied konvertieren Modal ───────────────────────────
-function KonvertierenModal({ item, onClose, onErfolg }) {
+export function KonvertierenModal({ item, onClose, onErfolg }) {
   const { T } = useApp()
   const [kurse,    setKurse]    = useState([])
   const [kursId,   setKursId]   = useState('')

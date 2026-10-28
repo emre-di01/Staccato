@@ -19,11 +19,11 @@ const ROLLEN_FARBE = {
   vorstand:  { bg: '#7c3aed',         text: '#fff' },
 }
 
-function bicGueltig(bic) {
+export function bicGueltig(bic) {
   return /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic.replace(/\s/g, '').toUpperCase())
 }
 
-function ibanGueltig(iban) {
+export function ibanGueltig(iban) {
   const rein = iban.replace(/\s/g, '').toUpperCase()
   if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/.test(rein)) return false
   const umgestellt = rein.slice(4) + rein.slice(0, 4)
@@ -62,7 +62,7 @@ function Feld({ label, children }) {
 
 // ─── Nutzer anlegen Modal ─────────────────────────────────────
 
-function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
+export function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
   const { profil, rolle: currentRolle } = useApp()
   const [alleDetails, setAlleDetails] = useState(false)
   const [form, setForm] = useState({
@@ -294,7 +294,7 @@ function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
 
 // ─── Einladung senden Modal ───────────────────────────────────
 
-function EinladungModal({ onClose, T }) {
+export function EinladungModal({ onClose, T }) {
   const { schule, profil } = useApp()
   const [form,   setForm]   = useState({ email: '', rolle: 'schueler' })
   const [laden,  setLaden]  = useState(false)
@@ -572,7 +572,7 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
 
 // ─── Lehrer-Schüler Zuordnung Modal ──────────────────────────
 
-function ZuordnungModal({ mitglied, onClose, T }) {
+export function ZuordnungModal({ mitglied, onClose, T }) {
   const [lehrer,    setLehrer]    = useState([])
   const [schueler,  setSchueler]  = useState([])
   const [zuordnung, setZuordnung] = useState([])
@@ -649,7 +649,7 @@ function ZuordnungModal({ mitglied, onClose, T }) {
 
 // ─── Passwort zurücksetzen Modal ─────────────────────────────
 
-function PasswortModal({ mitglied, onClose }) {
+export function PasswortModal({ mitglied, onClose }) {
   const { T } = useApp()
   const [pw,     setPw]     = useState('')
   const [pw2,    setPw2]    = useState('')
@@ -717,7 +717,7 @@ function PasswortModal({ mitglied, onClose }) {
 
 // ─── E-Mail ändern Modal ─────────────────────────────────────
 
-function EmailModal({ mitglied, onClose, onErfolg }) {
+export function EmailModal({ mitglied, onClose, onErfolg }) {
   const { T } = useApp()
   const [email,  setEmail]  = useState(mitglied.email ?? '')
   const [laden,  setLaden]  = useState(false)
@@ -778,7 +778,7 @@ const DOK_TYPEN = [
   { key: 'sonstiges',        tKey: 'dok_type_sonstiges' },
 ]
 
-function DokumenteModal({ mitglied, onClose }) {
+export function DokumenteModal({ mitglied, onClose }) {
   const { T, confirm } = useApp()
   const fileRef = useRef()
   const [dateien,  setDateien]  = useState([])
@@ -899,7 +899,7 @@ function DokumenteModal({ mitglied, onClose }) {
 
 // ─── Löschen Bestätigung Modal ────────────────────────────────
 
-function LoeschenModal({ mitglied, onClose, onErfolg }) {
+export function LoeschenModal({ mitglied, onClose, onErfolg }) {
   const { T } = useApp()
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
@@ -955,7 +955,7 @@ function LoeschenModal({ mitglied, onClose, onErfolg }) {
 
 // ─── Kursantrag Modal (Kursauswahl) ──────────────────────────
 
-function KursantragAuswahlModal({ mitglied, onClose }) {
+export function KursantragAuswahlModal({ mitglied, onClose }) {
   const [kurse,  setKurse]  = useState([])
   const [laden,  setLaden]  = useState(true)
   const [gewählt, setGewählt] = useState(null)
@@ -1007,7 +1007,7 @@ function KursantragAuswahlModal({ mitglied, onClose }) {
 
 // ─── Schulen Modal (Superadmin) ───────────────────────────────
 
-function SchulenModal({ mitglied, onClose }) {
+export function SchulenModal({ mitglied, onClose }) {
   const [allSchulen,       setAllSchulen]       = useState([])
   const [mitgliedschaften, setMitgliedschaften] = useState([])
   const [laden,            setLaden]            = useState(true)

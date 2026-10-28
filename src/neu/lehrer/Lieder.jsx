@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { useBasis, useSchulweit } from '../rolle'
 import { Seite, Abschnitt, Chips, Suchfeld, Knopf, Zeile, LiedCover, LiedKachel, Regal, Leer, Laden, Blatt, Feld, eingabeStil } from '../../ui'
 import LiedVorschlaege from '../../components/LiedVorschlaege'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
@@ -14,15 +15,17 @@ import { useLehrerKurse } from '../lehrerDaten'
 // ganze Bibliothek der Schule als eigener Filter, Vorschläge prüfen
 export default function LehrerLieder() {
   const { T, profil } = useApp()
+  const basis = useBasis()
+  const schulweit = useSchulweit()
   const [params] = useSearchParams()
   const { data: kurse = [] } = useLehrerKurse()
   const { data: offeneVorschlaege = 0 } = useOffeneVorschlaege()
-  const [filter, setFilter] = useState(params.get('tab') === 'vorschlaege' ? 'vorschlaege' : 'meine')
+  const [filter, setFilter] = useState(params.get('tab') === 'vorschlaege' ? 'vorschlaege' : schulweit ? 'bibliothek' : 'meine')
   const [suche, setSuche] = useState('')
   const [neuOffen, setNeuOffen] = useState(false)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['nl-lieder', kurse.length],
+    queryKey: ['nl-lieder', schulweit, kurse.length],
     queryFn: async () => {
       const ids = kurse.map(k => k.id)
       const [alle, us] = await Promise.all([
@@ -52,9 +55,9 @@ export default function LehrerLieder() {
 
   const kurseMitLiedern = kurse.filter(k => zuordnung.some(z => z.unterricht_id === k.id))
   const chips = [
-    ['meine', T('nl_meine_lieder')],
+    ...(schulweit ? [['bibliothek', T('nl_bibliothek')]] : [['meine', T('nl_meine_lieder')]]),
     ...kurseMitLiedern.map(k => [k.id, k.name]),
-    ['bibliothek', T('nl_bibliothek')],
+    ...(schulweit ? [] : [['bibliothek', T('nl_bibliothek')]]),
     ['vorschlaege', offeneVorschlaege ? `${T('vorschlag_tab')} (${offeneVorschlaege})` : T('vorschlag_tab')],
   ]
 
@@ -73,7 +76,7 @@ export default function LehrerLieder() {
 
       {filter === 'vorschlaege' ? (
         <div style={{ margin: '24px 20px 0' }}>
-          <LiedVorschlaege modus="lehrer" rollePfad="lehrer" fokusId={params.get('vorschlag')} />
+          <LiedVorschlaege modus="lehrer" rollePfad={basis.slice(1)} fokusId={params.get('vorschlag')} />
         </div>
       ) : isLoading ? (
         <div style={{ marginTop: 24 }}><Laden hoehe={200} /></div>
@@ -82,7 +85,7 @@ export default function LehrerLieder() {
           {!q && aktuell.length > 0 && (
             <Abschnitt titel={T('n_aktuell_geprobt')} style={{ marginTop: 26 }}>
               <Regal>
-                {aktuell.map(st => <LiedKachel key={st.id} stueck={st} to={`/lehrer/repertoire/${st.id}`} state={aktuellState} />)}
+                {aktuell.map(st => <LiedKachel key={st.id} stueck={st} to={`${basis}/repertoire/${st.id}`} state={aktuellState} />)}
               </Regal>
             </Abschnitt>
           )}
@@ -95,7 +98,7 @@ export default function LehrerLieder() {
                   <div key={st.id} style={{ borderBottom: '1px solid var(--n-sep)', margin: '0 4px' }}>
                     <Zeile bild={<LiedCover id={st.id} />} titel={st.titel}
                       untertitel={[st.komponist, liedInhalt(st, T)].filter(Boolean).join(' · ')}
-                      to={`/lehrer/repertoire/${st.id}`} state={navState} />
+                      to={`${basis}/repertoire/${st.id}`} state={navState} />
                   </div>
                 ))}
               </div>
@@ -112,6 +115,7 @@ export default function LehrerLieder() {
 // Neues Stück anlegen; danach direkt in die Bearbeitung (Text, Akkorde, Dateien)
 function NeuesLiedBlatt({ onClose }) {
   const { profil, schule, T, toast } = useApp()
+  const basis = useBasis()
   const navigate = useNavigate()
   const [form, setForm] = useState({ titel: '', komponist: '', tonart: '' })
   const [sendet, setSendet] = useState(false)
@@ -124,7 +128,7 @@ function NeuesLiedBlatt({ onClose }) {
       .select('id').single()
     setSendet(false)
     if (error) { toast(error.message, 'error'); return }
-    navigate(`/lehrer/repertoire/${data.id}/bearbeiten`)
+    navigate(`${basis}/repertoire/${data.id}/bearbeiten`)
   }
 
   return (

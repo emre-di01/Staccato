@@ -6,6 +6,7 @@ import { ChevronLeft, Hand, ThumbsUp, ThumbsDown, Heart, CircleHelp, MonitorUp, 
 import { supabase } from '../../lib/supabase'
 import { safeMarkdown } from '../../lib/markdown'
 import { useApp } from '../../context/AppContext'
+import { useBasis } from '../rolle'
 import { liedFarbe } from '../../ui'
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import { useNeuLaden } from '../daten'
@@ -33,6 +34,7 @@ function hatAnsicht(st, a) {
 const ersteAnsicht = st => ANSICHTEN.map(([a]) => a).find(a => hatAnsicht(st, a)) ?? 'liedtext'
 
 export default function LehrerLive() {
+  const basis = useBasis()
   const { id: kursId } = useParams()
   const navigate = useNavigate()
   const { T, lang, zeitzone, toast } = useApp()
@@ -194,7 +196,7 @@ export default function LehrerLive() {
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
         <div style={{ padding: 'calc(10px + env(safe-area-inset-top, 0px)) 12px 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           {phase === 'aktiv' ? <span /> : (
-            <Link to={`/lehrer/kurse/${kursId}`} style={{ minHeight: 44, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 2, fontSize: 17, fontWeight: 600, color: F.akzent, textDecoration: 'none' }}>
+            <Link to={`${basis}/kurse/${kursId}`} style={{ minHeight: 44, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 2, fontSize: 17, fontWeight: 600, color: F.akzent, textDecoration: 'none' }}>
               <ChevronLeft aria-hidden="true" size={24} />{data?.kurs?.name ?? T('nl_tab_kurse')}
             </Link>
           )}
@@ -372,9 +374,9 @@ export default function LehrerLive() {
               {session?.stunde_id ? T('nl_live_beendet_text').replace('{n}', teilnehmer.filter(t => t.profil_id).length) : T('nl_live_beendet_ohne')}
             </div>
             {session?.stunde_id && (
-              <button onClick={() => navigate(`/lehrer/stunde/${session.stunde_id}`, { state: { zurueck: { to: `/lehrer/kurse/${kursId}`, label: data?.kurs?.name } } })} style={grossKnopf(F.akzent, '#111114')}>{T('nl_stunde_abschliessen')}</button>
+              <button onClick={() => navigate(`${basis}/stunde/${session.stunde_id}`, { state: { zurueck: { to: `${basis}/kurse/${kursId}`, label: data?.kurs?.name } } })} style={grossKnopf(F.akzent, '#111114')}>{T('nl_stunde_abschliessen')}</button>
             )}
-            <Link to={`/lehrer/kurse/${kursId}`} style={{ marginTop: 10, minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 600, color: F.akzent, textDecoration: 'none' }}>{T('nl_zurueck_zum_kurs')}</Link>
+            <Link to={`${basis}/kurse/${kursId}`} style={{ marginTop: 10, minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 600, color: F.akzent, textDecoration: 'none' }}>{T('nl_zurueck_zum_kurs')}</Link>
           </section>
         )}
       </div>

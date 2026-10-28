@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Plus, Pencil, Music } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { useBasis, useSchulweit } from '../rolle'
 import { Seite, Segment, Leer, Laden, Knopf } from '../../ui'
 import EventBlatt from './EventBlatt'
 import { useMeineEvents, useNeuLaden } from '../daten'
@@ -12,7 +13,10 @@ import { gruppenLabel, uhrzeit, tagKey } from '../zeit'
 
 // Termine der Lehrkraft: Stunden der eigenen Kurse (ab heute) und Veranstaltungen
 export default function LehrerTermine() {
-  const { profil, T, lang, zeitzone, toast } = useApp()
+  const { profil, rolle, T, lang, zeitzone, toast } = useApp()
+  const basis = useBasis()
+  const schulweit = useSchulweit()
+  const termine = schulweit ? '/admin/stundenplan' : '/lehrer/anwesenheit'
   const { data: stunden, isLoading: l1 } = useLehrerStunden({ zurueck: 1, tage: 60 })
   const { data: events, isLoading: l2 } = useMeineEvents()
   const neuLaden = useNeuLaden()
@@ -60,7 +64,7 @@ export default function LehrerTermine() {
       <Segment label={T('n_termine_filtern')} wert={filter} onChange={setFilter} style={{ margin: '16px 20px 0' }}
         optionen={[['alle', T('n_alle')], ['unterricht', T('n_unterricht')], ['events', T('n_veranstaltungen')]]} />
       <div style={{ margin: '8px 20px 0', textAlign: 'right' }}>
-        <Link to="/lehrer/stundenplan" style={{ display: 'inline-flex', minHeight: 44, alignItems: 'center', fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>{T('nl_wochenansicht')}</Link>
+        <Link to={schulweit ? '/admin/woche' : '/lehrer/stundenplan'} style={{ display: 'inline-flex', minHeight: 44, alignItems: 'center', fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>{T('nl_wochenansicht')}</Link>
       </div>
 
       {laden ? <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}><Laden /><Laden /></div>
@@ -72,10 +76,10 @@ export default function LehrerTermine() {
               {g.eintraege.map(e => {
                 if (e.art === 'event') {
                   const ev = e.daten
-                  const eigenes = ev.erstellt_von === profil.id
+                  const eigenes = ev.erstellt_von === profil.id || (schulweit && ['admin', 'superadmin'].includes(rolle))
                   const aktionen = (eigenes || ev.event_stuecke?.length > 0) && (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {ev.event_stuecke?.length > 0 && <Link to={`/lehrer/events/${ev.id}/repertoire`} style={linkKnopf}><Music aria-hidden="true" size={18} />{T('n_tab_lieder')}</Link>}
+                      {ev.event_stuecke?.length > 0 && <Link to={`${basis}/events/${ev.id}/repertoire`} style={linkKnopf}><Music aria-hidden="true" size={18} />{T('n_tab_lieder')}</Link>}
                       {eigenes && <button onClick={() => setEventBlatt(ev)} style={linkKnopf}><Pencil aria-hidden="true" size={18} />{T('edit')}</button>}
                     </div>
                   )
@@ -84,7 +88,7 @@ export default function LehrerTermine() {
                 const s = e.daten
                 const [status, farbe] = stundeStatus(s)
                 return (
-                  <Link key={e.id} to={`/lehrer/stunde/${s.id}`} state={{ zurueck: { to: '/lehrer/anwesenheit', label: T('n_tab_termine') } }} style={{ color: 'inherit', textDecoration: 'none' }}>
+                  <Link key={e.id} to={`${basis}/stunde/${s.id}`} state={{ zurueck: { to: termine, label: T('n_tab_termine') } }} style={{ color: 'inherit', textDecoration: 'none' }}>
                     <Karte beginn={s.beginn} titel={s.unterricht?.name}
                       unter={[`${uhrzeit(s.beginn, zeitzone, lang)} – ${uhrzeit(s.ende, zeitzone, lang)}`, s.raum].filter(Boolean).join(' · ')}
                       status={status} statusFarbe={farbe} />

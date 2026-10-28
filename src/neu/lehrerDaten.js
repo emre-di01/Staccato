@@ -3,21 +3,32 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
+import { useSchulweit } from './rolle'
 
 const TAG = 24 * 60 * 60 * 1000
 
-// Kurse, in denen ich unterrichte (inkl. aktiver Teilnehmerzahl)
+// Kurse, in denen ich unterrichte (inkl. aktiver Teilnehmerzahl) – im Admin-Bereich alle Kurse der Schule
 export function useLehrerKurse() {
   const { profil, schule } = useApp()
+  const schulweit = useSchulweit()
   return useQuery({
-    queryKey: ['nl-kurse', profil?.id, schule?.id],
-    enabled: !!profil?.id,
+    queryKey: ['nl-kurse', profil?.id, schule?.id, schulweit],
+    enabled: !!profil?.id && (!schulweit || !!schule?.id),
     queryFn: async () => {
-      const { data, error } = await supabase.from('unterricht_lehrer')
-        .select('rolle, unterricht(id, name, typ, wochentag, uhrzeit_von, uhrzeit_bis, aktiv, raeume(name), unterricht_schueler(schueler_id, status))')
-        .eq('lehrer_id', profil.id)
-      if (error) throw error
-      return (data ?? []).map(u => u.unterricht).filter(Boolean)
+      const felder = 'id, name, typ, wochentag, uhrzeit_von, uhrzeit_bis, aktiv, raeume(name), unterricht_schueler(schueler_id, status)'
+      let kurse
+      if (schulweit) {
+        const { data, error } = await supabase.from('unterricht')
+          .select(`${felder}, unterricht_lehrer(rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name))`)
+          .eq('schule_id', schule.id)
+        if (error) throw error
+        kurse = (data ?? []).map(k => ({ ...k, lehrer: (k.unterricht_lehrer ?? []).map(l => l.profiles?.voller_name).filter(Boolean) }))
+      } else {
+        const { data, error } = await supabase.from('unterricht_lehrer').select(`rolle, unterricht(${felder})`).eq('lehrer_id', profil.id)
+        if (error) throw error
+        kurse = (data ?? []).map(u => u.unterricht).filter(Boolean)
+      }
+      return kurse
         .map(k => ({ ...k, teilnehmer: (k.unterricht_schueler ?? []).filter(s => s.status === 'aktiv').length }))
         .sort((a, b) => a.name.localeCompare(b.name))
     },
@@ -28,9 +39,10 @@ export function useLehrerKurse() {
 // `kursId` schränkt auf einen Kurs ein.
 export function useLehrerStunden({ zurueck = 1, tage = 1, kursId } = {}) {
   const { profil, schule } = useApp()
+  const schulweit = useSchulweit()
   const { data: kurse } = useLehrerKurse()
   return useQuery({
-    queryKey: ['nl-stunden', profil?.id, schule?.id, zurueck, tage, kursId ?? null, kurse?.length],
+    queryKey: ['nl-stunden', profil?.id, schule?.id, schulweit, zurueck, tage, kursId ?? null, kurse?.length],
     enabled: !!profil?.id && !!kurse,
     queryFn: async () => {
       const ids = kursId ? [kursId] : kurse.map(k => k.id)

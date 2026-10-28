@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Check, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { useBasis } from '../rolle'
 import { Seite, Abschnitt, Gruppe, Knopf, Leer, Laden, eingabeStil } from '../../ui'
 import { useNeuLaden } from '../daten'
 import { useStunde } from '../lehrerDaten'
@@ -21,7 +22,8 @@ export default function StundeAbschliessen() {
   const { state } = useLocation()
   const { T } = useApp()
   const { data: st, isLoading, error } = useStunde(id)
-  const zurueck = state?.zurueck ?? { to: '/lehrer', label: T('n_tab_start') }
+  const basis = useBasis()
+  const zurueck = state?.zurueck ?? { to: basis, label: T('n_tab_start') }
 
   if (isLoading) return <Seite zurueck={zurueck}><div style={{ marginTop: 24 }}><Laden hoehe={320} /></div></Seite>
   if (error || !st) return <Seite zurueck={zurueck}><div style={{ marginTop: 24 }}><Leer text={T('nl_stunde_nicht_gefunden')} /></div></Seite>

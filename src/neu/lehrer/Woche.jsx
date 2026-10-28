@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { useBasis, useSchulweit } from '../rolle'
 import { Seite, Gruppe, Trenner, Zeile, Laden, Knopf } from '../../ui'
 import { useLehrerKurse, istOffen } from '../lehrerDaten'
 import { schulZeitZuIso, tagKey, uhrzeit } from '../zeit'
@@ -25,12 +26,14 @@ function format(key, lang, opt) {
 // Wochenansicht der Lehrkraft: Stunden der eigenen Kurse und Veranstaltungen, wochenweise blätterbar
 export default function LehrerWoche() {
   const { profil, schule, T, lang, zeitzone } = useApp()
+  const basis = useBasis()
+  const schulweit = useSchulweit()
   const heute = tagKey(new Date().toISOString(), zeitzone)
   const [montag, setMontag] = useState(() => montagVon(heute))
   const { data: kurse } = useLehrerKurse()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['nl-woche', profil?.id, schule?.id, montag, kurse?.length],
+    queryKey: ['nl-woche', profil?.id, schule?.id, schulweit, montag, kurse?.length],
     enabled: !!profil?.id && !!kurse,
     queryFn: async () => {
       const von = schulZeitZuIso(montag, '00:00', zeitzone)
@@ -57,7 +60,7 @@ export default function LehrerWoche() {
 
   const istDieseWoche = montag === montagVon(heute)
   const titel = `${format(montag, lang, { day: 'numeric', month: 'short' })} – ${format(plusTage(montag, 6), lang, { day: 'numeric', month: 'short', year: 'numeric' })}`
-  const hierher = { zurueck: { to: '/lehrer/stundenplan', label: T('nl_wochenansicht') } }
+  const hierher = { zurueck: { to: schulweit ? '/admin/woche' : '/lehrer/stundenplan', label: T('nl_wochenansicht') } }
 
   function status(s) {
     if (s.status === 'abgesagt') return [T('n_faellt_aus'), 'var(--danger)']
@@ -70,7 +73,7 @@ export default function LehrerWoche() {
   const pfeil = { width: 44, height: 44, borderRadius: 22, border: 'none', background: 'var(--n-fill)', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
 
   return (
-    <Seite zurueck={{ to: '/lehrer/anwesenheit', label: T('n_tab_termine') }} titel={T('nl_wochenansicht')}>
+    <Seite zurueck={{ to: schulweit ? '/admin/stundenplan' : '/lehrer/anwesenheit', label: T('n_tab_termine') }} titel={T('nl_wochenansicht')}>
       <div style={{ margin: '16px 20px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
         <button onClick={() => setMontag(m => plusTage(m, -7))} aria-label={T('nl_woche_vorher')} style={pfeil}><ChevronLeft aria-hidden="true" size={22} /></button>
         <div aria-live="polite" style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: 17, fontWeight: 700 }}>{titel}</div>
@@ -113,7 +116,7 @@ export default function LehrerWoche() {
                   return (
                     <div key={e.id}>
                       {i > 0 && <Trenner />}
-                      <Zeile bild={zeit} titel={e.unterricht?.name} to={`/lehrer/stunde/${e.id}`} state={hierher}
+                      <Zeile bild={zeit} titel={e.unterricht?.name} to={`${basis}/stunde/${e.id}`} state={hierher}
                         untertitel={[bis, e.raeume?.name ?? e.unterricht?.raeume?.name].filter(Boolean).join(' · ')}
                         wert={text} wertFarbe={farbe} />
                     </div>

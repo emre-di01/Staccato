@@ -39,10 +39,11 @@ export default function LiederListe({ art }) {
   })
 
   const zurueck = art === 'kurs'
-    ? { to: `/lehrer/kurse/${id}`, label: data?.name ?? T('nl_tab_kurse') }
+    ? { to: `${basis}/kurse/${id}`, label: data?.name ?? T('nl_tab_kurse') }
+    : basis === '/admin' ? { to: '/admin/events', label: T('events') }
     : { to: rolle === 'lehrer' ? '/lehrer/anwesenheit' : '/schueler/stundenplan', label: T('n_tab_termine') }
-  const darfBearbeiten = rolle === 'lehrer' && (art === 'kurs' || data?.erstelltVon === profil?.id)
-  const liedPfad = sid => art === 'kurs' ? `/lehrer/kurse/${id}/repertoire/${sid}` : `${basis}/events/${id}/repertoire/${sid}`
+  const darfBearbeiten = basis === '/admin' || (rolle === 'lehrer' && (art === 'kurs' || data?.erstelltVon === profil?.id))
+  const liedPfad = sid => art === 'kurs' ? `${basis}/kurse/${id}/repertoire/${sid}` : `${basis}/events/${id}/repertoire/${sid}`
   const liste = data?.liste ?? []
   const navState = { liste: liste.map(e => ({ id: e.stuecke.id, titel: e.stuecke.titel })) }
   const neu = () => neuLaden('n-liederliste', 'nl-kurs', 'nl-lieder', 'n-events')

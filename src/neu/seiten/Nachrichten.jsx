@@ -20,7 +20,7 @@ export default function NeuNachrichten() {
   const neuLaden = useNeuLaden()
   const basis = useBasis()
   const offenId = params.get('id')
-  const kannSenden = rolle === 'lehrer'
+  const kannSenden = ['lehrer', 'admin', 'superadmin'].includes(rolle)
   const [ordner, setOrdner] = useState('eingang')
   const schreiben = kannSenden && params.get('neu') ? { typ: params.get('neu'), kurs: params.get('kurs'), an: params.get('an') } : null
 
@@ -164,7 +164,7 @@ export default function NeuNachrichten() {
   )
 }
 
-// Nachricht schreiben (Lehrer): an alle, an einen Kurs oder an eine Person
+// Nachricht schreiben (Lehrer, Admin): an alle, an einen Kurs oder an eine Person
 function SchreibenBlatt({ start, onClose, onGesendet }) {
   const { profil, schule, T, toast } = useApp()
   const { data: kurse = [] } = useLehrerKurse()

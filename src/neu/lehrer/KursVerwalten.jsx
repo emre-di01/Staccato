@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CalendarPlus, CalendarRange, Printer, Download, UserPlus, FileText, Award, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { useBasis } from '../rolle'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Blatt, Feld, Knopf, Suchfeld, Leer, Laden, eingabeStil } from '../../ui'
 import ZertifikatModal from '../../components/ZertifikatModal'
 import KursantragModal from '../../components/KursantragModal'
@@ -42,6 +43,7 @@ function Initialen({ p }) {
 const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 export default function KursVerwalten() {
+  const basis = useBasis()
   const { id } = useParams()
   const { T, lang, zeitzone, toast, confirm } = useApp()
   const { data, isLoading } = useKursVerwalten(id)
@@ -49,8 +51,8 @@ export default function KursVerwalten() {
   const [blatt, setBlatt] = useState(null)       // 'einzel' | 'zeitraum' | 'hinzufuegen' | { person }
   const [dokument, setDokument] = useState(null) // { art: 'zertifikat' | 'antrag', person }
 
-  if (isLoading) return <Seite zurueck={{ to: `/lehrer/kurse/${id}`, label: T('nl_tab_kurse') }}><div style={{ marginTop: 24 }}><Laden hoehe={300} /></div></Seite>
-  if (!data) return <Seite zurueck={{ to: '/lehrer/kurse', label: T('nl_tab_kurse') }}><div style={{ marginTop: 24 }}><Leer text={T('nl_kurs_nicht_gefunden')} /></div></Seite>
+  if (isLoading) return <Seite zurueck={{ to: `${basis}/kurse/${id}`, label: T('nl_tab_kurse') }}><div style={{ marginTop: 24 }}><Laden hoehe={300} /></div></Seite>
+  if (!data) return <Seite zurueck={{ to: `${basis}/kurse`, label: T('nl_tab_kurse') }}><div style={{ marginTop: 24 }}><Leer text={T('nl_kurs_nicht_gefunden')} /></div></Seite>
 
   const { kurs, teilnehmer, stunden } = data
   const aktualisieren = () => neuLaden('nl-kurs-verwalten', 'nl-kurs', 'nl-stunden', 'nl-kurse')
@@ -120,7 +122,7 @@ ${st.hausaufgaben ? `<div class="label">${T('nl_bis_naechstes_mal')}</div><p cla
   const lehrkraefte = (kurs.unterricht_lehrer ?? []).filter(l => l.profiles)
 
   return (
-    <Seite zurueck={{ to: `/lehrer/kurse/${id}`, label: kurs.name }} ueber={kurs.name} titel={T('nl_kurs_verwalten')}>
+    <Seite zurueck={{ to: `${basis}/kurse/${id}`, label: kurs.name }} ueber={kurs.name} titel={T('nl_kurs_verwalten')}>
       <Abschnitt titel={T('nl_stunden')} style={{ marginTop: 24 }}>
         <Gruppe>
           <Zeile icon={CalendarPlus} titel={T('nl_kv_einzelstunde')} untertitel={T('nl_kv_einzelstunde_hinweis')} onClick={() => setBlatt('einzel')} />

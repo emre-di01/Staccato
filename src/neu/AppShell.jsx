@@ -39,13 +39,18 @@ const NEUE_SEITEN = [
   '/lehrer/repertoire/:stueckId', '/lehrer/kurse/:kursId/repertoire/:stueckId', '/lehrer/events/:kursId/repertoire/:stueckId',
   '/schueler/events/:kursId/repertoire/:stueckId', '/lehrer/kurse/:id/unterrichtsmodus',
   '/lehrer/kurse/:id/verwalten', '/lehrer/repertoire/:stueckId/bearbeiten', '/lehrer/stundenplan',
-  '/admin', '/admin/unterricht', '/admin/verwaltung', '/admin/ich', '/admin/profil', '/admin/tools',
+  '/admin', '/admin/unterricht', '/admin/verwaltung', '/admin/ich', '/admin/profil', '/admin/tools', '/admin/mitglieder', '/admin/interessenten', '/admin/nachrichten',
+  '/admin/kurse', '/admin/kurse/:id', '/admin/kurse/:id/verwalten', '/admin/kurse/:id/repertoire', '/admin/kurse/:id/unterrichtsmodus',
+  '/admin/stundenplan', '/admin/woche', '/admin/stunde/:id', '/admin/repertoire', '/admin/repertoire/:stueckId', '/admin/repertoire/:stueckId/bearbeiten',
+  '/admin/kurse/:kursId/repertoire/:stueckId', '/admin/events/:id/repertoire', '/admin/events/:kursId/repertoire/:stueckId',
   ...GEMEINSAM,
 ]
 const VOLLBILD = [
   '/schueler/repertoire/:stueckId', '/schueler/events/:kursId/repertoire/:stueckId',
   '/lehrer/repertoire/:stueckId', '/lehrer/kurse/:kursId/repertoire/:stueckId', '/lehrer/events/:kursId/repertoire/:stueckId',
   '/lehrer/kurse/:id/unterrichtsmodus',
+  '/admin/repertoire/:stueckId', '/admin/kurse/:kursId/repertoire/:stueckId', '/admin/events/:kursId/repertoire/:stueckId',
+  '/admin/kurse/:id/unterrichtsmodus',
 ]
 
 const passt = (muster, pfad) => muster.some(m => matchPath({ path: m, end: true }, pfad))

@@ -12,7 +12,7 @@ export function adminBereiche(abo) {
   return {
     unterricht: [
       { to: '/admin/kurse',       icon: BookOpen,     label: 'courses',      hinweis: 'na_kurse_hinweis' },
-      { to: '/admin/stundenplan', icon: CalendarDays, label: 'n_tab_termine', hinweis: 'na_termine_hinweis' },
+      { to: '/admin/stundenplan', icon: CalendarDays, label: 'n_tab_termine', hinweis: 'na_termine_hinweis', auch: ['/admin/woche', '/admin/stunde'] },
       { to: '/admin/repertoire',  icon: ListMusic,    label: 'n_tab_lieder', hinweis: 'na_lieder_hinweis' },
     ],
     mitglieder: [
@@ -45,7 +45,7 @@ export function adminReiter(abo) {
   const pfade = liste => liste.map(e => e.to)
   return [
     { to: '/admin',            icon: House,      label: 'n_tab_start',       auch: [] },
-    { to: '/admin/unterricht', icon: Music,      label: 'na_tab_unterricht', auch: pfade(b.unterricht) },
+    { to: '/admin/unterricht', icon: Music,      label: 'na_tab_unterricht', auch: [...pfade(b.unterricht), '/admin/woche', '/admin/stunde'] },
     { to: '/admin/mitglieder', icon: Users,      label: 'na_tab_mitglieder', auch: pfade(b.mitglieder) },
     { to: '/admin/verwaltung', icon: LayoutGrid, label: 'na_tab_verwaltung', auch: [...pfade(b.verwaltung), '/vorstand'] },
     { to: '/admin/ich',        icon: CircleUser, label: 'n_tab_ich',         auch: ['/admin/profil', '/admin/nachrichten', '/admin/tools', '/superadmin', '/schulen', ...GEMEINSAM] },
