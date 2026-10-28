@@ -36,6 +36,7 @@ const NEUE_SEITEN = [
   '/lehrer/kurse/:id/repertoire', '/lehrer/events/:id/repertoire', '/schueler/events/:id/repertoire',
   '/lehrer/repertoire/:stueckId', '/lehrer/kurse/:kursId/repertoire/:stueckId', '/lehrer/events/:kursId/repertoire/:stueckId',
   '/schueler/events/:kursId/repertoire/:stueckId', '/lehrer/kurse/:id/unterrichtsmodus',
+  '/lehrer/kurse/:id/verwalten', '/lehrer/repertoire/:stueckId/bearbeiten', '/lehrer/stundenplan',
   ...GEMEINSAM,
 ]
 const VOLLBILD = [

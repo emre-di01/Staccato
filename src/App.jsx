@@ -86,6 +86,9 @@ const NeuLehrerLive        = lazy(() => import('./neu/lehrer/Live'))
 const NeuLiederListe       = lazy(() => import('./neu/seiten/LiederListe'))
 const NeuSession           = lazy(() => import('./neu/seiten/Session'))
 const NeuWerkzeuge         = lazy(() => import('./neu/seiten/Werkzeuge'))
+const NeuKursVerwalten     = lazy(() => import('./neu/lehrer/KursVerwalten'))
+const NeuLiedBearbeiten    = lazy(() => import('./neu/lehrer/LiedBearbeiten'))
+const NeuLehrerWoche       = lazy(() => import('./neu/lehrer/Woche'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -161,19 +164,19 @@ function AppRoutes() {
         <Route element={<LayoutWahl />}>
           <Route path="/lehrer"                 element={<DesignWahl alt={<LehrerDashboard />} neu={<NeuLehrerStart />} />} />
           <Route path="/lehrer/kurse"           element={<DesignWahl alt={<LehrerKurse />} neu={<NeuLehrerKurse />} />} />
-          <Route path="/lehrer/kurse/alt"       element={<LehrerKurse />} />
+          <Route path="/lehrer/kurse/alt"       element={<DesignWahl alt={<LehrerKurse />} neu={<Navigate to="/lehrer/kurse" replace />} />} />
           <Route path="/lehrer/kurse/:id"       element={<DesignWahl alt={<KursDetail />} neu={<NeuLehrerKurs />} />} />
-          <Route path="/lehrer/kurse/:id/verwalten" element={<KursDetail />} />
+          <Route path="/lehrer/kurse/:id/verwalten" element={<DesignWahl alt={<KursDetail />} neu={<NeuKursVerwalten />} />} />
           <Route path="/lehrer/stunde/:id"      element={<DesignWahl alt={<Navigate to="/lehrer" replace />} neu={<NeuStundeAbschliessen />} />} />
           <Route path="/lehrer/kurse/:id/repertoire" element={<DesignWahl alt={<KursRepertoire />} neu={<NeuLiederListe art="kurs" />} />} />
           <Route path="/lehrer/kurse/:kursId/repertoire/:stueckId" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
           <Route path="/lehrer/kurse/:id/unterrichtsmodus" element={<DesignWahl alt={<Unterrichtsmodus />} neu={<NeuLehrerLive />} />} />
           <Route path="/lehrer/schueler"        element={<DesignWahl alt={<LehrerSchueler />} neu={<NeuLehrerSchueler />} />} />
           <Route path="/lehrer/anwesenheit"     element={<DesignWahl alt={<Stundenplan />} neu={<NeuLehrerTermine />} />} />
-          <Route path="/lehrer/stundenplan"     element={<Stundenplan />} />
+          <Route path="/lehrer/stundenplan"     element={<DesignWahl alt={<Stundenplan />} neu={<NeuLehrerWoche />} />} />
           <Route path="/lehrer/repertoire"      element={<DesignWahl alt={<Repertoire />} neu={<NeuLehrerLieder />} />} />
           <Route path="/lehrer/repertoire/:stueckId" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
-          <Route path="/lehrer/repertoire/:stueckId/bearbeiten" element={<StueckDetail />} />
+          <Route path="/lehrer/repertoire/:stueckId/bearbeiten" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLiedBearbeiten />} />} />
           <Route path="/lehrer/events"                                         element={<DesignWahl alt={<LehrerEvents />} neu={<Navigate to="/lehrer/anwesenheit" replace />} />} />
           <Route path="/lehrer/events/:id/repertoire"                        element={<DesignWahl alt={<EventRepertoire />} neu={<NeuLiederListe art="event" />} />} />
           <Route path="/lehrer/events/:kursId/repertoire/:stueckId"          element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />

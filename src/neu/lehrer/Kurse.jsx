@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Users, ChevronRight } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Zeile, Segment, LiedCover, Leer, Laden } from '../../ui'
+import { useNeuLaden } from '../daten'
 import { useLehrerKurse } from '../lehrerDaten'
 import { kursZeit } from './kursZeit'
+import KursBlatt from './KursBlatt'
 
 const GRUPPE = ['gruppe', 'chor', 'ensemble']
 
@@ -12,6 +14,9 @@ export default function LehrerKurse() {
   const { profil, T, lang } = useApp()
   const { data: kurse = [], isLoading } = useLehrerKurse()
   const [filter, setFilter] = useState('alle')
+  const [anlegen, setAnlegen] = useState(false)
+  const navigate = useNavigate()
+  const neuLaden = useNeuLaden()
 
   const aktive = kurse.filter(k => k.aktiv !== false)
   const gemischt = aktive.some(k => GRUPPE.includes(k.typ)) && aktive.some(k => !GRUPPE.includes(k.typ))
@@ -20,9 +25,9 @@ export default function LehrerKurse() {
 
   return (
     <Seite titel={T('nl_tab_kurse')} rechts={profil?.kann_kurse_anlegen && (
-      <Link to="/lehrer/kurse/alt" aria-label={T('nl_kurs_anlegen')} style={{ width: 44, height: 44, borderRadius: 22, background: 'var(--n-fill)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <button onClick={() => setAnlegen(true)} aria-label={T('nl_kurs_anlegen')} style={{ width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer', background: 'var(--n-fill)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Plus aria-hidden="true" size={22} strokeWidth={2.2} />
-      </Link>
+      </button>
     )}>
       {gemischt && (
         <Segment label={T('n_filter')} wert={filter} onChange={setFilter} style={{ margin: '16px 20px 0' }}
@@ -51,6 +56,14 @@ export default function LehrerKurse() {
             <Zeile icon={Users} titel={T('nl_schueler_in_kursen').replace('{n}', schuelerGesamt).replace('{k}', aktive.length)} to="/lehrer/schueler" />
           </Gruppe>
         </Abschnitt>
+      )}
+
+      {anlegen && (
+        <KursBlatt onClose={() => setAnlegen(false)} onFertig={id => {
+          setAnlegen(false)
+          neuLaden('nl-kurse', 'nl-stunden')
+          if (id) navigate(`/lehrer/kurse/${id}`)
+        }} />
       )}
     </Seite>
   )

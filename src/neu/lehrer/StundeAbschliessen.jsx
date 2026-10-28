@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { Check, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Knopf, Leer, Laden, eingabeStil } from '../../ui'
@@ -77,10 +77,31 @@ function Formular({ st, zurueck }) {
     navigate(zurueck.to)
   }
 
+  async function wiederherstellen() {
+    const { error: e } = await supabase.from('stunden').update({ status: 'geplant' }).eq('id', st.id)
+    if (e) { toast(e.message, 'error'); return }
+    neuLaden('nl-stunden', 'nl-stunde', 'nl-kurs', 'nl-kurs-verwalten')
+  }
+
+  async function loeschen() {
+    const ok = await confirm(T('nl_stunde_loeschen_frage'), { sub: T('nl_kv_loeschen_hinweis'), confirmLabel: T('delete') })
+    if (!ok) return
+    const { error: e } = await supabase.from('stunden').delete().eq('id', st.id)
+    if (e) { toast(e.message, 'error'); return }
+    neuLaden('nl-stunden', 'nl-kurs', 'nl-kurs-verwalten')
+    navigate(zurueck.to)
+  }
+
   return (
     <Seite zurueck={zurueck} ueber={`${tagLabel(st.beginn, zeitzone, lang, T)} · ${uhrzeit(st.beginn, zeitzone, lang)}`} titel={st.unterricht?.name}>
       {abgesagt ? (
-        <div style={{ marginTop: 20 }}><Leer text={T('nl_stunde_abgesagt')} /></div>
+        <>
+          <div style={{ marginTop: 20 }}><Leer text={T('nl_stunde_abgesagt')} /></div>
+          <div style={{ margin: '20px 20px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Knopf voll variante="sekundaer" onClick={wiederherstellen}>{T('nl_stunde_wiederherstellen')}</Knopf>
+            <Knopf voll variante="gefahr" icon={Trash2} onClick={loeschen}>{T('nl_stunde_loeschen')}</Knopf>
+          </div>
+        </>
       ) : (
         <>
           {st.teilnehmer.length > 0 && (
@@ -144,6 +165,7 @@ function Formular({ st, zurueck }) {
             {st.status === 'geplant' && (
               <Knopf voll variante="gefahr" onClick={absagen}>{T('nl_stunde_absagen')}</Knopf>
             )}
+            <Knopf voll variante="gefahr" icon={Trash2} onClick={loeschen}>{T('nl_stunde_loeschen')}</Knopf>
           </div>
         </>
       )}

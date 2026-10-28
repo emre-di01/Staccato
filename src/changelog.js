@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.6.0'
+export const CURRENT_VERSION = '2.7.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.7.0',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '✨',
+        de: 'Für Lehrer jetzt komplett im neuen Design: Termine mit Wochenansicht, Lieder bearbeiten, Schüler, Nachrichten schreiben, Kurse anlegen und verwalten',
+        en: 'Teachers now get the new design everywhere: schedule with week view, song editing, students, writing messages, creating and managing courses',
+        tr: 'Öğretmenler için artık her yer yeni tasarımda: haftalık görünümlü takvim, şarkı düzenleme, öğrenciler, mesaj yazma, kurs oluşturma ve yönetme',
+      },
+      {
+        icon: '🎤',
+        de: 'Live-Unterricht im neuen Design – auch für Schüler und Gäste, die per Code beitreten',
+        en: 'Live lessons in the new design – also for students and guests joining with a code',
+        tr: 'Yeni tasarımda canlı ders – kodla katılan öğrenciler ve misafirler için de',
+      },
+      {
+        icon: '🗓',
+        de: 'Kurs verwalten: zusätzliche Stunden anlegen, Stunden für einen Zeitraum eintragen, Teilnehmer hinzufügen, Anwesenheitsliste herunterladen',
+        en: 'Manage course: add extra lessons, schedule lessons for a period, add participants, download the attendance list',
+        tr: 'Kursu yönet: ek ders ekleyin, bir dönem için ders planlayın, katılımcı ekleyin, yoklama listesini indirin',
+      },
+    ],
+  },
   {
     version: '2.6.0',
     date: '2026-10-28',

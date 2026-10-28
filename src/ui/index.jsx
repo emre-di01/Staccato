@@ -10,15 +10,20 @@ import { ChevronLeft, ChevronRight, Music, Search, X } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
 // ─── Seite mit großem Titel ───────────────────────────────────
-// `zurueck`: { to, label } → Link über dem Titel (Unterseiten)
+// `zurueck`: { to, label } → Link über dem Titel (Unterseiten); { onClick, label } → Knopf
+const zurueckStil = { display: 'inline-flex', alignItems: 'center', gap: 2, minHeight: 44, margin: '8px 0 -12px 10px', padding: '0 10px 0 0', fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }
 export function Seite({ titel, ueber, rechts, zurueck, children }) {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', paddingBottom: 32 }}>
-      {zurueck && (
-        <Link to={zurueck.to} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, minHeight: 44, margin: '8px 0 -12px 10px', padding: '0 10px 0 0', fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
+      {zurueck && (zurueck.onClick ? (
+        <button onClick={zurueck.onClick} style={{ ...zurueckStil, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <ChevronLeft aria-hidden="true" size={24} />{zurueck.label}
+        </button>
+      ) : (
+        <Link to={zurueck.to} style={zurueckStil}>
           <ChevronLeft aria-hidden="true" size={24} />{zurueck.label}
         </Link>
-      )}
+      ))}
       {(titel || rechts) && (
         <header style={{ padding: '20px 20px 4px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0 }}>

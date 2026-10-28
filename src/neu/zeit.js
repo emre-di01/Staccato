@@ -51,3 +51,18 @@ export function datumLang(tz, lang) {
 export function stundeDerSchule(tz) {
   return parseInt(new Intl.DateTimeFormat('de-DE', { hour: 'numeric', hour12: false, timeZone: tz }).format(new Date()), 10)
 }
+
+// Datum 'YYYY-MM-DD' + Uhrzeit 'HH:MM' in der Schul-Zeitzone → ISO (UTC)
+export function schulZeitZuIso(datum, zeit, tz) {
+  const [j, m, t] = datum.split('-').map(Number)
+  const [h, min] = zeit.split(':').map(Number)
+  const wunsch = Date.UTC(j, m - 1, t, h, min)
+  const versatz = ms => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })
+      .formatToParts(new Date(ms)).map(x => [x.type, x.value]))
+    return Date.UTC(+p.year, p.month - 1, +p.day, +p.hour, +p.minute) - ms
+  }
+  let ms = wunsch - versatz(wunsch)
+  ms = wunsch - versatz(ms)   // zweiter Schritt für Tage mit Zeitumstellung
+  return new Date(ms).toISOString()
+}
