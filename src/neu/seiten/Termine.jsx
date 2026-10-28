@@ -7,9 +7,11 @@ import { Seite, Segment, Leer, Laden } from '../../ui'
 import { useMeineStunden, useMeineEvents, useNeuLaden, useAbsage } from '../daten'
 import { StundeKarte, EventKarte } from '../karten'
 import { gruppenLabel } from '../zeit'
+import { useBasis } from '../rolle'
 
 export default function NeuTermine() {
   const { profil, T, lang, zeitzone, toast } = useApp()
+  const basis = useBasis()
   const { data: stunden, isLoading: l1 } = useMeineStunden(60)
   const { data: events, isLoading: l2 } = useMeineEvents()
   const neuLaden = useNeuLaden()
@@ -59,7 +61,7 @@ export default function NeuTermine() {
                 : <EventKarte key={e.id} ev={e.daten} onAntwort={z => antworten(e.daten, z)} sendet={sendet === e.id}
                     aktionen={e.daten.event_stuecke?.length > 0 && (
                       <div style={{ display: 'flex' }}>
-                        <Link to={`/schueler/events/${e.id}/repertoire`} style={{ minHeight: 44, padding: '0 14px', borderRadius: 22, background: 'var(--bg)', color: 'var(--text)', fontSize: 16, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                        <Link to={`${basis}/events/${e.id}/repertoire`} style={{ minHeight: 44, padding: '0 14px', borderRadius: 22, background: 'var(--bg)', color: 'var(--text)', fontSize: 16, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
                           <Music aria-hidden="true" size={18} />{T('n_tab_lieder')}
                         </Link>
                       </div>

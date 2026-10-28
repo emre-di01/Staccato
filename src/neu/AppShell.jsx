@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, Outlet, useLocation, matchPath } from 'react-router-dom'
-import { House, CalendarDays, Music, CircleUser, Users } from 'lucide-react'
+import { House, CalendarDays, Music, CircleUser, Users, Landmark, Heart } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { ToastContainer } from '../components/Toast'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -27,6 +27,19 @@ const REITER = {
     { to: '/lehrer/repertoire',  icon: Music,        label: 'n_tab_lieder',  auch: [] },
     { to: '/lehrer/ich',         icon: CircleUser,   label: 'n_tab_ich',     auch: ['/lehrer/profil', '/lehrer/nachrichten', '/lehrer/tools', ...GEMEINSAM] },
   ],
+  vorstand: [
+    { to: '/vorstand',             icon: House,        label: 'n_tab_start',   auch: [] },
+    { to: '/vorstand/stundenplan', icon: CalendarDays, label: 'n_tab_termine', auch: ['/vorstand/events'] },
+    { to: '/vorstand/repertoire',  icon: Music,        label: 'n_tab_lieder',  auch: [] },
+    { to: '/vorstand/bereich',     icon: Landmark,     label: 'na_vorstand',   auch: ['/vorstand/ziele', '/vorstand/protokolle', '/vorstand/inventar'] },
+    { to: '/vorstand/ich',         icon: CircleUser,   label: 'n_tab_ich',     auch: ['/vorstand/profil', '/vorstand/nachrichten', '/vorstand/kurse', '/vorstand/dateien', '/vorstand/faq', '/vorstand/tools', ...GEMEINSAM] },
+  ],
+  eltern: [
+    { to: '/eltern',             icon: House,        label: 'n_tab_start',    auch: [] },
+    { to: '/eltern/stundenplan', icon: CalendarDays, label: 'n_tab_termine',  auch: ['/eltern/events'] },
+    { to: '/eltern/kinder',      icon: Heart,        label: 'ne_tab_kinder',  auch: [] },
+    { to: '/eltern/ich',         icon: CircleUser,   label: 'n_tab_ich',      auch: ['/eltern/profil', '/eltern/nachrichten', '/eltern/dateien', '/eltern/tools', ...GEMEINSAM] },
+  ],
 }
 
 // Seiten, die schon im neuen Design gebaut sind (bringen eigene Abstände mit)
@@ -42,6 +55,10 @@ const NEUE_SEITEN = [
   '/admin', '/admin/unterricht', '/admin/verwaltung', '/admin/ich', '/admin/profil', '/admin/tools', '/admin/mitglieder', '/admin/interessenten', '/admin/nachrichten',
   '/admin/events', '/admin/raeume', '/admin/instrumente', '/admin/inventar', '/admin/rechnungen', '/admin/einstellungen',
   '/vorstand/ziele', '/vorstand/protokolle', '/superadmin', '/superadmin/demos',
+  '/vorstand', '/vorstand/bereich', '/vorstand/inventar', '/vorstand/stundenplan', '/vorstand/events', '/vorstand/repertoire', '/vorstand/repertoire/:stueckId',
+  '/vorstand/events/:id/repertoire', '/vorstand/events/:kursId/repertoire/:stueckId', '/vorstand/kurse', '/vorstand/kurse/:id', '/vorstand/ich',
+  '/vorstand/nachrichten', '/vorstand/dateien', '/vorstand/faq', '/vorstand/profil', '/vorstand/tools',
+  '/eltern', '/eltern/stundenplan', '/eltern/kinder', '/eltern/kinder/:id', '/eltern/ich', '/eltern/nachrichten', '/eltern/dateien', '/eltern/profil', '/eltern/tools',
   '/admin/kurse', '/admin/kurse/:id', '/admin/kurse/:id/verwalten', '/admin/kurse/:id/repertoire', '/admin/kurse/:id/unterrichtsmodus',
   '/admin/stundenplan', '/admin/woche', '/admin/stunde/:id', '/admin/repertoire', '/admin/repertoire/:stueckId', '/admin/repertoire/:stueckId/bearbeiten',
   '/admin/kurse/:kursId/repertoire/:stueckId', '/admin/events/:id/repertoire', '/admin/events/:kursId/repertoire/:stueckId',
@@ -53,6 +70,7 @@ const VOLLBILD = [
   '/lehrer/kurse/:id/unterrichtsmodus',
   '/admin/repertoire/:stueckId', '/admin/kurse/:kursId/repertoire/:stueckId', '/admin/events/:kursId/repertoire/:stueckId',
   '/admin/kurse/:id/unterrichtsmodus',
+  '/vorstand/repertoire/:stueckId', '/vorstand/events/:kursId/repertoire/:stueckId',
 ]
 
 const passt = (muster, pfad) => muster.some(m => matchPath({ path: m, end: true }, pfad))
@@ -141,6 +159,7 @@ export default function AppShell() {
           confirmLabel={confirmState.confirmLabel}
           cancelLabel={confirmState.cancelLabel}
           dangerous={confirmState.dangerous ?? true}
+          neu
           onConfirm={() => resolveConfirm(true)}
           onCancel={() => resolveConfirm(false)}
         />

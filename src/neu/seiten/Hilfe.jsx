@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronDown, Mail, Phone } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile } from '../../ui'
+import { useBasis } from '../rolle'
 
 // Fragen und Antworten zur neuen Oberfläche. Wie in der alten FAQ steht der Inhalt
 // hier statt in translations.js, weil es längere Texte sind.
@@ -83,11 +84,12 @@ const FRAGEN = {
 
 export default function NeuHilfe() {
   const { T, lang, schule } = useApp()
+  const basis = useBasis()
   const gruppen = FRAGEN[lang] ?? FRAGEN.de
   const [offen, setOffen] = useState(null)
 
   return (
-    <Seite titel={T('n_hilfe')} zurueck={{ to: '/schueler/ich', label: T('n_tab_ich') }}>
+    <Seite titel={T('n_hilfe')} zurueck={{ to: `${basis}/ich`, label: T('n_tab_ich') }}>
       {gruppen.map((g, gi) => (
         <Abschnitt key={g.titel} titel={g.titel} style={{ marginTop: gi === 0 ? 24 : 32 }}>
           <Gruppe>
@@ -107,7 +109,7 @@ export default function NeuHilfe() {
                       {it.a}
                       {it.zu && (
                         <div style={{ marginTop: 10 }}>
-                          <Link to={it.zu[0]} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>{it.zu[1]} ›</Link>
+                          <Link to={it.zu[0].replace('/schueler', basis)} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>{it.zu[1]} ›</Link>
                         </div>
                       )}
                     </div>

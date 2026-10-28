@@ -4,12 +4,14 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Leer, Laden } from '../../ui'
 import { tagLabel } from '../zeit'
+import { useBasis } from '../rolle'
 
 const TYP_REIHENFOLGE = ['aufnahmeformular', 'vertrag', 'sepa', 'einverstaendnis', 'sonstiges']
 
 // Dokumente, die die Schule für das Mitglied hinterlegt hat (Vertrag, SEPA …)
 export default function NeuDokumente() {
   const { profil, T, toast, lang, zeitzone } = useApp()
+  const basis = useBasis()
   const { data: dateien = [], isLoading } = useQuery({
     queryKey: ['n-dokumente', profil?.id],
     enabled: !!profil?.id,
@@ -33,7 +35,7 @@ export default function NeuDokumente() {
   const typen = TYP_REIHENFOLGE.filter(t => dateien.some(d => (TYP_REIHENFOLGE.includes(d.typ) ? d.typ : 'sonstiges') === t))
 
   return (
-    <Seite titel={T('n_dokumente')} zurueck={{ to: '/schueler/ich', label: T('n_tab_ich') }}>
+    <Seite titel={T('n_dokumente')} zurueck={{ to: `${basis}/ich`, label: T('n_tab_ich') }}>
       <p style={{ margin: '8px 20px 0', fontSize: 16, color: 'var(--text-2)', lineHeight: 1.5 }}>{T('n_dokumente_erklaerung')}</p>
       {isLoading ? <div style={{ marginTop: 20 }}><Laden /></div>
         : dateien.length === 0 ? <div style={{ marginTop: 20 }}><Leer text={T('files_empty_desc')} /></div>

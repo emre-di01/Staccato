@@ -58,7 +58,7 @@ export default function Modal({ titel, onClose, children, maxWidth = 480, maxHei
       >
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'24px 28px 0', flexShrink:0 }}>
           <h3 id={titleId} style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{titel}</h3>
-          <button onClick={onClose} aria-label="Schließen" style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 }}>✕</button>
+          <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-3)', padding:4 }}>✕</button>
         </div>
         <div style={{ overflowY:'auto', flex:1, padding:'20px 28px 28px', overscrollBehavior:'contain' }}>
           {children}

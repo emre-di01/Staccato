@@ -1205,7 +1205,7 @@ function MitgliedDrawer({ mitglied, onClose, onAktion, rolle }) {
             {zahlungUnvollstaendig && <div style={{ fontSize: 11, color: 'var(--warning, #f59e0b)', marginTop: 4 }}>⚠️ IBAN fehlt</div>}
             {zahlungOk && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>💳 {mitglied.zahlungsweise === 'sepa' ? 'SEPA' : mitglied.zahlungsweise === 'ueberweisung' ? 'Überweisung' : 'Bar'}</div>}
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--text-3)', padding: 4, flexShrink: 0, lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--text-3)', padding: 4, flexShrink: 0, lineHeight: 1 }}>✕</button>
         </div>
 
         {/* Aktionen */}

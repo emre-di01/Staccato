@@ -104,6 +104,12 @@ const NeuAdminZiele        = lazy(() => import('./neu/admin/Ziele'))
 const NeuAdminProtokolle   = lazy(() => import('./neu/admin/Protokolle'))
 const NeuSuperadminSchulen = lazy(() => import('./neu/admin/Schulen'))
 const NeuSuperadminDemos   = lazy(() => import('./neu/admin/Demos'))
+// Neues Design, Phase 5: Vorstand und Eltern
+const NeuVorstandBereich   = lazy(() => import('./neu/vorstand/Bereich'))
+const NeuElternStart       = lazy(() => import('./neu/eltern/Start'))
+const NeuElternTermine     = lazy(() => import('./neu/eltern/Termine'))
+const NeuElternKinder      = lazy(() => import('./neu/eltern/Kinder').then(m => ({ default: m.ElternKinder })))
+const NeuElternKind        = lazy(() => import('./neu/eltern/Kinder').then(m => ({ default: m.ElternKind })))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
@@ -112,7 +118,7 @@ function RollenWeiterleitung() {
   return <Navigate to={startseiteNach(rolle)} replace />
 }
 
-// Neues Design: Standard für NEU_ROLLEN, Opt-in für OPTIN_ROLLEN (Admin/Superadmin)
+// Neues Design: Standard für alle Rollen in NEU_ROLLEN, klassisches Design per Einstellung
 function useNeuesDesignAktiv() {
   const { neuesDesign, rolle } = useApp()
   return neuesDesign && DESIGN_ROLLEN.includes(rolle)
@@ -124,6 +130,13 @@ function LayoutWahl() {
 
 function DesignWahl({ alt, neu }) {
   return useNeuesDesignAktiv() ? neu : alt
+}
+
+// Schülerseiten unter /vorstand: neu nur für die Rolle vorstand; Admins landen in ihrer Verwaltung
+function VorstandWahl({ alt, neu, admin = '/admin' }) {
+  const { rolle } = useApp()
+  if (!useNeuesDesignAktiv()) return alt
+  return rolle === 'vorstand' ? neu : <Navigate to={admin} replace />
 }
 
 // Live-Sitzung (öffentlich): neues Design auch für Gäste; klassisch nur, wer es eingeschaltet hat
@@ -235,34 +248,41 @@ function AppRoutes() {
       {/* ── Vorstand ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['vorstand', 'admin', 'superadmin']} />}>
         <Route element={<LayoutWahl />}>
-          <Route path="/vorstand"                       element={<VorstandDashboard />} />
+          <Route path="/vorstand"                       element={<VorstandWahl alt={<VorstandDashboard />} neu={<NeuStart />} admin="/admin/verwaltung" />} />
+          <Route path="/vorstand/bereich"               element={<VorstandWahl alt={<Navigate to="/vorstand" replace />} neu={<NeuVorstandBereich />} admin="/admin/verwaltung" />} />
           <Route path="/vorstand/ziele"                 element={<DesignWahl alt={<VorstandZiele />} neu={<NeuAdminZiele />} />} />
           <Route path="/vorstand/protokolle"            element={<DesignWahl alt={<VorstandProtokolle />} neu={<NeuAdminProtokolle />} />} />
-          <Route path="/vorstand/stundenplan"           element={<Stundenplan />} />
-          <Route path="/vorstand/kurse"                 element={<SchuelerKurse />} />
-          <Route path="/vorstand/kurse/:id"             element={<SchuelerKursDetail />} />
-          <Route path="/vorstand/events"                element={<SchuelerEvents />} />
-          <Route path="/vorstand/events/:id/repertoire" element={<EventRepertoire />} />
-          <Route path="/vorstand/events/:kursId/repertoire/:stueckId" element={<StueckDetail />} />
-          <Route path="/vorstand/repertoire"            element={<Repertoire />} />
-          <Route path="/vorstand/repertoire/:stueckId"  element={<StueckDetail />} />
-          <Route path="/vorstand/inventar"              element={<Inventar />} />
-          <Route path="/vorstand/tools"                 element={<Tools />} />
-          <Route path="/vorstand/faq"                   element={<VorstandFAQ />} />
-          <Route path="/vorstand/profil"                element={<ProfilSeite />} />
+          <Route path="/vorstand/inventar"              element={<DesignWahl alt={<Inventar />} neu={<NeuAdminInventar />} />} />
+          <Route path="/vorstand/stundenplan"           element={<VorstandWahl alt={<Stundenplan />} neu={<NeuTermine />} />} />
+          <Route path="/vorstand/kurse"                 element={<VorstandWahl alt={<SchuelerKurse />} neu={<NeuKurse />} />} />
+          <Route path="/vorstand/kurse/:id"             element={<VorstandWahl alt={<SchuelerKursDetail />} neu={<NeuKurs />} />} />
+          <Route path="/vorstand/events"                element={<VorstandWahl alt={<SchuelerEvents />} neu={<NeuTermine />} />} />
+          <Route path="/vorstand/events/:id/repertoire" element={<VorstandWahl alt={<EventRepertoire />} neu={<NeuLiederListe art="event" />} />} />
+          <Route path="/vorstand/events/:kursId/repertoire/:stueckId" element={<VorstandWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
+          <Route path="/vorstand/repertoire"            element={<VorstandWahl alt={<Repertoire />} neu={<NeuLieder />} />} />
+          <Route path="/vorstand/repertoire/:stueckId"  element={<VorstandWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
+          <Route path="/vorstand/dateien"               element={<VorstandWahl alt={<Navigate to="/profil" replace />} neu={<NeuDokumente />} />} />
+          <Route path="/vorstand/nachrichten"           element={<VorstandWahl alt={<Nachrichten />} neu={<NeuNachrichten />} />} />
+          <Route path="/vorstand/ich"                   element={<VorstandWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
+          <Route path="/vorstand/tools"                 element={<VorstandWahl alt={<Tools />} neu={<NeuWerkzeuge />} />} />
+          <Route path="/vorstand/faq"                   element={<VorstandWahl alt={<VorstandFAQ />} neu={<NeuHilfe />} />} />
+          <Route path="/vorstand/profil"                element={<VorstandWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
         </Route>
       </Route>
 
       {/* ── Eltern ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['eltern']} />}>
-        <Route element={<AppLayout />}>
-          <Route path="/eltern"                 element={P('Dashboard', '📊')} />
-          <Route path="/eltern/stundenplan"     element={<Stundenplan />} />
-          <Route path="/eltern/dateien"         element={P('Dateien', '📁')} />
-          <Route path="/eltern/events"          element={P('Veranstaltungen', '🎭')} />
-          <Route path="/eltern/nachrichten"     element={<Nachrichten />} />
-          <Route path="/eltern/profil"          element={<ProfilSeite />} />
-          <Route path="/eltern/tools"           element={<Tools />} />
+        <Route element={<LayoutWahl />}>
+          <Route path="/eltern"                 element={<DesignWahl alt={P('Dashboard', '📊')} neu={<NeuElternStart />} />} />
+          <Route path="/eltern/stundenplan"     element={<DesignWahl alt={<Stundenplan />} neu={<NeuElternTermine />} />} />
+          <Route path="/eltern/kinder"          element={<DesignWahl alt={<Navigate to="/eltern" replace />} neu={<NeuElternKinder />} />} />
+          <Route path="/eltern/kinder/:id"      element={<DesignWahl alt={<Navigate to="/eltern" replace />} neu={<NeuElternKind />} />} />
+          <Route path="/eltern/dateien"         element={<DesignWahl alt={P('Dateien', '📁')} neu={<NeuDokumente />} />} />
+          <Route path="/eltern/events"          element={<DesignWahl alt={P('Veranstaltungen', '🎭')} neu={<Navigate to="/eltern/stundenplan" replace />} />} />
+          <Route path="/eltern/nachrichten"     element={<DesignWahl alt={<Nachrichten />} neu={<NeuNachrichten />} />} />
+          <Route path="/eltern/ich"             element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
+          <Route path="/eltern/profil"          element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
+          <Route path="/eltern/tools"           element={<DesignWahl alt={<Tools />} neu={<NeuWerkzeuge />} />} />
         </Route>
       </Route>
 

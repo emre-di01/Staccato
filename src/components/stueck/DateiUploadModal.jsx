@@ -133,7 +133,7 @@ export default function DateiUploadModal({ stueckId, onClose, onErfolg }) {
       <div className="modal-inner" style={s.modal}>
         <div style={s.modalHeader}>
           <h3 style={s.modalTitel}>{T('modal_file_upload_title')}</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
+          <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={s.iconBtn}>✕</button>
         </div>
         <div style={{ ...s.modalBody, display:'flex', flexDirection:'column', gap:14 }}>
 

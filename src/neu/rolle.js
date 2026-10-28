@@ -2,13 +2,14 @@
 import { useLocation } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 
-export { NEU_ROLLEN, OPTIN_ROLLEN, DESIGN_ROLLEN } from './neuRollen'
+export { NEU_ROLLEN, DESIGN_ROLLEN } from './neuRollen'
 
-// '/schueler', '/lehrer' bzw. '/admin' – für Links auf gemeinsamen Seiten (Ich, Profil, Nachrichten …)
+// '/schueler', '/lehrer', '/admin', '/vorstand' bzw. '/eltern' – für Links auf gemeinsamen Seiten (Ich, Profil, Nachrichten …)
 export function useBasis() {
   const { rolle } = useApp()
   if (rolle === 'admin' || rolle === 'superadmin') return '/admin'
-  return rolle === 'lehrer' ? '/lehrer' : '/schueler'
+  if (rolle === 'lehrer' || rolle === 'vorstand' || rolle === 'eltern') return '/' + rolle
+  return '/schueler'
 }
 
 // true im Admin-Bereich: Lehrer-Seiten zeigen dann alle Kurse der Schule statt nur die eigenen

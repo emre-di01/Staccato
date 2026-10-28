@@ -88,8 +88,8 @@ export default function AudioTranskribierenModal({ onErgebnis, onSchliessen }) {
   }
 
   return (
-    <div style={s.overlay} onClick={e => e.target === e.currentTarget && onSchliessen()}>
-      <div style={s.box}>
+    <div className="modal-overlay" style={s.overlay} onClick={e => e.target === e.currentTarget && onSchliessen()}>
+      <div className="modal-inner" style={s.box}>
         <div style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>🎤 Audio transkribieren</div>
 
         {(phase === 'laden' || phase === 'verarbeitung') && (

@@ -98,7 +98,7 @@ function ZielKarte({ ziel, aufgaben, namen, onAktion }) {
 }
 
 export default function AdminZiele() {
-  const { T, profil, schule, toast, confirm } = useApp()
+  const { T, profil, schule, rolle, toast, confirm } = useApp()
   const neuLaden = useNeuLaden()
   const { data, isLoading } = useVorstandZiele()
   const [zeitraum, setZeitraum] = useState('alle')
@@ -131,7 +131,7 @@ export default function AdminZiele() {
   const fertig = () => { setModal(null); aktualisieren() }
 
   return (
-    <Seite titel={T('vorstand_ziele')} zurueck={{ to: '/admin/verwaltung', label: T('na_tab_verwaltung') }}
+    <Seite titel={T('vorstand_ziele')} zurueck={rolle === 'vorstand' ? { to: '/vorstand/bereich', label: T('na_vorstand') } : { to: '/admin/verwaltung', label: T('na_tab_verwaltung') }}
       rechts={<Knopf klein variante="tint" icon={Plus} onClick={() => setModal({ typ: 'ziel', ziel: null })}>{T('nv_neu')}</Knopf>}>
       {zeitraeume.length > 1 && (
         <div style={{ marginTop: 16 }}>

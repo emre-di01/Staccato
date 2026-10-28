@@ -341,6 +341,41 @@ const NEU_GLOBAL_CSS = `
     background: var(--bg);
     -webkit-font-smoothing: antialiased;
   }
+  /* Ältere Formular-Dialoge (Modal.jsx und eigene .modal-overlay/.modal-inner) an die neue Oberfläche angleichen:
+     Blatt-Optik, große Eingabefelder und Knöpfe. Inline-Stile der alten Dialoge erfordern !important. */
+  @keyframes nModalHoch { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
+  html[data-theme="neu2026"] .modal-overlay:has(> .modal-inner) { background: var(--n-overlay) !important; }
+  html[data-theme="neu2026"] .modal-inner {
+    background: var(--bg) !important; color: var(--text); border: none !important; border-radius: 24px !important;
+    box-shadow: var(--shadow-lg) !important; animation: nModalHoch .25s cubic-bezier(.2,.8,.2,1) both;
+  }
+  html[data-theme="neu2026"] .modal-inner :is(h2, h3) { font-size: 22px !important; font-weight: 800 !important; letter-spacing: -0.01em; }
+  html[data-theme="neu2026"] .modal-inner label { font-size: 15px !important; }
+  html[data-theme="neu2026"] .modal-inner :is(input:not([type=checkbox], [type=radio], [type=range], [type=file], [type=color]), select, textarea) {
+    min-height: 48px; padding: 11px 14px !important; border-radius: 12px !important; font-size: 17px !important;
+    border: 1.5px solid var(--n-fill-2) !important; background: var(--bg) !important; color: var(--text) !important;
+  }
+  html[data-theme="neu2026"] .modal-inner textarea { min-height: 96px; }
+  html[data-theme="neu2026"] .modal-inner :is(input[type=checkbox], input[type=radio]) { width: 20px; height: 20px; accent-color: var(--primary); }
+  html[data-theme="neu2026"] .modal-inner button[style*="background: var(--primary)"] {
+    min-height: 48px; padding: 0 20px !important; border-radius: 14px !important; font-size: 17px !important; font-weight: 700 !important;
+  }
+  html[data-theme="neu2026"] .modal-inner button[style*="border: 1.5px solid var(--border)"] {
+    min-height: 48px; border-radius: 14px !important; font-size: 16px !important; font-weight: 600 !important;
+    border-color: transparent !important; background: var(--n-fill) !important; color: var(--text) !important;
+  }
+  html[data-theme="neu2026"] .modal-inner :is(.modal-schliessen, button[aria-label="Schließen"]) {
+    width: 44px; height: 44px; min-height: 0; flex-shrink: 0; padding: 0 !important; margin: 0 !important; border-radius: 22px !important;
+    background: var(--n-fill) !important; color: var(--text) !important; font-size: 16px !important;
+    display: flex; align-items: center; justify-content: center;
+  }
+  @media (max-width: 899px) {
+    html[data-theme="neu2026"] .modal-overlay:has(> .modal-inner) { align-items: flex-end !important; padding: 0 !important; }
+    html[data-theme="neu2026"] .modal-inner {
+      border-radius: 24px 24px 0 0 !important; max-width: 100% !important; max-height: 92dvh !important;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+  }
 `
 export const NEU_THEME = {
   light: {

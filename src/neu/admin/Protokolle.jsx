@@ -131,7 +131,7 @@ function Detail({ p, namen, onBearbeiten, onLoeschen }) {
 }
 
 export default function AdminProtokolle() {
-  const { T, lang, profil, schule, toast, confirm } = useApp()
+  const { T, lang, profil, schule, rolle, toast, confirm } = useApp()
   const breit = useBreit()
   const neuLaden = useNeuLaden()
   const { data, isLoading } = useProtokolle()
@@ -161,7 +161,7 @@ export default function AdminProtokolle() {
   const chips = [['alle', T('n_alle')], ...TYPEN.filter(t => protokolle.some(p => p.sitzungstyp === t)).map(t => [t, T(`np_typ_${t}`)])]
 
   return (
-    <Seite breit titel={T('vorstand_protokolle')} zurueck={{ to: '/admin/verwaltung', label: T('na_tab_verwaltung') }}
+    <Seite breit titel={T('vorstand_protokolle')} zurueck={rolle === 'vorstand' ? { to: '/vorstand/bereich', label: T('na_vorstand') } : { to: '/admin/verwaltung', label: T('na_tab_verwaltung') }}
       rechts={<Knopf klein variante="tint" icon={Plus} onClick={() => setModal({ neu: true })}>{T('nv_neu')}</Knopf>}>
       <ListeDetail breit={breit} detailLabel={gewaehlt?.titel} blattTitel={T('vorstand_protokolle')}
         onSchliessen={() => setGewaehltId(null)} blattVerstecken={!!modal}

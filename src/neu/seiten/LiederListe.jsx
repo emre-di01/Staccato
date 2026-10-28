@@ -41,7 +41,7 @@ export default function LiederListe({ art }) {
   const zurueck = art === 'kurs'
     ? { to: `${basis}/kurse/${id}`, label: data?.name ?? T('nl_tab_kurse') }
     : basis === '/admin' ? { to: '/admin/events', label: T('events') }
-    : { to: rolle === 'lehrer' ? '/lehrer/anwesenheit' : '/schueler/stundenplan', label: T('n_tab_termine') }
+    : { to: rolle === 'lehrer' ? '/lehrer/anwesenheit' : `${basis}/stundenplan`, label: T('n_tab_termine') }
   const darfBearbeiten = basis === '/admin' || (rolle === 'lehrer' && (art === 'kurs' || data?.erstelltVon === profil?.id))
   const liedPfad = sid => art === 'kurs' ? `${basis}/kurse/${id}/repertoire/${sid}` : `${basis}/events/${id}/repertoire/${sid}`
   const liste = data?.liste ?? []

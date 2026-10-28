@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { applyTheme, THEMES } from '../themes/themes'
 import { t as translate } from '../i18n/translations'
 import OneSignal from 'react-onesignal'
-import { NEU_ROLLEN, OPTIN_ROLLEN } from '../neu/neuRollen'
+import { NEU_ROLLEN } from '../neu/neuRollen'
 
 const AppContext = createContext(null)
 
@@ -66,8 +66,6 @@ export function AppProvider({ children }) {
   // Klassisches Design (Opt-in, im Profil gespeichert; localStorage nur für den ersten Paint).
   // Standard ist die neue Oberfläche – für die Rollen in NEU_ROLLEN.
   const [altesDesign, setAltesDesignState] = useState(() => localStorage.getItem('staccato_altes_design') === 'true')
-  // Admin/Superadmin: neue Oberfläche nur per Opt-in (profiles.neues_design), solange sie im Aufbau ist
-  const [neuOptin, setNeuOptinState] = useState(() => localStorage.getItem('staccato_neu_optin') === 'true')
 
   const loadedUidRef = useRef(null)
   const profilIdRef  = useRef(null)
@@ -75,7 +73,7 @@ export function AppProvider({ children }) {
   // Vor dem Laden des Profils ist die Rolle unbekannt → letzter bekannter Stand
   const rolleGeladen = profil?.rolle ?? null
   const neuesDesignAktiv = rolleGeladen
-    ? (NEU_ROLLEN.includes(rolleGeladen) ? !altesDesign : OPTIN_ROLLEN.includes(rolleGeladen) && neuOptin)
+    ? NEU_ROLLEN.includes(rolleGeladen) && !altesDesign
     : localStorage.getItem('staccato_neues_design_aktiv') === 'true'
 
   useEffect(() => {
@@ -89,9 +87,8 @@ export function AppProvider({ children }) {
     localStorage.setItem('staccato_theme', theme)
     localStorage.setItem('staccato_dark', darkMode)
     localStorage.setItem('staccato_altes_design', String(altesDesign))
-    localStorage.setItem('staccato_neu_optin', String(neuOptin))
     if (rolleGeladen) localStorage.setItem('staccato_neues_design_aktiv', String(neuesDesignAktiv))
-  }, [theme, darkMode, schule?.farbe, altesDesign, neuOptin, neuesDesignAktiv, rolleGeladen])
+  }, [theme, darkMode, schule?.farbe, altesDesign, neuesDesignAktiv, rolleGeladen])
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
@@ -134,7 +131,6 @@ export function AppProvider({ children }) {
         if (data.thema)     setThemeKey(data.thema)
         if (data.dark_mode != null && farbmodusRef.current !== 'auto') setDarkMode(data.dark_mode)
         if (data.altes_design != null) setAltesDesignState(data.altes_design)
-        if (data.neues_design != null) setNeuOptinState(data.neues_design)
 
         const activeSchuleId = data.letzte_schule_id ?? data.schule_id
         if (activeSchuleId) {
@@ -267,11 +263,6 @@ export function AppProvider({ children }) {
   }
 
   function setNeuesDesign(an) {
-    if (OPTIN_ROLLEN.includes(profil?.rolle)) {
-      setNeuOptinState(an)
-      saveToProfile({ neues_design: an })
-      return
-    }
     setAltesDesignState(!an)
     saveToProfile({ altes_design: !an })
   }

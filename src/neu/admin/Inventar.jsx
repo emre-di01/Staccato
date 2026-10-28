@@ -77,7 +77,7 @@ function Detail({ item, onAktion }) {
 }
 
 export default function AdminInventar() {
-  const { T, schule, confirm, toast } = useApp()
+  const { T, schule, rolle, confirm, toast } = useApp()
   const breit = useBreit()
   const neuLaden = useNeuLaden()
   const { data, isLoading } = useInventar()
@@ -117,7 +117,7 @@ export default function AdminInventar() {
   const zu = () => setModal(null)
 
   return (
-    <Seite breit titel={T('inv_title')} rechts={<Knopf klein variante="tint" icon={Plus} onClick={() => setModal({ typ: 'neu' })}>{T('nv_neu')}</Knopf>}>
+    <Seite breit titel={T('inv_title')} zurueck={rolle === 'vorstand' ? { to: '/vorstand/bereich', label: T('na_vorstand') } : undefined} rechts={<Knopf klein variante="tint" icon={Plus} onClick={() => setModal({ typ: 'neu' })}>{T('nv_neu')}</Knopf>}>
       <ListeDetail breit={breit} detailLabel={gewaehlt?.name} blattTitel={T('inv_title')}
         onSchliessen={() => setGewaehltId(null)} blattVerstecken={!!modal}
         detail={gewaehlt && <Detail key={gewaehlt.id} item={gewaehlt} onAktion={aktion} />}

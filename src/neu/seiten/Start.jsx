@@ -1,22 +1,26 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, MapPin, MessageCircle, Check, X, CalendarDays, BookOpen, Radio } from 'lucide-react'
+import { Clock, MapPin, MessageCircle, Check, X, CalendarDays, CalendarClock, BookOpen, Radio, Target } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, LiedKachel, Regal, Leer, Laden, TextLink } from '../../ui'
-import JoinSessionModal from '../../components/layout/JoinSessionModal'
+import LiveBeitretenBlatt from '../LiveBeitretenBlatt'
 import { useMeineStunden, useMeineEvents, useMeineLieder, useUngelesen, useMeineVorschlaege, useLetzteHausaufgabe, useAbsage } from '../daten'
 import { uhrzeit, tagLabel, datumLang, stundeDerSchule } from '../zeit'
+import { useVorstandUebersicht } from '../vorstand/daten'
+import { useBasis } from '../rolle'
 
 const VIERZEHN_TAGE = 14 * 24 * 60 * 60 * 1000
 
 export default function NeuStart() {
-  const { profil, T, lang, zeitzone } = useApp()
+  const { profil, rolle, T, lang, zeitzone } = useApp()
+  const basis = useBasis()
   const { data: stunden, isLoading } = useMeineStunden(30)
   const { data: events = [] } = useMeineEvents()
   const { data: lieder = [] } = useMeineLieder()
   const { data: ungelesen = [] } = useUngelesen()
   const { data: vorschlaege = [] } = useMeineVorschlaege()
   const { data: hausaufgabe } = useLetzteHausaufgabe()
+  const { data: vorstand } = useVorstandUebersicht({ aktiv: rolle === 'vorstand' })
   const absage = useAbsage()
   const [joinOffen, setJoinOffen] = useState(false)
 
@@ -39,7 +43,7 @@ export default function NeuStart() {
   // Neuigkeiten: ungelesene Nachrichten, entschiedene Vorschläge, offene Einladungen, Hausaufgabe
   const neuigkeiten = []
   ungelesen.slice(0, 3).forEach(n => neuigkeiten.push(
-    <Zeile key={'n' + n.id} icon={MessageCircle} titel={n.betreff || T('n_nachricht')} untertitel={`${n.sender?.voller_name ?? ''} · ${tagLabel(n.gesendet_am, zeitzone, lang, T)}`} punkt to={`/schueler/nachrichten?id=${n.id}`} />,
+    <Zeile key={'n' + n.id} icon={MessageCircle} titel={n.betreff || T('n_nachricht')} untertitel={`${n.sender?.voller_name ?? ''} · ${tagLabel(n.gesendet_am, zeitzone, lang, T)}`} punkt to={`${basis}/nachrichten?id=${n.id}`} />,
   ))
   vorschlaege.filter(v => v.status !== 'offen' && v.entschieden_am && jetzt - new Date(v.entschieden_am) < VIERZEHN_TAGE).slice(0, 2).forEach(v => {
     const ok = v.status === 'angenommen'
@@ -47,12 +51,19 @@ export default function NeuStart() {
       <Zeile key={'v' + v.id} icon={ok ? Check : X} iconFarbe={ok ? 'var(--success)' : 'var(--text-2)'}
         titel={T(ok ? (v.art === 'liedtext' ? 'n_text_uebernommen' : 'n_vorschlag_angenommen') : 'n_vorschlag_abgelehnt').replace('{titel}', v.titel)}
         untertitel={v.antwort || T('n_dein_vorschlag')}
-        to={ok && v.stueck_id ? `/schueler/repertoire/${v.stueck_id}` : '/schueler/repertoire?ansicht=vorschlaege'} />,
+        to={ok && v.stueck_id ? `${basis}/repertoire/${v.stueck_id}` : `${basis}/repertoire?ansicht=vorschlaege`} />,
     )
   })
   events.filter(e => e.eingeladen && e.zusage === 'offen').slice(0, 2).forEach(e => neuigkeiten.push(
-    <Zeile key={'e' + e.id} icon={CalendarDays} iconFarbe="#2563EB" titel={e.titel} untertitel={`${tagLabel(e.beginn, zeitzone, lang, T)} · ${T('n_bitte_zusagen')}`} to="/schueler/stundenplan" />,
+    <Zeile key={'e' + e.id} icon={CalendarDays} iconFarbe="#2563EB" titel={e.titel} untertitel={`${tagLabel(e.beginn, zeitzone, lang, T)} · ${T('n_bitte_zusagen')}`} to={`${basis}/stundenplan`} />,
   ))
+  if (vorstand?.meineAufgaben.length) neuigkeiten.push(
+    <Zeile key="vs-aufgaben" icon={Target} titel={T('nvs_aufgaben_fuer_dich').replace('{n}', vorstand.meineAufgaben.length)} untertitel={vorstand.meineAufgaben[0].titel} to="/vorstand/bereich" />,
+  )
+  if (vorstand?.naechsteSitzung && new Date(vorstand.naechsteSitzung.beginn) - jetzt < VIERZEHN_TAGE) neuigkeiten.push(
+    <Zeile key="vs-sitzung" icon={CalendarClock} iconFarbe="#2563EB" titel={vorstand.naechsteSitzung.titel}
+      untertitel={`${tagLabel(vorstand.naechsteSitzung.beginn, zeitzone, lang, T)} · ${uhrzeit(vorstand.naechsteSitzung.beginn, zeitzone, lang)}`} to="/vorstand/bereich" />,
+  )
   if (hausaufgabe?.hausaufgaben) neuigkeiten.push(
     <Zeile key="hausaufgabe" icon={BookOpen} iconFarbe="var(--success)" titel={`${T('n_hausaufgabe')} · ${hausaufgabe.unterricht?.name ?? ''}`} untertitel={hausaufgabe.hausaufgaben} />,
   )
@@ -62,11 +73,11 @@ export default function NeuStart() {
       ueber={datumLang(zeitzone, lang)}
       titel={vorname ? `${gruss}, ${vorname}` : gruss}
       rechts={<>
-        <Link to="/schueler/nachrichten" aria-label={`${T('messages')}${ungelesen.length ? `, ${ungelesen.length} ${T('n_ungelesen')}` : ''}`} style={{ position: 'relative', width: 44, height: 44, borderRadius: 22, background: 'var(--n-fill)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Link to={`${basis}/nachrichten`} aria-label={`${T('messages')}${ungelesen.length ? `, ${ungelesen.length} ${T('n_ungelesen')}` : ''}`} style={{ position: 'relative', width: 44, height: 44, borderRadius: 22, background: 'var(--n-fill)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <MessageCircle aria-hidden="true" size={22} />
           {ungelesen.length > 0 && <span aria-hidden="true" style={{ position: 'absolute', top: -2, right: -2, minWidth: 20, height: 20, padding: '0 6px', borderRadius: 10, background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ungelesen.length > 9 ? '9+' : ungelesen.length}</span>}
         </Link>
-        <Link to="/schueler/ich" aria-label={T('n_tab_ich')} style={{ width: 44, height: 44, borderRadius: 22, background: 'var(--n-tint)', color: 'var(--n-tint-fg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, textDecoration: 'none', overflow: 'hidden' }}>
+        <Link to={`${basis}/ich`} aria-label={T('n_tab_ich')} style={{ width: 44, height: 44, borderRadius: 22, background: 'var(--n-tint)', color: 'var(--n-tint-fg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, textDecoration: 'none', overflow: 'hidden' }}>
           {profil?.avatar_url ? <img src={profil.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (vorname[0] ?? '?').toUpperCase()}
         </Link>
       </>}
@@ -94,7 +105,7 @@ export default function NeuStart() {
             {!laeuft && !entschuldigt && (
               <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
                 {regal.length > 0 && (
-                  <Link to={`/schueler/repertoire/${regal[0].stueck.id}`} state={regalState} style={{ flex: '1 1 140px', height: 52, borderRadius: 14, background: '#FFFFFF', color: 'var(--n-hero-btn-fg)', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>{T('n_lieder_oeffnen')}</Link>
+                  <Link to={`${basis}/repertoire/${regal[0].stueck.id}`} state={regalState} style={{ flex: '1 1 140px', height: 52, borderRadius: 14, background: '#FFFFFF', color: 'var(--n-hero-btn-fg)', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>{T('n_lieder_oeffnen')}</Link>
                 )}
                 <button onClick={() => absage.umschalten(naechste)} disabled={sendet} style={{ flex: '1 1 140px', height: 52, borderRadius: 14, border: 'none', background: 'var(--n-hero-2)', color: '#FFFFFF', fontFamily: 'inherit', fontSize: 17, fontWeight: 600, cursor: 'pointer' }}>{T('n_ich_kann_nicht')}</button>
               </div>
@@ -112,9 +123,9 @@ export default function NeuStart() {
       </div>
 
       {regal.length > 0 && (
-        <Abschnitt titel={fuerProbe.length ? T('n_lieder_fuer_probe') : T('n_aktuelle_lieder')} aktion={<TextLink to="/schueler/repertoire">{T('n_alle')}</TextLink>}>
+        <Abschnitt titel={fuerProbe.length ? T('n_lieder_fuer_probe') : T('n_aktuelle_lieder')} aktion={<TextLink to={`${basis}/repertoire`}>{T('n_alle')}</TextLink>}>
           <Regal>
-            {regal.map(l => <LiedKachel key={l.stueck.id} stueck={l.stueck} to={`/schueler/repertoire/${l.stueck.id}`} state={regalState} />)}
+            {regal.map(l => <LiedKachel key={l.stueck.id} stueck={l.stueck} to={`${basis}/repertoire/${l.stueck.id}`} state={regalState} />)}
           </Regal>
         </Abschnitt>
       )}
@@ -127,7 +138,7 @@ export default function NeuStart() {
         )}
       </Abschnitt>
 
-      {joinOffen && <JoinSessionModal onClose={() => setJoinOffen(false)} />}
+      {joinOffen && <LiveBeitretenBlatt onClose={() => setJoinOffen(false)} />}
     </Seite>
   )
 }

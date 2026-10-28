@@ -1,9 +1,39 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.7.0'
+export const CURRENT_VERSION = '2.8.0'
 
 export const CHANGELOG = [
+  {
+    version: '2.8.0',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '✨',
+        de: 'Das neue Design ist jetzt für alle Standard – auch für Verwaltung, Vorstand und Eltern. Das klassische Design lässt sich weiterhin unter „Ich“ einschalten',
+        en: 'The new design is now the default for everyone – including administration, board members and parents. You can still turn on the classic design under “Me”',
+        tr: 'Yeni tasarım artık herkes için varsayılan – yönetim, yönetim kurulu ve veliler dahil. Klasik tasarımı yine “Ben” altında açabilirsiniz',
+      },
+      {
+        icon: '🏛',
+        de: 'Vorstand: eigener Bereich mit „Meine Aufgaben“, nächster Sitzung, Zielen, Protokollen und Inventar – Hinweise auf offene Aufgaben direkt auf der Startseite',
+        en: 'Board: a dedicated area with “My tasks”, the next meeting, goals, minutes and inventory – open tasks are shown right on the home page',
+        tr: 'Yönetim kurulu: “Görevlerim”, sonraki toplantı, hedefler, tutanaklar ve envanter içeren ayrı bir alan – açık görevler doğrudan ana sayfada',
+      },
+      {
+        icon: '👨‍👩‍👧',
+        de: 'Eltern sehen jetzt die Termine, Hausaufgaben und Anwesenheit ihrer Kinder, Veranstaltungen, Nachrichten und Dokumente',
+        en: 'Parents can now see their children’s lessons, homework and attendance, as well as events, messages and documents',
+        tr: 'Veliler artık çocuklarının derslerini, ödevlerini ve devam durumunu, ayrıca etkinlikleri, mesajları ve belgeleri görebilir',
+      },
+      {
+        icon: '🪟',
+        de: 'Formulare und Dialoge passen sich dem neuen Design an: größere Felder und Knöpfe, auf dem Handy als Blatt von unten',
+        en: 'Forms and dialogs now match the new design: larger fields and buttons, shown as a sheet from the bottom on phones',
+        tr: 'Formlar ve pencereler yeni tasarıma uyum sağlıyor: daha büyük alanlar ve düğmeler, telefonda alttan açılan sayfa olarak',
+      },
+    ],
+  },
   {
     version: '2.7.0',
     date: '2026-10-28',

@@ -5,9 +5,11 @@ import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Chips, Suchfeld, Knopf, Zeile, LiedCover, LiedKachel, Regal, Leer, Laden } from '../../ui'
 import LiedVorschlaege, { VorschlagModal } from '../../components/LiedVorschlaege'
 import { useMeineKurse, useMeineLieder, useNeuLaden, liedInhalt } from '../daten'
+import { useBasis } from '../rolle'
 
 export default function NeuLieder() {
   const { T } = useApp()
+  const basis = useBasis()
   const [params] = useSearchParams()
   const { data: kurse = [] } = useMeineKurse()
   const { data: lieder = [], isLoading } = useMeineLieder()
@@ -56,7 +58,7 @@ export default function NeuLieder() {
           {!q && aktuell.length > 0 && (
             <Abschnitt titel={T('n_aktuell_geprobt')} style={{ marginTop: 26 }}>
               <Regal>
-                {aktuell.map(l => <LiedKachel key={l.stueck.id} stueck={l.stueck} to={`/schueler/repertoire/${l.stueck.id}`} state={aktuellState} />)}
+                {aktuell.map(l => <LiedKachel key={l.stueck.id} stueck={l.stueck} to={`${basis}/repertoire/${l.stueck.id}`} state={aktuellState} />)}
               </Regal>
             </Abschnitt>
           )}
@@ -69,7 +71,7 @@ export default function NeuLieder() {
                   <div key={l.stueck.id} style={{ borderBottom: '1px solid var(--n-sep)', margin: '0 4px 0 4px' }}>
                     <Zeile bild={<LiedCover id={l.stueck.id} />} titel={l.stueck.titel}
                       untertitel={[l.stueck.komponist, liedInhalt(l.stueck, T)].filter(Boolean).join(' · ')}
-                      to={`/schueler/repertoire/${l.stueck.id}`} state={navState} />
+                      to={`${basis}/repertoire/${l.stueck.id}`} state={navState} />
                   </div>
                 ))}
               </div>

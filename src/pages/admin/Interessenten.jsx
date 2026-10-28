@@ -151,7 +151,7 @@ function DetailModal({ item, onClose, onErfolg, onEdit, onKonvertieren, onLoesch
             <div style={{ fontWeight:800, fontSize:16, color:'var(--text)' }}>{item.voller_name}</div>
             <div style={{ fontSize:12, color:'var(--text-3)' }}>{T('interessent_since')} {new Date(item.angemeldet_am).toLocaleDateString('de-DE')}</div>
           </div>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
+          <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={s.iconBtn}>✕</button>
         </div>
 
         <div style={{ overflowY:'auto', flex:1, padding:'18px 24px 22px', overscrollBehavior:'contain' }}>
@@ -283,7 +283,7 @@ export function InteressentModal({ item, onClose, onErfolg }) {
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>
             {istNeu ? T('interessent_new') : T('interessent_edit')}
           </h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
+          <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={s.iconBtn}>✕</button>
         </div>
 
         <div style={{ overflowY:'auto', flex:1, padding:'20px 28px 24px', overscrollBehavior:'contain', display:'flex', flexDirection:'column', gap:14 }}>
@@ -421,7 +421,7 @@ export function KonvertierenModal({ item, onClose, onErfolg }) {
       <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', padding:'24px 28px', width:'100%', maxWidth:460, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{T('interessent_konvertieren')}</h3>
-          <button onClick={onClose} style={s.iconBtn}>✕</button>
+          <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={s.iconBtn}>✕</button>
         </div>
 
         <div style={{ background:'var(--bg-2)', borderRadius:'var(--radius)', padding:'12px 14px', marginBottom:18, border:'1px solid var(--border)' }}>

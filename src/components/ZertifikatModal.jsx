@@ -123,9 +123,9 @@ export default function ZertifikatModal({ schueler, kurs, onClose }) {
   }
 
   return createPortal(
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
+    <div className="modal-overlay" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:560, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
+      <div className="modal-inner" style={{ background:'var(--surface)', borderRadius:'var(--radius-lg)', width:'100%', maxWidth:560, boxShadow:'var(--shadow-lg)', border:'1px solid var(--border)' }}>
 
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid var(--border)' }}>
           <span style={{ fontWeight:700, fontSize:15, color:'var(--text)' }}>🎓 Zertifikat erstellen</span>
@@ -133,7 +133,7 @@ export default function ZertifikatModal({ schueler, kurs, onClose }) {
             <button onClick={drucken} style={{ padding:'8px 18px', borderRadius:'var(--radius)', border:'none', background:'var(--primary)', color:'var(--primary-fg)', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               🖨 Als PDF speichern
             </button>
-            <button onClick={onClose} style={{ padding:'8px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
+            <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={{ padding:'8px 12px', borderRadius:'var(--radius)', border:'1px solid var(--border)', background:'transparent', color:'var(--text)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
           </div>
         </div>
 

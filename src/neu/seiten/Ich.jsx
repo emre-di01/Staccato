@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut, Users, CalendarDays, Wrench, Building2, Inbox } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Segment, Schalter } from '../../ui'
-import JoinSessionModal from '../../components/layout/JoinSessionModal'
+import LiveBeitretenBlatt from '../LiveBeitretenBlatt'
 import { useUngelesen } from '../daten'
 import { useBasis } from '../rolle'
 
@@ -15,6 +15,7 @@ export default function NeuIch() {
   const basis = useBasis()
   const lehrer = rolle === 'lehrer'
   const admin = rolle === 'admin' || rolle === 'superadmin'
+  const eltern = rolle === 'eltern'
 
   const name = profil?.voller_name ?? ''
   const initial = (name[0] ?? '?').toUpperCase()
@@ -33,6 +34,11 @@ export default function NeuIch() {
     ] : []),
     <Zeile key="dateien" icon={FolderOpen} titel={T('eigene_meine')} to="/meine-dateien" />,
     <Zeile key="werkzeuge" icon={Wrench} titel={T('tools_title')} untertitel={T('n_werkzeuge_untertitel')} to="/admin/tools" />,
+  ] : eltern ? [
+    nachrichten,
+    <Zeile key="kinder" icon={Users} titel={T('ne_tab_kinder')} to="/eltern/kinder" />,
+    <Zeile key="dokumente" icon={FileText} titel={T('n_dokumente')} untertitel={T('n_dokumente_untertitel')} to="/eltern/dateien" />,
+    <Zeile key="werkzeuge" icon={Wrench} titel={T('tools_title')} untertitel={T('n_werkzeuge_untertitel')} to="/eltern/tools" />,
   ] : lehrer ? [
     nachrichten,
     <Zeile key="schueler" icon={Users} titel={T('my_students')} to="/lehrer/schueler" />,
@@ -42,15 +48,15 @@ export default function NeuIch() {
   ] : [
     nachrichten,
     <Zeile key="dateien" icon={FolderOpen} titel={T('eigene_meine')} to="/meine-dateien" />,
-    <Zeile key="kurse" icon={Music} titel={T('my_classes')} untertitel={T('n_kurse_untertitel')} to="/schueler/kurse" />,
-    <Zeile key="dokumente" icon={FileText} titel={T('n_dokumente')} untertitel={T('n_dokumente_untertitel')} to="/schueler/dateien" />,
+    <Zeile key="kurse" icon={Music} titel={T('my_classes')} untertitel={T('n_kurse_untertitel')} to={`${basis}/kurse`} />,
+    <Zeile key="dokumente" icon={FileText} titel={T('n_dokumente')} untertitel={T('n_dokumente_untertitel')} to={`${basis}/dateien`} />,
     <Zeile key="live" icon={Radio} titel={T('n_live_beitreten')} untertitel={T('n_live_untertitel')} onClick={() => setJoinOffen(true)} />,
-    <Zeile key="werkzeuge" icon={Wrench} titel={T('tools_title')} untertitel={T('n_werkzeuge_untertitel')} to="/schueler/tools" />,
+    <Zeile key="werkzeuge" icon={Wrench} titel={T('tools_title')} untertitel={T('n_werkzeuge_untertitel')} to={`${basis}/tools`} />,
   ]
   const weitere = [
     ...(schulenListe?.length > 1 ? [<Zeile key="schule" icon={School} titel={T('n_schule_wechseln')} untertitel={schule?.name} to="/schulen" />] : []),
     <Zeile key="einstellungen" icon={Settings} titel={T('n_weitere_einstellungen')} untertitel={T('n_einstellungen_untertitel')} to="/einstellungen" />,
-    ...(lehrer || admin ? [] : [<Zeile key="faq" icon={CircleHelp} titel={T('n_hilfe')} to="/schueler/faq" />]),
+    ...(lehrer || admin || eltern ? [] : [<Zeile key="faq" icon={CircleHelp} titel={T('n_hilfe')} to={`${basis}/faq`} />]),
   ]
 
   return (
@@ -90,10 +96,10 @@ export default function NeuIch() {
 
       <Gruppe style={{ marginTop: 24, padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 600 }}>{admin ? T('n_neues_design') : T('n_klassisches_design')}</div>
-          <div style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 2 }}>{admin ? T('na_neues_design_hinweis') : T('n_klassisches_design_hinweis')}</div>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{T('n_klassisches_design')}</div>
+          <div style={{ fontSize: 15, color: 'var(--text-2)', marginTop: 2 }}>{T('n_klassisches_design_hinweis')}</div>
         </div>
-        <Schalter an={admin} label={admin ? T('n_neues_design') : T('n_klassisches_design')} onChange={zurAltenAnsicht} />
+        <Schalter an={false} label={T('n_klassisches_design')} onChange={zurAltenAnsicht} />
       </Gruppe>
 
       <Gruppe style={{ marginTop: 24 }}>
@@ -106,7 +112,7 @@ export default function NeuIch() {
         </button>
       </div>
 
-      {joinOffen && <JoinSessionModal onClose={() => setJoinOffen(false)} />}
+      {joinOffen && <LiveBeitretenBlatt onClose={() => setJoinOffen(false)} />}
     </Seite>
   )
 }

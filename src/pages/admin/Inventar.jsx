@@ -94,7 +94,7 @@ export function KategorienModal({ schuleId, onClose, onGeaendert }) {
           {mob && <div style={{ width:40, height:4, borderRadius:2, background:'var(--border)', margin:'0 auto 14px' }} />}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:'var(--text)' }}>⚙️ {T('inv_kat_manage')}</h3>
-            <button onClick={onClose} style={s.iconBtn}>✕</button>
+            <button onClick={onClose} aria-label="Schließen" className="modal-schliessen" style={s.iconBtn}>✕</button>
           </div>
         </div>
         <div style={{ overflowY:'auto', flex:1, padding: mob ? '16px 16px 28px' : '16px 28px 28px', overscrollBehavior:'contain' }}>

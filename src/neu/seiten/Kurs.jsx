@@ -8,17 +8,19 @@ import { useMeineStunden, useMeineLieder, useAbsage } from '../daten'
 import { StundeKarte } from '../karten'
 import { tagLabel, uhrzeit } from '../zeit'
 import { useKurseMitLehrern, KURS_ICON } from './Kurse'
+import { useBasis } from '../rolle'
 
 const ANSICHTEN = ['termine', 'lieder', 'anwesenheit', 'dateien']
 
 export default function NeuKurs() {
   const { id } = useParams()
   const { T, lang } = useApp()
+  const basis = useBasis()
   const [params, setParams] = useSearchParams()
   const ansicht = ANSICHTEN.includes(params.get('ansicht')) ? params.get('ansicht') : 'termine'
   const { data: kurse, isLoading } = useKurseMitLehrern()
   const kurs = kurse?.find(k => k.id === id)
-  const zurueck = { to: '/schueler/kurse', label: T('my_classes') }
+  const zurueck = { to: `${basis}/kurse`, label: T('my_classes') }
 
   if (isLoading) return <Seite zurueck={zurueck}><div style={{ marginTop: 24 }}><Laden hoehe={200} /></div></Seite>
   if (!kurs) return <Seite zurueck={zurueck}><div style={{ marginTop: 24 }}><Leer text={T('kurs_not_found')} /></div></Seite>
@@ -85,6 +87,7 @@ function KursTermine({ kursId }) {
 
 function KursLieder({ kursId }) {
   const { T } = useApp()
+  const basis = useBasis()
   const { data: lieder = [], isLoading } = useMeineLieder()
   const imKurs = lieder
     .map(l => ({ ...l, k: l.kurse.find(k => k.id === kursId) }))
@@ -102,7 +105,7 @@ function KursLieder({ kursId }) {
               {i > 0 && <Trenner />}
               <Zeile bild={<LiedCover id={l.stueck.id} groesse={48} />} titel={l.stueck.titel}
                 untertitel={[l.stueck.komponist, l.k.status === 'aktuell' ? T('n_wird_geprobt') : null].filter(Boolean).join(' · ') || null}
-                to={`/schueler/repertoire/${l.stueck.id}`} state={state} />
+                to={`${basis}/repertoire/${l.stueck.id}`} state={state} />
             </div>
           ))}
         </Gruppe>
