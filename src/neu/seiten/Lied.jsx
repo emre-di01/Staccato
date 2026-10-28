@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Play, Pause, Pencil, Video } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Play, Pause, Pencil, Video, Music, Headphones } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { safeMarkdown } from '../../lib/markdown'
 import { useApp } from '../../context/AppContext'
 import { NEU_THEME } from '../../themes/themes'
-import { liedFarbe, Zeile, Gruppe, Trenner } from '../../ui'
+import { liedFarbe, Gruppe, Trenner } from '../../ui'
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import AkkordDateiAnzeige from '../../components/stueck/AkkordDateiAnzeige'
 import PdfCard from '../../components/stueck/PdfCard'
@@ -91,6 +91,11 @@ export default function NeuLied() {
   const gehe = l => navigate(`/schueler/repertoire/${l.id}`, { state: location.state, replace: true })
 
   const meta = [stueck.komponist, stueck.tonart, stueck.takt].filter(Boolean).join(' · ')
+  const anhoeren = [
+    [stueck.youtube_url, Video, 'YouTube'],
+    [stueck.youtube_music_url, Music, 'YouTube Music'],
+    [stueck.spotify_url, Headphones, 'Spotify'],
+  ].filter(([url]) => url)
   const hatLeiste = audio.length > 0 || vorher || nachher
 
   return (
@@ -109,6 +114,16 @@ export default function NeuLied() {
           <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.15, fontWeight: 800, letterSpacing: '-0.02em', overflowWrap: 'anywhere' }}>{stueck.titel}</h1>
           {meta && <div style={{ marginTop: 6, fontSize: 17, color: '#E8EEF2' }}>{meta}</div>}
         </header>
+
+        {anhoeren.length > 0 && (
+          <nav aria-label={T('n_anhoeren')} style={{ margin: '16px 20px 0', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {anhoeren.map(([url, Icon, name]) => (
+              <a key={name} href={url} target="_blank" rel="noopener noreferrer" style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, background: 'rgba(255,255,255,0.16)', color: '#FFFFFF', textDecoration: 'none', fontSize: 16, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Icon aria-hidden="true" size={18} />{name}
+              </a>
+            ))}
+          </nav>
+        )}
 
         {tabs.length > 1 && (
           <div role="tablist" aria-label={T('n_ansicht')} style={{ margin: '18px 20px 0', padding: 4, borderRadius: 14, background: 'rgba(0,0,0,0.22)', display: 'flex', gap: 4 }}>
@@ -159,13 +174,12 @@ export default function NeuLied() {
                 {audio.map(d => <AudioPlayer key={d.id} datei={d} />)}
               </Bereich>
             )}
-            {(sonst.length > 0 || stueck.youtube_url) && (
+            {sonst.length > 0 && (
               <Bereich titel={T('n_weitere')}>
                 <Gruppe style={{ margin: 0 }}>
-                  {stueck.youtube_url && <Zeile icon={Video} titel={T('n_auf_youtube')} href={stueck.youtube_url} />}
                   {sonst.map((d, i) => (
                     <div key={d.id}>
-                      {(i > 0 || stueck.youtube_url) && <Trenner />}
+                      {i > 0 && <Trenner />}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', flexWrap: 'wrap' }}>
                         <span style={{ flex: 1, minWidth: 160, fontSize: 17, fontWeight: 600, overflowWrap: 'anywhere' }}>{d.name}</span>
                         <OeffnenButton pfad={d.bucket_pfad} />
