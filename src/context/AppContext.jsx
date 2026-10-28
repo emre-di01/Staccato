@@ -47,32 +47,55 @@ export function AppProvider({ children }) {
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
   })
   const [lang,         setLangState]    = useState(() => localStorage.getItem('staccato_lang') || DEFAULT_LANG)
-  const [großeSchrift, setGrosseSchrift] = useState(() => localStorage.getItem('staccato_grosse_schrift') === 'true')
+  // Schriftstufe 0 = normal, 1 = groß, 2 = sehr groß (Zoom); „großeSchrift“ bleibt für alte Stellen erhalten
+  const [schriftStufe, setSchriftStufeState] = useState(() => {
+    const s = parseInt(localStorage.getItem('staccato_schriftstufe') ?? '', 10)
+    if (s >= 0 && s <= 2) return s
+    return localStorage.getItem('staccato_grosse_schrift') === 'true' ? 1 : 0
+  })
+  const großeSchrift = schriftStufe > 0
+  // Farbmodus hell | dunkel | auto (auto folgt dem Gerät)
+  const [farbmodus, setFarbmodusState] = useState(() => {
+    const m = localStorage.getItem('staccato_farbmodus')
+    if (m === 'hell' || m === 'dunkel' || m === 'auto') return m
+    const d = localStorage.getItem('staccato_dark')
+    return d === null ? 'auto' : d === 'true' ? 'dunkel' : 'hell'
+  })
+  const farbmodusRef = useRef(farbmodus)
+  // Neues Design (Opt-in, im Profil gespeichert; localStorage nur für den ersten Paint)
+  const [neuesDesign, setNeuesDesignState] = useState(() => localStorage.getItem('staccato_neues_design') === 'true')
 
   const loadedUidRef = useRef(null)
   const profilIdRef  = useRef(null)
 
   useEffect(() => {
-    applyTheme(theme, darkMode)
-    if (schule?.farbe) document.documentElement.style.setProperty('--primary', schule.farbe)
+    if (neuesDesign) {
+      // Neues Design: ein Farbschema für alle Schulen, keine Schulfarbe
+      applyTheme('neu2026', darkMode)
+    } else {
+      applyTheme(theme, darkMode)
+      if (schule?.farbe) document.documentElement.style.setProperty('--primary', schule.farbe)
+    }
     localStorage.setItem('staccato_theme', theme)
     localStorage.setItem('staccato_dark', darkMode)
-  }, [theme, darkMode, schule?.farbe])
+    localStorage.setItem('staccato_neues_design', String(neuesDesign))
+  }, [theme, darkMode, schule?.farbe, neuesDesign])
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
     if (!mq) return
     const handler = e => {
-      if (localStorage.getItem('staccato_dark') === null) setDarkMode(e.matches)
+      if (farbmodusRef.current === 'auto') setDarkMode(e.matches)
     }
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
 
   useEffect(() => {
-    document.documentElement.style.zoom = großeSchrift ? '1.15' : ''
-    localStorage.setItem('staccato_grosse_schrift', String(großeSchrift))
-  }, [großeSchrift])
+    document.documentElement.style.zoom = ['', '1.15', '1.3'][schriftStufe] ?? ''
+    localStorage.setItem('staccato_schriftstufe', String(schriftStufe))
+    localStorage.setItem('staccato_grosse_schrift', String(schriftStufe > 0))
+  }, [schriftStufe])
 
   useEffect(() => {
     if (schule?.name) document.title = `Staccato – ${schule.name}`
@@ -97,7 +120,8 @@ export function AppProvider({ children }) {
         setProfil(data)
         if (data.sprache)   setLangState(data.sprache)
         if (data.thema)     setThemeKey(data.thema)
-        if (data.dark_mode != null) setDarkMode(data.dark_mode)
+        if (data.dark_mode != null && farbmodusRef.current !== 'auto') setDarkMode(data.dark_mode)
+        if (data.neues_design != null) setNeuesDesignState(data.neues_design)
 
         const activeSchuleId = data.letzte_schule_id ?? data.schule_id
         if (activeSchuleId) {
@@ -199,11 +223,39 @@ export function AppProvider({ children }) {
   }
 
   function toggleDark() {
-    setDarkMode(d => { const next = !d; saveToProfile({ dark_mode: next }); return next })
+    setDarkMode(d => {
+      const next = !d
+      saveToProfile({ dark_mode: next })
+      farbmodusRef.current = next ? 'dunkel' : 'hell'
+      setFarbmodusState(farbmodusRef.current)
+      localStorage.setItem('staccato_farbmodus', farbmodusRef.current)
+      return next
+    })
+  }
+
+  function setFarbmodus(m) {
+    farbmodusRef.current = m
+    setFarbmodusState(m)
+    localStorage.setItem('staccato_farbmodus', m)
+    if (m === 'auto') {
+      setDarkMode(window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false)
+    } else {
+      setDarkMode(m === 'dunkel')
+      saveToProfile({ dark_mode: m === 'dunkel' })
+    }
   }
 
   function toggleGrosseSchrift() {
-    setGrosseSchrift(g => !g)
+    setSchriftStufeState(s => (s > 0 ? 0 : 1))
+  }
+
+  function setSchriftStufe(stufe) {
+    setSchriftStufeState(Math.max(0, Math.min(2, stufe)))
+  }
+
+  function setNeuesDesign(an) {
+    setNeuesDesignState(an)
+    saveToProfile({ neues_design: an })
   }
 
   function setLang(l) {
@@ -237,7 +289,9 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       session, profil, rolle, laden,
       theme, darkMode, lang, zeitzone,
-      großeSchrift, toggleGrosseSchrift,
+      großeSchrift, toggleGrosseSchrift, schriftStufe, setSchriftStufe,
+      farbmodus, setFarbmodus,
+      neuesDesign, setNeuesDesign,
       schule, setSchule, abo,
       schulenListe,
       schuleWechseln,

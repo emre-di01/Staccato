@@ -4,20 +4,13 @@ import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { THEMES, THEME_KEYS } from '../themes/themes'
 import { ONBOARDING_LS_KEY } from '../components/OnboardingModal'
-import { isNative, registerNativePush, unregisterNativePush, isNativePushRegistered } from '../lib/nativePush'
+import { usePushAbo } from '../hooks/usePushAbo'
 
 const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL ?? ''
-const VAPID_PUBLIC_KEY  = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? ''
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4)
-  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw     = atob(base64)
-  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
-}
 
 export default function Einstellungen() {
-  const { profil, ladeProfil, T, rolle, lang, setLang, theme, darkMode, changeTheme, toggleDark, großeSchrift, toggleGrosseSchrift } = useApp()
+  const { profil, ladeProfil, T, rolle, lang, setLang, theme, darkMode, changeTheme, toggleDark, großeSchrift, toggleGrosseSchrift, neuesDesign, setNeuesDesign } = useApp()
+  const neuesDesignMoeglich = rolle === 'schueler'
   const navigate = useNavigate()
 
   const DEFAULT_NOTIF = { event_invite: true, new_piece: true, new_message: true, lesson_reminder: false }
@@ -25,10 +18,7 @@ export default function Einstellungen() {
   const [notifLaden,  setNotifLaden]  = useState(false)
   const [notifErfolg, setNotifErfolg] = useState(false)
 
-  const DEFAULT_PUSH_PREFS = { new_message: true, event_invite: true, broadcast: true, kurs: true }
-  const [pushPrefs,   setPushPrefs]   = useState({ ...DEFAULT_PUSH_PREFS, ...(profil?.email_benachrichtigungen?.push ?? {}) })
-  const [pushEnabled, setPushEnabled] = useState(false)
-  const [pushLaden,   setPushLaden]   = useState(true)
+  const { pushEnabled, pushLaden, pushPrefs, pushToggle, pushPrefToggle } = usePushAbo(profil)
 
   const [kalenderToken, setKalenderToken] = useState(null)
   const [kalTokenLaden, setKalTokenLaden] = useState(true)
@@ -39,84 +29,6 @@ export default function Einstellungen() {
     supabase.from('profiles').select('kalender_token').eq('id', profil.id).single()
       .then(({ data }) => { setKalenderToken(data?.kalender_token ?? null); setKalTokenLaden(false) })
   }, [profil?.id])
-
-  useEffect(() => {
-    if (!profil?.id) return
-    async function checkPush() {
-      try {
-        if (isNative) {
-          setPushEnabled(await isNativePushRegistered(profil.id, supabase))
-          setPushLaden(false)
-          return
-        }
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-          setPushEnabled(false); setPushLaden(false); return
-        }
-        const reg = await navigator.serviceWorker.ready
-        const sub = await reg.pushManager.getSubscription()
-        if (sub) {
-          const { data } = await supabase.from('push_subscriptions').select('id').eq('user_id', profil.id).eq('endpoint', sub.endpoint).maybeSingle()
-          setPushEnabled(!!data)
-        } else {
-          setPushEnabled(false)
-        }
-      } catch { setPushEnabled(false) }
-      finally  { setPushLaden(false) }
-    }
-    checkPush()
-  }, [profil?.id])
-
-  async function pushToggle() {
-    if (pushLaden) return
-    setPushLaden(true)
-    try {
-      if (isNative) {
-        if (pushEnabled) {
-          await unregisterNativePush(profil.id, supabase)
-          setPushEnabled(false)
-        } else {
-          const ok = await registerNativePush(profil.id, supabase)
-          setPushEnabled(ok)
-        }
-        setPushLaden(false)
-        return
-      }
-      const reg = await navigator.serviceWorker.ready
-      if (pushEnabled) {
-        const sub = await reg.pushManager.getSubscription()
-        if (sub) {
-          await sub.unsubscribe()
-          await supabase.from('push_subscriptions').delete().eq('user_id', profil.id).eq('endpoint', sub.endpoint)
-        }
-        setPushEnabled(false)
-      } else {
-        const permission = await Notification.requestPermission()
-        if (permission !== 'granted') { setPushLaden(false); return }
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-        })
-        const key  = sub.getKey('p256dh')
-        const auth = sub.getKey('auth')
-        await supabase.from('push_subscriptions').upsert({
-          user_id:  profil.id,
-          endpoint: sub.endpoint,
-          p256dh:   btoa(String.fromCharCode(...new Uint8Array(key))),
-          auth_key: btoa(String.fromCharCode(...new Uint8Array(auth))),
-          platform: 'web',
-        }, { onConflict: 'endpoint' })
-        setPushEnabled(true)
-      }
-    } catch (e) { console.error('Push toggle error:', e) }
-    setPushLaden(false)
-  }
-
-  async function pushPrefToggle(key) {
-    const newPrefs = { ...pushPrefs, [key]: !pushPrefs[key] }
-    setPushPrefs(newPrefs)
-    const prefs = profil?.email_benachrichtigungen ?? {}
-    await supabase.from('profiles').update({ email_benachrichtigungen: { ...prefs, push: newPrefs } }).eq('id', profil.id)
-  }
 
   const kalenderUrl = kalenderToken
     ? `${SUPABASE_URL}/functions/v1/kalender?token=${kalenderToken}`
@@ -147,6 +59,23 @@ export default function Einstellungen() {
   return (
     <div style={{ maxWidth: 600 }}>
       <h1 style={s.h1}>⚙️ {T('settings')}</h1>
+
+      {/* Neues Design (Opt-in, vorerst Schüler) */}
+      {neuesDesignMoeglich && (
+        <div style={s.card}>
+          <button onClick={() => setNeuesDesign(!neuesDesign)} role="switch" aria-checked={neuesDesign}
+            style={{ ...s.toggleRow, border: `1.5px solid ${neuesDesign ? 'var(--primary)' : 'var(--border)'}`, background: neuesDesign ? 'color-mix(in srgb, var(--primary) 6%, transparent)' : 'var(--bg)' }}>
+            <span style={{ fontSize: 18 }}>✨</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{T('n_neues_design_ausprobieren')}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 2 }}>{T('n_neues_design_beschreibung')}</div>
+            </div>
+            <div style={{ width: 42, height: 24, borderRadius: 99, background: neuesDesign ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: 3, left: neuesDesign ? 21 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.2)', transition: 'left 0.2s' }} />
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Erscheinungsbild */}
       <div style={s.card}>
@@ -194,7 +123,7 @@ export default function Einstellungen() {
           </button>
         </div>
 
-        <div style={s.gruppe}>
+        {!neuesDesign && <div style={s.gruppe}>
           <div style={s.gruppeLabel}>{T('theme')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {THEME_KEYS.map(key => (
@@ -205,7 +134,7 @@ export default function Einstellungen() {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* E-Mail-Benachrichtigungen */}

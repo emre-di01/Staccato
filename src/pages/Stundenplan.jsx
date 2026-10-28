@@ -137,7 +137,7 @@ function DetailModal({ stunde, onClose, tz }) {
   useEffect(() => {
     if (!kannEntschuldigen || !profil) return
     supabase.from('anwesenheit')
-      .select('id, status')
+      .select('status')
       .eq('stunde_id', stunde.id)
       .eq('schueler_id', profil.id)
       .maybeSingle()
@@ -148,12 +148,12 @@ function DetailModal({ stunde, onClose, tz }) {
     if (!profil || laden) return
     setLaden(true)
     if (entschuldigt) {
-      await supabase.from('anwesenheit').delete().eq('id', entschuldigt.id)
+      await supabase.from('anwesenheit').delete().eq('stunde_id', stunde.id).eq('schueler_id', profil.id)
       setEntschuldigt(null)
     } else {
       const { data } = await supabase.from('anwesenheit')
         .insert({ stunde_id: stunde.id, schueler_id: profil.id, status: 'entschuldigt' })
-        .select('id, status').single()
+        .select('status').single()
       if (data) setEntschuldigt(data)
     }
     setLaden(false)

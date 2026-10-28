@@ -1,13 +1,8 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import Hinweis from '../Hinweis'
-
-const BUCKET    = 'eigene-dateien'
-const MAX_BYTES = 50 * 1024 * 1024
-const SICHTBARKEITEN = ['privat', 'lehrer', 'alle']
+import { useEigeneDateien, useStueckAuswahl, groesseText, SICHTBARKEITEN } from './useEigeneDateien'
 
 function dateiIcon(mime = '', name = '') {
   if (mime.startsWith('audio/')) return '🎵'
@@ -15,11 +10,6 @@ function dateiIcon(mime = '', name = '') {
   if (mime.startsWith('image/')) return '🖼️'
   if (mime === 'application/pdf' || name.toLowerCase().endsWith('.pdf')) return '📄'
   return '📎'
-}
-
-function groesseText(bytes) {
-  if (!bytes) return ''
-  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 // Route-Präfix für Repertoire-Links; eltern haben kein Repertoire
@@ -32,8 +22,7 @@ function repertoirePfad(rolle, stueckId) {
 // Mit `stueck`: Dateien dieses Stücks (Tab in StueckDetail).
 // Ohne `stueck`: alle Dateien der Schule, die der Nutzer sehen darf (Seite „Meine Dateien“).
 export default function EigeneDateien({ stueck }) {
-  const { profil, rolle, schule, T, toast, confirm } = useApp()
-  const queryClient = useQueryClient()
+  const { profil, rolle, T } = useApp()
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const istGlobal = !stueck
@@ -47,93 +36,25 @@ export default function EigeneDateien({ stueck }) {
   const [ansicht,      setAnsicht]      = useState('meine')   // meine | geteilt (nur global)
   const [suche,        setSuche]        = useState('')
 
-  const { data: dateien = [], isLoading } = useQuery({
-    queryKey: ['eigene-dateien', stueck?.id ?? 'alle', profil?.id, schule?.id],
-    enabled: !!profil?.id && !!schule?.id,
-    queryFn: async () => {
-      let q = supabase.from('stueck_eigene_dateien')
-        .select('*, besitzer:profiles!stueck_eigene_dateien_besitzer_id_fkey(voller_name), stueck:stuecke(id, titel)')
-        .order('hochgeladen_am', { ascending: false })
-      q = istGlobal ? q.eq('schule_id', schule.id).limit(500) : q.eq('stueck_id', stueck.id)
-      const { data, error } = await q
-      if (error) throw error
-      return data ?? []
-    },
-  })
-
-  // Stückauswahl beim Hochladen von der zentralen Seite
-  const { data: stuecke = [] } = useQuery({
-    queryKey: ['eigene-dateien-stuecke', schule?.id],
-    enabled: istGlobal && !!auswahl && !!schule?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('stuecke').select('id, titel').eq('schule_id', schule.id).order('titel')
-      return data ?? []
-    },
-  })
-
-  const meine   = dateien.filter(d => d.besitzer_id === profil?.id)
-  const geteilt = dateien.filter(d => d.besitzer_id !== profil?.id)
+  const { dateien, isLoading, meine, geteilt, pruefen, hochladen: dateiHochladen, oeffnen, sichtbarkeitAendern, loeschen } = useEigeneDateien(stueck)
+  const { data: stuecke = [] } = useStueckAuswahl(istGlobal && !!auswahl)
 
   const s_ = suche.trim().toLowerCase()
   const trifft = d => !s_ || [d.name, d.notiz, d.stueck?.titel, d.besitzer?.voller_name].some(x => x?.toLowerCase().includes(s_))
   const liste = (istGlobal && ansicht === 'geteilt' ? geteilt : meine).filter(trifft)
 
-  function neuLaden() { queryClient.invalidateQueries({ queryKey: ['eigene-dateien'] }) }
-
   function dateiGewaehlt(e) {
     const f = e.target.files?.[0]
     e.target.value = ''
-    if (!f) return
-    if (f.size > MAX_BYTES) { toast(T('eigene_zu_gross'), 'error'); return }
+    if (!f || !pruefen(f)) return
     setAuswahl(f); setSichtbarkeit('privat'); setNotiz(''); setZielStueck('')
   }
 
   async function hochladen() {
     setLaden(true)
-    const stueckId = stueck?.id ?? (zielStueck || null)
-    const sichererName = auswahl.name.replace(/[^\w.-]+/g, '_')
-    const pfad = `${profil.id}/${stueckId ?? 'allgemein'}/${crypto.randomUUID()}-${sichererName}`
-    const { error: upErr } = await supabase.storage.from(BUCKET).upload(pfad, auswahl, { contentType: auswahl.type || undefined })
-    if (upErr) { setLaden(false); toast(upErr.message, 'error'); return }
-    const { error } = await supabase.from('stueck_eigene_dateien').insert({
-      stueck_id: stueckId, schule_id: schule.id, besitzer_id: profil.id,
-      name: auswahl.name, bucket_pfad: pfad, mime_typ: auswahl.type || null, groesse: auswahl.size,
-      sichtbarkeit, notiz: notiz.trim() || null,
-    })
+    const ok = await dateiHochladen(auswahl, { sichtbarkeit, notiz, stueckId: stueck?.id ?? (zielStueck || null) })
     setLaden(false)
-    if (error) {
-      await supabase.storage.from(BUCKET).remove([pfad])
-      toast(error.message, 'error'); return
-    }
-    toast(T('eigene_hochgeladen'), 'success')
-    setAuswahl(null); setAnsicht('meine')
-    neuLaden()
-  }
-
-  async function oeffnen(d) {
-    // Fenster sofort öffnen, sonst blockiert iOS das Popup nach dem await
-    const fenster = window.open('', '_blank')
-    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(d.bucket_pfad, 3600)
-    if (error || !data?.signedUrl) { fenster?.close(); toast(error?.message ?? 'Fehler', 'error'); return }
-    if (fenster) fenster.location = data.signedUrl
-    else window.location.href = data.signedUrl
-  }
-
-  async function sichtbarkeitAendern(d, wert) {
-    const { error } = await supabase.from('stueck_eigene_dateien').update({ sichtbarkeit: wert }).eq('id', d.id)
-    if (error) { toast(error.message, 'error'); return }
-    neuLaden()
-  }
-
-  async function loeschen(d) {
-    const ok = await confirm(T('eigene_loeschen_confirm'), { confirmLabel: T('delete') })
-    if (!ok) return
-    // Erst Storage (dessen Policy prüft die Metadaten-Zeile), dann die Zeile
-    const { error: stErr } = await supabase.storage.from(BUCKET).remove([d.bucket_pfad])
-    if (stErr) { toast(stErr.message, 'error'); return }
-    const { error } = await supabase.from('stueck_eigene_dateien').delete().eq('id', d.id)
-    if (error) { toast(error.message, 'error'); return }
-    neuLaden()
+    if (ok) { setAuswahl(null); setAnsicht('meine') }
   }
 
   function dateiZeile(d) {

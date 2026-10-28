@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import OnboardingModal from '../../components/OnboardingModal'
+import NeuesDesignHinweis from '../../neu/NeuesDesignHinweis'
 import Hinweis from '../../components/Hinweis'
 import { Skeleton, SkeletonStatCard, SkeletonList, SkeletonStyle } from '../../components/Skeleton'
 
@@ -143,6 +144,7 @@ export default function SchuelerDashboard() {
   return (
     <div>
       <OnboardingModal />
+      <NeuesDesignHinweis />
       <div style={{ marginBottom:20 }}>
         <div style={{ fontSize:13, color:'var(--text-3)', marginBottom:4 }}>{gruss}</div>
         <h1 style={{ fontSize:28, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', margin:'0 0 12px' }}>

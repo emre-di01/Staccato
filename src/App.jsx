@@ -6,6 +6,7 @@ import { AppProvider, useApp } from './context/AppContext'
 import PageErrorBoundary from './components/PageErrorBoundary'
 import ProtectedRoute, { startseiteNach } from './components/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
+import AppShell from './neu/AppShell'
 import ConsentBanner from './components/ConsentBanner'
 import WhatsNewModal from './components/WhatsNewModal'
 
@@ -58,12 +59,40 @@ const SchulWaehler         = lazy(() => import('./pages/SchulWaehler'))
 const Einladung            = lazy(() => import('./pages/Einladung'))
 const SuperadminDashboard  = lazy(() => import('./pages/superadmin/Dashboard'))
 const SuperadminDemos      = lazy(() => import('./pages/superadmin/Demos'))
+// Neues Design (Opt-in, Phase 2: Schüler)
+const NeuStart             = lazy(() => import('./neu/seiten/Start'))
+const NeuTermine           = lazy(() => import('./neu/seiten/Termine'))
+const NeuLieder            = lazy(() => import('./neu/seiten/Lieder'))
+const NeuLied              = lazy(() => import('./neu/seiten/Lied'))
+const NeuIch               = lazy(() => import('./neu/seiten/Ich'))
+const NeuNachrichten       = lazy(() => import('./neu/seiten/Nachrichten'))
+const NeuKurse             = lazy(() => import('./neu/seiten/Kurse'))
+const NeuKurs              = lazy(() => import('./neu/seiten/Kurs'))
+const NeuDokumente         = lazy(() => import('./neu/seiten/Dokumente'))
+const NeuMeineDateien      = lazy(() => import('./neu/seiten/MeineDateien'))
+const NeuProfil            = lazy(() => import('./neu/seiten/Profil'))
+const NeuEinstellungen     = lazy(() => import('./neu/seiten/Einstellungen'))
+const NeuHilfe             = lazy(() => import('./neu/seiten/Hilfe'))
 
 function RollenWeiterleitung() {
   const { session, rolle, laden } = useApp()
   if (laden) return null
   if (!session) return <Navigate to="/login" replace />
   return <Navigate to={startseiteNach(rolle)} replace />
+}
+
+// Neues Design: vorerst nur für Schüler, nur wenn im Profil eingeschaltet
+function useNeuesDesignAktiv() {
+  const { neuesDesign, rolle } = useApp()
+  return neuesDesign && rolle === 'schueler'
+}
+
+function LayoutWahl() {
+  return useNeuesDesignAktiv() ? <AppShell /> : <AppLayout />
+}
+
+function DesignWahl({ alt, neu }) {
+  return useNeuesDesignAktiv() ? neu : alt
 }
 
 function AppRoutes() {
@@ -127,22 +156,23 @@ function AppRoutes() {
 
       {/* ── Schüler ── */}
       <Route element={<ProtectedRoute erlaubteRollen={['schueler']} />}>
-        <Route element={<AppLayout />}>
-          <Route path="/schueler"                     element={<SchuelerDashboard />} />
-          <Route path="/schueler/stundenplan"         element={<Stundenplan />} />
-          <Route path="/schueler/kurse"               element={<SchuelerKurse />} />
-          <Route path="/schueler/kurse/:id"           element={<SchuelerKursDetail />} />
+        <Route element={<LayoutWahl />}>
+          <Route path="/schueler"                     element={<DesignWahl alt={<SchuelerDashboard />} neu={<NeuStart />} />} />
+          <Route path="/schueler/stundenplan"         element={<DesignWahl alt={<Stundenplan />} neu={<NeuTermine />} />} />
+          <Route path="/schueler/ich"                 element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
+          <Route path="/schueler/kurse"               element={<DesignWahl alt={<SchuelerKurse />} neu={<NeuKurse />} />} />
+          <Route path="/schueler/kurse/:id"           element={<DesignWahl alt={<SchuelerKursDetail />} neu={<NeuKurs />} />} />
           <Route path="/schueler/kurse/:id/anwesenheit" element={<SchuelerAnwesenheit />} />
-          <Route path="/schueler/dateien"             element={<SchuelerDateien />} />
-          <Route path="/schueler/events"                                       element={<SchuelerEvents />} />
+          <Route path="/schueler/dateien"             element={<DesignWahl alt={<SchuelerDateien />} neu={<NeuDokumente />} />} />
+          <Route path="/schueler/events"                                       element={<DesignWahl alt={<SchuelerEvents />} neu={<NeuTermine />} />} />
           <Route path="/schueler/events/:id/repertoire"                      element={<EventRepertoire />} />
           <Route path="/schueler/events/:kursId/repertoire/:stueckId"        element={<StueckDetail />} />
-          <Route path="/schueler/repertoire"         element={<Repertoire />} />
-          <Route path="/schueler/repertoire/:stueckId" element={<StueckDetail />} />
-          <Route path="/schueler/nachrichten"         element={<Nachrichten />} />
+          <Route path="/schueler/repertoire"         element={<DesignWahl alt={<Repertoire />} neu={<NeuLieder />} />} />
+          <Route path="/schueler/repertoire/:stueckId" element={<DesignWahl alt={<StueckDetail />} neu={<NeuLied />} />} />
+          <Route path="/schueler/nachrichten"         element={<DesignWahl alt={<Nachrichten />} neu={<NeuNachrichten />} />} />
           <Route path="/schueler/tools"              element={<Tools />} />
-          <Route path="/schueler/faq"                element={<SchuelerFAQ />} />
-          <Route path="/schueler/profil"              element={<ProfilSeite />} />
+          <Route path="/schueler/faq"                element={<DesignWahl alt={<SchuelerFAQ />} neu={<NeuHilfe />} />} />
+          <Route path="/schueler/profil"              element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
         </Route>
       </Route>
 
@@ -209,10 +239,10 @@ function AppRoutes() {
 
       {/* Profil & Einstellungen - für alle Rollen */}
       <Route element={<ProtectedRoute erlaubteRollen={['admin','superadmin','lehrer','schueler','eltern','vorstand']} />}>
-        <Route element={<AppLayout />}>
-          <Route path="/profil"         element={<ProfilSeite />} />
-          <Route path="/einstellungen"  element={<Einstellungen />} />
-          <Route path="/meine-dateien"  element={<MeineDateien />} />
+        <Route element={<LayoutWahl />}>
+          <Route path="/profil"         element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
+          <Route path="/einstellungen"  element={<DesignWahl alt={<Einstellungen />} neu={<NeuEinstellungen />} />} />
+          <Route path="/meine-dateien"  element={<DesignWahl alt={<MeineDateien />} neu={<NeuMeineDateien />} />} />
         </Route>
       </Route>
 

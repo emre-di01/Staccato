@@ -331,6 +331,48 @@ export const THEMES = {
   },
 }
 
+// ─── Staccato 2026 (neues Design, Opt-in) ─────────────────────
+// Bewusst NICHT in THEMES: taucht nicht in der alten Theme-Auswahl auf.
+// Die klassischen Variablen (--bg, --text …) werden mitgesetzt, damit noch
+// nicht umgebaute Seiten in der neuen Hülle stimmig aussehen.
+const NEU_GLOBAL_CSS = `
+  html[data-theme="neu2026"] body {
+    font-family: 'Inter Variable', Inter, system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+`
+export const NEU_THEME = {
+  light: {
+    '--bg': '#FFFFFF', '--bg-2': '#F2F2F5', '--bg-3': '#E3E3E8',
+    '--surface': '#FFFFFF', '--surface-2': '#F2F2F5', '--border': '#E3E3E8',
+    '--text': '#111114', '--text-2': '#5E5E66', '--text-3': '#6E6E76',
+    '--primary': '#C2410C', '--primary-fg': '#FFFFFF', '--accent': '#C2410C', '--accent-fg': '#FFFFFF',
+    '--danger': '#B42318', '--success': '#15803D', '--warning': '#B45309',
+    '--shadow': '0 1px 3px rgba(17,17,20,0.06)', '--shadow-lg': '0 12px 40px rgba(17,17,20,0.16)',
+    '--radius': '14px', '--radius-lg': '20px',
+    '--n-fill': '#F2F2F5', '--n-fill-2': '#E3E3E8', '--n-sep': '#E3E3E8',
+    '--n-tint': '#FBE3D9', '--n-tint-fg': '#9A3412', '--n-chev': '#8E8E96',
+    '--n-hero': '#C2410C', '--n-hero-2': '#A3360A', '--n-hero-sub': '#FFE4D6', '--n-hero-btn-fg': '#9A3412',
+    '--n-bar': 'rgba(250,250,252,0.88)', '--n-overlay': 'rgba(17,17,20,0.4)',
+    globalCss: NEU_GLOBAL_CSS,
+  },
+  dark: {
+    '--bg': '#000000', '--bg-2': '#1C1C1E', '--bg-3': '#2C2C2E',
+    '--surface': '#1C1C1E', '--surface-2': '#2C2C2E', '--border': '#38383A',
+    '--text': '#F5F5F7', '--text-2': '#A1A1AA', '--text-3': '#8E8E96',
+    '--primary': '#FB923C', '--primary-fg': '#1A0E05', '--accent': '#FB923C', '--accent-fg': '#1A0E05',
+    '--danger': '#F87171', '--success': '#4ADE80', '--warning': '#FBBF24',
+    '--shadow': '0 1px 3px rgba(0,0,0,0.5)', '--shadow-lg': '0 12px 40px rgba(0,0,0,0.6)',
+    '--radius': '14px', '--radius-lg': '20px',
+    '--n-fill': '#1C1C1E', '--n-fill-2': '#2C2C2E', '--n-sep': '#2C2C2E',
+    '--n-tint': '#3A2418', '--n-tint-fg': '#FDBA74', '--n-chev': '#8E8E96',
+    '--n-hero': '#C2410C', '--n-hero-2': '#A3360A', '--n-hero-sub': '#FFE4D6', '--n-hero-btn-fg': '#9A3412',
+    '--n-bar': 'rgba(22,22,24,0.88)', '--n-overlay': 'rgba(0,0,0,0.6)',
+    globalCss: NEU_GLOBAL_CSS,
+  },
+}
+
 export const THEME_KEYS = Object.keys(THEMES)
 
 const THEME_META_COLORS = {
@@ -340,10 +382,11 @@ const THEME_META_COLORS = {
   kreativ: { light: '#faf5ff', dark: '#0a0514' },
   liquid:  { light: '#C8D8F8', dark: '#0A1628' },
   fresh:   { light: '#f0fdf4', dark: '#020f06' },
+  neu2026: { light: '#FFFFFF', dark: '#000000' },
 }
 
 export function applyTheme(themeKey, darkMode) {
-  const theme = THEMES[themeKey]
+  const theme = themeKey === 'neu2026' ? NEU_THEME : THEMES[themeKey]
   if (!theme) return
   const vars = darkMode ? theme.dark : theme.light
   const root = document.documentElement

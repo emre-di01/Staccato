@@ -311,7 +311,7 @@ export default function SchuelerKursDetail() {
   async function stundeAbsagen(stunde) {
     const vorhanden = anwesenheiten[stunde.id]
     if (vorhanden) {
-      await supabase.from('anwesenheit').delete().eq('id', vorhanden.id)
+      await supabase.from('anwesenheit').delete().eq('stunde_id', stunde.id).eq('schueler_id', profil.id)
       setAnwesenheiten(prev => { const n = { ...prev }; delete n[stunde.id]; return n })
     } else {
       const { error } = await supabase.from('anwesenheit').insert({
