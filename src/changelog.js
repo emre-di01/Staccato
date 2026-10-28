@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.4'
+export const CURRENT_VERSION = '2.9.5'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.5',
+    date: '2026-10-28',
+    features: [
+      {
+        icon: '➕',
+        de: 'Kurse und Events: Beim Hinzufügen von Liedern direkt ein neues Lied anlegen',
+        en: 'Courses and events: create a new song right from the add-song dialog',
+        tr: 'Kurslar ve etkinlikler: Şarkı eklerken doğrudan yeni şarkı oluştur',
+      },
+    ],
+  },
   {
     version: '2.9.4',
     date: '2026-10-28',

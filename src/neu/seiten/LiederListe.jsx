@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, ChevronUp, ChevronDown, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
@@ -129,7 +129,9 @@ const pfeil = aus => ({ width: 40, height: 30, border: 'none', background: 'tran
 
 // Lied aus der Bibliothek zuordnen (Kurs: benachrichtigt die Teilnehmer wie bisher)
 function HinzufuegenBlatt({ art, zielId, vorhanden, anzahl, onClose, onFertig }) {
-  const { T, toast } = useApp()
+  const { T, toast, profil, schule } = useApp()
+  const basis = useBasis()
+  const navigate = useNavigate()
   const [suche, setSuche] = useState('')
   const [gewaehlt, setGewaehlt] = useState(null)
   const [interpret, setInterpret] = useState('')
@@ -154,6 +156,20 @@ function HinzufuegenBlatt({ art, zielId, vorhanden, anzahl, onClose, onFertig })
       supabase.functions.invoke('send-push', { body }).catch(() => {})
     }
     onFertig()
+    return true
+  }
+
+  // Neues Lied mit dem Suchtext als Titel anlegen, zuordnen und direkt bearbeiten
+  async function neuAnlegen() {
+    const titel = suche.trim()
+    if (!titel) { toast(T('title_required'), 'error'); return }
+    setSendet(true)
+    const { data: st, error } = await supabase.from('stuecke')
+      .insert({ titel, erstellt_von: profil.id, schule_id: schule?.id })
+      .select('id, titel').single()
+    setSendet(false)
+    if (error) { toast(error.message, 'error'); return }
+    if (await zuordnen(st)) navigate(`${basis}/repertoire/${st.id}/bearbeiten`)
   }
 
   return (
@@ -171,7 +187,14 @@ function HinzufuegenBlatt({ art, zielId, vorhanden, anzahl, onClose, onFertig })
           <div style={{ margin: '0 -20px' }}>
             <Suchfeld wert={suche} onChange={setSuche} label={T('n_lieder_suchen')} placeholder={T('n_titel_oder_komponist')} />
           </div>
-          <div style={{ marginTop: 12, margin: '12px -20px 0' }}>
+          <div style={{ margin: '12px -20px 0' }}>
+            <Gruppe>
+              <Zeile icon={Plus} chevron={false} onClick={sendet ? undefined : neuAnlegen}
+                titel={q ? `${T('nl_neues_lied')}: „${suche.trim()}“` : T('nl_neues_lied')}
+                untertitel={q ? T('nl_neues_lied_anlegen_hinweis') : T('nl_neues_lied_titel_hinweis')} />
+            </Gruppe>
+          </div>
+          <div style={{ margin: '12px -20px 0' }}>
             {isLoading ? <Laden /> : treffer.length === 0 ? <Leer text={T('n_kein_lied_gefunden')} /> : (
               <Gruppe>
                 {treffer.map((st, i) => (
