@@ -117,9 +117,6 @@ WHERE p.schule_id = public.meine_schule_id();
 
 GRANT SELECT ON public.mitglieder_mit_email TO authenticated;
 
--- ─── Admin-User ───────────────────────────────────────────────
-SELECT public.create_user('emre.dingil01@gmail.com', '123456', 'Emre Dingil', 'superadmin');
-
 -- ─── Realtime Broadcast Policies ──────────────────────────────
 -- Supabase Realtime v2 "Broadcast via database" requires INSERT/SELECT
 -- on realtime.messages — without these policies (RLS is enabled)
