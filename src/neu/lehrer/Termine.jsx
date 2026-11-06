@@ -49,8 +49,8 @@ export default function LehrerTermine() {
 
   function stundeStatus(s) {
     if (s.status === 'abgesagt') return [T('n_faellt_aus'), 'var(--danger)']
-    if (s.status === 'stattgefunden') return [T('nl_erledigt'), 'var(--success)']
     if (istOffen(s)) return [T('nl_anwesenheit_fehlt'), 'var(--primary)']
+    if (s.status === 'stattgefunden') return [T('nl_erledigt'), 'var(--success)']
     if (s.entschuldigt) return [T('nl_haben_abgesagt').replace('{n}', s.entschuldigt), 'var(--text-2)']
     return [null, null]
   }

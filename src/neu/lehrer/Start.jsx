@@ -33,9 +33,9 @@ export default function LehrerStart() {
   }
 
   function status(s) {
+    if (istOffen(s)) return [T('nl_offen'), 'var(--primary)']
     if (s.status === 'stattgefunden') return [T('nl_erledigt'), 'var(--success)']
     if (s.status === 'abgesagt') return [T('n_faellt_aus'), 'var(--danger)']
-    if (istOffen(s)) return [T('nl_offen'), 'var(--primary)']
     if (naechste?.id === s.id) return [laeuft ? T('n_laeuft_gerade') : T('nl_gleich'), 'var(--primary)']
     return [T('nl_spaeter'), 'var(--text-2)']
   }

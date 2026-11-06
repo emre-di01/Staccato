@@ -6,7 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { useBasis } from '../rolle'
 import { Seite, Abschnitt, Gruppe, Knopf, Leer, Laden, eingabeStil } from '../../ui'
 import { useNeuLaden } from '../daten'
-import { useStunde } from '../lehrerDaten'
+import { useStunde, anwesenheitErfasst, ANWESENHEIT_QUERIES } from '../lehrerDaten'
 import { uhrzeit, tagLabel } from '../zeit'
 
 // Reihenfolge = Reihenfolge der Knöpfe
@@ -34,9 +34,11 @@ function Formular({ st, zurueck }) {
   const navigate = useNavigate()
   const { T, lang, zeitzone, toast, confirm } = useApp()
   const neuLaden = useNeuLaden()
+  const erfasst = anwesenheitErfasst(st)
+  // Ist schon erfasst, bleibt ein Schüler ohne Eintrag leer (z.B. nicht der Live-Stunde beigetreten), statt als „da“ zu gelten
   const [stati, setStati] = useState(() => {
     const vorhanden = Object.fromEntries((st.anwesenheit ?? []).map(a => [a.schueler_id, a.status]))
-    return Object.fromEntries(st.teilnehmer.map(p => [p.id, vorhanden[p.id] ?? 'anwesend']))
+    return Object.fromEntries(st.teilnehmer.map(p => [p.id, vorhanden[p.id] ?? (erfasst ? null : 'anwesend')]))
   })
   const [notizen, setNotizen] = useState(st.notizen ?? '')
   const [hausaufgaben, setHausaufgaben] = useState(st.hausaufgaben ?? '')
@@ -45,7 +47,7 @@ function Formular({ st, zurueck }) {
   const abgesagt = st.status === 'abgesagt'
   const werte = Object.values(stati)
   const n = s => werte.filter(w => w === s).length
-  const rest = [[n('zu_spaet'), 'nl_n_spaet'], [n('entschuldigt'), 'nl_n_entschuldigt'], [n('abwesend'), 'nl_n_fehlt']]
+  const rest = [[n('zu_spaet'), 'nl_n_spaet'], [n('entschuldigt'), 'nl_n_entschuldigt'], [n('abwesend'), 'nl_n_fehlt'], [n(null), 'nl_n_offen']]
     .filter(([z]) => z).map(([z, k]) => T(k).replace('{n}', z)).join(' · ')
 
   function alleDa() {
@@ -54,7 +56,7 @@ function Formular({ st, zurueck }) {
 
   async function speichern() {
     setSpeichert(true)
-    const payload = st.teilnehmer.map(p => ({ id: p.id, status: stati[p.id] ?? 'anwesend' }))
+    const payload = st.teilnehmer.filter(p => stati[p.id]).map(p => ({ id: p.id, status: stati[p.id] }))
     const { error: e1 } = await supabase.rpc('anwesenheit_erfassen', { p_stunde_id: st.id, p_schueler: payload })
     const neueHA = hausaufgaben.trim()
     const { error: e2 } = e1 ? {} : await supabase.from('stunden')
@@ -64,7 +66,7 @@ function Formular({ st, zurueck }) {
     if (neueHA && neueHA !== (st.hausaufgaben ?? '').trim()) {
       supabase.functions.invoke('send-email', { body: { type: 'hausaufgaben', stunde_id: st.id, hausaufgaben: neueHA } }).catch(() => {})
     }
-    neuLaden('nl-stunden', 'nl-stunde', 'nl-kurs')
+    neuLaden(...ANWESENHEIT_QUERIES)
     toast(T('nl_gespeichert'), 'success')
     navigate(zurueck.to)
   }
@@ -162,7 +164,7 @@ function Formular({ st, zurueck }) {
 
           <div style={{ margin: '28px 20px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Knopf voll icon={Check} onClick={speichern} disabled={speichert} style={{ height: 56, fontSize: 18 }}>
-              {st.status === 'stattgefunden' ? T('nl_aenderungen_speichern') : T('nl_stunde_abschliessen')}
+              {erfasst ? T('nl_aenderungen_speichern') : T('nl_stunde_abschliessen')}
             </Knopf>
             {st.status === 'geplant' && (
               <Knopf voll variante="gefahr" onClick={absagen}>{T('nl_stunde_absagen')}</Knopf>

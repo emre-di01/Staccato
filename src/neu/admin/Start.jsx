@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { Seite, Gruppe, Trenner, Zeile, Leer, Laden } from '../../ui'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
 import { useUngelesen } from '../daten'
+import { istOffen } from '../lehrerDaten'
 import { uhrzeit, tagKey, datumLang, stundeDerSchule, schulZeitZuIso, wochentagKurz, tagDesMonats } from '../zeit'
 
 const TAG = 86400000
@@ -27,11 +28,12 @@ function useAdminStart() {
         anzahl(supabase.from('interessenten').select('id', { count: 'exact', head: true }).eq('schule_id', schule.id).eq('status', 'interessent')),
         anzahl(supabase.from('rechnungen').select('id', { count: 'exact', head: true }).eq('schule_id', schule.id)
           .is('bezahlt_am', null).is('storniert_am', null).lt('faellig_am', heute)),
-        anzahl(supabase.from('stunden').select('id, unterricht!inner(schule_id)', { count: 'exact', head: true })
-          .eq('unterricht.schule_id', schule.id).eq('status', 'geplant')
-          .lt('ende', jetzt).gte('ende', new Date(Date.now() - 30 * TAG).toISOString())),
+        supabase.from('stunden').select('id, ende, status, anwesenheit(status, erfasst_von), unterricht!inner(schule_id, unterricht_schueler(status))')
+          .eq('unterricht.schule_id', schule.id).in('status', ['geplant', 'stattgefunden'])
+          .lt('ende', jetzt).gte('ende', new Date(Date.now() - 30 * TAG).toISOString())
+          .then(r => (r.data ?? []).filter(istOffen).length),
         supabase.from('stunden')
-          .select('id, beginn, ende, status, raeume(name), unterricht!inner(id, name, schule_id, raeume(name), unterricht_lehrer(rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
+          .select('id, beginn, ende, status, raeume(name), anwesenheit(status, erfasst_von), unterricht!inner(id, name, schule_id, raeume(name), unterricht_schueler(status), unterricht_lehrer(rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name)))')
           .eq('unterricht.schule_id', schule.id)
           .gte('beginn', schulZeitZuIso(heute, '00:00', zeitzone)).lt('beginn', schulZeitZuIso(morgen, '00:00', zeitzone))
           .order('beginn'),
@@ -95,9 +97,9 @@ export default function AdminStart() {
 
   function status(s) {
     if (s.status === 'abgesagt') return [T('n_faellt_aus'), 'var(--danger)']
+    if (istOffen(s)) return [T('nl_offen'), 'var(--primary)']
     if (s.status === 'stattgefunden') return [T('nl_erledigt'), 'var(--success)']
     if (new Date(s.beginn) <= jetzt && new Date(s.ende) > jetzt) return [T('n_laeuft_gerade'), 'var(--primary)']
-    if (new Date(s.ende) <= jetzt) return [T('nl_offen'), 'var(--primary)']
     return [null, null]
   }
 

@@ -26,7 +26,7 @@ export default function LehrerWoche() {
       const ids = kurse.map(k => k.id)
       const [st, ev] = await Promise.all([
         ids.length
-          ? supabase.from('stunden').select('id, beginn, ende, status, unterricht(name, raeume(name)), raeume(name), anwesenheit(status)')
+          ? supabase.from('stunden').select('id, beginn, ende, status, unterricht(name, raeume(name), unterricht_schueler(status)), raeume(name), anwesenheit(status, erfasst_von)')
               .in('unterricht_id', ids).gte('beginn', von).lt('beginn', bis).order('beginn')
           : { data: [] },
         supabase.from('events').select('id, titel, typ, beginn, ende, ort, raeume(name)').eq('schule_id', schule.id)
@@ -49,8 +49,8 @@ export default function LehrerWoche() {
 
   function status(s) {
     if (s.status === 'abgesagt') return [T('n_faellt_aus'), 'var(--danger)']
-    if (s.status === 'stattgefunden') return [T('nl_erledigt'), 'var(--success)']
     if (istOffen(s)) return [T('nl_anwesenheit_fehlt'), 'var(--primary)']
+    if (s.status === 'stattgefunden') return [T('nl_erledigt'), 'var(--success)']
     const ab = (s.anwesenheit ?? []).filter(a => a.status === 'entschuldigt').length
     return ab ? [T('nl_haben_abgesagt').replace('{n}', ab), 'var(--text-2)'] : [null, null]
   }

@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.5'
+export const CURRENT_VERSION = '2.9.6'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.6',
+    date: '2026-11-06',
+    features: [
+      {
+        icon: '🎵',
+        de: 'Lieder: Tonart, Takt, Tempo und Anmerkungen sichtbar, dazu Metronom, Transponieren, Akkord-Player und Filter nach Stimme',
+        en: 'Songs: key, meter, tempo and remarks are visible, plus metronome, transpose, chord player and voice filter',
+        tr: 'Şarkılar: Tonalite, ölçü, tempo ve açıklamalar görünür; ayrıca metronom, transpoze, akor çalar ve ses filtresi',
+      },
+      {
+        icon: '✅',
+        de: 'Anwesenheit: Stunden ohne Erfassung werden als offen angezeigt, nachträgliches Bearbeiten überschreibt keine Werte mehr',
+        en: 'Attendance: lessons without a record show as open, later edits no longer overwrite values',
+        tr: 'Yoklama: Kaydı olmayan dersler açık görünür, sonradan düzenleme artık değerlerin üzerine yazmaz',
+      },
+    ],
+  },
   {
     version: '2.9.5',
     date: '2026-10-28',

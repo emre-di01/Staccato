@@ -49,7 +49,7 @@ export function useLehrerStunden({ zurueck = 1, tage = 1, kursId } = {}) {
       if (!ids.length) return []
       const jetzt = Date.now()
       const { data, error } = await supabase.from('stunden')
-        .select('id, beginn, ende, status, notizen, hausaufgaben, unterricht_id, unterricht(name, typ, raeume(name), unterricht_schueler(schueler_id, status)), raeume(name), anwesenheit(status, schueler_id)')
+        .select('id, beginn, ende, status, notizen, hausaufgaben, unterricht_id, unterricht(name, typ, raeume(name), unterricht_schueler(schueler_id, status)), raeume(name), anwesenheit(status, schueler_id, erfasst_von)')
         .in('unterricht_id', ids)
         .gte('beginn', new Date(jetzt - zurueck * TAG).toISOString())
         .lte('beginn', new Date(jetzt + tage * TAG).toISOString())
@@ -71,9 +71,20 @@ function anreichern(st) {
   }
 }
 
-// Vergangene Stunden ohne erfasste Anwesenheit (letzte 30 Tage)
+// Alle Abfragen, die Anwesenheit oder den Stundenstatus anzeigen
+export const ANWESENHEIT_QUERIES = ['nl-stunden', 'nl-stunde', 'nl-kurs', 'nl-woche', 'nl-schueler', 'nl-kurs-verwalten', 'na-start']
+
+// Von Lehrkraft oder Live-Stunde erfasst; reine Selbst-Absagen von Schülern zählen nicht
+export function anwesenheitErfasst(st) {
+  return (st.anwesenheit ?? []).some(a => a.erfasst_von || a.status !== 'entschuldigt')
+}
+
+// Vergangene Stunden ohne erfasste Anwesenheit. Der Status allein sagt das nicht:
+// der Cron stunden_status_aktualisieren setzt jede vergangene Stunde auf stattgefunden.
 export function istOffen(st) {
-  return st.status === 'geplant' && new Date(st.ende) < Date.now()
+  if (st.status === 'abgesagt' || st.status === 'verschoben' || new Date(st.ende) >= Date.now()) return false
+  const hatTeilnehmer = (st.unterricht?.unterricht_schueler ?? []).some(s => s.status === 'aktiv')
+  return hatTeilnehmer && !anwesenheitErfasst(st)
 }
 
 // Eine Stunde mit Kurs, Teilnehmern und bisheriger Anwesenheit (für „Stunde abschließen“)
@@ -81,9 +92,12 @@ export function useStunde(id) {
   return useQuery({
     queryKey: ['nl-stunde', id],
     enabled: !!id,
+    // Das Formular übernimmt die Werte einmalig: nie aus dem Cache starten, sonst überschreibt Speichern mit Altstand
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const { data: st, error } = await supabase.from('stunden')
-        .select('id, beginn, ende, status, notizen, hausaufgaben, unterricht_id, unterricht(id, name), anwesenheit(status, schueler_id)')
+        .select('id, beginn, ende, status, notizen, hausaufgaben, unterricht_id, unterricht(id, name), anwesenheit(status, schueler_id, erfasst_von)')
         .eq('id', id).single()
       if (error) throw error
       const { data: tn } = await supabase.from('unterricht_schueler')

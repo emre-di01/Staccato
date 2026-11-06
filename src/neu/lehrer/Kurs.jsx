@@ -31,8 +31,8 @@ export default function LehrerKurs() {
 
   function info(s) {
     if (s.status === 'abgesagt') return [T('n_faellt_aus'), 'var(--danger)']
-    if (s.status === 'stattgefunden') return [T('nl_x_von_y_da').replace('{x}', s.da).replace('{y}', s.teilnehmer), 'var(--success)']
     if (istOffen(s)) return [T('nl_anwesenheit_fehlt'), 'var(--primary)']
+    if (s.status === 'stattgefunden') return [T('nl_x_von_y_da').replace('{x}', s.da).replace('{y}', s.teilnehmer), 'var(--success)']
     return [s.entschuldigt ? T('nl_haben_abgesagt').replace('{n}', s.entschuldigt) : T('nl_geplant'), 'var(--text-2)']
   }
 

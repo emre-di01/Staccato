@@ -8,8 +8,10 @@ import { safeMarkdown } from '../../lib/markdown'
 import { useApp } from '../../context/AppContext'
 import { useBasis } from '../rolle'
 import { liedFarbe } from '../../ui'
+import LiedAngaben from '../LiedAngaben'
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import { useNeuLaden } from '../daten'
+import { ANWESENHEIT_QUERIES } from '../lehrerDaten'
 import { uhrzeit, tagKey } from '../zeit'
 import { NotenSteuerung } from '../beamerNoten'
 
@@ -69,7 +71,7 @@ export default function LehrerLive() {
       const [k, st, us, aktiv] = await Promise.all([
         supabase.from('unterricht').select('id, name').eq('id', kursId).single(),
         supabase.from('stunden').select('id, beginn, ende, status').eq('unterricht_id', kursId).gte('beginn', von).lte('beginn', bis).order('beginn'),
-        supabase.from('unterricht_stuecke').select('status, reihenfolge, stuecke(id, titel, komponist, youtube_url, liedtext, liedtext_md, notizen, stueck_dateien(id, typ, name, bucket_pfad, stimme))').eq('unterricht_id', kursId),
+        supabase.from('unterricht_stuecke').select('status, reihenfolge, stuecke(id, titel, komponist, tonart, takt, tempo, youtube_url, liedtext, liedtext_md, notizen, stueck_dateien(id, typ, name, bucket_pfad, stimme))').eq('unterricht_id', kursId),
         supabase.from('unterricht_sessions').select('id, join_code, aktuelles_stueck, aktuelle_ansicht, gestartet_am, oeffentlich, stunde_id').eq('unterricht_id', kursId).eq('status', 'aktiv').maybeSingle(),
       ])
       const heute = tagKey(new Date().toISOString(), zeitzone)
@@ -154,7 +156,7 @@ export default function LehrerLive() {
       setNotenUrls(signed_urls); setNotenStatus(null)
       beamerRef.current.send({ type: 'broadcast', event: 'state', payload: {
         aktuelles_stueck: st.id, aktuelle_ansicht: ansicht, signed_urls, join_code: session.join_code,
-        stueck: { titel: st.titel, komponist: st.komponist, liedtext: st.liedtext, liedtext_md: st.liedtext_md, notizen: st.notizen, youtube_url: st.youtube_url },
+        stueck: { titel: st.titel, komponist: st.komponist, tonart: st.tonart, takt: st.takt, tempo: st.tempo, liedtext: st.liedtext, liedtext_md: st.liedtext_md, notizen: st.notizen, youtube_url: st.youtube_url },
       } })
     }
   }
@@ -186,13 +188,14 @@ export default function LehrerLive() {
 
   async function beenden() {
     setLaden(true)
+    const { error } = await supabase.rpc('session_beenden', { p_session_id: session.id })
+    if (error) { setLaden(false); toast(error.message, 'error'); return }
     broadcastRef.current?.send({ type: 'broadcast', event: 'state', payload: { status: 'beendet' } })
     beamerRef.current?.send({ type: 'broadcast', event: 'state', payload: { status: 'beendet' } })
-    await supabase.rpc('session_beenden', { p_session_id: session.id })
     beamerRef.current?.unsubscribe(); beamerRef.current = null
     setLaden(false)
     setPhase('beendet')
-    neuLaden('nl-stunden', 'nl-stunde', 'nl-kurs')
+    neuLaden(...ANWESENHEIT_QUERIES)
   }
 
   function kopieren() {
@@ -279,6 +282,7 @@ export default function LehrerLive() {
                 <div style={{ marginTop: 10, padding: 18, borderRadius: 22, background: liedFarbe(aktuell.id) }}>
                   <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.01em' }}>{aktuell.titel}</div>
                   {aktuell.komponist && <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.78)' }}>{aktuell.komponist}</div>}
+                  <LiedAngaben stueck={aktuell} style={{ marginTop: 12 }} />
                   <div role="group" aria-label={T('nl_ansicht_fuer_alle')} style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {ANSICHTEN.filter(([a]) => hatAnsicht(aktuell, a)).map(([a, label]) => (
                       <button key={a} onClick={() => zeigen(aktuell, a)} aria-pressed={liveAnsicht === a} style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: liveAnsicht === a ? '#FFFFFF' : 'rgba(0,0,0,0.28)', color: liveAnsicht === a ? '#111114' : '#FFFFFF', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>{T(label)}</button>

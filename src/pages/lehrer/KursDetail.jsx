@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { anwesenheitErfasst } from '../../neu/lehrerDaten'
 import { useApp } from '../../context/AppContext'
 import Avatar from '../../components/Avatar'
 import ZertifikatModal from '../../components/ZertifikatModal'
@@ -281,27 +282,31 @@ function AbsagenModal({ stunde, onClose, onErfolg }) {
 
 // ─── Anwesenheit erfassen Modal ───────────────────────────────
 function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
-  const { profil } = useApp()
+  const { profil, toast } = useApp()
   const [stati, setStati] = useState(
     Object.fromEntries(schueler.map(s => [s.schueler_id, 'anwesend']))
   )
   const [laden, setLaden] = useState(false)
+  const [geladen, setGeladen] = useState(false)
 
   // Bestehende Anwesenheit laden
   useEffect(() => {
     async function laden() {
       const { data } = await supabase.from('anwesenheit').select('*').eq('stunde_id', stunde.id)
-      if (data?.length > 0) {
-        setStati(Object.fromEntries(data.map(a => [a.schueler_id, a.status])))
-      }
+      const vorhanden = Object.fromEntries((data ?? []).map(a => [a.schueler_id, a.status]))
+      // Ist schon erfasst, bleibt ein Schüler ohne Eintrag leer, statt beim Speichern als „anwesend“ zu gelten
+      const erfasst = anwesenheitErfasst({ anwesenheit: data })
+      setStati(Object.fromEntries(schueler.map(s => [s.schueler_id, vorhanden[s.schueler_id] ?? (erfasst ? null : 'anwesend')])))
+      setGeladen(true)
     }
     laden()
   }, [stunde.id])
 
   async function speichern() {
     setLaden(true)
-    const payload = schueler.map(s => ({ id: s.schueler_id, status: stati[s.schueler_id] ?? 'anwesend' }))
-    await supabase.rpc('anwesenheit_erfassen', { p_stunde_id: stunde.id, p_schueler: payload })
+    const payload = schueler.filter(s => stati[s.schueler_id]).map(s => ({ id: s.schueler_id, status: stati[s.schueler_id] }))
+    const { error } = await supabase.rpc('anwesenheit_erfassen', { p_stunde_id: stunde.id, p_schueler: payload })
+    if (error) { setLaden(false); toast(error.message, 'error'); return }
     onErfolg()
     onClose()
   }
@@ -340,7 +345,7 @@ function AnwesenheitModal({ stunde, schueler, onClose, onErfolg }) {
 
           <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:10 }}>
             <button onClick={onClose} style={s.btnSek}>Abbrechen</button>
-            <button onClick={speichern} disabled={laden} style={s.btnPri}>
+            <button onClick={speichern} disabled={laden || !geladen} style={s.btnPri}>
               {laden ? 'Speichere …' : '💾 Anwesenheit speichern'}
             </button>
           </div>

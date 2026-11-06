@@ -7,6 +7,7 @@ import { useApp } from '../../context/AppContext'
 import { startseiteNach } from '../../components/ProtectedRoute'
 import { NEU_THEME } from '../../themes/themes'
 import { liedFarbe, UI_CSS } from '../../ui'
+import LiedAngaben from '../LiedAngaben'
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import AkkordDateiAnzeige from '../../components/stueck/AkkordDateiAnzeige'
 import PdfCard from '../../components/stueck/PdfCard'
@@ -82,7 +83,7 @@ export default function NeuSession() {
 
   async function ladeStueck(id) {
     const [{ data: st }, { data: df }] = await Promise.all([
-      supabase.from('stuecke').select('id, titel, komponist, youtube_url, liedtext, liedtext_md, notizen').eq('id', id).single(),
+      supabase.from('stuecke').select('id, titel, komponist, tonart, takt, tempo, youtube_url, liedtext, liedtext_md, notizen').eq('id', id).single(),
       supabase.from('stueck_dateien').select('*').eq('stueck_id', id).order('hochgeladen_am'),
     ])
     setStueck(st); setDateien(df ?? [])
@@ -187,6 +188,7 @@ export default function NeuSession() {
           <header style={{ padding: '22px 20px 0' }}>
             <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.15, fontWeight: 800, overflowWrap: 'anywhere' }}>{stueck.titel}</h1>
             {stueck.komponist && <div style={{ marginTop: 4, fontSize: 17, color: '#E8EEF2' }}>{stueck.komponist}</div>}
+            <LiedAngaben stueck={stueck} style={{ marginTop: 12 }} />
           </header>
           <div style={{ padding: '20px 20px 0', fontSize: GROESSEN[stufe], lineHeight: 1.5, fontWeight: 600 }}>
             {ansicht === 'liedtext' && (stueck.liedtext

@@ -4,6 +4,7 @@ import { Music, FileText, Guitar, Play, FolderOpen, Maximize, Minimize, Minus, P
 import { supabase } from '../../lib/supabase'
 import { safeMarkdown } from '../../lib/markdown'
 import { useApp } from '../../context/AppContext'
+import LiedAngaben from '../LiedAngaben'
 import { UI_CSS } from '../../ui'
 import ChordPro from '../../components/stueck/ChordProRenderer'
 import { NotenBeamer } from '../beamerNoten'
@@ -156,6 +157,7 @@ export default function NeuBeamer() {
           )}
           <h1 style={{ margin: '4px 0 0', fontSize: 'clamp(26px, 3vw, 38px)', lineHeight: 1.15, fontWeight: 800, letterSpacing: '-0.01em', overflowWrap: 'anywhere' }}>{stueck?.titel ?? ''}</h1>
           {stueck?.komponist && <div style={{ marginTop: 2, fontSize: 19, color: F.text2 }}>{stueck.komponist}</div>}
+          {stueck && <LiedAngaben stueck={stueck} style={{ marginTop: 8 }} />}
         </div>
         {leiste}
         {joinCode && liveQr ? (
