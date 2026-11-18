@@ -123,9 +123,6 @@ export default function MitgliedBlatt({ mitglied: m, onClose, onFertig }) {
             </Feld>
           </Zeile2>
         )}
-        {form.zahlungsweise === 'sepa' && m.sepa_mandat_am && (
-          <p style={{ margin: 0, fontSize: 15, color: 'var(--text-2)' }}>{T('nm_sepa_online').replace('{datum}', new Date(m.sepa_mandat_am).toLocaleDateString())}</p>
-        )}
 
         <Zwischentitel>{T('nm_erziehungsberechtigte')}</Zwischentitel>
         <Feld label={T('name')}>

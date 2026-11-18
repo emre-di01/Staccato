@@ -32,12 +32,11 @@ const ohneLeerzeichen = v => v.replace(/\s/g, '').toUpperCase()
 //   persoenlich: Telefon, Geburtsdatum, Adresse mit abfragen
 //   rolle:       steuert, ob Zahlungsdaten und Erziehungsberechtigte erscheinen
 //   onFertig:    nach dem Speichern; onSpaeter: optionaler „Später“-Knopf
-export default function MeineAngaben({ persoenlich = false, rolle, schuleName, knopfText, onFertig, onSpaeter }) {
+export default function MeineAngaben({ persoenlich = false, rolle, knopfText, onFertig, onSpaeter }) {
   const { T, toast } = useApp()
   const [uid, setUid] = useState(null)
   const [alt, setAlt] = useState(null)
   const [form, setForm] = useState(null)
-  const [zustimmung, setZustimmung] = useState(false)
   const [fehler, setFehler] = useState('')
   const [sendet, setSendet] = useState(false)
   const setze = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -48,7 +47,7 @@ export default function MeineAngaben({ persoenlich = false, rolle, schuleName, k
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || !aktiv) return
       const { data } = await supabase.from('profiles')
-        .select('telefon, adresse, geburtsdatum, zahlungsweise, kontoinhaber, iban, bic, sepa_mandat_am, erziehungsberechtigter_name, erziehungsberechtigter_telefon, erziehungsberechtigter_email')
+        .select('telefon, adresse, geburtsdatum, zahlungsweise, kontoinhaber, iban, bic, erziehungsberechtigter_name, erziehungsberechtigter_telefon, erziehungsberechtigter_email')
         .eq('id', user.id).single()
       if (!aktiv) return
       const p = data ?? {}
@@ -71,10 +70,7 @@ export default function MeineAngaben({ persoenlich = false, rolle, schuleName, k
   const sepa = form.zahlungsweise === 'sepa'
   const ibanFalsch = form.iban && !ibanGueltig(form.iban)
   const bicFalsch = form.bic && !bicGueltig(form.bic)
-  const ibanGeaendert = ohneLeerzeichen(form.iban) !== ohneLeerzeichen(alt.iban ?? '')
-  const zustimmungNoetig = sepa && (ibanGeaendert || !alt.sepa_mandat_am)
   const zeigeEltern = rolle === 'schueler' && (minderjaehrig(form.geburtsdatum) || !!alt.erziehungsberechtigter_name)
-  const schule = schuleName ?? T('nma_musikschule')
 
   async function speichern(e) {
     e.preventDefault()
@@ -82,7 +78,6 @@ export default function MeineAngaben({ persoenlich = false, rolle, schuleName, k
     if (zahlt && sepa) {
       if (!form.iban || ibanFalsch) { setFehler(T('nma_iban_pflicht')); return }
       if (bicFalsch) { setFehler(T('nm_bic_ungueltig')); return }
-      if (zustimmungNoetig && !zustimmung) { setFehler(T('nma_sepa_pflicht')); return }
     }
     const daten = {}
     if (persoenlich) Object.assign(daten, {
@@ -90,10 +85,9 @@ export default function MeineAngaben({ persoenlich = false, rolle, schuleName, k
     })
     if (zahlt) Object.assign(daten, sepa ? {
       zahlungsweise: 'sepa', kontoinhaber: leer(form.kontoinhaber), iban: ohneLeerzeichen(form.iban), bic: form.bic ? ohneLeerzeichen(form.bic) : null,
-      ...(zustimmungNoetig ? { sepa_mandat_am: new Date().toISOString() } : {}),
     } : {
       // Ohne Lastschrift wird keine Bankverbindung gebraucht (Datenminimierung)
-      zahlungsweise: form.zahlungsweise || null, kontoinhaber: null, iban: null, bic: null, sepa_mandat_am: null,
+      zahlungsweise: form.zahlungsweise || null, kontoinhaber: null, iban: null, bic: null,
     })
     if (zeigeEltern) Object.assign(daten, {
       erziehungsberechtigter_name: leer(form.erziehungsberechtigter_name),
@@ -104,8 +98,7 @@ export default function MeineAngaben({ persoenlich = false, rolle, schuleName, k
     const { error } = await supabase.from('profiles').update(daten).eq('id', uid)
     setSendet(false)
     if (error) { setFehler(error.message); return }
-    setAlt(a => ({ ...a, ...daten, sepa_mandat_am: daten.sepa_mandat_am !== undefined ? daten.sepa_mandat_am : a.sepa_mandat_am }))
-    setZustimmung(false)
+    setAlt(a => ({ ...a, ...daten }))
     toast(T('profile_saved'), 'success')
     onFertig?.()
   }
@@ -146,14 +139,6 @@ export default function MeineAngaben({ persoenlich = false, rolle, schuleName, k
             <input value={form.bic} onChange={e => setze('bic', e.target.value.toUpperCase())} autoComplete="off"
               aria-invalid={bicFalsch || undefined} style={{ ...eingabeStil, borderColor: bicFalsch ? 'var(--danger)' : undefined }} />
           </Feld>
-          {zustimmungNoetig ? (
-            <label style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderRadius: 14, background: 'var(--n-fill)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={zustimmung} onChange={e => setZustimmung(e.target.checked)} style={{ width: 22, height: 22, marginTop: 2, flexShrink: 0, accentColor: 'var(--primary)' }} />
-              <span style={{ fontSize: 15, lineHeight: 1.45 }}>{T('nma_sepa_zustimmung').replaceAll('{schule}', schule)}</span>
-            </label>
-          ) : (
-            <Hinweis>{T('nma_sepa_erteilt').replace('{datum}', new Date(alt.sepa_mandat_am).toLocaleDateString())}</Hinweis>
-          )}
         </>}
       </>}
 

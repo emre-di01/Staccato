@@ -8,7 +8,7 @@ import { useBasis } from '../rolle'
 import MeineAngaben, { ZAHLENDE_ROLLEN } from './MeineAngaben'
 
 export default function NeuProfil() {
-  const { profil, ladeProfil, schule, rolle, T, toast, confirm } = useApp()
+  const { profil, ladeProfil, rolle, T, toast, confirm } = useApp()
   const basis = useBasis()
   const fileRef = useRef(null)
   const [form, setForm] = useState({
@@ -120,7 +120,7 @@ export default function NeuProfil() {
       {ZAHLENDE_ROLLEN.includes(rolle) && (
         <Abschnitt titel={T('nm_zahlungsdaten')}>
           <Gruppe style={{ padding: 16 }}>
-            <MeineAngaben key={profil?.geburtsdatum ?? ''} rolle={rolle} schuleName={schule?.name} />
+            <MeineAngaben key={profil?.geburtsdatum ?? ''} rolle={rolle} />
           </Gruppe>
         </Abschnitt>
       )}

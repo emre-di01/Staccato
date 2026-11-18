@@ -10,9 +10,9 @@ export const CHANGELOG = [
     features: [
       {
         icon: '📝',
-        de: 'Einladung: Neue Mitglieder tragen Kontaktdaten, Bankverbindung mit SEPA-Mandat und Erziehungsberechtigte selbst ein',
-        en: 'Invitation: new members enter their contact details, bank account with SEPA mandate and guardians themselves',
-        tr: 'Davet: Yeni üyeler iletişim bilgilerini, SEPA talimatlı banka hesabını ve velilerini kendileri girer',
+        de: 'Einladung: Neue Mitglieder tragen Kontaktdaten, Bankverbindung und Erziehungsberechtigte selbst ein',
+        en: 'Invitation: new members enter their contact details, bank account and guardians themselves',
+        tr: 'Davet: Yeni üyeler iletişim bilgilerini, banka hesabını ve velilerini kendileri girer',
       },
       {
         icon: '🏦',

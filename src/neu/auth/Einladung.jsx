@@ -100,7 +100,7 @@ export default function NeuEinladung() {
 
   if (angaben) return (
     <AuthRahmen titel={T('nma_titel')} unter={T('nma_unter').replace('{schule}', einladung.schule_name)}>
-      <MeineAngaben persoenlich rolle={einladung.rolle} schuleName={einladung.schule_name}
+      <MeineAngaben persoenlich rolle={einladung.rolle}
         knopfText={T('nma_weiter')} onFertig={fertig} onSpaeter={fertig} />
     </AuthRahmen>
   )

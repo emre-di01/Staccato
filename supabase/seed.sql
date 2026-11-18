@@ -110,8 +110,7 @@ SELECT
   p.erziehungsberechtigter_email,
   p.aktualisiert_am,
   p.erstellt_am,
-  u.email,
-  p.sepa_mandat_am
+  u.email
 FROM public.profiles p
 LEFT JOIN auth.users u ON u.id = p.id
 WHERE p.schule_id = public.meine_schule_id()
