@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Blatt, Feld, Knopf, Gruppe, Trenner, SchalterZeile, eingabeStil } from '../../ui'
 import OrtAutocomplete from '../../components/OrtAutocomplete'
-import { ibanGueltig, bicGueltig } from '../../pages/admin/Mitgliederverwaltung'
+import { ibanGueltig, bicGueltig } from '../../lib/bank'
 
 const ROLLEN = ['schueler', 'lehrer', 'eltern', 'vorstand']
 const ALLE_ROLLEN = ['admin', ...ROLLEN]
@@ -122,6 +122,9 @@ export default function MitgliedBlatt({ mitglied: m, onClose, onFertig }) {
                 aria-invalid={bicFalsch || undefined} style={{ ...eingabeStil, borderColor: bicFalsch ? 'var(--danger)' : undefined }} />
             </Feld>
           </Zeile2>
+        )}
+        {form.zahlungsweise === 'sepa' && m.sepa_mandat_am && (
+          <p style={{ margin: 0, fontSize: 15, color: 'var(--text-2)' }}>{T('nm_sepa_online').replace('{datum}', new Date(m.sepa_mandat_am).toLocaleDateString())}</p>
         )}
 
         <Zwischentitel>{T('nm_erziehungsberechtigte')}</Zwischentitel>

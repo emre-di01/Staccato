@@ -5,9 +5,10 @@ import { useApp } from '../../context/AppContext'
 import OrtAutocomplete from '../../components/OrtAutocomplete'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Knopf, Blatt, Feld, eingabeStil } from '../../ui'
 import { useBasis } from '../rolle'
+import MeineAngaben, { ZAHLENDE_ROLLEN } from './MeineAngaben'
 
 export default function NeuProfil() {
-  const { profil, ladeProfil, T, toast, confirm } = useApp()
+  const { profil, ladeProfil, schule, rolle, T, toast, confirm } = useApp()
   const basis = useBasis()
   const fileRef = useRef(null)
   const [form, setForm] = useState({
@@ -114,6 +115,15 @@ export default function NeuProfil() {
           <Knopf voll onClick={speichern} disabled={speichert || !geaendert}>{speichert ? T('loading') : T('save')}</Knopf>
         </Gruppe>
       </Abschnitt>
+
+      {/* Zahlungsdaten und Erziehungsberechtigte – selbst pflegen (Art. 16 DSGVO) */}
+      {ZAHLENDE_ROLLEN.includes(rolle) && (
+        <Abschnitt titel={T('nm_zahlungsdaten')}>
+          <Gruppe style={{ padding: 16 }}>
+            <MeineAngaben key={profil?.geburtsdatum ?? ''} rolle={rolle} schuleName={schule?.name} />
+          </Gruppe>
+        </Abschnitt>
+      )}
 
       {/* Sicherheit */}
       <Abschnitt titel={T('n_sicherheit')}>

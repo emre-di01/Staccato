@@ -1,9 +1,33 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.6'
+export const CURRENT_VERSION = '2.9.7'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.7',
+    date: '2026-11-18',
+    features: [
+      {
+        icon: '📝',
+        de: 'Einladung: Neue Mitglieder tragen Kontaktdaten, Bankverbindung mit SEPA-Mandat und Erziehungsberechtigte selbst ein',
+        en: 'Invitation: new members enter their contact details, bank account with SEPA mandate and guardians themselves',
+        tr: 'Davet: Yeni üyeler iletişim bilgilerini, SEPA talimatlı banka hesabını ve velilerini kendileri girer',
+      },
+      {
+        icon: '🏦',
+        de: 'Profil: Zahlungsdaten und Erziehungsberechtigte selbst ändern',
+        en: 'Profile: change your payment details and guardians yourself',
+        tr: 'Profil: Ödeme bilgilerini ve velileri kendin değiştir',
+      },
+      {
+        icon: '🔒',
+        de: 'Datenschutz: Mitgliederdaten nur noch für Berechtigte sichtbar, Datenexport vollständig',
+        en: 'Privacy: member data only visible to authorised people, complete data export',
+        tr: 'Gizlilik: Üye verileri yalnızca yetkililere görünür, eksiksiz veri dışa aktarımı',
+      },
+    ],
+  },
   {
     version: '2.9.6',
     date: '2026-11-06',

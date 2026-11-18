@@ -226,7 +226,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.6** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.7** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -652,6 +652,9 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261028000004_profil_altes_design.sql` | `altes_design` auf `profiles` (default false) — seit v2.6.0 ist das neue Design (`src/neu/`) Standard für Schüler und Lehrer (`NEU_ROLLEN` in `src/neu/neuRollen.js`); `altes_design = true` schaltet das klassische Design ein |
 | `20261106000000_anwesenheit_lesen_kurslehrer.sql` | RLS-Fix `anw: lesen`: Kurslehrer lesen Anwesenheit auch ohne `stunden_lehrer`-Eintrag (z.B. vergangene Stunden nach Lehrerwechsel) |
 | `20261106000001_session_kurslehrer.sql` | `session_beenden` und `session_praesentation_wechseln`: auch Kurslehrer und Schul-Admins, nicht nur der Starter; `session_beenden` meldet fehlende Berechtigung jetzt als Fehler |
+| `20261118000000_mitglieder_view_zugriff.sql` | **Datenschutz-Fix**: `mitglieder_mit_email` (security_invoker=false) filterte nur nach Schule — alle Nutzer konnten IBAN/E-Mail/Geburtsdatum aller Mitglieder lesen. Jetzt: eigene Zeile, Admin der Schule, Lehrer eigener Schüler (wie `profiles: lesen`) |
+| `20261118000001_daten_export_vollstaendig.sql` | `meine_daten_exportieren()` um E-Mail, Notizen, Zahlungsdaten, Erziehungsberechtigte, Dokumente, Rechnungen ergänzt |
+| `20261118000002_mitglied_angaben_selbst.sql` | `sepa_mandat_am` auf `profiles` (Online-SEPA-Zustimmung, Zeitpunkt vom Server); `profil_schutz`: Mitglieder dürfen `mitgliedsbeitrag`/`zahlungsrhythmus`/`notizen` nicht selbst ändern, IBAN-Wechsel ohne neue Zustimmung setzt `sepa_mandat_am` zurück |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

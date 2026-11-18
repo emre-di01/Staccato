@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Knopf, Feld, Segment, Laden, eingabeStil } from '../../ui'
 import AuthRahmen, { Meldung, Zustand, passwortGueltig } from './Rahmen'
+import MeineAngaben from '../seiten/MeineAngaben'
 
 // Einladungslink: neues Konto anlegen oder mit bestehendem Konto der Schule beitreten
 export default function NeuEinladung() {
@@ -17,6 +18,7 @@ export default function NeuEinladung() {
   const [fehler,     setFehler]     = useState('')
   const [senden,     setSenden]     = useState(false)
   const [erfolg,     setErfolg]     = useState(false)
+  const [angaben,    setAngaben]    = useState(false) // nach dem Beitritt: eigene Angaben eintragen
   const [ansicht,    setAnsicht]    = useState('register') // 'register' | 'login'
   const [vollerName, setVollerName] = useState('')
   const [passwort,   setPasswort]   = useState('')
@@ -34,6 +36,7 @@ export default function NeuEinladung() {
 
   // Nach dem Beitritt kurz begrüßen, dann über "/" zur passenden Startseite
   function fertig() {
+    setAngaben(false)
     setErfolg(true)
     setTimeout(() => navigate('/', { replace: true }), 1500)
   }
@@ -43,7 +46,7 @@ export default function NeuEinladung() {
     setFehler('')
     try {
       await fn()
-      fertig()
+      setAngaben(true)
     } catch (e) {
       setFehler(e.message)
     } finally {
@@ -92,6 +95,13 @@ export default function NeuEinladung() {
   if (!einladung) return (
     <AuthRahmen zeichen={<span />}>
       <Zustand icon={Link2Off} farbe="var(--danger)" titel={T('invitation_not_found')} text={T('invitation_not_found_sub')} />
+    </AuthRahmen>
+  )
+
+  if (angaben) return (
+    <AuthRahmen titel={T('nma_titel')} unter={T('nma_unter').replace('{schule}', einladung.schule_name)}>
+      <MeineAngaben persoenlich rolle={einladung.rolle} schuleName={einladung.schule_name}
+        knopfText={T('nma_weiter')} onFertig={fertig} onSpaeter={fertig} />
     </AuthRahmen>
   )
 
