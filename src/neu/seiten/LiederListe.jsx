@@ -33,7 +33,8 @@ export default function LiederListe({ art }) {
       ])
       if (kopf.error) throw kopf.error
       const liste = (eintraege.data ?? []).filter(e => e.stuecke)
-      if (art === 'kurs') liste.sort((a, b) => STATUS.indexOf(a.status) - STATUS.indexOf(b.status) || a.stuecke.titel.localeCompare(b.stuecke.titel))
+      // Eigene Reihenfolge der Lehrkraft; bei Gleichstand (noch nie sortiert) wie bisher nach Status und Titel
+      if (art === 'kurs') liste.sort((a, b) => (a.reihenfolge ?? 0) - (b.reihenfolge ?? 0) || STATUS.indexOf(a.status) - STATUS.indexOf(b.status) || a.stuecke.titel.localeCompare(b.stuecke.titel))
       return { name: kopf.data.name ?? kopf.data.titel, erstelltVon: kopf.data.erstellt_von, liste }
     },
   })
@@ -67,7 +68,9 @@ export default function LiederListe({ art }) {
     const neueListe = [...liste]
     const [e] = neueListe.splice(i, 1)
     neueListe.splice(i + richtung, 0, e)
-    await Promise.all(neueListe.map((x, n) => supabase.from(tabelle).update({ reihenfolge: n }).eq(fk, id).eq('stueck_id', x.stueck_id)))
+    const ergebnisse = await Promise.all(neueListe.map((x, n) => supabase.from(tabelle).update({ reihenfolge: n }).eq(fk, id).eq('stueck_id', x.stueck_id)))
+    const fehler = ergebnisse.find(r => r.error)?.error
+    if (fehler) toast(fehler.message, 'error')
     neu()
   }
 
@@ -90,7 +93,7 @@ export default function LiederListe({ art }) {
                       wert={art === 'kurs' ? statusText(e.status) : null} wertFarbe={e.status === 'aktuell' ? 'var(--primary)' : 'var(--text-2)'}
                       chevron={!darfBearbeiten} to={liedPfad(e.stuecke.id)} state={navState} />
                   </div>
-                  {darfBearbeiten && art === 'event' && (
+                  {darfBearbeiten && (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <button onClick={() => verschieben(i, -1)} disabled={i === 0} aria-label={T('nl_nach_oben')} style={pfeil(i === 0)}><ChevronUp size={20} /></button>
                       <button onClick={() => verschieben(i, 1)} disabled={i === liste.length - 1} aria-label={T('nl_nach_unten')} style={pfeil(i === liste.length - 1)}><ChevronDown size={20} /></button>
@@ -118,7 +121,7 @@ export default function LiederListe({ art }) {
       )}
 
       {hinzufuegen && (
-        <HinzufuegenBlatt art={art} zielId={id} vorhanden={new Set(liste.map(e => e.stueck_id))} anzahl={liste.length}
+        <HinzufuegenBlatt art={art} zielId={id} vorhanden={new Set(liste.map(e => e.stueck_id))} anzahl={liste.reduce((m, e) => Math.max(m, (e.reihenfolge ?? 0) + 1), liste.length)}
           onClose={() => setHinzufuegen(false)} onFertig={() => { setHinzufuegen(false); neu() }} />
       )}
     </Seite>
@@ -146,7 +149,7 @@ function HinzufuegenBlatt({ art, zielId, vorhanden, anzahl, onClose, onFertig })
   async function zuordnen(st) {
     setSendet(true)
     const { error } = art === 'kurs'
-      ? await supabase.from('unterricht_stuecke').insert({ unterricht_id: zielId, stueck_id: st.id, status: 'aktuell' })
+      ? await supabase.from('unterricht_stuecke').insert({ unterricht_id: zielId, stueck_id: st.id, status: 'aktuell', reihenfolge: anzahl })
       : await supabase.from('event_stuecke').insert({ event_id: zielId, stueck_id: st.id, interpret: interpret.trim() || null, reihenfolge: anzahl })
     setSendet(false)
     if (error) { toast(error.message, 'error'); return }

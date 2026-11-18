@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.9'
+export const CURRENT_VERSION = '2.9.10'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.10',
+    date: '2026-11-18',
+    features: [
+      {
+        icon: '↕️',
+        de: 'Lieder im Kurs sortieren: Lehrkräfte legen mit den Pfeilen die Reihenfolge fest – Schüler sehen die Lieder genau so',
+        en: 'Sort songs in a course: teachers set the order with the arrows – students see the songs in exactly that order',
+        tr: 'Kurstaki şarkıları sırala: Öğretmenler okları kullanarak sırayı belirler – öğrenciler şarkıları tam bu sırayla görür',
+      },
+    ],
+  },
   {
     version: '2.9.9',
     date: '2026-11-18',

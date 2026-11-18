@@ -92,7 +92,7 @@ function KursLieder({ kursId }) {
   const imKurs = lieder
     .map(l => ({ ...l, k: l.kurse.find(k => k.id === kursId) }))
     .filter(l => l.k && l.k.status !== 'geplant')
-    .sort((a, b) => a.k.reihenfolge - b.k.reihenfolge)
+    .sort((a, b) => a.k.reihenfolge - b.k.reihenfolge || a.stueck.titel.localeCompare(b.stueck.titel))
   const state = { liste: imKurs.map(l => ({ id: l.stueck.id, titel: l.stueck.titel })) }
 
   if (isLoading) return <div style={{ marginTop: 20 }}><Laden /></div>
