@@ -8,6 +8,8 @@ import { useSchulweit } from './rolle'
 const TAG = 24 * 60 * 60 * 1000
 
 // Kurse, in denen ich unterrichte (inkl. aktiver Teilnehmerzahl) – im Admin-Bereich alle Kurse der Schule
+const STATUS_FOLGE = ['aktuell', 'geplant', 'abgeschlossen']
+
 export function useLehrerKurse() {
   const { profil, schule } = useApp()
   const schulweit = useSchulweit()
@@ -135,7 +137,7 @@ export function useLehrerKurs(id) {
         }
       }).sort((a, b) => a.name.localeCompare(b.name))
       const lieder = (li.data ?? []).filter(l => l.stuecke && l.status !== 'archiviert')
-        .sort((a, b) => (a.reihenfolge ?? 0) - (b.reihenfolge ?? 0) || a.stuecke.titel.localeCompare(b.stuecke.titel))
+        .sort((a, b) => (a.reihenfolge ?? 0) - (b.reihenfolge ?? 0) || STATUS_FOLGE.indexOf(a.status) - STATUS_FOLGE.indexOf(b.status) || a.stuecke.titel.localeCompare(b.stuecke.titel))
       return { kurs: k.data, teilnehmer, lieder }
     },
   })

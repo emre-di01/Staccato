@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Play, MessageCircle, Settings2, ListMusic } from 'lucide-react'
+import { Play, MessageCircle, Settings2, ListMusic, ChevronUp, ChevronDown } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
+import { useNeuLaden } from '../daten'
 import { useApp } from '../../context/AppContext'
 import { useBasis } from '../rolle'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Segment, LiedCover, Leer, Laden } from '../../ui'
@@ -9,12 +11,14 @@ import { useLehrerKurs, useLehrerStunden, istOffen } from '../lehrerDaten'
 import { uhrzeit, tagLabel } from '../zeit'
 import { kursZeit } from './kursZeit'
 
+const pfeil = aus => ({ width: 40, height: 30, border: 'none', background: 'transparent', color: 'var(--text-2)', cursor: aus ? 'default' : 'pointer', opacity: aus ? 0.3 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' })
 const knopf = { flex: '1 1 140px', height: 50, borderRadius: 14, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }
 
 export default function LehrerKurs() {
   const basis = useBasis()
   const { id } = useParams()
-  const { T, lang, zeitzone } = useApp()
+  const { T, lang, zeitzone, toast } = useApp()
+  const neuLaden = useNeuLaden()
   const { data, isLoading } = useLehrerKurs(id)
   const { data: stunden = [], isLoading: stundenLaden } = useLehrerStunden({ kursId: id, zurueck: 90, tage: 60 })
   const [reiter, setReiter] = useState('stunden')
@@ -28,6 +32,18 @@ export default function LehrerKurs() {
   const jetzt = Date.now()
   const kommend = stunden.filter(s => new Date(s.ende) > jetzt).slice(0, 4)
   const vergangen = stunden.filter(s => new Date(s.ende) <= jetzt).reverse().slice(0, 10)
+
+  // Lied um eine Stelle verschieben und die ganze Liste neu durchnummerieren
+  async function verschieben(i, richtung) {
+    const neueListe = [...lieder]
+    const [l] = neueListe.splice(i, 1)
+    neueListe.splice(i + richtung, 0, l)
+    const ergebnisse = await Promise.all(neueListe.map((x, n) =>
+      supabase.from('unterricht_stuecke').update({ reihenfolge: n }).eq('unterricht_id', id).eq('stueck_id', x.stuecke.id)))
+    const fehler = ergebnisse.find(r => r.error)?.error
+    if (fehler) toast(fehler.message, 'error')
+    neuLaden('nl-kurs', 'n-liederliste', 'nl-lieder')
+  }
 
   function info(s) {
     if (s.status === 'abgesagt') return [T('n_faellt_aus'), 'var(--danger)']
@@ -109,12 +125,22 @@ export default function LehrerKurs() {
       {reiter === 'lieder' && (
         <div style={{ marginTop: 22 }}>
           <Gruppe>
-            {lieder.map(l => (
+            {lieder.map((l, i) => (
               <div key={l.stuecke.id}>
-                <Zeile bild={<LiedCover id={l.stuecke.id} groesse={44} radius={10} />} titel={l.stuecke.titel} untertitel={l.stuecke.komponist}
-                  wert={l.status === 'aktuell' ? T('nl_aktuell') : l.status === 'geplant' ? T('nl_geplant') : null}
-                  wertFarbe={l.status === 'aktuell' ? 'var(--primary)' : 'var(--text-2)'}
-                  to={`${basis}/kurse/${id}/repertoire/${l.stuecke.id}`} />
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Zeile bild={<LiedCover id={l.stuecke.id} groesse={44} radius={10} />} titel={l.stuecke.titel} untertitel={l.stuecke.komponist}
+                      wert={l.status === 'aktuell' ? T('nl_aktuell') : l.status === 'geplant' ? T('nl_geplant') : null}
+                      wertFarbe={l.status === 'aktuell' ? 'var(--primary)' : 'var(--text-2)'}
+                      chevron={false} to={`${basis}/kurse/${id}/repertoire/${l.stuecke.id}`} />
+                  </div>
+                  {lieder.length > 1 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', marginRight: 6 }}>
+                      <button onClick={() => verschieben(i, -1)} disabled={i === 0} aria-label={`${T('nl_nach_oben')}: ${l.stuecke.titel}`} style={pfeil(i === 0)}><ChevronUp size={20} /></button>
+                      <button onClick={() => verschieben(i, 1)} disabled={i === lieder.length - 1} aria-label={`${T('nl_nach_unten')}: ${l.stuecke.titel}`} style={pfeil(i === lieder.length - 1)}><ChevronDown size={20} /></button>
+                    </div>
+                  )}
+                </div>
                 <Trenner />
               </div>
             ))}
