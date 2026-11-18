@@ -6,6 +6,7 @@ import { Seite, Abschnitt, Chips, Suchfeld, Knopf, Zeile, LiedCover, LiedKachel,
 import LiedVorschlaege, { VorschlagModal } from '../../components/LiedVorschlaege'
 import { useMeineKurse, useMeineLieder, useNeuLaden, liedInhalt } from '../daten'
 import { useBasis } from '../rolle'
+import { liedUntertitel } from '../LiedAngaben'
 
 export default function NeuLieder() {
   const { T } = useApp()
@@ -70,7 +71,7 @@ export default function NeuLieder() {
                 {liste.map(l => (
                   <div key={l.stueck.id} style={{ borderBottom: '1px solid var(--n-sep)', margin: '0 4px 0 4px' }}>
                     <Zeile bild={<LiedCover id={l.stueck.id} />} titel={l.stueck.titel}
-                      untertitel={[l.stueck.komponist, liedInhalt(l.stueck, T)].filter(Boolean).join(' · ')}
+                      untertitel={liedUntertitel([l.stueck.komponist, liedInhalt(l.stueck, T)].filter(Boolean).join(' · '), l.stueck, T)}
                       to={`${basis}/repertoire/${l.stueck.id}`} state={navState} />
                   </div>
                 ))}

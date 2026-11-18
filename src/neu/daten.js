@@ -126,7 +126,7 @@ export function useMeineLieder() {
     queryFn: async () => {
       if (!kurse.length) return []
       const { data: us, error } = await supabase.from('unterricht_stuecke')
-        .select('unterricht_id, status, reihenfolge, stuecke(id, titel, komponist, liedtext, notizen, stueck_dateien(typ))')
+        .select('unterricht_id, status, reihenfolge, stuecke(id, titel, komponist, tonart, takt, tempo, liedtext, notizen, stueck_dateien(typ))')
         .in('unterricht_id', kurse.map(k => k.id))
       if (error) throw error
       const kursName = Object.fromEntries(kurse.map(k => [k.id, k.name]))

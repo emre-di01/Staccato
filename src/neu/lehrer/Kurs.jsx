@@ -10,6 +10,7 @@ import { Karte } from '../karten'
 import { useLehrerKurs, useLehrerStunden, istOffen } from '../lehrerDaten'
 import { uhrzeit, tagLabel } from '../zeit'
 import { kursZeit } from './kursZeit'
+import { liedUntertitel } from '../LiedAngaben'
 
 const pfeil = aus => ({ width: 40, height: 30, border: 'none', background: 'transparent', color: 'var(--text-2)', cursor: aus ? 'default' : 'pointer', opacity: aus ? 0.3 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' })
 const knopf = { flex: '1 1 140px', height: 50, borderRadius: 14, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }
@@ -129,7 +130,7 @@ export default function LehrerKurs() {
               <div key={l.stuecke.id}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <Zeile bild={<LiedCover id={l.stuecke.id} groesse={44} radius={10} />} titel={l.stuecke.titel} untertitel={l.stuecke.komponist}
+                    <Zeile bild={<LiedCover id={l.stuecke.id} groesse={44} radius={10} />} titel={l.stuecke.titel} untertitel={liedUntertitel(l.stuecke.komponist, l.stuecke, T)}
                       wert={l.status === 'aktuell' ? T('nl_aktuell') : l.status === 'geplant' ? T('nl_geplant') : null}
                       wertFarbe={l.status === 'aktuell' ? 'var(--primary)' : 'var(--text-2)'}
                       chevron={false} to={`${basis}/kurse/${id}/repertoire/${l.stuecke.id}`} />

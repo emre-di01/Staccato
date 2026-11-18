@@ -9,6 +9,7 @@ import { StundeKarte } from '../karten'
 import { tagLabel, uhrzeit } from '../zeit'
 import { useKurseMitLehrern, KURS_ICON } from './Kurse'
 import { useBasis } from '../rolle'
+import { liedUntertitel } from '../LiedAngaben'
 
 const ANSICHTEN = ['termine', 'lieder', 'anwesenheit', 'dateien']
 
@@ -104,7 +105,7 @@ function KursLieder({ kursId }) {
             <div key={l.stueck.id}>
               {i > 0 && <Trenner />}
               <Zeile bild={<LiedCover id={l.stueck.id} groesse={48} />} titel={l.stueck.titel}
-                untertitel={[l.stueck.komponist, l.k.status === 'aktuell' ? T('n_wird_geprobt') : null].filter(Boolean).join(' · ') || null}
+                untertitel={liedUntertitel([l.stueck.komponist, l.k.status === 'aktuell' ? T('n_wird_geprobt') : null].filter(Boolean).join(' · '), l.stueck, T)}
                 to={`${basis}/repertoire/${l.stueck.id}`} state={state} />
             </div>
           ))}

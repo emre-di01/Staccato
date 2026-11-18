@@ -7,6 +7,7 @@ import { useApp } from '../../context/AppContext'
 import { Seite, Gruppe, Trenner, Zeile, LiedCover, Leer, Laden, Blatt, Suchfeld, Knopf, Feld, eingabeStil } from '../../ui'
 import { useNeuLaden } from '../daten'
 import { useBasis } from '../rolle'
+import { liedUntertitel } from '../LiedAngaben'
 
 const STATUS = ['aktuell', 'geplant', 'abgeschlossen']
 
@@ -29,7 +30,7 @@ export default function LiederListe({ art }) {
         art === 'kurs'
           ? supabase.from('unterricht').select('id, name').eq('id', id).single()
           : supabase.from('events').select('id, titel, erstellt_von').eq('id', id).single(),
-        supabase.from(tabelle).select(`*, stuecke(id, titel, komponist)`).eq(fk, id).order('reihenfolge'),
+        supabase.from(tabelle).select(`*, stuecke(id, titel, komponist, tonart, takt, tempo)`).eq(fk, id).order('reihenfolge'),
       ])
       if (kopf.error) throw kopf.error
       const liste = (eintraege.data ?? []).filter(e => e.stuecke)
@@ -89,7 +90,7 @@ export default function LiederListe({ art }) {
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <Zeile bild={<LiedCover id={e.stuecke.id} groesse={44} radius={10} />} titel={e.stuecke.titel}
-                      untertitel={[e.stuecke.komponist, e.interpret].filter(Boolean).join(' · ')}
+                      untertitel={liedUntertitel([e.stuecke.komponist, e.interpret].filter(Boolean).join(' · '), e.stuecke, T)}
                       wert={art === 'kurs' ? statusText(e.status) : null} wertFarbe={e.status === 'aktuell' ? 'var(--primary)' : 'var(--text-2)'}
                       chevron={!darfBearbeiten} to={liedPfad(e.stuecke.id)} state={navState} />
                   </div>
@@ -141,7 +142,7 @@ function HinzufuegenBlatt({ art, zielId, vorhanden, anzahl, onClose, onFertig })
   const [sendet, setSendet] = useState(false)
   const { data: alle = [], isLoading } = useQuery({
     queryKey: ['n-bibliothek'],
-    queryFn: async () => (await supabase.from('stuecke').select('id, titel, komponist').order('titel')).data ?? [],
+    queryFn: async () => (await supabase.from('stuecke').select('id, titel, komponist, tonart, takt, tempo').order('titel')).data ?? [],
   })
   const q = suche.trim().toLowerCase()
   const treffer = alle.filter(st => !vorhanden.has(st.id) && (!q || st.titel.toLowerCase().includes(q) || (st.komponist ?? '').toLowerCase().includes(q))).slice(0, 50)
@@ -203,7 +204,7 @@ function HinzufuegenBlatt({ art, zielId, vorhanden, anzahl, onClose, onFertig })
                 {treffer.map((st, i) => (
                   <div key={st.id}>
                     {i > 0 && <Trenner />}
-                    <Zeile bild={<LiedCover id={st.id} groesse={40} radius={10} />} titel={st.titel} untertitel={st.komponist}
+                    <Zeile bild={<LiedCover id={st.id} groesse={40} radius={10} />} titel={st.titel} untertitel={liedUntertitel(st.komponist, st, T)}
                       onClick={sendet ? undefined : () => (art === 'event' ? setGewaehlt(st) : zuordnen(st))} chevron={false} />
                   </div>
                 ))}

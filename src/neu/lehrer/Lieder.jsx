@@ -10,6 +10,7 @@ import LiedVorschlaege from '../../components/LiedVorschlaege'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
 import { liedInhalt } from '../daten'
 import { useLehrerKurse } from '../lehrerDaten'
+import { liedUntertitel } from '../LiedAngaben'
 
 // Lieder der Lehrkraft: Standard = Lieder der eigenen Kurse (+ selbst angelegte), Filter je Kurs,
 // ganze Bibliothek der Schule als eigener Filter, Vorschläge prüfen
@@ -29,7 +30,7 @@ export default function LehrerLieder() {
     queryFn: async () => {
       const ids = kurse.map(k => k.id)
       const [alle, us] = await Promise.all([
-        supabase.from('stuecke').select('id, titel, komponist, liedtext, notizen, erstellt_von, stueck_dateien(typ)').order('titel'),
+        supabase.from('stuecke').select('id, titel, komponist, tonart, takt, tempo, liedtext, notizen, erstellt_von, stueck_dateien(typ)').order('titel'),
         ids.length ? supabase.from('unterricht_stuecke').select('stueck_id, unterricht_id, status').in('unterricht_id', ids) : { data: [] },
       ])
       if (alle.error) throw alle.error
@@ -97,7 +98,7 @@ export default function LehrerLieder() {
                 {liste.map(st => (
                   <div key={st.id} style={{ borderBottom: '1px solid var(--n-sep)', margin: '0 4px' }}>
                     <Zeile bild={<LiedCover id={st.id} />} titel={st.titel}
-                      untertitel={[st.komponist, liedInhalt(st, T)].filter(Boolean).join(' · ')}
+                      untertitel={liedUntertitel([st.komponist, liedInhalt(st, T)].filter(Boolean).join(' · '), st, T)}
                       to={`${basis}/repertoire/${st.id}`} state={navState} />
                   </div>
                 ))}

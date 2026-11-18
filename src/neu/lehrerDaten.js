@@ -124,7 +124,7 @@ export function useLehrerKurs(id) {
           .select('schueler_id, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, avatar_url)')
           .eq('unterricht_id', id).eq('status', 'aktiv'),
         supabase.from('stunden').select('id, anwesenheit(status, schueler_id)').eq('unterricht_id', id).eq('status', 'stattgefunden'),
-        supabase.from('unterricht_stuecke').select('status, reihenfolge, stuecke(id, titel, komponist)').eq('unterricht_id', id),
+        supabase.from('unterricht_stuecke').select('status, reihenfolge, stuecke(id, titel, komponist, tonart, takt, tempo)').eq('unterricht_id', id),
       ])
       if (k.error) throw k.error
       const gehalten = st.data ?? []

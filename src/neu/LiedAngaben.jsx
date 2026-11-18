@@ -10,6 +10,18 @@ export function liedAngaben(stueck, T) {
   ].filter(([, wert]) => wert)
 }
 
+// Kurzform für Listen: „C-Dur · 4/4 · 80 BPM“
+export function liedDetails(stueck, T) {
+  return liedAngaben(stueck, T).map(([, wert]) => wert).join(' · ') || null
+}
+
+// Untertitel einer Liederliste: erste Zeile (z. B. Komponist), darunter Tonart/Takt/Tempo
+export function liedUntertitel(erste, stueck, T) {
+  const details = liedDetails(stueck, T)
+  if (!details) return erste || null
+  return <>{erste}<span style={{ display: 'block' }}>{details}</span></>
+}
+
 // Tonart, Takt und Tempo als Chips auf dem farbigen Liedgrund
 export default function LiedAngaben({ stueck, style }) {
   const { T } = useApp()
