@@ -20,6 +20,12 @@ export const CHANGELOG = [
         en: 'Signed course registrations and membership applications are saved automatically as PDF in the member documents',
         tr: 'İmzalı kurs kayıtları ve üyelik başvuruları otomatik olarak PDF şeklinde üyenin belgelerine kaydedilir',
       },
+      {
+        icon: '🔒',
+        de: 'Datenschutz: Dokumente, Noten und Vorstandsdateien sind nur noch innerhalb der eigenen Schule zugänglich',
+        en: 'Privacy: documents, sheet music and board files are only accessible within your own school',
+        tr: 'Gizlilik: Belgeler, notalar ve yönetim dosyaları yalnızca kendi okulun içinde erişilebilir',
+      },
     ],
   },
   {

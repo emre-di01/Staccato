@@ -40,25 +40,8 @@ DO $$ BEGIN
     USING (bucket_id = 'avatare' AND (SELECT rolle FROM public.profiles WHERE id = auth.uid()) = ANY(ARRAY['admin'::public.user_rolle, 'superadmin'::public.user_rolle]));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN
-  CREATE POLICY "Authentifizierte können hochladen" ON storage.objects FOR INSERT TO authenticated
-    WITH CHECK (bucket_id = ANY(ARRAY['stueck-dateien', 'kurs-dateien', 'schueler-dateien']));
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  CREATE POLICY "Authentifizierte können lesen" ON storage.objects FOR SELECT TO authenticated
-    USING (bucket_id = ANY(ARRAY['stueck-dateien', 'kurs-dateien', 'schueler-dateien']));
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  CREATE POLICY "Authentifizierte können updaten" ON storage.objects FOR UPDATE TO authenticated
-    USING (bucket_id = ANY(ARRAY['stueck-dateien', 'kurs-dateien', 'schueler-dateien']));
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  CREATE POLICY "Authentifizierte können löschen" ON storage.objects FOR DELETE TO authenticated
-    USING (bucket_id = ANY(ARRAY['stueck-dateien', 'kurs-dateien', 'schueler-dateien']));
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- stueck-dateien, kurs-dateien, schueler-dateien: Policies schulgebunden in Migration
+-- 20261118000005 (vorher hier: jeder angemeldete Nutzer durfte alles)
 
 -- mitglied-dateien: nur Admins der eigenen Schule bzw. Lehrer des Mitglieds
 -- (Funktionen aus Migration 20261118000004)
