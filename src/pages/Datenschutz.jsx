@@ -2,7 +2,7 @@ import RechtsRahmen, { sek, h2, p, ul, link } from '../neu/seiten/RechtsRahmen'
 
 export default function Datenschutz() {
   return (
-    <RechtsRahmen titel="Datenschutzerklärung" unter="Stand: Mai 2026">
+    <RechtsRahmen titel="Datenschutzerklärung" unter="Stand: November 2026">
       <section style={sek}>
         <h2 style={h2}>1. Verantwortlicher</h2>
         <p style={p}>
@@ -25,6 +25,8 @@ export default function Datenschutz() {
         <p style={p}>Im Rahmen des Betriebs der Plattform werden folgende personenbezogene Daten verarbeitet:</p>
         <ul style={ul}>
           <li><strong>Stammdaten:</strong> Name, E-Mail-Adresse, Telefonnummer, Geburtsdatum, Adresse</li>
+          <li><strong>Zahlungsdaten:</strong> Kontoinhaber, IBAN, BIC, Zahlungsweise (SEPA-Lastschrift, Überweisung, bar), Zahlungsrhythmus und Höhe des Mitgliedsbeitrags, Rechnungen</li>
+          <li><strong>Daten von Erziehungsberechtigten</strong> (bei Minderjährigen): Name, Telefonnummer, E-Mail-Adresse</li>
           <li><strong>Nutzungsdaten:</strong> Anwesenheiten, Kurszuordnungen, Repertoire-Fortschritt, Unterrichtsprotokolle</li>
           <li><strong>Technische Daten:</strong> Login-Zeitpunkte, Sitzungsinformationen (Session-Token), Push-Notification-Token (gerätegebundener Bezeichner für Benachrichtigungen via Web Push oder Firebase Cloud Messaging, nur bei aktivierten Push-Benachrichtigungen)</li>
           <li><strong>Einstellungen:</strong> Sprachpräferenz, Design (lokal im Gerätespeicher, kein Server-Zugriff)</li>
@@ -41,7 +43,9 @@ export default function Datenschutz() {
           <li>Kommunikation zwischen Lehrern, Schülern und Eltern (Art. 6 Abs. 1 lit. b DSGVO)</li>
           <li>Bereitstellung von Unterrichtsmaterialien und Repertoire (Art. 6 Abs. 1 lit. b DSGVO)</li>
           <li>Vereinsverwaltung (Ziele, Protokolle, Inventar) für Vorstandsmitglieder (Art. 6 Abs. 1 lit. b DSGVO)</li>
+          <li>Abrechnung der Unterrichts- bzw. Mitgliedsbeiträge, Rechnungsstellung und Einzug per SEPA-Lastschrift durch die jeweilige Musikschule (Art. 6 Abs. 1 lit. b DSGVO); Aufbewahrung von Rechnungen und Buchungsbelegen aufgrund gesetzlicher Pflichten (Art. 6 Abs. 1 lit. c DSGVO i.&nbsp;V.&nbsp;m. § 147 AO, § 257 HGB)</li>
         </ul>
+        <p style={{ ...p, marginTop: 10 }}>Zahlungsdaten werden ausschließlich von der jeweiligen Musikschule erfasst und genutzt. Einsehen können sie nur die Verwaltung (Administratoren) dieser Musikschule, die betroffene Person selbst sowie die Lehrkräfte des jeweiligen Schülers, soweit sie Anmeldeformulare erstellen. Eine Weitergabe an Dritte erfolgt nicht – mit Ausnahme der für den Lastschrifteinzug erforderlichen Übermittlung durch die Musikschule an ihre Bank.</p>
       </section>
 
       <section style={sek}>
@@ -75,6 +79,7 @@ export default function Datenschutz() {
       <section style={sek}>
         <h2 style={h2}>8. Speicherdauer</h2>
         <p style={p}>Personenbezogene Daten werden gelöscht, sobald sie für den Zweck ihrer Erhebung nicht mehr benötigt werden — in der Regel nach Beendigung der Mitgliedschaft in der jeweiligen Musikschule. Steuerrelevante Unterlagen werden gemäß gesetzlicher Aufbewahrungsfristen aufbewahrt (i. d. R. 10 Jahre).</p>
+        <p style={{ ...p, marginTop: 10 }}>Bankverbindungen (IBAN, BIC, Kontoinhaber) werden gelöscht, sobald sie für den Beitragseinzug nicht mehr benötigt werden, spätestens mit Löschung des Kontos. SEPA-Lastschriftmandate bewahrt die Musikschule bis mindestens 14 Monate nach der letzten Lastschrift auf (Erstattungsfristen nach § 676b BGB). Bereits ausgestellte Rechnungen bleiben aufgrund der gesetzlichen Aufbewahrungspflicht (10 Jahre) erhalten; sie enthalten keine Bankverbindung des Mitglieds.</p>
       </section>
 
       <section style={sek}>
@@ -82,7 +87,8 @@ export default function Datenschutz() {
         <p style={p}>
           Sie können jederzeit eine Kopie aller über Sie gespeicherten personenbezogenen Daten herunterladen
           sowie Ihr Konto und alle zugehörigen Daten sofort und unwiderruflich selbst löschen (Art. 15, 17, 20 DSGVO).
-          Die Löschung umfasst Stammdaten, Nutzungsdaten, hochgeladene Dateien und Push-Notification-Tokens.
+          Der Export enthält u.&nbsp;a. Stammdaten, Zahlungsdaten, Daten von Erziehungsberechtigten, Kurse, Anwesenheiten, Dokumente, Rechnungen und Nachrichten.
+          Die Löschung umfasst Stammdaten, Zahlungsdaten, Nutzungsdaten, hochgeladene Dateien und Push-Notification-Tokens.
         </p>
         <p style={{ ...p, marginTop: 10 }}>
           <strong>Daten exportieren:</strong> Profil → „Meine Daten (DSGVO Art. 15)" → „Daten herunterladen" — sofortiger Download als JSON-Datei.<br />
