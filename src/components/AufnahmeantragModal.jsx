@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useApp } from '../context/AppContext'
 import { DokumentDialog } from './Dialog'
+import { antragAblegen, istUnterschrieben } from '../lib/antragAblegen'
 
 const isMobile = () => 'ontouchstart' in window
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
@@ -225,7 +226,8 @@ function SignaturCanvas({ canvasRef, label }) {
 }
 
 export default function AufnahmeantragModal({ mitglied, onClose }) {
-  const { schule, T, lang } = useApp()
+  const { schule, T, lang, toast } = useApp()
+  const abgelegtRef = useRef(false)
   const sigMitgliedRef      = useRef(null)
   const sigErziehungRef     = useRef(null)
   const sigVerantwortlichRef = useRef(null)
@@ -383,6 +385,14 @@ export default function AufnahmeantragModal({ mitglied, onClose }) {
 
     const win = window.open('', '_blank', 'width=820,height=900')
     if (win) { win.document.write(html); win.document.close() }
+
+    // Unterschriebenen Antrag automatisch bei den Dokumenten des Mitglieds ablegen
+    if (abgelegtRef.current) return
+    if (!istUnterschrieben(sigMitgliedRef.current)) { toast(T('ndok_nicht_abgelegt'), 'warning'); return }
+    abgelegtRef.current = true
+    antragAblegen({ html, profilId: mitglied.id, name: `Aufnahmeantrag – ${heute}`, typ: 'aufnahmeformular' })
+      .then(() => toast(T('ndok_abgelegt').replace('{name}', mitglied.voller_name), 'success'))
+      .catch(e => { abgelegtRef.current = false; toast(`${T('ndok_ablegen_fehler')} ${e.message}`, 'error') })
   }
 
   return (

@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { DokumentDialog } from './Dialog'
+import { antragAblegen, istUnterschrieben } from '../lib/antragAblegen'
 
 const ABRECHNUNG_LABEL = {
   einzeln:   'Pro Unterrichtsstunde',
@@ -64,7 +65,8 @@ function SignaturCanvas({ canvasRef, label }) {
 }
 
 export default function KursantragModal({ schueler, kurs, onClose }) {
-  const { schule, T, lang } = useApp()
+  const { schule, T, lang, toast } = useApp()
+  const abgelegtRef        = useRef(false)
   const sigSchuelerRef     = useRef(null)
   const sigErziehungRef    = useRef(null)
   const sigSchuleRef       = useRef(null)
@@ -262,6 +264,14 @@ export default function KursantragModal({ schueler, kurs, onClose }) {
 
     const win = window.open('', '_blank', 'width=820,height=900')
     if (win) { win.document.write(html); win.document.close() }
+
+    // Unterschriebenen Antrag automatisch bei den Dokumenten des Mitglieds ablegen
+    if (abgelegtRef.current) return
+    if (!istUnterschrieben(sigSchuelerRef.current)) { toast(T('ndok_nicht_abgelegt'), 'warning'); return }
+    abgelegtRef.current = true
+    antragAblegen({ html, profilId: schueler.id, name: `Kursanmeldung – ${kurs?.name ?? ''} – ${heute}`, typ: 'vertrag' })
+      .then(() => toast(T('ndok_abgelegt').replace('{name}', schueler.voller_name), 'success'))
+      .catch(e => { abgelegtRef.current = false; toast(`${T('ndok_ablegen_fehler')} ${e.message}`, 'error') })
   }
 
   return (

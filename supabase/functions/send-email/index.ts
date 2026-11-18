@@ -68,7 +68,7 @@ serve(async (req) => {
     else if (type === 'hausaufgaben')    await sendHausaufgaben(body, supabase)
     else if (type === 'neues_dokument')  await sendNeuesDokument(body, supabase)
     else if (type === 'rsvp_erinnerung')  await sendRsvpErinnerung(body, supabase)
-    else if (type === 'schuleinladung')   await sendSchuleinladung(body)
+    else if (type === 'schuleinladung')   await sendSchuleinladung(body, supabase, user.id)
     else return new Response(JSON.stringify({ error: 'Unknown type' }), { status: 400, headers: CORS })
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -460,11 +460,21 @@ async function sendRsvpErinnerung(body: Record<string, unknown>, supabase: Retur
 
 // ─── Schuleinladung ───────────────────────────────────────────
 
-async function sendSchuleinladung(body: Record<string, unknown>) {
-  const { email, voller_name, token, schule_name, rolle, eingeladen_von_name } = body as {
-    email: string; voller_name?: string; token: string
-    schule_name: string; rolle: string; eingeladen_von_name?: string
+async function sendSchuleinladung(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>, absenderId: string) {
+  // Alle Angaben aus der gespeicherten Einladung – nicht aus dem Request, sonst
+  // ließen sich beliebige Mails im Namen einer Schule verschicken
+  const { token, voller_name } = body as { token: string; voller_name?: string }
+  const { data: einladung } = await supabase.from('schul_einladungen')
+    .select('email, rolle, status, eingeladen_von, schulen(name), unterricht(name), profiles!schul_einladungen_eingeladen_von_fkey(voller_name)')
+    .eq('token', token).single()
+  if (!einladung || einladung.status !== 'offen' || einladung.eingeladen_von !== absenderId) {
+    throw new Error('Einladung nicht gefunden')
   }
+  const email = einladung.email as string
+  const rolle = einladung.rolle as string
+  const schule_name = (einladung.schulen as { name?: string } | null)?.name ?? 'Staccato'
+  const kurs_name = (einladung.unterricht as { name?: string } | null)?.name
+  const eingeladen_von_name = (einladung.profiles as { voller_name?: string } | null)?.voller_name
 
   const rollenText: Record<string, string> = {
     schueler: 'Schüler/in', lehrer: 'Lehrer/in',
@@ -485,7 +495,8 @@ async function sendSchuleinladung(body: Record<string, unknown>) {
       <p style="margin:0 0 20px;color:#475569">
         Du hast eine Einladung${vonText} erhalten,
         der Musikschule <strong>${esc(schule_name)}</strong> bei <strong>Staccato</strong>
-        als <strong>${esc(rollenText[rolle] ?? rolle)}</strong> beizutreten.
+        als <strong>${esc(rollenText[rolle] ?? rolle)}</strong> beizutreten.${kurs_name ? `
+        Du wirst dabei direkt in den Kurs <strong>${esc(kurs_name)}</strong> aufgenommen.` : ''}
       </p>
 
       <p style="margin:0 0 24px;color:#475569">

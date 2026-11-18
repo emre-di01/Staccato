@@ -226,7 +226,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.7** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.8** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -656,6 +656,7 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261118000001_daten_export_vollstaendig.sql` | `meine_daten_exportieren()` um E-Mail, Notizen, Zahlungsdaten, Erziehungsberechtigte, Dokumente, Rechnungen ergänzt |
 | `20261118000002_mitglied_angaben_selbst.sql` | `profil_schutz`: Mitglieder dürfen `mitgliedsbeitrag`/`zahlungsrhythmus`/`notizen` nicht selbst ändern (Mitglieder tragen Bankdaten seit v2.9.7 selbst ein); legte außerdem `sepa_mandat_am` an |
 | `20261118000003_sepa_mandat_entfernen.sql` | Entfernt `sepa_mandat_am` wieder — SEPA-Mandat wird nicht in Staccato erteilt, den Einzug macht die Schule |
+| `20261118000004_lehrer_einladen_dokumente.sql` | `schul_einladungen.unterricht_id`; `einladung_versenden(email, rolle, unterricht_id DEFAULT NULL)` — Lehrer dürfen Schüler in eigene Kurse einladen, bekannte Schulmitglieder werden direkt aufgenommen; `einladung_annehmen`/`accept-invitation` nehmen in den Kurs auf; `mitglied_dateien` + Bucket `mitglied-dateien` schulgebunden via `ist_admin_von_mitglied()`, Lehrer dürfen für eigene Schüler ablegen (`ist_lehrer_von_mitglied()`); `seed.sql` mit denselben Storage-Policies |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

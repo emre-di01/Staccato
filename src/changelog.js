@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.7'
+export const CURRENT_VERSION = '2.9.8'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.8',
+    date: '2026-11-18',
+    features: [
+      {
+        icon: '✉️',
+        de: 'Lehrkräfte laden neue Schülerinnen und Schüler per E-Mail direkt in ihren Kurs ein',
+        en: 'Teachers invite new students by email straight into their course',
+        tr: 'Öğretmenler yeni öğrencileri e-posta ile doğrudan kurslarına davet eder',
+      },
+      {
+        icon: '📄',
+        de: 'Unterschriebene Kursanmeldungen und Aufnahmeanträge landen automatisch als PDF bei den Dokumenten des Mitglieds',
+        en: 'Signed course registrations and membership applications are saved automatically as PDF in the member documents',
+        tr: 'İmzalı kurs kayıtları ve üyelik başvuruları otomatik olarak PDF şeklinde üyenin belgelerine kaydedilir',
+      },
+    ],
+  },
   {
     version: '2.9.7',
     date: '2026-11-18',

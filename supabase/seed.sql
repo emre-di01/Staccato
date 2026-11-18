@@ -60,14 +60,18 @@ DO $$ BEGIN
     USING (bucket_id = ANY(ARRAY['stueck-dateien', 'kurs-dateien', 'schueler-dateien']));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- mitglied-dateien: nur Admins der eigenen Schule bzw. Lehrer des Mitglieds
+-- (Funktionen aus Migration 20261118000004)
 DO $$ BEGIN
-  CREATE POLICY "admin_upload" ON storage.objects FOR INSERT TO authenticated
-    WITH CHECK (bucket_id = 'mitglied-dateien' AND (SELECT rolle FROM public.profiles WHERE id = auth.uid()) = ANY(ARRAY['admin'::public.user_rolle, 'superadmin'::public.user_rolle]));
+  CREATE POLICY "md-storage: admin lesen" ON storage.objects FOR SELECT
+    USING (bucket_id = 'mitglied-dateien' AND public.ist_admin_von_mitglied((storage.foldername(name))[1]));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE POLICY "admin_lesen_mitglied" ON storage.objects FOR SELECT TO authenticated
-    USING (bucket_id = 'mitglied-dateien' AND (SELECT rolle FROM public.profiles WHERE id = auth.uid()) = ANY(ARRAY['admin'::public.user_rolle, 'superadmin'::public.user_rolle]));
+  CREATE POLICY "md-storage: hochladen" ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'mitglied-dateien' AND (
+      public.ist_admin_von_mitglied((storage.foldername(name))[1])
+      OR public.ist_lehrer_von_mitglied((storage.foldername(name))[1])));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -76,8 +80,13 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE POLICY "admin_loeschen_mitglied" ON storage.objects FOR DELETE TO authenticated
-    USING (bucket_id = 'mitglied-dateien' AND (SELECT rolle FROM public.profiles WHERE id = auth.uid()) = ANY(ARRAY['admin'::public.user_rolle, 'superadmin'::public.user_rolle]));
+  CREATE POLICY "md-storage: admin aendern" ON storage.objects FOR UPDATE
+    USING (bucket_id = 'mitglied-dateien' AND public.ist_admin_von_mitglied((storage.foldername(name))[1]));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "md-storage: admin loeschen" ON storage.objects FOR DELETE
+    USING (bucket_id = 'mitglied-dateien' AND public.ist_admin_von_mitglied((storage.foldername(name))[1]));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ─── View: mitglieder_mit_email ───────────────────────────────

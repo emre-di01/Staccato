@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarPlus, CalendarRange, Printer, Download, UserPlus, FileText, Award, Trash2, Pencil } from 'lucide-react'
+import { CalendarPlus, CalendarRange, Printer, Download, UserPlus, FileText, Award, Trash2, Pencil, Mail } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useBasis, useSchulweit } from '../rolle'
@@ -20,15 +20,17 @@ function useKursVerwalten(id) {
     queryKey: ['nl-kurs-verwalten', id],
     enabled: !!id,
     queryFn: async () => {
-      const [k, tn, st] = await Promise.all([
+      const [k, tn, st, ei] = await Promise.all([
         supabase.from('unterricht').select('*, instrumente(name_de, icon), raeume(name), unterricht_lehrer(lehrer_id, rolle, profiles!unterricht_lehrer_lehrer_id_fkey(voller_name))').eq('id', id).single(),
         supabase.from('unterricht_schueler').select('schueler_id, profiles!unterricht_schueler_schueler_id_fkey(id, voller_name, geburtsdatum, avatar_url)').eq('unterricht_id', id).eq('status', 'aktiv'),
         supabase.from('stunden').select('id, beginn, status, notizen, hausaufgaben').eq('unterricht_id', id).order('beginn'),
+        supabase.from('schul_einladungen').select('id, email').eq('unterricht_id', id).eq('status', 'offen')
+          .gt('ablauf_am', new Date().toISOString()).order('erstellt_am'),
       ])
       if (k.error) throw k.error
       const teilnehmer = (tn.data ?? []).filter(t => t.profiles).map(t => t.profiles)
         .sort((a, b) => a.voller_name.localeCompare(b.voller_name))
-      return { kurs: k.data, teilnehmer, stunden: st.data ?? [] }
+      return { kurs: k.data, teilnehmer, stunden: st.data ?? [], einladungen: ei.data ?? [] }
     },
   })
 }
@@ -56,7 +58,7 @@ export default function KursVerwalten() {
   if (isLoading) return <Seite zurueck={{ to: `${basis}/kurse/${id}`, label: T('nl_tab_kurse') }}><div style={{ marginTop: 24 }}><Laden hoehe={300} /></div></Seite>
   if (!data) return <Seite zurueck={{ to: `${basis}/kurse`, label: T('nl_tab_kurse') }}><div style={{ marginTop: 24 }}><Leer text={T('nl_kurs_nicht_gefunden')} /></div></Seite>
 
-  const { kurs, teilnehmer, stunden } = data
+  const { kurs, teilnehmer, stunden, einladungen } = data
   const aktualisieren = () => neuLaden('nl-kurs-verwalten', 'nl-kurs', 'nl-stunden', 'nl-kurse')
 
   function notizenDrucken() {
@@ -148,6 +150,12 @@ ${st.hausaufgaben ? `<div class="label">${T('nl_bis_naechstes_mal')}</div><p cla
           {teilnehmer.map(p => (
             <div key={p.id}>
               <Zeile bild={<Initialen p={p} />} titel={p.voller_name} onClick={() => setBlatt({ person: p })} />
+              <Trenner />
+            </div>
+          ))}
+          {einladungen.map(e => (
+            <div key={e.id}>
+              <Zeile icon={Mail} iconFarbe="var(--text-2)" titel={e.email} untertitel={T('nl_kv_eingeladen')} chevron={false} />
               <Trenner />
             </div>
           ))}
@@ -292,6 +300,8 @@ function ZeitraumBlatt({ kurs, onClose, onFertig }) {
 
 function HinzufuegenBlatt({ kursId, vorhanden, onClose, onFertig }) {
   const { T, toast } = useApp()
+  const [email, setEmail] = useState('')
+  const [laedtEin, setLaedtEin] = useState(false)
   const [suche, setSuche] = useState('')
   const [hinzu, setHinzu] = useState([])
   const { data: alle = [], isLoading } = useQuery({
@@ -314,8 +324,34 @@ function HinzufuegenBlatt({ kursId, vorhanden, onClose, onFertig }) {
     onFertig()
   }
 
+  // Neue Schüler per E-Mail einladen – nach dem Annehmen sind sie direkt im Kurs
+  async function einladen(e) {
+    e.preventDefault()
+    const mail = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) { toast(T('nl_kv_email_ungueltig'), 'error'); return }
+    setLaedtEin(true)
+    const { data, error } = await supabase.rpc('einladung_versenden', { p_email: mail, p_rolle: 'schueler', p_unterricht_id: kursId })
+    if (error) { setLaedtEin(false); toast(error.message, 'error'); return }
+    if (data?.action === 'einladung_erstellt') {
+      const { error: mailErr } = await supabase.functions.invoke('send-email', { body: { type: 'schuleinladung', token: data.token } })
+      toast(mailErr ? T('nl_kv_einladung_ohne_mail') : T('nl_kv_einladung_gesendet').replace('{email}', mail), mailErr ? 'warning' : 'success')
+    } else {
+      toast(T('nl_kv_direkt_aufgenommen').replace('{email}', mail), 'success')
+    }
+    setLaedtEin(false)
+    setEmail('')
+    onFertig()
+  }
+
   return (
     <Blatt titel={T('nl_kv_teilnehmer_hinzufuegen')} onClose={onClose}>
+      <form onSubmit={einladen} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        <Feld label={T('nl_kv_per_email_einladen')} hinweis={T('nl_kv_einladen_hinweis')}>
+          <input type="email" autoComplete="off" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@beispiel.de" style={eingabeStil} />
+        </Feld>
+        <Knopf type="submit" voll icon={Mail} disabled={laedtEin || !email.trim()}>{laedtEin ? T('loading') : T('nl_kv_einladen')}</Knopf>
+      </form>
+      <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>{T('nl_kv_vorhandene_hinzufuegen')}</div>
       <div style={{ margin: '0 -20px 16px' }}>
         <Suchfeld wert={suche} onChange={setSuche} placeholder={T('nl_kv_name_suchen')} label={T('nl_kv_name_suchen')} />
       </div>

@@ -33,7 +33,7 @@ serve(async (req) => {
   // Einladung laden
   const { data: einladung, error: loadErr } = await supabase
     .from('schul_einladungen')
-    .select('id, email, schule_id, rolle, status, ablauf_am')
+    .select('id, email, schule_id, rolle, status, ablauf_am, unterricht_id')
     .eq('token', token)
     .single()
 
@@ -86,6 +86,15 @@ serve(async (req) => {
     schule_id: einladung.schule_id,
     rolle:     einladung.rolle,
   }, { onConflict: 'user_id,schule_id' })
+
+  // Von einer Lehrkraft in einen Kurs eingeladen: direkt aufnehmen
+  if (einladung.unterricht_id) {
+    await supabase.from('unterricht_schueler').upsert({
+      unterricht_id: einladung.unterricht_id,
+      schueler_id:   user.id,
+      status:        'aktiv',
+    }, { onConflict: 'unterricht_id,schueler_id' })
+  }
 
   // Einladung als angenommen markieren
   await supabase.from('schul_einladungen').update({ status: 'angenommen' }).eq('id', einladung.id)
