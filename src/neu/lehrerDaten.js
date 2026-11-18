@@ -49,7 +49,7 @@ export function useLehrerStunden({ zurueck = 1, tage = 1, kursId } = {}) {
       if (!ids.length) return []
       const jetzt = Date.now()
       const { data, error } = await supabase.from('stunden')
-        .select('id, beginn, ende, status, notizen, hausaufgaben, unterricht_id, unterricht(name, typ, raeume(name), unterricht_schueler(schueler_id, status)), raeume(name), anwesenheit(status, schueler_id, erfasst_von)')
+        .select('id, beginn, ende, status, notizen, hausaufgaben, unterricht_id, unterricht(name, typ, raeume(name), unterricht_schueler(schueler_id, status)), raeume(name), anwesenheit(status, schueler_id, erfasst_von, eingecheckt_am)')
         .in('unterricht_id', ids)
         .gte('beginn', new Date(jetzt - zurueck * TAG).toISOString())
         .lte('beginn', new Date(jetzt + tage * TAG).toISOString())

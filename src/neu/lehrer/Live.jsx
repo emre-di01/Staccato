@@ -60,6 +60,7 @@ export default function LehrerLive() {
   const [gestartet, setGestartet] = useState(null)
   const [notenUrls, setNotenUrls] = useState([])     // Notendateien, die der Beamer gerade hat
   const [notenStatus, setNotenStatus] = useState(null) // Ansicht, die der Beamer zurückmeldet
+  const [ci, setCi] = useState(null)               // wechselndes Einchecken-Token (nur mit Stunde)
   const broadcastRef = useRef(null)
   const beamerRef = useRef(null)
 
@@ -111,6 +112,27 @@ export default function LehrerLive() {
     return () => { ch.unsubscribe(); bc.unsubscribe(); document.removeEventListener('visibilitychange', sichtbar) }
   }, [session])
 
+  // Einchecken: alle 30 s ein neues Token (je 90 s gültig). Abfotografierte Codes laufen so schnell ab.
+  // In der App gescannt checkt der QR ein, mit der Handy-Kamera tritt er nur bei.
+  useEffect(() => {
+    if (phase !== 'aktiv' || !session?.stunde_id) return
+    let aus = false
+    async function neu() {
+      const { data: t, error } = await supabase.rpc('checkin_code_erzeugen', { p_stunde_id: session.stunde_id })
+      if (!aus && !error && t) setCi(t)
+    }
+    neu()
+    const iv = setInterval(neu, 30000)
+    return () => { aus = true; clearInterval(iv) }
+  }, [phase, session])
+
+  useEffect(() => {
+    if (!session) return
+    const link = `${window.location.origin}/session/${session.join_code}${ci ? `?ci=${ci}` : ''}`
+    QRCode.toDataURL(link, { width: 320, margin: 1 }).then(setQr)
+    if (ci) beamerRef.current?.send({ type: 'broadcast', event: 'checkin', payload: { ci } })
+  }, [session, ci])
+
   // Laufzeit-Anzeige
   const [, setTick] = useState(0)
   useEffect(() => {
@@ -120,7 +142,6 @@ export default function LehrerLive() {
   }, [phase])
 
   async function aktivieren(s, start) {
-    setQr(await QRCode.toDataURL(`${window.location.origin}/session/${s.join_code}`, { width: 320, margin: 1 }))
     setSession(s)
     setGestartet(start)
     setPhase('aktiv')
@@ -174,6 +195,7 @@ export default function LehrerLive() {
     setTimeout(() => st && liveAnsicht
       ? zeigen(st, liveAnsicht)
       : beamerRef.current?.send({ type: 'broadcast', event: 'state', payload: { join_code: session.join_code } }), 800)
+    setTimeout(() => ci && beamerRef.current?.send({ type: 'broadcast', event: 'checkin', payload: { ci } }), 900)
   }
 
   function notenBefehl(payload) {
@@ -270,6 +292,7 @@ export default function LehrerLive() {
                 <div style={{ fontSize: 15, color: F.text2 }}>{T('nl_beitreten_mit_code')}</div>
                 <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: '0.12em', fontVariantNumeric: 'tabular-nums' }}>{session.join_code}</div>
                 <div style={{ marginTop: 4, fontSize: 16, fontWeight: 600, color: F.gruen }}>{T('nl_verbunden_n').replace('{n}', teilnehmer.length)}</div>
+                {ci && <div style={{ marginTop: 4, fontSize: 14, color: F.text2 }}>{T('ci_live_hinweis')}</div>}
                 <button onClick={kopieren} style={{ marginTop: 10, minHeight: 40, padding: '0 14px', borderRadius: 20, border: 'none', background: F.linie, color: F.text, fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   {kopiert ? <Check aria-hidden="true" size={16} /> : <Copy aria-hidden="true" size={16} />}{kopiert ? T('nl_kopiert') : T('nl_link_kopieren')}
                 </button>

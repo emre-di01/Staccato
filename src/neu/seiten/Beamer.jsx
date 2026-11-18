@@ -32,12 +32,14 @@ export default function NeuBeamer() {
   const [qr, setQr] = useState('')
   const [liveQr, setLiveQr] = useState('')
   const [daten, setDaten] = useState(null)
+  const [ci, setCi] = useState(null)   // wechselndes Einchecken-Token aus dem Live-Unterricht
   const [groesse, setGroesse] = useState(28)
   const [vollbild, setVollbild] = useState(false)
   const kanal = useRef(null)
   const notenBefehl = useRef(null)
   const joinCode = daten?.join_code
-  const liveLink = joinCode ? `${window.location.origin}/session/${joinCode}` : ''
+  // In der App gescannt checkt ci ein; mit der Handy-Kamera tritt der Link nur bei
+  const liveLink = joinCode ? `${window.location.origin}/session/${joinCode}${ci ? `?ci=${ci}` : ''}` : ''
 
   useEffect(() => {
     QRCode.toDataURL(code, { width: 360, margin: 1, color: QR_FARBEN }).then(setQr)
@@ -50,10 +52,11 @@ export default function NeuBeamer() {
   useEffect(() => {
     const ch = supabase.channel(`beamer-${code}`)
       .on('broadcast', { event: 'state' }, ({ payload }) => {
-        if (payload.status === 'beendet') { setDaten(null); setCode(neuerCode()); return }
+        if (payload.status === 'beendet') { setDaten(null); setCi(null); setCode(neuerCode()); return }
         // Ältere Absender schicken den Beitritts-Code nicht jedes Mal mit → behalten
         setDaten(alt => ({ ...payload, join_code: payload.join_code ?? alt?.join_code }))
       })
+      .on('broadcast', { event: 'checkin' }, ({ payload }) => { if (/^[A-Za-z0-9]{8,64}$/.test(payload?.ci ?? '')) setCi(payload.ci) })
       .on('broadcast', { event: 'font_size' }, ({ payload }) => { if (payload?.size) setGroesse(payload.size) })
       .on('broadcast', { event: 'noten_befehl' }, ({ payload }) => notenBefehl.current?.(payload))
       .subscribe()
@@ -132,6 +135,7 @@ export default function NeuBeamer() {
               <Marke />
               <h1 style={{ margin: '28px 0 0', fontSize: 'clamp(32px, 4vw, 52px)', lineHeight: 1.1, fontWeight: 800, letterSpacing: '-0.02em' }}>{T('nb_mitmachen_titel')}</h1>
               <p style={{ margin: '14px 0 0', fontSize: 'clamp(18px, 1.8vw, 24px)', lineHeight: 1.5, color: F.text2 }}>{T('nb_mitmachen_text')}</p>
+              {ci && <p style={{ margin: '10px 0 0', fontSize: 'clamp(17px, 1.6vw, 22px)', lineHeight: 1.5, color: F.gruen, fontWeight: 600 }}>{T('ci_beamer_hinweis')}</p>}
               <div style={{ marginTop: 28, fontSize: 15, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: F.text3 }}>{T('nl_code')}</div>
               <div style={{ marginTop: 6, fontSize: 'clamp(64px, 9vw, 112px)', lineHeight: 1, fontWeight: 800, letterSpacing: '0.14em', fontVariantNumeric: 'tabular-nums' }}>{joinCode}</div>
             </div>

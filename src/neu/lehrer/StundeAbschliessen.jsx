@@ -121,6 +121,7 @@ function Formular({ st, zurueck }) {
               <Gruppe style={{ marginTop: 14 }}>
                 {st.teilnehmer.map((p, i) => {
                   const selbst = stati[p.id] === 'entschuldigt' && (st.anwesenheit ?? []).some(a => a.schueler_id === p.id && a.status === 'entschuldigt')
+                  const eingecheckt = (st.anwesenheit ?? []).find(a => a.schueler_id === p.id)?.eingecheckt_am
                   return (
                     <div key={p.id} style={{ padding: '12px 14px 14px', borderTop: i ? '1px solid var(--n-sep)' : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -129,6 +130,7 @@ function Formular({ st, zurueck }) {
                         </span>
                         <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 600, overflowWrap: 'anywhere' }}>{p.name}</span>
                         {selbst && <span style={{ fontSize: 14, color: 'var(--text-2)' }}>{T('nl_hat_abgesagt')}</span>}
+                        {eingecheckt && <span style={{ fontSize: 14, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{T('ci_per_qr')} · {uhrzeit(eingecheckt, zeitzone, lang)}</span>}
                       </div>
                       <div role="group" aria-label={p.name} style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                         {STATUS.map(([wert, label, farbe]) => {

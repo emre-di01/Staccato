@@ -4,6 +4,7 @@ import { QrCode } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { Blatt, Knopf, eingabeStil } from '../ui'
 import { useKameraScan, KameraVollbild } from './kamera'
+import { checkinAusQr, useEinchecken, fehlerText } from './einchecken'
 
 // Code aus gescanntem QR lesen: Link …/session/ABC123 oder nur der Code
 export function codeAusQr(text) {
@@ -15,8 +16,9 @@ export function codeAusQr(text) {
 
 // Live-Unterricht per Code beitreten (Start und Ich)
 export default function LiveBeitretenBlatt({ onClose }) {
-  const { T } = useApp()
+  const { T, toast } = useApp()
   const navigate = useNavigate()
+  const einchecken = useEinchecken()
   const [code, setCode] = useState('')
   const [fehler, setFehler] = useState(false)
   const [scannen, setScannen] = useState(false)
@@ -34,7 +36,19 @@ export default function LiveBeitretenBlatt({ onClose }) {
     oeffnen(c)
   }
 
-  function gescannt(text) {
+  async function gescannt(text) {
+    // QR vom Beamer/Live-Unterricht mit Einchecken-Token: beitreten und gleich einchecken
+    const qr = checkinAusQr(text)
+    if (qr?.art === 'stunde') {
+      const e = await einchecken(qr.art, qr.token)
+      toast(e.ok ? T(e.schon ? 'ci_schon' : 'ci_erfolg') : fehlerText(T, e), e.ok ? 'success' : 'error')
+      oeffnen(qr.code); return
+    }
+    if (qr?.art === 'raum') {
+      const e = await einchecken(qr.art, qr.token)
+      toast(e.ok ? T(e.schon ? 'ci_schon' : 'ci_erfolg') : fehlerText(T, e), e.ok ? 'success' : 'error')
+      onClose(); return
+    }
     const c = codeAusQr(text)
     if (c) { oeffnen(c); return }
     setScannen(false); setScanFehler(true)

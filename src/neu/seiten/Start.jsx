@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, MapPin, MessageCircle, Check, X, CalendarDays, CalendarClock, BookOpen, Radio, Target } from 'lucide-react'
+import { Clock, MapPin, MessageCircle, Check, X, CalendarDays, CalendarClock, BookOpen, Radio, Target, ScanLine, CircleCheck } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, LiedKachel, Regal, Leer, Laden, TextLink } from '../../ui'
 import LiveBeitretenBlatt from '../LiveBeitretenBlatt'
+import EincheckenBlatt from '../einchecken'
 import { useMeineStunden, useMeineEvents, useMeineLieder, useUngelesen, useMeineVorschlaege, useLetzteHausaufgabe, useAbsage } from '../daten'
 import { uhrzeit, tagLabel, datumLang, stundeDerSchule } from '../zeit'
 import { useVorstandUebersicht } from '../vorstand/daten'
 import { useBasis } from '../rolle'
 
 const VIERZEHN_TAGE = 14 * 24 * 60 * 60 * 1000
+const EINCHECKEN_VORLAUF = 15 * 60 * 1000
 
 export default function NeuStart() {
   const { profil, rolle, T, lang, zeitzone } = useApp()
@@ -23,12 +25,16 @@ export default function NeuStart() {
   const { data: vorstand } = useVorstandUebersicht({ aktiv: rolle === 'vorstand' })
   const absage = useAbsage()
   const [joinOffen, setJoinOffen] = useState(false)
+  const [eincheckenOffen, setEincheckenOffen] = useState(false)
 
   const jetzt = Date.now()
   const naechste = (stunden ?? []).find(s => new Date(s.ende) > jetzt && s.status !== 'abgesagt')
   const laeuft = naechste && new Date(naechste.beginn) <= jetzt
   const entschuldigt = naechste?.meine?.status === 'entschuldigt'
   const sendet = !!naechste && absage.sendet === naechste.id
+  // Einchecken per QR: ab 15 min vor Beginn bis Stundenende
+  const istDa = ['anwesend', 'zu_spaet'].includes(naechste?.meine?.status)
+  const eincheckbar = !!naechste && !istDa && jetzt >= new Date(naechste.beginn).getTime() - EINCHECKEN_VORLAUF
 
   // Lieder der nächsten Probe: „aktuell“ im Kurs der nächsten Stunde, sonst alle aktuellen
   const aktuelle = lieder.filter(l => l.kurse.some(k => k.status === 'aktuell'))
@@ -97,12 +103,22 @@ export default function NeuStart() {
                 <MapPin aria-hidden="true" size={20} />{naechste.raum}
               </div>
             )}
+            {eincheckbar && (
+              <button onClick={() => setEincheckenOffen(true)} style={{ marginTop: 8, height: 52, borderRadius: 14, border: 'none', background: '#FFFFFF', color: 'var(--n-hero-btn-fg)', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <ScanLine aria-hidden="true" size={20} />{T('ci_einchecken')}
+              </button>
+            )}
+            {istDa && (
+              <div role="status" style={{ marginTop: 8, minHeight: 52, padding: '0 16px', borderRadius: 14, background: 'var(--n-hero-2)', display: 'flex', alignItems: 'center', gap: 10, fontSize: 17, fontWeight: 700 }}>
+                <CircleCheck aria-hidden="true" size={22} />{T('ci_eingecheckt')}
+              </div>
+            )}
             {laeuft && (
-              <button onClick={() => setJoinOffen(true)} style={{ marginTop: 8, height: 52, borderRadius: 14, border: 'none', background: '#FFFFFF', color: 'var(--n-hero-btn-fg)', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <button onClick={() => setJoinOffen(true)} style={{ marginTop: eincheckbar ? 0 : 8, height: 52, borderRadius: 14, border: 'none', background: eincheckbar ? 'var(--n-hero-2)' : '#FFFFFF', color: eincheckbar ? '#FFFFFF' : 'var(--n-hero-btn-fg)', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 <Radio aria-hidden="true" size={20} />{T('n_live_beitreten')}
               </button>
             )}
-            {!laeuft && !entschuldigt && (
+            {!laeuft && !entschuldigt && !istDa && (
               <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
                 {regal.length > 0 && (
                   <Link to={`${basis}/repertoire/${regal[0].stueck.id}`} state={regalState} style={{ flex: '1 1 140px', height: 52, borderRadius: 14, background: '#FFFFFF', color: 'var(--n-hero-btn-fg)', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>{T('n_lieder_oeffnen')}</Link>
@@ -139,6 +155,7 @@ export default function NeuStart() {
       </Abschnitt>
 
       {joinOffen && <LiveBeitretenBlatt onClose={() => setJoinOffen(false)} />}
+      {eincheckenOffen && <EincheckenBlatt onClose={() => setEincheckenOffen(false)} />}
     </Seite>
   )
 }

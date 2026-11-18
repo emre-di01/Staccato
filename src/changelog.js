@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.8'
+export const CURRENT_VERSION = '2.9.9'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.9',
+    date: '2026-11-18',
+    features: [
+      {
+        icon: '📲',
+        de: 'Einchecken per QR-Code: In der App den Code im Raum oder auf dem Beamer scannen – und du bist für deine Stunde anwesend',
+        en: 'Check in via QR code: scan the code in the room or on the projector in the app – and you are marked present for your lesson',
+        tr: 'QR kod ile check-in: Uygulamada odadaki veya projeksiyondaki kodu tara – dersin için mevcut sayılırsın',
+      },
+      {
+        icon: '🖨️',
+        de: 'Admins drucken für jeden Raum einen Einchecken-Aushang als PDF; im Live-Unterricht wechselt der Code alle 30 Sekunden',
+        en: 'Admins print a check-in poster as PDF for every room; in live lessons the code changes every 30 seconds',
+        tr: 'Yöneticiler her oda için PDF olarak check-in afişi yazdırır; canlı derste kod her 30 saniyede değişir',
+      },
+    ],
+  },
   {
     version: '2.9.8',
     date: '2026-11-18',
