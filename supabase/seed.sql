@@ -113,7 +113,12 @@ SELECT
   u.email
 FROM public.profiles p
 LEFT JOIN auth.users u ON u.id = p.id
-WHERE p.schule_id = public.meine_schule_id();
+WHERE p.schule_id = public.meine_schule_id()
+  AND (
+    p.id = auth.uid()
+    OR public.meine_rolle() IN ('admin', 'superadmin')
+    OR public.ist_lehrer_von_schueler(p.id)
+  );
 
 GRANT SELECT ON public.mitglieder_mit_email TO authenticated;
 
