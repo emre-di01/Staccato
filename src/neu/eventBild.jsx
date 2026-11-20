@@ -59,3 +59,13 @@ export function EventBild({ pfad, radius = 14, ganz, style }) {
     </div>
   )
 }
+
+// Kleines quadratisches Vorschaubild für Listenzeilen
+export function EventVorschau({ pfad, groesse = 40 }) {
+  const url = useEventBildUrl(pfad)
+  return (
+    <span aria-hidden="true" style={{ width: groesse, height: groesse, flexShrink: 0, borderRadius: 10, overflow: 'hidden', background: 'var(--bg)', display: 'block' }}>
+      {url && <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+    </span>
+  )
+}

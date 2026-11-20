@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil, Music, UserPlus, X, Globe } from 'lucide-react'
+import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt } from '../../ui'
 import { useNeuLaden } from '../daten'
 import { uhrzeit } from '../zeit'
 import EventBlatt from '../lehrer/EventBlatt'
-import { EventBild } from '../eventBild'
+import { EventBild, EventVorschau } from '../eventBild'
 import { useBreit, Avatar, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
@@ -199,6 +199,7 @@ export default function AdminEvents() {
                     <div key={ev.id} style={{ background: breit && gewaehlt?.id === ev.id ? 'var(--n-tint)' : undefined }}>
                       {i > 0 && <Trenner />}
                       <Zeile titel={ev.titel} chevron={!breit} onClick={() => setGewaehltId(ev.id)}
+                        icon={CalendarDays} iconFarbe="#2563EB" bild={ev.bild_pfad && <EventVorschau pfad={ev.bild_pfad} />}
                         untertitel={[T(`n_evt_${ev.typ}`), datumZeit(ev, lang, zeitzone)].join(' · ')}
                         wert={ev.event_teilnehmer?.length ? T('nv_x_zusagen').replace('{n}', ja) : null} />
                     </div>
