@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.10'
+export const CURRENT_VERSION = '2.9.11'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.11',
+    date: '2026-11-20',
+    features: [
+      {
+        icon: '🖼️',
+        de: 'Titelbild für Veranstaltungen: Plakat oder Flyer hochladen – alle Eingeladenen sehen es direkt im Termin',
+        en: 'Cover image for events: upload a poster or flyer – everyone invited sees it right in the event',
+        tr: 'Etkinlikler için kapak görseli: Afiş veya broşür yükle – davet edilen herkes onu doğrudan etkinlikte görür',
+      },
+    ],
+  },
   {
     version: '2.9.10',
     date: '2026-11-18',

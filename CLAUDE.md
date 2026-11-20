@@ -226,7 +226,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.10** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.11** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -524,6 +524,7 @@ Staccato is a full music school management platform. Features by area:
 | `mitglied-dateien` | ✗ | Member documents (Aufnahmeformular etc.) |
 | `vorstand-dateien` | ✗ | Board meeting protocol attachments |
 | `ausgaben-dateien` | ✗ | Belege/Rechnungen für Ausgaben (Invoice Capture) |
+| `event-bilder` | ✗ | Titelbilder (Plakat/Flyer) für Veranstaltungen |
 
 **Enum types:**
 | Enum | Values |
@@ -659,6 +660,7 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261118000004_lehrer_einladen_dokumente.sql` | `schul_einladungen.unterricht_id`; `einladung_versenden(email, rolle, unterricht_id DEFAULT NULL)` — Lehrer dürfen Schüler in eigene Kurse einladen, bekannte Schulmitglieder werden direkt aufgenommen; `einladung_annehmen`/`accept-invitation` nehmen in den Kurs auf; `mitglied_dateien` + Bucket `mitglied-dateien` schulgebunden via `ist_admin_von_mitglied()`, Lehrer dürfen für eigene Schüler ablegen (`ist_lehrer_von_mitglied()`); `seed.sql` mit denselben Storage-Policies |
 | `20261118000005_storage_schulgrenzen.sql` | Buckets schulgebunden (vorher: jeder Angemeldete durfte in `stueck-/kurs-/schueler-dateien` alles inkl. Löschen; `vorstand-`/`ausgaben-dateien` schulübergreifend). Erster Ordner = `stueck_id` / `unterricht_id` / `schueler_id` / `schule_id`; Helfer `stueck_schule()`, `kurs_schule()`, `darf_kursdatei()`, `darf_schuelerdatei()`, `darf_vorstandsdatei()`; Tabelle `stueck_dateien` ebenfalls schulgebunden |
 | `20261118000006_qr_einchecken.sql` | QR-Einchecken: `anwesenheit.eingecheckt_am`; Tabellen `raum_checkin` (fester Code pro Raum) und `stunde_checkin_codes` (wechselnde Codes aus Live/Beamer, 90 s gültig), beide RLS ohne Policies — Zugriff nur über `raum_checkin_token(raum_id, neu)` (Admin), `checkin_code_erzeugen(stunde_id)` (Lehrkraft/Admin) und `einchecken(art, token)` (Zeitfenster 15 min vor bis 20 min nach Beginn beim Raum-Code, ab 10 min nach Beginn `zu_spaet`; Einträge der Lehrkraft bleiben unangetastet) |
+| `20261120000000_event_titelbild.sql` | `events.bild_pfad` + privater Bucket `event-bilder` (Pfad `<schule_id>/<event_id>/…`); Lesen: aktive Schule; Hochladen/Löschen via `darf_eventbild()` (Admin der Schule oder Lehrkraft, die das Event angelegt hat) |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

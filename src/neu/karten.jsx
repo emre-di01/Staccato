@@ -2,12 +2,14 @@
 import { useApp } from '../context/AppContext'
 import { Knopf } from '../ui'
 import { uhrzeit, wochentagKurz, tagDesMonats, tagKey } from './zeit'
+import { EventBild } from './eventBild'
 
-export function Karte({ beginn, akzent, titel, unter, status, statusFarbe, children }) {
+export function Karte({ beginn, akzent, titel, unter, status, statusFarbe, bild, children }) {
   const { lang, zeitzone } = useApp()
   const heute = tagKey(beginn, zeitzone) === tagKey(new Date().toISOString(), zeitzone)
   return (
     <article style={{ borderRadius: 18, background: 'var(--n-fill)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {bild}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div aria-hidden="true" style={{ width: 56, flexShrink: 0, textAlign: 'center', borderRadius: 12, background: 'var(--bg)', padding: '6px 0' }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: heute ? 'var(--primary)' : (akzent ?? 'var(--text-2)') }}>{wochentagKurz(beginn, zeitzone, lang)}</div>
@@ -53,7 +55,8 @@ export function EventKarte({ ev, onAntwort, sendet, aktionen }) {
   const offen = !ev.zusage || ev.zusage === 'offen'
   return (
     <Karte beginn={ev.beginn} akzent="#2563EB" titel={ev.titel}
-      unter={[T(`n_evt_${ev.typ}`), zeit, ort].filter(Boolean).join(' · ')} status={status} statusFarbe={farbe}>
+      unter={[T(`n_evt_${ev.typ}`), zeit, ort].filter(Boolean).join(' · ')} status={status} statusFarbe={farbe}
+      bild={ev.bild_pfad && <EventBild pfad={ev.bild_pfad} style={{ margin: '-2px -4px 0', width: 'calc(100% + 8px)' }} />}>
       {offen ? (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Knopf style={{ flex: '1 1 140px', height: 48 }} onClick={() => onAntwort('zugesagt')} disabled={sendet}>{T('n_ich_bin_dabei')}</Knopf>

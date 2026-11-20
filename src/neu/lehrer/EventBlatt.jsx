@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { Trash2, ImagePlus, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useSchulweit } from '../rolle'
 import { Blatt, Feld, Knopf, SchalterZeile, Gruppe, eingabeStil } from '../../ui'
+import { EventBild, bildVerkleinern, eventBildHochladen, eventBildLoeschen } from '../eventBild'
 
 const TYPEN = ['konzert', 'vorspiel', 'pruefung', 'veranstaltung', 'sonstiges']
 
@@ -33,7 +34,7 @@ async function verwaisteLiederLoeschen(eventId) {
 
 // Veranstaltung anlegen oder bearbeiten (Lehrer: nur eigene Events; im Admin-Bereich alle, inkl. Vorstandssitzung)
 export default function EventBlatt({ ev, onClose, onFertig }) {
-  const { schule, T, toast, confirm } = useApp()
+  const { schule, profil, T, toast, confirm } = useApp()
   const schulweit = useSchulweit()
   const typen = schulweit ? [...TYPEN, 'vorstandssitzung'] : TYPEN
   const [form, setForm] = useState({
@@ -48,6 +49,40 @@ export default function EventBlatt({ ev, onClose, onFertig }) {
   const [sendet, setSendet] = useState(false)
   const setze = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  // Titelbild: undefined = unverändert, null = entfernen, Blob = neues Bild
+  const [neuesBild, setNeuesBild] = useState(undefined)
+  const [vorschau, setVorschau] = useState(null)
+  const dateiRef = useRef(null)
+  useEffect(() => () => { if (vorschau) URL.revokeObjectURL(vorschau) }, [vorschau])
+
+  async function bildGewaehlt(e) {
+    const datei = e.target.files?.[0]
+    e.target.value = ''
+    if (!datei) return
+    try {
+      const blob = await bildVerkleinern(datei)
+      setNeuesBild(blob)
+      setVorschau(URL.createObjectURL(blob))
+    } catch {
+      toast(T('nl_event_bild_fehler'), 'error')
+    }
+  }
+
+  function bildEntfernen() {
+    setNeuesBild(null)
+    setVorschau(null)
+  }
+
+  // nach dem Speichern des Events: Bild hochladen bzw. entfernen, altes Bild aufräumen
+  async function bildSpeichern(eventId) {
+    if (neuesBild === undefined) return
+    const alt = ev?.bild_pfad ?? null
+    const pfad = neuesBild ? await eventBildHochladen(schule.id, eventId, neuesBild) : null
+    const { error } = await supabase.from('events').update({ bild_pfad: pfad }).eq('id', eventId)
+    if (error) throw error
+    if (alt && alt !== pfad) await eventBildLoeschen(alt)
+  }
+
   async function speichern() {
     if (!form.titel.trim() || !form.beginn) { toast(T('nl_event_pflicht'), 'error'); return }
     setSendet(true)
@@ -58,14 +93,19 @@ export default function EventBlatt({ ev, onClose, onFertig }) {
     }
     const { data: gespeichert, error } = ev
       ? await supabase.from('events').update(payload).eq('id', ev.id).select('id').single()
-      : await supabase.from('events').insert({ ...payload, schule_id: schule.id }).select('id').single()
+      : await supabase.from('events').insert({ ...payload, schule_id: schule.id, erstellt_von: profil.id }).select('id').single()
     if (!error && !ev && payload.typ === 'vorstandssitzung') {
       // Vorstand der Schule automatisch einladen
       const { data: vorstand } = await supabase.from('profiles').select('id').eq('schule_id', schule.id).in('rolle', ['vorstand', 'admin', 'superadmin'])
       if (vorstand?.length) await supabase.from('event_teilnehmer').insert(vorstand.map(m => ({ event_id: gespeichert.id, profil_id: m.id })))
     }
+    if (error) { setSendet(false); toast(error.message, 'error'); return }
+    try {
+      await bildSpeichern(gespeichert.id)
+    } catch (e) {
+      toast(`${T('nl_event_bild_fehler')} (${e.message})`, 'error')
+    }
     setSendet(false)
-    if (error) { toast(error.message, 'error'); return }
     onFertig()
   }
 
@@ -73,6 +113,7 @@ export default function EventBlatt({ ev, onClose, onFertig }) {
     const ok = await confirm(T('nl_event_loeschen_frage'), { confirmLabel: T('delete') })
     if (!ok) return
     if (schulweit) await verwaisteLiederLoeschen(ev.id)
+    await eventBildLoeschen(ev.bild_pfad)   // vor dem Event, sonst greift die Storage-Policy nicht mehr
     const { error } = await supabase.from('events').delete().eq('id', ev.id)
     if (error) { toast(error.message, 'error'); return }
     onFertig()
@@ -89,6 +130,22 @@ export default function EventBlatt({ ev, onClose, onFertig }) {
             {typen.map(t => <option key={t} value={t}>{T(`n_evt_${t}`)}</option>)}
           </select>
         </Feld>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-2)' }}>{T('nl_event_bild')}</span>
+          {vorschau
+            ? <img src={vorschau} alt="" style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 14, display: 'block' }} />
+            : neuesBild !== null && <EventBild pfad={ev?.bild_pfad} />}
+          <input ref={dateiRef} type="file" accept="image/*" onChange={bildGewaehlt} hidden />
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Knopf klein variante="rahmen" icon={ImagePlus} onClick={() => dateiRef.current?.click()}>
+              {vorschau || (ev?.bild_pfad && neuesBild !== null) ? T('nl_event_bild_aendern') : T('nl_event_bild_waehlen')}
+            </Knopf>
+            {(vorschau || (ev?.bild_pfad && neuesBild !== null)) && (
+              <Knopf klein variante="rahmen" icon={X} onClick={bildEntfernen}>{T('nl_event_bild_entfernen')}</Knopf>
+            )}
+          </div>
+          <span style={{ fontSize: 15, color: 'var(--text-2)' }}>{T('nl_event_bild_hinweis')}</span>
+        </div>
         <Feld label={T('event_start')}>
           <input type="datetime-local" value={form.beginn} onChange={e => setze('beginn', e.target.value)} style={eingabeStil} />
         </Feld>

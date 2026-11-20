@@ -8,6 +8,7 @@ import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, B
 import { useNeuLaden } from '../daten'
 import { uhrzeit } from '../zeit'
 import EventBlatt from '../lehrer/EventBlatt'
+import { EventBild } from '../eventBild'
 import { useBreit, Avatar, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
@@ -107,6 +108,7 @@ function Detail({ ev, onBearbeiten, onEinladen }) {
 
   return (
     <div>
+      {ev.bild_pfad && <EventBild pfad={ev.bild_pfad} ganz radius={18} style={{ marginBottom: 16 }} />}
       <div style={{ fontSize: 15, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{T(`n_evt_${ev.typ}`)}</div>
       <h2 style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 800, overflowWrap: 'anywhere' }}>{ev.titel}</h2>
       <div style={{ fontSize: 16, color: 'var(--text-2)', marginTop: 2 }}>{datumZeit(ev, lang, zeitzone)}</div>
