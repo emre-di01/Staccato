@@ -57,6 +57,7 @@ const NeuBeamer            = lazy(() => import('./neu/seiten/Beamer'))
 const Repertoire           = lazy(() => import('./pages/Repertoire'))
 const Nachrichten          = lazy(() => import('./pages/Nachrichten'))
 const Impressum            = lazy(() => import('./pages/Impressum'))
+const KontoLoeschen        = lazy(() => import('./pages/KontoLoeschen'))
 const Datenschutz          = lazy(() => import('./pages/Datenschutz'))
 const Lizenzen             = lazy(() => import('./pages/Lizenzen'))
 const SchulWaehler         = lazy(() => import('./pages/SchulWaehler'))
@@ -330,6 +331,7 @@ function AppRoutes() {
 
       {/* Öffentliche Seiten */}
       <Route path="/impressum"   element={<Impressum />} />
+      <Route path="/konto-loeschen" element={<KontoLoeschen />} />
       <Route path="/datenschutz" element={<Datenschutz />} />
       <Route path="/lizenzen"    element={<Lizenzen />} />
 

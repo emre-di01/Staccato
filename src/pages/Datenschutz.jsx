@@ -93,6 +93,7 @@ export default function Datenschutz() {
         <p style={{ ...p, marginTop: 10 }}>
           <strong>Daten exportieren:</strong> Profil → „Meine Daten (DSGVO Art. 15)" → „Daten herunterladen" — sofortiger Download als JSON-Datei.<br />
           <strong>Konto löschen:</strong> Profil → „Konto löschen" → Bestätigung mit „LÖSCHEN" — sofortige, unwiderrufliche Löschung.<br />
+          <strong>Anleitung:</strong> <a href="/konto-loeschen" style={link}>app.staccato-music.de/konto-loeschen</a><br />
           <strong>Per E-Mail:</strong> <a href="mailto:staccato@401dev.de?subject=Kontolöschung%20beantragen" style={link}>staccato@401dev.de</a>
         </p>
         <p style={{ ...p, marginTop: 10 }}>Gesetzliche Aufbewahrungspflichten (z.&nbsp;B. steuerrelevante Unterlagen) bleiben davon unberührt.</p>
