@@ -26,6 +26,7 @@ jobs:
 
       - name: Wegwerf-Schlüssel für die Testinstanz
         run: |
+          sed -i '/^external_url/d' supabase/config.toml   # sonst spricht die CLI beim Start mit Prod (api.401dev.de)
           echo '[]' > supabase/signing_keys.json
           supabase gen signing-key --algorithm ES256 --yes
           node infra/schluessel/erzeugen.mjs supabase/signing_keys.json >> $GITHUB_ENV
