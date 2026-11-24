@@ -89,7 +89,7 @@ export function ReservierenBlatt({ ev, onClose }) {
     setFehler('')
     const { data, error } = await supabase.rpc('tickets_reservieren', { p_event_id: ev.id, p_anzahl: anzahl, p_betrag: preis.betrag })
     setSendet(false)
-    neuLaden('n-ticket-info', 'n-ticket-bestellungen', 'n-meine-tickets')
+    neuLaden('n-ticket-info', 'n-ticket-bestellungen', 'n-meine-tickets', 'na-ticket-bestellungen')
     if (error || !data.ok) { setFehler(error ? error.message : grundText(data.grund)); return }
     setFertig(data)
     // Mail im Hintergrund; kostenlose Tickets sind sofort gültig. Alles Nötige steht auch in der App.

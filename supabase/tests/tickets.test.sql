@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(181);
+SELECT plan(183);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -193,6 +193,12 @@ SELECT is(pg_temp.res(5, 2, 0), 'ok', 'Kostenlose Tickets');
 SELECT is((SELECT count(*) FROM tickets WHERE event_id = '73000000-0000-0000-0000-000000000005' AND status = 'gueltig' AND code IS NOT NULL), 2::bigint, 'Kostenlose Tickets sofort gültig');
 SELECT is((ticket_info('73000000-0000-0000-0000-000000000005')->>'frist')::timestamptz, now() + interval '90 minutes', 'Abendkasse: Frist 30 min vor Beginn');
 SELECT is(jsonb_array_length(meine_daten_exportieren()->'ticketbestellungen'), 4, 'DSGVO-Export enthält Ticketbestellungen');
+RESET ROLE;
+
+-- Admins reservieren wie alle anderen Mitglieder, auch bei nicht öffentlichen Events
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.res(4, 1, 8), 'ok', 'Admin reserviert für sich (öffentlich)');
+SELECT is(pg_temp.res(2, 1, 15), 'ok', 'Admin reserviert für sich (intern)');
 RESET ROLE;
 
 -- sieht_event() muss mit den events-Policies übereinstimmen

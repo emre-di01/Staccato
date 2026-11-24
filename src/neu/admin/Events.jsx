@@ -9,6 +9,7 @@ import { useNeuLaden } from '../daten'
 import { uhrzeit } from '../zeit'
 import EventBlatt from '../lehrer/EventBlatt'
 import TicketBlatt from './TicketBlatt'
+import { EventTickets } from '../EventTickets'
 import TicketHelfer, { useTicketHelfer } from './TicketHelfer'
 import TicketBestellungen, { useBestellungen } from './TicketBestellungen'
 import { useTicketEinstellungen, bestellungenAuswerten, euro } from '../tickets'
@@ -124,6 +125,8 @@ function TicketZeile({ ev }) {
         <Zeile icon={Banknote} titel={T('ka_titel')} onClick={() => navigate(`/kasse?event=${ev.id}`)} />
       </>}
     </DetailGruppe>
+    {/* Admins reservieren hier auch für sich selbst */}
+    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}><EventTickets ev={ev} /></div>
     {offen === 'helfer' && <TicketHelfer ev={ev} onClose={() => setOffen(null)} />}
     {offen === 'bestellungen' && <TicketBestellungen ev={ev} kapazitaet={e.kapazitaet} onClose={() => setOffen(null)} />}
     {offen === 'einstellungen' && <TicketBlatt ev={ev} einstellungen={e} onClose={() => setOffen(null)}
