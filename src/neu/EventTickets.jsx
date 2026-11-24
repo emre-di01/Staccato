@@ -1,65 +1,87 @@
-// Tickets einer Veranstaltung für Mitglieder: Knopf auf der Terminkarte und Blatt zum Reservieren
+// Tickets für Mitglieder, bewusst einfach gehalten: ein Schritt, ein Hauptknopf je Ansicht
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Minus, Plus, QrCode, Ticket } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { CircleCheck, Minus, Plus, Ticket } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
-import { Blatt, Knopf, Gruppe, Trenner, Zeile, Laden, FehlerText } from '../ui'
+import { Blatt, Knopf, Laden, FehlerText } from '../ui'
 import { useNeuLaden } from './daten'
-import { tagLabel, uhrzeit } from './zeit'
-import { useTicketVerkauf, useMeineBestellungen, useTicketInfo, preisBerechnen, aktiveBestellungen, euro } from './tickets'
+import { useTicketVerkauf, useMeineBestellungen, useMeineTickets, useTicketInfo, ticketsNachEvent, preisBerechnen, aktiveBestellungen, geldKurz, tagAusgeschrieben } from './tickets'
 
 const GRUENDE = ['nicht_verfuegbar', 'kein_mitglied', 'noch_nicht', 'beendet', 'ausverkauft', 'obergrenze', 'zu_wenig_frei', 'preis_geaendert', 'anzahl']
 
-function useTexte() {
+// „Bitte 24 € bar bezahlen bis Freitag, 4. Dezember.“
+export function BezahlenHinweis({ betrag, frist, tz, style }) {
   const { T, lang, zeitzone } = useApp()
-  return {
-    zeitpunkt: iso => `${tagLabel(iso, zeitzone, lang, T)}, ${uhrzeit(iso, zeitzone, lang)}`,
-    anzahl: n => n === 1 ? T('tk_1_ticket') : T('tk_x_tickets').replace('{n}', n),
-    geld: betrag => euro(betrag, lang),
-  }
+  return (
+    <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.4, color: 'var(--primary)', ...style }}>
+      {T('tk_bezahlen_bis').replace('{betrag}', geldKurz(betrag, lang)).replace('{zeit}', tagAusgeschrieben(frist, tz ?? zeitzone, lang))}
+    </div>
+  )
 }
 
+// Auf der Terminkarte: entweder „Tickets reservieren“ oder der Weg zu den eigenen Tickets
 export function EventTickets({ ev }) {
   const { T } = useApp()
-  const texte = useTexte()
+  const navigate = useNavigate()
   const [offen, setOffen] = useState(false)
   const { data: verkauf = [] } = useTicketVerkauf()
   const { data: alle } = useMeineBestellungen()
   const meine = aktiveBestellungen(alle?.filter(b => b.event_id === ev.id))
-  if (!verkauf.includes(ev.id) && !meine.length) return null
+  if (!verkauf.includes(ev.id) && !meine.length && !offen) return null
 
-  const anzahl = meine.reduce((s, b) => s + b.anzahl, 0)
-  const unbezahlt = meine.some(b => b.status === 'reserviert')
+  const offene = meine.filter(b => b.status === 'reserviert')
+  const bereit = meine.filter(b => b.status === 'bezahlt').reduce((s, b) => s + b.anzahl, 0)
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <Knopf klein variante="tint" icon={Ticket} onClick={() => setOffen(true)}>{T(anzahl ? 'tk_meine_tickets' : 'tk_reservieren')}</Knopf>
-        {anzahl > 0 && (
-          <span style={{ fontSize: 15, fontWeight: 600, color: unbezahlt ? 'var(--primary)' : 'var(--success)' }}>
-            {texte.anzahl(anzahl)} · {T(unbezahlt ? 'tk_noch_bezahlen' : 'tk_bezahlt')}
-          </span>
-        )}
-      </div>
-      {offen && <ReservierenBlatt ev={ev} meine={meine} onClose={() => setOffen(false)} />}
+      {offene.map(b => <BezahlenHinweis key={b.id} betrag={b.betrag} frist={b.frist} />)}
+      {meine.length === 0
+        ? <Knopf voll variante="tint" icon={Ticket} onClick={() => setOffen(true)}>{T('tk_reservieren')}</Knopf>
+        : <Knopf voll variante="tint" icon={Ticket} onClick={() => navigate(`/tickets?event=${ev.id}`)}>{T(bereit === 1 ? 'tk_mein_ticket' : 'tk_meine_tickets')}</Knopf>}
+      {offen && <ReservierenBlatt ev={ev} onClose={() => setOffen(false)} />}
     </>
   )
 }
 
-function ReservierenBlatt({ ev, meine, onClose }) {
-  const { T, toast } = useApp()
-  const texte = useTexte()
+// Startseite: eigene Tickets für kommende Veranstaltungen, ein Tipp bis zum QR-Code
+export function TicketStart() {
+  const { T, lang } = useApp()
+  const { data } = useMeineTickets()
+  const gruppen = ticketsNachEvent(data).filter(g => !g.vergangen && (g.offen.length || g.tickets.some(x => x.ticket.status === 'gueltig'))).slice(0, 3)
+  return gruppen.map(g => {
+    const bereit = g.tickets.filter(x => x.ticket.status === 'gueltig').length
+    return (
+      <section key={g.event.id} aria-label={`${T('tk_tickets')}: ${g.event.titel}`} style={{ margin: '16px 20px 0', padding: 22, borderRadius: 24, background: 'var(--n-fill)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.2, overflowWrap: 'anywhere' }}>{g.event.titel}</div>
+          <div style={{ marginTop: 4, fontSize: 17, color: 'var(--text-2)' }}>{tagAusgeschrieben(g.event.beginn, g.schule.zeitzone, lang)}</div>
+        </div>
+        {g.offen.map(o => <BezahlenHinweis key={o.id} betrag={o.betrag} frist={o.frist} tz={g.schule.zeitzone} />)}
+        {bereit > 0 && (
+          <Link to={`/tickets?event=${g.event.id}`} style={{ height: 60, borderRadius: 16, background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 19, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, textDecoration: 'none' }}>
+            <Ticket aria-hidden="true" size={24} />{bereit === 1 ? T('tk_mein_ticket') : T('tk_meine_x').replace('{n}', bereit)}
+          </Link>
+        )}
+      </section>
+    )
+  })
+}
+
+export function ReservierenBlatt({ ev, onClose }) {
+  const { T, lang, zeitzone } = useApp()
   const neuLaden = useNeuLaden()
   const navigate = useNavigate()
   const { data: info, isLoading, isError } = useTicketInfo(ev.id)
   const [gewaehlt, setGewaehlt] = useState(1)
   const [sendet, setSendet] = useState(false)
   const [fehler, setFehler] = useState('')
+  const [fertig, setFertig] = useState(null)   // Ergebnis der Reservierung
 
   const anzahl = Math.max(1, Math.min(gewaehlt, info?.max ?? 1))
   const preis = info?.ok ? preisBerechnen(info, anzahl) : null
+  const geld = betrag => geldKurz(betrag, lang)
   const grundText = grund => grund === 'noch_nicht' && info?.verkauf_von
-    ? T('tk_grund_noch_nicht').replace('{zeit}', texte.zeitpunkt(info.verkauf_von))
+    ? T('tk_grund_noch_nicht').replace('{zeit}', tagAusgeschrieben(info.verkauf_von, zeitzone, lang))
     : T(`tk_grund_${GRUENDE.includes(grund) ? grund : 'nicht_verfuegbar'}`)
 
   async function reservieren() {
@@ -69,67 +91,49 @@ function ReservierenBlatt({ ev, meine, onClose }) {
     setSendet(false)
     neuLaden('n-ticket-info', 'n-ticket-bestellungen', 'n-meine-tickets')
     if (error || !data.ok) { setFehler(error ? error.message : grundText(data.grund)); return }
-    setGewaehlt(1)
-    toast(T(data.status === 'bezahlt' ? 'tk_sofort_gueltig' : 'tk_reserviert'), 'success')
+    setFertig(data)
   }
 
-  return (
-    <Blatt titel={T('tk_tickets')} onClose={onClose}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div>
-          <div style={{ fontSize: 19, fontWeight: 700, overflowWrap: 'anywhere' }}>{ev.titel}</div>
-          <div style={{ fontSize: 16, color: 'var(--text-2)' }}>{texte.zeitpunkt(ev.beginn)}</div>
-        </div>
-
-        {meine.length > 0 && (
-          <Gruppe style={{ margin: 0 }}>
-            {meine.map((b, i) => (
-              <div key={b.id}>
-                {i > 0 && <Trenner />}
-                <Zeile icon={Ticket} chevron={false} titel={texte.anzahl(b.anzahl)} wert={texte.geld(b.betrag)}
-                  untertitel={b.status === 'bezahlt' ? T('tk_bezahlt') : T('tk_bar_bis').replace('{zeit}', texte.zeitpunkt(b.frist))} />
-              </div>
-            ))}
-          </Gruppe>
-        )}
-
-        {meine.some(b => b.status === 'bezahlt') && <Knopf voll variante="sekundaer" icon={QrCode} onClick={() => navigate(`/tickets?event=${ev.id}`)}>{T('tk_qr_zeigen')}</Knopf>}
-
-        {isLoading ? <Laden hoehe={160} /> : isError ? <FehlerText>{T('tk_laden_fehler')}</FehlerText>
-          : !info.ok ? <p role="status" style={{ margin: 0, fontSize: 17, color: 'var(--text-2)' }}>{grundText(info.grund)}</p> : <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 17, fontWeight: 600 }}>{T('tk_anzahl')}</div>
-                <div style={{ fontSize: 15, color: 'var(--text-2)' }}>{T('tk_noch_frei').replace('{n}', info.frei)} · {T('tk_hoechstens').replace('{n}', info.max)}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Knopf klein variante="rahmen" icon={Minus} aria-label={T('tk_weniger')} style={rund} disabled={anzahl <= 1} onClick={() => setGewaehlt(anzahl - 1)} />
-                <span aria-live="polite" style={{ minWidth: 36, textAlign: 'center', fontSize: 22, fontWeight: 800 }}>{anzahl}</span>
-                <Knopf klein variante="rahmen" icon={Plus} aria-label={T('tk_mehr')} style={rund} disabled={anzahl >= info.max} onClick={() => setGewaehlt(anzahl + 1)} />
-              </div>
-            </div>
-
-            <Gruppe style={{ margin: 0 }}>
-              {preis.verguenstigt > 0 && <>
-                <Zeile titel={T('tk_zeile_verguenstigt')} untertitel={`${preis.verguenstigt} × ${texte.geld(info.preis_verguenstigt)}`} wert={texte.geld(preis.verguenstigt * info.preis_verguenstigt)} />
-                <Trenner />
-              </>}
-              {preis.normal > 0 && <>
-                <Zeile titel={T('tk_zeile_normal')} untertitel={`${preis.normal} × ${texte.geld(info.preis_normal)}`} wert={texte.geld(preis.normal * info.preis_normal)} />
-                <Trenner />
-              </>}
-              <Zeile titel={T('tk_summe')} wert={texte.geld(preis.betrag)} wertFarbe="var(--text)" />
-            </Gruppe>
-
-            {preis.betrag > 0 && <p style={{ margin: 0, fontSize: 16, color: 'var(--text-2)' }}>{T('tk_frist_hinweis').replace('{zeit}', texte.zeitpunkt(info.frist))}</p>}
-            <Knopf voll onClick={reservieren} disabled={sendet}>
-              {preis.betrag > 0 ? T('tk_fuer_reservieren').replace('{betrag}', texte.geld(preis.betrag)) : T('tk_kostenlos_holen')}
-            </Knopf>
-          </>}
-        {fehler && <div role="alert"><FehlerText>{fehler}</FehlerText></div>}
+  if (fertig) return (
+    <Blatt titel={ev.titel} onClose={onClose}>
+      <div role="status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, padding: '8px 0' }}>
+        <CircleCheck aria-hidden="true" size={64} color="var(--success)" />
+        <div style={{ fontSize: 28, fontWeight: 800 }}>{T(fertig.frist ? 'tk_reserviert_titel' : 'tk_fertig_titel')}</div>
+        {fertig.frist && <>
+          <BezahlenHinweis betrag={fertig.betrag} frist={fertig.frist} style={{ fontSize: 21 }} />
+          <div style={{ fontSize: 17, color: 'var(--text-2)' }}>{T('tk_reserviert_danach')}</div>
+        </>}
+        {fertig.frist
+          ? <Knopf voll onClick={onClose}>{T('tk_fertig')}</Knopf>
+          : <Knopf voll icon={Ticket} onClick={() => { onClose(); navigate(`/tickets?event=${ev.id}`) }}>{T('tk_mein_ticket')}</Knopf>}
       </div>
+    </Blatt>
+  )
+
+  return (
+    <Blatt titel={ev.titel} onClose={onClose}>
+      {isLoading ? <Laden hoehe={220} /> : isError ? <FehlerText>{T('tk_laden_fehler')}</FehlerText>
+        : !info.ok ? <p role="status" style={{ margin: '8px 0', fontSize: 19, fontWeight: 600 }}>{grundText(info.grund)}</p> : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 18 }}>
+            <div style={{ fontSize: 21, fontWeight: 700 }}>{T('tk_wie_viele')}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <Knopf variante="sekundaer" aria-label={T('tk_weniger')} style={rund} disabled={anzahl <= 1} onClick={() => setGewaehlt(anzahl - 1)}><Minus aria-hidden="true" size={30} /></Knopf>
+              <span aria-live="polite" style={{ minWidth: 64, fontSize: 44, fontWeight: 800 }}>{anzahl}</span>
+              <Knopf variante="sekundaer" aria-label={T('tk_mehr')} style={rund} disabled={anzahl >= info.max} onClick={() => setGewaehlt(anzahl + 1)}><Plus aria-hidden="true" size={30} /></Knopf>
+            </div>
+            {anzahl >= info.max && info.max > 1 && <div style={{ fontSize: 16, color: 'var(--text-2)' }}>{T('tk_mehr_geht_nicht')}</div>}
+            <div>
+              <div style={{ fontSize: 26, fontWeight: 800 }}>{T('tk_zusammen').replace('{betrag}', geld(preis.betrag))}</div>
+              {preis.verguenstigt > 0 && preis.normal > 0 && (
+                <div style={{ marginTop: 4, fontSize: 16, color: 'var(--text-2)' }}>{preis.verguenstigt} × {geld(info.preis_verguenstigt)} + {preis.normal} × {geld(info.preis_normal)}</div>
+              )}
+            </div>
+            {fehler && <div role="alert"><FehlerText>{fehler}</FehlerText></div>}
+            <Knopf voll onClick={reservieren} disabled={sendet} style={{ height: 60, fontSize: 19 }}>{T('tk_jetzt_reservieren')}</Knopf>
+          </div>
+        )}
     </Blatt>
   )
 }
 
-const rund = { width: 44, padding: 0 }
+const rund = { width: 64, height: 64, borderRadius: 32, padding: 0 }

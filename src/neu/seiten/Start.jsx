@@ -9,6 +9,7 @@ import { useMeineStunden, useMeineEvents, useMeineLieder, useUngelesen, useMeine
 import { uhrzeit, tagLabel, datumLang, stundeDerSchule } from '../zeit'
 import { useVorstandUebersicht } from '../vorstand/daten'
 import { useBasis } from '../rolle'
+import { TicketStart } from '../EventTickets'
 
 const VIERZEHN_TAGE = 14 * 24 * 60 * 60 * 1000
 const EINCHECKEN_VORLAUF = 15 * 60 * 1000
@@ -88,6 +89,8 @@ export default function NeuStart() {
         </Link>
       </>}
     >
+      <TicketStart />
+
       {/* Nächster Termin */}
       <div style={{ marginTop: 16 }}>
         {isLoading ? <Laden hoehe={220} /> : naechste ? (

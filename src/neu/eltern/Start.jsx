@@ -3,6 +3,7 @@ import { Clock, MessageCircle, CalendarDays, BookOpen } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Leer, Laden } from '../../ui'
 import { useMeineEvents, useUngelesen } from '../daten'
+import { TicketStart } from '../EventTickets'
 import { useKinder, useKinderStunden, vorname } from './daten'
 import { uhrzeit, tagLabel, datumLang, stundeDerSchule } from '../zeit'
 
@@ -39,6 +40,7 @@ export default function ElternStart() {
         </Link>
       }
     >
+      <TicketStart />
       {isLoading ? <div style={{ marginTop: 24 }}><Laden hoehe={160} /></div>
         : kinder.length === 0 ? <div style={{ marginTop: 24 }}><Leer text={T('ne_keine_kinder')} /></div>
         : kinder.map((k, ki) => {

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Clock, MapPin, Users, Play, ClipboardCheck, Music, MessageCircle } from 'lucide-react'
+import { TicketStart } from '../EventTickets'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Leer, Laden } from '../../ui'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
@@ -68,6 +69,7 @@ export default function LehrerStart() {
         </Link>
       }
     >
+      <TicketStart />
       <div style={{ marginTop: 16 }}>
         {isLoading ? <Laden hoehe={240} /> : naechste ? (
           <section aria-label={T('n_naechster_termin')} style={{ margin: '0 20px', padding: 22, borderRadius: 24, background: 'var(--n-hero)', color: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: 10 }}>

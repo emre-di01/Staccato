@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(112);
+SELECT plan(113);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -168,6 +168,12 @@ RESET ROLE;
 INSERT INTO ticket_einstellungen (event_id, aktiv, kapazitaet, preis_normal) VALUES ('73000000-0000-0000-0000-000000000003', true, 5, 10);
 SELECT pg_temp.als('7d000000-0000-0000-0000-000000000000');
 SELECT is(pg_temp.res(3, 1, 10), 'kein_mitglied', 'Eingeladen, aber nicht Mitglied der Schule B');
+RESET ROLE;
+
+UPDATE ticket_einstellungen SET verkauf_bis = NULL WHERE event_id = '73000000-0000-0000-0000-000000000004';
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT is(to_char((ticket_info('73000000-0000-0000-0000-000000000004')->>'frist')::timestamptz AT TIME ZONE 'Europe/Berlin', 'YYYY-MM-DD HH24:MI'),
+  to_char((now() AT TIME ZONE 'Europe/Berlin')::date + 7, 'YYYY-MM-DD') || ' 23:59', 'Frist endet am Tagesende in Schulzeit');
 RESET ROLE;
 
 -- Verfall gibt Platz und Kontingent frei, auch vor dem Aufräumjob

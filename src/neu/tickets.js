@@ -230,3 +230,20 @@ export function ticketsNachEvent(bestellungen, jetzt = Date.now()) {
   }
   return [...gruppen.values()].filter(g => g.tickets.length || g.offen.length || g.storniert)
 }
+
+// ─── Anzeige ──────────────────────────────────────────────────
+
+// „24 €“ bzw. „8,50 €“
+export function geldKurz(betrag, lang) {
+  const ganz = Number.isInteger(Number(betrag))
+  return new Intl.NumberFormat(LOCALE[lang] ?? 'de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: ganz ? 0 : 2, maximumFractionDigits: ganz ? 0 : 2 }).format(betrag)
+}
+
+// „Freitag, 4. Dezember“, mit Uhrzeit außer bei Fristen bis Tagesende (23:59)
+export function tagAusgeschrieben(iso, tz, lang, { mitZeit = true } = {}) {
+  const d = new Date(iso)
+  const f = opt => new Intl.DateTimeFormat(LOCALE[lang] ?? 'de-DE', { timeZone: tz ?? 'Europe/Berlin', ...opt }).format(d)
+  const uhr = f({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const tag = f({ weekday: 'long', day: 'numeric', month: 'long' })
+  return mitZeit && uhr !== '23:59' ? `${tag}, ${uhr}` : tag
+}

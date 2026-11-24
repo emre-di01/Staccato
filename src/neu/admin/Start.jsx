@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, MessageCircle, UserPlus, Receipt, ClipboardCheck, Music, Inbox, Building2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { TicketStart } from '../EventTickets'
 import { useApp } from '../../context/AppContext'
 import { Seite, Gruppe, Trenner, Zeile, Leer, Laden } from '../../ui'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
@@ -120,6 +121,8 @@ export default function AdminStart() {
           <Link to="/superadmin" style={{ ...schnellKnopf, background: 'var(--n-fill)', color: 'var(--text)', fontWeight: 600 }}><Building2 aria-hidden="true" size={18} />{T('all_schools')}</Link>
         )}
       </div>
+
+      <TicketStart />
 
       <div style={{ margin: '22px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         {isLoading ? [0, 1, 2, 3].map(i => <div key={i} aria-busy="true" style={{ height: 104, borderRadius: 20, background: 'var(--n-fill)', animation: 'nPuls 1.4s ease-in-out infinite' }} />) : <>

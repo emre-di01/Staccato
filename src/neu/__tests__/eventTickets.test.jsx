@@ -18,13 +18,16 @@ vi.mock('../../lib/supabase', () => {
   }
   return { supabase: { from: abfrage, rpc: (...a) => db.rpc(...a) } }
 })
-vi.mock('../ticketPdf', () => ({ ticketPdf: async () => new File(['x'], 'Ticket.pdf', { type: 'application/pdf' }) }))
+vi.mock('../ticketPdf', () => ({
+  ticketPdf: async () => new File(['x'], 'Ticket.pdf', { type: 'application/pdf' }),
+  ticketBilder: async ({ tickets, fertig }) => tickets.forEach(x => fertig(x.ticket.id, new File(['x'], `Ticket_${x.nr}.jpg`, { type: 'image/jpeg' }))),
+}))
 const toast = vi.fn()
 const confirm = vi.fn(async () => true)
 vi.mock('../../context/AppContext', () => ({
   useApp: () => ({ T: k => t('de', k), lang: 'de', zeitzone: 'Europe/Berlin', profil: { id: 'ich' }, rolle: 'schueler', schule: { id: 's', name: 'Chor' }, toast, confirm }),
 }))
-const { EventTickets } = await import('../EventTickets')
+const { EventTickets, TicketStart } = await import('../EventTickets')
 const { default: TicketBlatt } = await import('../admin/TicketBlatt')
 const { default: NeuTickets } = await import('../seiten/Tickets')
 const { default: TicketBestellungen } = await import('../admin/TicketBestellungen')
@@ -52,19 +55,20 @@ describe('EventTickets', () => {
     expect(text()).toBe('')
   })
 
-  it('rechnet die Summe und reserviert mit dem bestätigten Betrag', async () => {
+  it('rechnet die Summe, reserviert und sagt, was jetzt zu tun ist', async () => {
     db.tabellen.ticket_einstellungen = [{ event_id: 'ev1' }]
-    const rpc = vi.fn(async name => ({ data: name === 'ticket_info' ? info : { ok: true, status: 'reserviert' }, error: null }))
+    const rpc = vi.fn(async name => ({ data: name === 'ticket_info' ? info : { ok: true, status: 'reserviert', betrag: 55.5, frist: '2099-12-04T22:59:00Z' }, error: null }))
     db.rpc = rpc
     await zeige(<EventTickets ev={ev} />)
     await klick('Tickets reservieren')
+    expect(text()).toContain('Zusammen 8,50 €')
     for (let i = 0; i < 4; i++) await klick('Mehr Tickets')
-    expect(text()).toContain('3 × 8,50 €')
-    expect(text()).toContain('2 × 15,00 €')
-    expect(text()).toContain('1. Dez. 2099, 18:00')
-    await klick('Für 55,50 € reservieren')
+    expect(text()).toContain('Zusammen 55,50 €')
+    expect(text()).toContain('3 × 8,50 € + 2 × 15 €')
+    await klick('Reservieren')
     expect(rpc).toHaveBeenCalledWith('tickets_reservieren', { p_event_id: 'ev1', p_anzahl: 5, p_betrag: 55.5 })
-    expect(toast).toHaveBeenCalledWith('Tickets reserviert', 'success')
+    expect(text()).toContain('Reserviert!')
+    expect(text()).toContain('Bitte 55,50 € bar bezahlen bis Freitag, 4. Dezember.')   // 23:59 → ohne Uhrzeit
   })
 
   it('zeigt Fehlergrund des Servers', async () => {
@@ -72,20 +76,26 @@ describe('EventTickets', () => {
     db.rpc = async name => ({ data: name === 'ticket_info' ? info : { ok: false, grund: 'preis_geaendert' }, error: null })
     await zeige(<EventTickets ev={ev} />)
     await klick('Tickets reservieren')
-    await klick('Für 8,50 € reservieren')
+    await klick('Reservieren')
     expect(text()).toContain('Der Preis hat sich geändert')
-    expect(toast).not.toHaveBeenCalled()
+    expect(text()).not.toContain('Reserviert!')
   })
 
-  it('zeigt eigene Reservierung mit Frist und Grund, wenn nichts mehr geht', async () => {
-    db.tabellen.ticket_bestellungen = [{ id: 'b', event_id: 'ev1', status: 'reserviert', frist: '2099-12-01T17:00:00Z', tickets: [{ status: 'reserviert', preis: 8.5 }, { status: 'reserviert', preis: 15 }] }]
-    db.rpc = async () => ({ data: { ...info, ok: false, grund: 'obergrenze' }, error: null })
+  it('zeigt nur den Grund, wenn nichts geht', async () => {
+    db.tabellen.ticket_einstellungen = [{ event_id: 'ev1' }]
+    db.rpc = async () => ({ data: { ...info, ok: false, grund: 'ausverkauft' }, error: null })
     await zeige(<EventTickets ev={ev} />)
-    expect(text()).toContain('2 Tickets · noch bezahlen')
-    await klick('Meine Tickets')
-    expect(text()).toContain('23,50 €')
-    expect(text()).toContain('Bar bezahlen bis')
-    expect(text()).toContain('Mehr Tickets sind pro Mitglied nicht möglich.')
+    await klick('Tickets reservieren')
+    expect(text()).toContain('Ausverkauft')
+    expect(knopf('Reservieren')).toBeUndefined()
+  })
+
+  it('zeigt auf der Karte, was noch zu zahlen ist', async () => {
+    db.tabellen.ticket_bestellungen = [{ id: 'b', event_id: 'ev1', status: 'reserviert', frist: '2099-12-04T17:00:00Z', tickets: [{ status: 'reserviert', preis: 9 }, { status: 'reserviert', preis: 15 }] }]
+    await zeige(<EventTickets ev={ev} />)
+    expect(text()).toContain('Bitte 24 € bar bezahlen bis Freitag, 4. Dezember, 18:00.')
+    expect(knopf('Meine Tickets')).toBeTruthy()
+    expect(knopf('Tickets reservieren')).toBeUndefined()
   })
 })
 
@@ -170,33 +180,36 @@ describe('NeuTickets', () => {
   const daten = [{ id: 'b', status: 'bezahlt', frist: null, schule: { name: 'Chor', zeitzone: 'Europe/Berlin' },
     event: { id: 'ev1', titel: 'Winterkonzert', beginn: ev.beginn, ende: null, ort: 'Aula', bild_pfad: null },
     tickets: [{ id: 'aaaaaaaa-1', preis: 8, status: 'eingeloest', code: 'c1', eingeloest_am: '2099-12-12T17:30:00Z' }, { id: 'bbbbbbbb-2', preis: 8, status: 'gueltig', code: 'c2' }] }]
-  const oeffnen = async () => {
-    db.rpc = async () => ({ error: null, data: daten })
+  const oeffnen = async (teil = daten) => {
+    db.rpc = async () => ({ error: null, data: teil })
     await zeige(<NeuTickets />)
-    await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('QR-Codes anzeigen')).click())
     await warte()
   }
   afterEach(() => { delete navigator.share; delete navigator.canShare })
 
-  it('zeigt QR-Codes, blättert und kennzeichnet eingelöste', async () => {
+  it('zeigt die Tickets sofort untereinander, gültige zuerst', async () => {
     await oeffnen()
-    expect(text()).toContain('2 Tickets · 1 eingelöst')
-    expect(text()).toContain('Ticket 2 von 2')          // beginnt beim ersten gültigen
-    expect(document.querySelector('img[alt="QR-Code BBBBBBBB"]')).not.toBeNull()
-    await klick('Vorheriges Ticket')
-    expect(text()).toContain('18:30')
-    expect(knopf('Ticket weitergeben')).toBeUndefined()
+    expect([...document.querySelectorAll('article')].map(a => a.getAttribute('aria-label'))).toEqual(['Ticket 2 von 2', 'Ticket 1 von 2'])
+    expect(document.querySelectorAll('article img')).toHaveLength(1)
+    expect(text()).toContain('Bereit')
+    expect(text()).toContain('Benutzt, 18:30')
   })
 
-  it('teilt das vorbereitete PDF noch im selben Klick', async () => {
+  it('zeigt bei mehreren Veranstaltungen eine Liste mit Zustand', async () => {
+    const offen = { id: 'c', status: 'reserviert', frist: '2099-12-04T22:59:00Z', schule: daten[0].schule, event: { ...daten[0].event, id: 'ev2', titel: 'Chorabend' }, tickets: [{ id: 'cccccccc-3', preis: 8, status: 'reserviert', code: null }] }
+    await oeffnen([...daten, offen])
+    expect(text()).toContain('Bereit')
+    expect(text()).toContain('Bitte bezahlen')
+    expect(document.querySelectorAll('article')).toHaveLength(0)
+  })
+
+  it('verschickt das vorbereitete Bild noch im selben Klick', async () => {
     navigator.canShare = () => true
     navigator.share = vi.fn(async () => {})
     await oeffnen()
-    const k = knopf('Ticket weitergeben')
-    expect(k.disabled).toBe(false)
-    k.click()                                            // ohne Warten: share muss synchron aufgerufen werden
+    knopf('Verschicken').click()                         // ohne Warten: share muss synchron aufgerufen werden
     expect(navigator.share).toHaveBeenCalledTimes(1)
-    expect(navigator.share.mock.calls[0][0].files[0].name).toBe('Ticket.pdf')
+    expect(navigator.share.mock.calls[0][0].files[0].name).toBe('Ticket_2.jpg')
   })
 
   it('speichert stattdessen, wenn der Browser das Teilen ablehnt', async () => {
@@ -205,14 +218,30 @@ describe('NeuTickets', () => {
     navigator.canShare = () => true
     navigator.share = vi.fn(async () => { throw Object.assign(new Error('x'), { name: 'NotAllowedError' }) })
     await oeffnen()
-    await klick('Ticket weitergeben')
+    await klick('Verschicken')
     expect(URL.createObjectURL).toHaveBeenCalled()
-    expect(toast).toHaveBeenCalledWith('PDF gespeichert', 'success')
+    expect(toast).toHaveBeenCalledWith('Bild gespeichert', 'success')
   })
 
   it('bietet ohne Teilen-Funktion das Speichern an', async () => {
     await oeffnen()
-    expect(knopf('Ticket weitergeben')).toBeUndefined()
-    expect(knopf('Als PDF speichern')).toBeTruthy()
+    expect(knopf('Verschicken')).toBeUndefined()
+    expect(knopf('Als Bild speichern')).toBeTruthy()
+  })
+})
+
+describe('TicketStart', () => {
+  const gruppe = tickets => [{ id: 'b', status: 'bezahlt', frist: null, schule: { zeitzone: 'Europe/Berlin' }, event: { id: 'ev1', titel: 'Winterkonzert', beginn: ev.beginn, ende: null }, tickets }]
+  it('führt mit einem Tipp zu den gültigen Tickets', async () => {
+    db.rpc = async () => ({ error: null, data: gruppe([{ id: '1', preis: 8, status: 'gueltig', code: 'a' }, { id: '2', preis: 8, status: 'gueltig', code: 'b' }]) })
+    await zeige(<TicketStart />)
+    const link = document.querySelector('a')
+    expect(link.textContent).toBe('Meine 2 Tickets')
+    expect(link.getAttribute('href')).toBe('/tickets?event=ev1')
+  })
+  it('zeigt nichts, wenn alles benutzt ist', async () => {
+    db.rpc = async () => ({ error: null, data: gruppe([{ id: '1', preis: 8, status: 'eingeloest', code: 'a', eingeloest_am: ev.beginn }]) })
+    await zeige(<TicketStart />)
+    expect(text()).toBe('')
   })
 })

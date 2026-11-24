@@ -68,19 +68,38 @@ export function zeichneTicket(cvs, { ticket, nr, anzahl, event, schule, qr, logo
   umbrechen(ctx, T('tk_pdf_hinweis'), B - 2 * RAND, 2).forEach((z, i) => ctx.fillText(z, M, H - 105 + i * 42))
 }
 
-// PDF mit einer Seite pro Ticket. tickets: [{ ticket, nr }]
-export async function ticketPdf({ tickets, anzahl, event, schule, T, lang }) {
-  const { default: jsPDF } = await import('jspdf')
+const dateiname = (T, event, endung) => `${`${T('tk_tickets')}_${event.titel}`.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}${endung}`
+
+async function zeichner({ anzahl, event, schule, T, lang }) {
   try { await document.fonts?.ready } catch { /* egal */ }
   const logo = schule.logo_url ? await bildLaden(schule.logo_url, true).catch(() => null) : null
-  const doc = new jsPDF({ unit: 'mm', format: 'a5' })
   const cvs = document.createElement('canvas')
-  for (const [i, { ticket, nr }] of tickets.entries()) {
+  return async ({ ticket, nr }) => {
     const qr = await bildLaden(await QRCode.toDataURL(ticketQrInhalt(ticket.code), { width: 900, margin: 0, color: { dark: '#111114', light: '#FFFFFF' } }))
     zeichneTicket(cvs, { ticket, nr, anzahl, event, schule, qr, logo, T, lang })
+    return cvs
+  }
+}
+
+// Ein Bild pro Ticket (zum Verschicken); fertig(ticketId, Datei) wird nacheinander aufgerufen
+export async function ticketBilder({ tickets, fertig, ...rest }) {
+  const zeichne = await zeichner(rest)
+  for (const x of tickets) {
+    const cvs = await zeichne(x)
+    const blob = await new Promise(ok => cvs.toBlob(ok, 'image/jpeg', 0.92))
+    fertig(x.ticket.id, blob && new File([blob], dateiname(rest.T, rest.event, `_${x.nr}.jpg`), { type: 'image/jpeg' }))
+  }
+}
+
+// PDF mit einer Seite pro Ticket. tickets: [{ ticket, nr }]
+export async function ticketPdf({ tickets, ...rest }) {
+  const { default: jsPDF } = await import('jspdf')
+  const zeichne = await zeichner(rest)
+  const doc = new jsPDF({ unit: 'mm', format: 'a5' })
+  for (const [i, x] of tickets.entries()) {
+    const cvs = await zeichne(x)
     if (i > 0) doc.addPage()
     doc.addImage(cvs.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 148, 210)   // PNG wäre bei vielen Tickets sehr langsam
   }
-  const name = `${T('tk_tickets')}_${event.titel}`.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)
-  return new File([doc.output('blob')], `${name}.pdf`, { type: 'application/pdf' })
+  return new File([doc.output('blob')], dateiname(rest.T, rest.event, '.pdf'), { type: 'application/pdf' })
 }
