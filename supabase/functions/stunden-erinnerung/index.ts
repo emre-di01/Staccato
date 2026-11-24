@@ -1,5 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
+import { kontoDateienLoeschen } from '../_shared/kontoDateien.ts'
 
 const VAPID_PUBLIC_KEY  = Deno.env.get('VAPID_PUBLIC_KEY')!
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
@@ -21,6 +22,11 @@ Deno.serve(async (req) => {
   }
   // Nur Weg und Kennwort prüfen, nichts versenden
   if (req.headers.get('x-nur-pruefen')) return new Response('ok – geprüft', { status: 200 })
+
+  // Zweiter interner Auftrag (pg_cron konto-dateien-loeschen)
+  const { aufgabe } = await req.json().catch(() => ({})) as { aufgabe?: string }
+  if (aufgabe === 'dateien') return await kontoDateienLoeschen(supabase)
+  if (aufgabe) return new Response('Unbekannte Aufgabe', { status: 400 })
 
   const jetzt = new Date()
   const morgenStart = new Date(jetzt)
