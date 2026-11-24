@@ -143,6 +143,9 @@ export default function EventBlatt({ ev, onClose, onFertig }) {
           </div>
           <span style={{ fontSize: 15, color: 'var(--text-2)' }}>{T('nl_event_bild_hinweis')}</span>
         </div>
+        <Feld label={T('nl_event_beschreibung')} hinweis={T('nl_event_beschreibung_hinweis')}>
+          <textarea rows={6} value={form.beschreibung} onChange={e => setze('beschreibung', e.target.value)} style={{ ...eingabeStil, resize: 'vertical' }} />
+        </Feld>
         <Feld label={T('event_start')}>
           <input type="datetime-local" value={form.beginn} onChange={e => setze('beginn', e.target.value)} style={eingabeStil} />
         </Feld>
@@ -160,9 +163,6 @@ export default function EventBlatt({ ev, onClose, onFertig }) {
             </select>
           </Feld>
         )}
-        <Feld label={T('event_description')}>
-          <textarea rows={3} value={form.beschreibung} onChange={e => setze('beschreibung', e.target.value)} style={{ ...eingabeStil, resize: 'vertical' }} />
-        </Feld>
         <Gruppe style={{ margin: 0 }}>
           <SchalterZeile titel={T('nl_event_oeffentlich')} untertitel={T('nl_event_oeffentlich_hinweis')} an={form.oeffentlich} onChange={v => setze('oeffentlich', v)} />
         </Gruppe>

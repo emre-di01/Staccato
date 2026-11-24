@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.17'
+export const CURRENT_VERSION = '2.9.18'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.18',
+    date: '2026-11-24',
+    features: [
+      {
+        icon: '📝',
+        de: 'Veranstaltungen: Beschreibung und Details stehen jetzt bei den Terminen und im Ticketshop, dort auch mit Titelbild',
+        en: 'Events: description and details now appear in your dates and in the ticket shop, there with the cover image too',
+        tr: 'Etkinlikler: Açıklama ve ayrıntılar artık tarihlerde ve bilet satış sayfasında görünür, orada kapak görseliyle birlikte',
+      },
+    ],
+  },
   {
     version: '2.9.17',
     date: '2026-11-24',

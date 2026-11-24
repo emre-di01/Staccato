@@ -11,6 +11,16 @@ export async function shopAufruf(aktion, werte = {}) {
   } catch { return { ok: false, grund: 'netz' } }
 }
 
+// Die Function läuft auf dem Server und signiert Bilder mit dessen interner Adresse (z. B. http://kong:8000);
+// für den Browser zählt die öffentliche Adresse der API
+export function bildAdresse(url, api = import.meta.env.VITE_SUPABASE_URL) {
+  if (!url || !api) return url ?? null
+  try {
+    const { pathname, search } = new URL(url)
+    return new URL(pathname + search, api).href
+  } catch { return null }
+}
+
 // In Cent gerechnet, damit der Betrag genau dem des Servers entspricht
 export const summe = (anzahl, preis) => anzahl * Math.round(preis * 100) / 100
 

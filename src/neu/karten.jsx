@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { Knopf } from '../ui'
 import { uhrzeit, wochentagKurz, tagDesMonats, tagKey } from './zeit'
 import { EventBild } from './eventBild'
+import LangerText from './LangerText'
 import { EventTickets } from './EventTickets'
 
 export function Karte({ beginn, akzent, titel, unter, status, statusFarbe, bild, children }) {
@@ -58,6 +59,7 @@ export function EventKarte({ ev, onAntwort, sendet, aktionen }) {
     <Karte beginn={ev.beginn} akzent="#2563EB" titel={ev.titel}
       unter={[T(`n_evt_${ev.typ}`), zeit, ort].filter(Boolean).join(' · ')} status={status} statusFarbe={farbe}
       bild={ev.bild_pfad && <EventBild pfad={ev.bild_pfad} style={{ margin: '-2px -4px 0', width: 'calc(100% + 8px)' }} />}>
+      <LangerText text={ev.beschreibung} zeilen={3} />
       {offen ? (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Knopf style={{ flex: '1 1 140px', height: 48 }} onClick={() => onAntwort('zugesagt')} disabled={sendet}>{T('n_ich_bin_dabei')}</Knopf>

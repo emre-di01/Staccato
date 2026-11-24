@@ -176,7 +176,7 @@ function Detail({ ev, onBearbeiten, onEinladen }) {
         <DetailTitel>{T('nv_details')}</DetailTitel>
         <DetailGruppe>
           <Info label={T('event_location')}>{[ev.ort, ev.raeume?.name].filter(Boolean).join(' · ')}</Info>
-          {ev.beschreibung && <><Trenner /><Info label={T('event_description')}>{ev.beschreibung}</Info></>}
+          {ev.beschreibung && <><Trenner /><Info label={T('nl_event_beschreibung')}>{ev.beschreibung}</Info></>}
           {ev.oeffentlich && <><Trenner /><Zeile icon={Globe} titel={T('nl_event_oeffentlich')} untertitel={T('nl_event_oeffentlich_hinweis')} chevron={false} /></>}
         </DetailGruppe>
       </>}

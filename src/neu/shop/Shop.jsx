@@ -6,8 +6,9 @@ import { ChevronLeft, Minus, Plus, Ticket } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Feld, FehlerText, Knopf, Laden, Leer, eingabeStil } from '../../ui'
 import { geldKurz, tagAusgeschrieben } from '../tickets'
+import LangerText from '../LangerText'
 import ShopRahmen, { h1, textKnopf } from './Rahmen'
-import { emailGueltig, fehlerText, nameGueltig, shopAufruf, summe } from './daten'
+import { bildAdresse, emailGueltig, fehlerText, nameGueltig, shopAufruf, summe } from './daten'
 
 const INFOS = ['impressum', 'agb', 'datenschutz']
 const ANSICHTEN = [...INFOS, 'nochmal']
@@ -106,8 +107,12 @@ function Falle({ wert, onChange }) {
   )
 }
 
-function Plakat({ url, style }) {
-  return url && <img src={url} alt="" style={{ width: '100%', display: 'block', objectFit: 'cover', borderRadius: 20, ...style }} />
+// Titelbild; lässt es sich nicht laden, bleibt die Stelle leer. `ganz`: ungekürzt, damit man ein Plakat lesen kann
+function Plakat({ url, ganz, style }) {
+  const src = bildAdresse(url)
+  const [kaputt, setKaputt] = useState(null)
+  if (!src || kaputt === src) return null
+  return <img src={src} alt="" onError={() => setKaputt(src)} style={{ display: 'block', borderRadius: 20, ...(ganz ? { maxWidth: '100%', maxHeight: 560, margin: '0 auto' } : { width: '100%', objectFit: 'cover' }), ...style }} />
 }
 
 // null = kaufbar
@@ -129,6 +134,7 @@ function EventListe({ events, tz, onWahl }) {
             <div style={{ padding: 20 }}>
               <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, lineHeight: 1.2, overflowWrap: 'anywhere' }}>{ev.titel}</h2>
               <div style={{ marginTop: 6, fontSize: 17, lineHeight: 1.4, color: 'var(--text-2)' }}>{tagAusgeschrieben(ev.beginn, tz, lang)}{ev.ort && <><br />{ev.ort}</>}</div>
+              <LangerText text={ev.beschreibung} zeilen={3} style={{ marginTop: 10 }} />
               <div style={{ marginTop: 14 }}>
                 {zu ? <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-2)' }}>{zu}</div>
                   : <Knopf voll icon={Ticket} onClick={() => onWahl(ev.id)} style={{ height: 56 }}>{T('shop_tickets_ab').replace('{preis}', geldKurz(ev.lage.preis, lang))}</Knopf>}
@@ -183,10 +189,10 @@ function Kauf({ ev, demo, tz, onInfo, onNeuLaden }) {
   const rund = { width: 60, height: 60, borderRadius: 30, border: 'none', background: 'var(--bg)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
   return (
     <div>
-      <Plakat url={ev.bild_url} style={{ maxHeight: 420, marginBottom: 18 }} />
+      <Plakat url={ev.bild_url} ganz style={{ marginBottom: 18 }} />
       <h1 style={h1}>{ev.titel}</h1>
       <div style={{ marginTop: 8, fontSize: 18, lineHeight: 1.4, color: 'var(--text-2)' }}>{tagAusgeschrieben(ev.beginn, tz, lang)}{ev.ort && <><br />{ev.ort}</>}</div>
-      {ev.beschreibung && <div style={{ marginTop: 12, fontSize: 17, lineHeight: 1.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{ev.beschreibung}</div>}
+      <LangerText text={ev.beschreibung} zeilen={8} style={{ marginTop: 14 }} />
       {zu ? <div role="status" style={{ marginTop: 20, padding: 20, borderRadius: 18, background: 'var(--n-fill)', fontSize: 19, fontWeight: 700, textAlign: 'center' }}>{zu}</div> : (
         <form onSubmit={kaufen} noValidate style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ padding: 20, borderRadius: 24, background: 'var(--n-fill)', textAlign: 'center' }}>

@@ -20,7 +20,7 @@ const { default: Bestellung } = await import('../shop/Bestellung')
 const { default: AdminTicketshop, stripeLink } = await import('../admin/Ticketshop')
 const { default: TicketBestellungen } = await import('../admin/TicketBestellungen')
 const { slugAus, SLUG } = await import('../ticketshop')
-const { summe } = await import('../shop/daten')
+const { summe, bildAdresse } = await import('../shop/daten')
 const { einstellungenAusFormular, bestellungenAuswerten } = await import('../tickets')
 
 const schule = { name: 'Probe', zeitzone: 'Europe/Berlin' }
@@ -78,6 +78,28 @@ describe('Shop', () => {
     expect(aufrufe('kaufen')).toEqual([{ aktion: 'kaufen', event_id: 'ev1', anzahl: 2, betrag: 30, name: 'Gast Öz', email: 'gast@example.test', sprache: 'de', agb: true, website: '' }])
     expect(text()).toContain('Gerade wurden die letzten Tickets verkauft.')
     expect(aufrufe('info').length).toBe(2)   // freie Plätze neu geladen
+  })
+  it('Titelbild und Beschreibung: in der Übersicht gekürzt, beim Kauf mit öffentlicher Bildadresse', async () => {
+    const lang = `Programm\n${'Viele Lieder aus aller Welt. '.repeat(30)}`
+    antworten({ info: angebot([{ ...event, beschreibung: lang, bild_url: 'http://kong:8000/storage/v1/object/sign/event-bilder/s/e/1.jpg?token=x' }, { ...event, id: 'ev2', titel: 'Zweites', beschreibung: 'Kurz' }]) })
+    await zeige('/shop/probe')
+    expect(text()).toContain('Viele Lieder')
+    expect(text()).toContain('Kurz')
+    expect(document.querySelectorAll('[aria-expanded]').length).toBe(1)
+    await klick('Mehr lesen')
+    expect(knopf('Weniger anzeigen').getAttribute('aria-expanded')).toBe('true')
+    const bild = document.querySelector('article img')
+    expect(bild.src).toContain('/storage/v1/object/sign/event-bilder/s/e/1.jpg?token=x')
+    await act(async () => bild.dispatchEvent(new Event('error')))
+    expect(document.querySelector('article img')).toBe(null)
+    await klick('Tickets kaufen · 15 €')
+    expect(text()).toContain('Viele Lieder')
+  })
+  it('interne Bildadresse wird öffentlich', () => {
+    expect(bildAdresse('http://kong:8000/storage/v1/object/sign/a/b.jpg?token=x', 'https://api.example.test')).toBe('https://api.example.test/storage/v1/object/sign/a/b.jpg?token=x')
+    expect(bildAdresse('https://api.example.test/x?token=y', 'https://api.example.test')).toBe('https://api.example.test/x?token=y')
+    expect(bildAdresse(null, 'https://api.example.test')).toBe(null)
+    expect(bildAdresse('quatsch', 'https://api.example.test')).toBe(null)
   })
   it('Doppelklick kauft nur einmal', async () => {
     antworten({ info: angebot(), kaufen: () => new Promise(() => {}) })
