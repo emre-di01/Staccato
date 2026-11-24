@@ -381,6 +381,10 @@ allow_dynamic_registration = false
 [functions.kalender]
 verify_jwt = false
 
+# Prüft das interne Kennwort selbst (Aufruf durch pg_cron)
+[functions.stunden-erinnerung]
+verify_jwt = false
+
 [functions.demo-anfragen]
 verify_jwt = false
 

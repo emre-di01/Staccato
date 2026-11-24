@@ -16,9 +16,11 @@ const supabase = createClient(
 Deno.serve(async (req) => {
   // Nur interner Aufruf via pg_cron/pg_net erlaubt — kein öffentlicher Zugriff
   const secret = req.headers.get('x-internal-secret')
-  if (secret !== Deno.env.get('INTERNAL_SECRET')) {
+  if (!secret || secret !== Deno.env.get('INTERNAL_SECRET')) {
     return new Response('Forbidden', { status: 403 })
   }
+  // Nur Weg und Kennwort prüfen, nichts versenden
+  if (req.headers.get('x-nur-pruefen')) return new Response('ok – geprüft', { status: 200 })
 
   const jetzt = new Date()
   const morgenStart = new Date(jetzt)

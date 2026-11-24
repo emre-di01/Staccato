@@ -1,16 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { isNative, registerNativePush, unregisterNativePush, isNativePushRegistered } from '../lib/nativePush'
+import { aboAnlegen, pushErneuern } from '../lib/pushErneuern'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? ''
 const DEFAULT_PUSH_PREFS = { new_message: true, event_invite: true, broadcast: true, kurs: true }
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4)
-  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw     = atob(base64)
-  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
-}
 
 // Push-Abo dieses Geräts (Web Push oder nativ) und die Push-Einstellungen im Profil
 export function usePushAbo(profil) {
@@ -28,6 +22,7 @@ export function usePushAbo(profil) {
           return
         }
         if (!unterstuetzt) { setPushEnabled(false); return }
+        await pushErneuern(supabase, profil.id, VAPID_PUBLIC_KEY)
         const reg = await navigator.serviceWorker.ready
         const sub = await reg.pushManager.getSubscription()
         if (sub) {
@@ -66,19 +61,7 @@ export function usePushAbo(profil) {
       } else {
         const permission = await Notification.requestPermission()
         if (permission !== 'granted') return
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-        })
-        const key  = sub.getKey('p256dh')
-        const auth = sub.getKey('auth')
-        await supabase.from('push_subscriptions').upsert({
-          user_id:  profil.id,
-          endpoint: sub.endpoint,
-          p256dh:   btoa(String.fromCharCode(...new Uint8Array(key))),
-          auth_key: btoa(String.fromCharCode(...new Uint8Array(auth))),
-          platform: 'web',
-        }, { onConflict: 'endpoint' })
+        await aboAnlegen(reg, supabase, profil.id, VAPID_PUBLIC_KEY)
         setPushEnabled(true)
       }
     } catch (e) { console.error('Push toggle error:', e) }

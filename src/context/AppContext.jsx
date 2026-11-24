@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { applyTheme, THEMES } from '../themes/themes'
 import { t as translate } from '../i18n/translations'
 import OneSignal from 'react-onesignal'
+import { isNative } from '../lib/nativePush'
+import { pushErneuern } from '../lib/pushErneuern'
 import { NEU_ROLLEN } from '../neu/neuRollen'
 import { schulfarbenTokens } from '../neu/schulfarbe'
 
@@ -237,6 +239,11 @@ export function AppProvider({ children }) {
       subscription.unsubscribe()
     }
   }, [ladeProfil])
+
+  // Nach einem Wechsel des VAPID-Schlüssels das Push-Abo dieses Browsers still erneuern
+  useEffect(() => {
+    if (profil?.id && !isNative) pushErneuern(supabase, profil.id, import.meta.env.VITE_VAPID_PUBLIC_KEY ?? '')
+  }, [profil?.id])
 
   async function abmelden() {
     OneSignal.logout().catch(() => {})
