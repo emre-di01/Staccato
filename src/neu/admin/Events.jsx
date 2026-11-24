@@ -108,7 +108,7 @@ function TicketZeile({ ev }) {
       <Zeile icon={Ticket} titel={T('tk_einstellungen')} untertitel={stand} onClick={isLoading || isError ? undefined : () => setOffen(true)} />
     </DetailGruppe>
     {offen && <TicketBlatt ev={ev} einstellungen={e} onClose={() => setOffen(false)}
-      onFertig={() => { setOffen(false); neuLaden('n-ticket-einstellungen') }} />}
+      onFertig={() => { setOffen(false); neuLaden('n-ticket-einstellungen', 'n-ticket-verkauf', 'n-ticket-info') }} />}
   </>
 }
 

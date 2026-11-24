@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { Knopf } from '../ui'
 import { uhrzeit, wochentagKurz, tagDesMonats, tagKey } from './zeit'
 import { EventBild } from './eventBild'
+import { EventTickets } from './EventTickets'
 
 export function Karte({ beginn, akzent, titel, unter, status, statusFarbe, bild, children }) {
   const { lang, zeitzone } = useApp()
@@ -69,6 +70,7 @@ export function EventKarte({ ev, onAntwort, sendet, aktionen }) {
           </Knopf>
         </div>
       )}
+      <EventTickets ev={ev} />
       {aktionen}
     </Karte>
   )

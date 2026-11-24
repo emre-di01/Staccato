@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('../../lib/supabase', () => ({ supabase: {} }))
-const { betragAus, einstellungenAusFormular } = await import('../tickets')
+vi.mock('../../context/AppContext', () => ({ useApp: () => ({}) }))
+const { betragAus, einstellungenAusFormular, preisBerechnen, aktiveBestellungen } = await import('../tickets')
 
 const basis = {
   aktiv: true, kapazitaet: '200', preis_normal: '15', ermaessigt: true, preis_verguenstigt: '8,50', preis_abendkasse: '', kontingent: '3', obergrenze: '10',
@@ -47,5 +48,34 @@ describe('einstellungenAusFormular', () => {
     expect(fehler({ verkauf_von: '2026-12-02T10:00', verkauf_bis: '2026-12-01T10:00' })).toBe('tk_fehler_zeitraum')
     expect(fehler({ frist_tage: '0' })).toBe('tk_fehler_frist')
     expect(fehler({ bis_abendkasse: true, freigabe_minuten: '' })).toBe('tk_fehler_freigabe')
+  })
+})
+
+describe('preisBerechnen', () => {
+  const info = { rest_verguenstigt: 3, preis_verguenstigt: 8.1, preis_normal: 15.35 }
+  it('rechnet zuerst vergünstigt, dann normal', () => {
+    expect(preisBerechnen(info, 2)).toEqual({ verguenstigt: 2, normal: 0, betrag: 16.2 })
+    expect(preisBerechnen(info, 5)).toEqual({ verguenstigt: 3, normal: 2, betrag: 55 })
+  })
+  it('ohne Vergünstigung', () => {
+    expect(preisBerechnen({ rest_verguenstigt: 0, preis_verguenstigt: null, preis_normal: 10 }, 3)).toEqual({ verguenstigt: 0, normal: 3, betrag: 30 })
+  })
+  it('keine Rundungsfehler', () => {
+    expect(preisBerechnen({ rest_verguenstigt: 3, preis_verguenstigt: 0.1, preis_normal: 1 }, 3).betrag).toBe(0.3)
+  })
+})
+
+describe('aktiveBestellungen', () => {
+  const jetzt = new Date('2026-12-01T12:00:00Z').getTime()
+  const t = (status, preis = 8) => ({ status, preis })
+  it('lässt verfallene, abgelaufene und stornierte weg', () => {
+    const liste = aktiveBestellungen([
+      { id: 1, status: 'reserviert', frist: '2026-12-02T12:00:00Z', tickets: [t('reserviert'), t('reserviert', 15)] },
+      { id: 2, status: 'reserviert', frist: '2026-12-01T11:59:00Z', tickets: [t('reserviert')] },
+      { id: 3, status: 'verfallen', frist: '2026-11-01T12:00:00Z', tickets: [t('verfallen')] },
+      { id: 4, status: 'bezahlt', frist: null, tickets: [t('gueltig'), t('storniert')] },
+      { id: 5, status: 'bezahlt', frist: null, tickets: [t('storniert')] },
+    ], jetzt)
+    expect(liste.map(b => [b.id, b.anzahl, b.betrag])).toEqual([[1, 2, 23], [4, 1, 8]])
   })
 })

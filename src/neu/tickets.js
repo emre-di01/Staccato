@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useApp } from '../context/AppContext'
 
 // ─── Ticketverkauf: Einstellungen je Veranstaltung ────────────
 
@@ -68,4 +69,68 @@ export function einstellungenAusFormular(f) {
       freigabe_minuten: freigabe_minuten >= 0 ? freigabe_minuten : 30,
     },
   }
+}
+
+// ─── Reservieren (Mitglieder) ─────────────────────────────────
+
+// Veranstaltungen mit eingeschaltetem Verkauf (nur sichtbare): Set der event_ids
+export function useTicketVerkauf() {
+  const { profil, schule } = useApp()
+  return useQuery({
+    queryKey: ['n-ticket-verkauf', profil?.id, schule?.id],
+    enabled: !!profil?.id && !!schule?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('ticket_einstellungen').select('event_id').eq('aktiv', true)
+      if (error) throw error
+      return data.map(e => e.event_id)
+    },
+  })
+}
+
+export function useMeineBestellungen() {
+  const { profil } = useApp()
+  return useQuery({
+    queryKey: ['n-ticket-bestellungen', profil?.id],
+    enabled: !!profil?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('ticket_bestellungen')
+        .select('id, event_id, status, frist, erstellt_am, tickets(id, preis, verguenstigt, status)')
+        .eq('kaeufer_id', profil.id).order('erstellt_am')
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+export function useTicketInfo(eventId) {
+  const { profil } = useApp()
+  return useQuery({
+    queryKey: ['n-ticket-info', eventId, profil?.id],
+    enabled: !!eventId && !!profil?.id,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('ticket_info', { p_event_id: eventId })
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+// Erst vergünstigte, dann normale Tickets (wie tickets_reservieren). In Cent gerechnet, damit der Betrag exakt passt.
+export function preisBerechnen(info, anzahl) {
+  const verguenstigt = Math.min(anzahl, info.rest_verguenstigt)
+  const normal = anzahl - verguenstigt
+  const cent = verguenstigt * Math.round((info.preis_verguenstigt ?? 0) * 100) + normal * Math.round(info.preis_normal * 100)
+  return { verguenstigt, normal, betrag: cent / 100 }
+}
+
+// Laufende Bestellungen: ohne stornierte, verfallene und abgelaufene; mit Anzahl und Betrag der gültigen Tickets
+export function aktiveBestellungen(bestellungen, jetzt = Date.now()) {
+  return (bestellungen ?? [])
+    .filter(b => b.status === 'bezahlt' || (b.status === 'reserviert' && new Date(b.frist) > jetzt))
+    .map(b => {
+      const tickets = b.tickets.filter(t => ['reserviert', 'gueltig', 'eingeloest'].includes(t.status))
+      return { ...b, anzahl: tickets.length, betrag: tickets.reduce((s, t) => s + Math.round(t.preis * 100), 0) / 100 }
+    })
+    .filter(b => b.anzahl > 0)
 }
