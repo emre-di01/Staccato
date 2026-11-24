@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { CircleCheck, Download, Send, Ticket } from 'lucide-react'
+import { CircleCheck, Download, Plus, Printer, Send, Ticket } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, FehlerText } from '../../ui'
 import { useBasis } from '../rolle'
@@ -58,6 +58,7 @@ function EventTicketSeite({ g, zurueck }) {
   const gueltige = g.vergangen ? [] : g.tickets.filter(x => x.ticket.status === 'gueltig')
   const sortiert = [...gueltige, ...g.tickets.filter(x => !gueltige.includes(x))]
   const rest = { anzahl: g.tickets.length, event: g.event, schule: g.schule, T, lang }
+  const nachkaufbar = !g.vergangen && verkauf.includes(g.event.id)
   const schluessel = gueltige.map(x => x.ticket.id + x.nr).join()
 
   // Bilder schon beim Öffnen erzeugen: Handys erlauben „Teilen“ nur unmittelbar nach dem Tippen
@@ -87,6 +88,12 @@ function EventTicketSeite({ g, zurueck }) {
       <div style={{ margin: '6px 20px 0', fontSize: 18, lineHeight: 1.4, color: 'var(--text-2)' }}>
         {tagAusgeschrieben(g.event.beginn, g.schule.zeitzone, lang)}{g.event.ort && <><br />{g.event.ort}</>}
       </div>
+      {(nachkaufbar || gueltige.length > 0) && (
+        <div style={{ margin: '16px 20px 0', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {nachkaufbar && <Knopf variante="tint" icon={Plus} onClick={() => setMehr(true)} style={obenKnopf}>{T('tk_weitere')}</Knopf>}
+          {gueltige.length > 0 && <Knopf variante="sekundaer" icon={Printer} onClick={drucken} disabled={druckt} style={obenKnopf}>{T(gueltige.length === 1 ? 'tk_drucken_1' : 'tk_drucken')}</Knopf>}
+        </div>
+      )}
       <div style={{ margin: '20px 20px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {g.offen.map(o => (
           <section key={o.id} style={{ padding: 22, borderRadius: 24, background: 'var(--n-fill)', textAlign: 'center' }}>
@@ -96,8 +103,6 @@ function EventTicketSeite({ g, zurueck }) {
         ))}
         {sortiert.map(x => <TicketKarte key={x.ticket.id} x={x} anzahl={g.tickets.length} schule={g.schule} bild={bilder[x.ticket.id]} nutzbar={gueltige.includes(x)} />)}
         {g.storniert > 0 && <div style={{ textAlign: 'center', fontSize: 16, color: 'var(--text-2)' }}>{T('tk_x_storniert').replace('{n}', g.storniert)}</div>}
-        {gueltige.length > 0 && <button onClick={drucken} disabled={druckt} style={textKnopf}>{T('tk_drucken')}</button>}
-        {!g.vergangen && verkauf.includes(g.event.id) && <button onClick={() => setMehr(true)} style={textKnopf}>{T('tk_weitere')}</button>}
       </div>
       {mehr && <ReservierenBlatt ev={g.event} onClose={() => setMehr(false)} />}
     </Seite>
@@ -149,4 +154,4 @@ function TicketKarte({ x: { ticket, nr }, anzahl, schule, bild, nutzbar }) {
   )
 }
 
-const textKnopf = { minHeight: 48, border: 'none', background: 'none', color: 'var(--primary)', fontFamily: 'inherit', fontSize: 17, fontWeight: 600, cursor: 'pointer' }
+const obenKnopf = { flex: '1 1 160px' }

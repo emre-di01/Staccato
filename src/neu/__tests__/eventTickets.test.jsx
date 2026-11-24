@@ -195,6 +195,16 @@ describe('NeuTickets', () => {
     expect(text()).toContain('Benutzt, 18:30')
   })
 
+  it('hat Nachkaufen und Ausdrucken oben, vor den Tickets', async () => {
+    db.tabellen.ticket_einstellungen = [{ event_id: 'ev1' }]
+    await oeffnen()
+    const erstes = document.querySelector('article')
+    for (const name of ['Weitere Tickets', 'Ausdrucken']) expect(knopf(name).compareDocumentPosition(erstes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    db.rpc = async () => ({ data: info, error: null })
+    await klick('Weitere Tickets')
+    expect(text()).toContain('Wie viele Tickets?')
+  })
+
   it('zeigt bei mehreren Veranstaltungen eine Liste mit Zustand', async () => {
     const offen = { id: 'c', status: 'reserviert', frist: '2099-12-04T22:59:00Z', schule: daten[0].schule, event: { ...daten[0].event, id: 'ev2', titel: 'Chorabend' }, tickets: [{ id: 'cccccccc-3', preis: 8, status: 'reserviert', code: null }] }
     await oeffnen([...daten, offen])
