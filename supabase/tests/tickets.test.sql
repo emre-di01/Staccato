@@ -519,11 +519,11 @@ SELECT throws_ok($$SELECT shop_bestellung(repeat('a', 64))$$, '42501', NULL, 'Ga
 
 SELECT pg_temp.intern();
 SELECT is(pg_temp.shop(1, 15), 'nicht_verfuegbar', 'Ohne Zahlungskonto kein Verkauf');
-INSERT INTO schul_zahlungskonten (schule_id, schluessel, webhook_geheim, livemode, letzte4) VALUES ('71111111-1111-1111-1111-111111111111', 'v1:geheim', 'v1:geheim2', false, '4242');
+INSERT INTO schul_zahlungskonten (schule_id, schluessel, webhook_geheim, livemode, letzte4) VALUES ('71111111-1111-1111-1111-111111111111', 'v1:geheim', 'v1:geheim2', true, '4242');
 RESET ROLE;
 SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
 SELECT is((SELECT count(*) FROM schul_zahlungskonten), 0::bigint, 'Auch Admins lesen keine Schlüssel');
-SELECT is((SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111') - 'seit'), '{"verbunden": true, "livemode": false, "letzte4": "4242"}'::jsonb, 'Status ohne Schlüssel');
+SELECT is((SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111') - 'seit'), '{"verbunden": true, "livemode": true, "letzte4": "4242"}'::jsonb, 'Status ohne Schlüssel');
 RESET ROLE;
 SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
 SELECT is((SELECT count(*) FROM schul_zahlungskonten) + (SELECT count(*) FROM ticket_shops), 0::bigint, 'Mitglieder sehen weder Schlüssel noch Shop-Einstellungen');

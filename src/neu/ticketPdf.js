@@ -61,6 +61,15 @@ export function zeichneTicket(cvs, { ticket, nr, anzahl, event, schule, qr, logo
   ctx.fillStyle = '#55555C'; ctx.font = '500 36px Inter, system-ui, sans-serif'
   ctx.fillText(`${euro(ticket.preis, lang)} · ${T('tk_nummer')} ${ticketNummer(ticket)}`, M, qy + Q + 146)
 
+  // Im Testmodus gekauft: unübersehbar quer über den QR-Code
+  if (ticket.status === 'demo') {
+    ctx.save()
+    ctx.translate(M, qy + Q / 2); ctx.rotate(-Math.PI / 7)
+    ctx.font = '800 250px Inter, system-ui, sans-serif'; ctx.textBaseline = 'middle'
+    ctx.fillStyle = 'rgba(185, 28, 28, 0.82)'; ctx.fillText('DEMO', 0, 0)
+    ctx.restore()
+  }
+
   // Hinweis
   ctx.strokeStyle = '#DDDDE2'; ctx.lineWidth = 2; ctx.setLineDash([10, 10])
   ctx.beginPath(); ctx.moveTo(RAND, H - 165); ctx.lineTo(B - RAND, H - 165); ctx.stroke(); ctx.setLineDash([])

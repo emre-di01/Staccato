@@ -147,7 +147,7 @@ export async function alleBestellungenLaden(eventId) {
   const alle = []
   for (let von = 0; ; von += SEITE) {
     const { data, error } = await supabase.from('ticket_bestellungen')
-      .select(`id, herkunft, kaeufer_name, kaeufer_email, auto_erstatten, status, frist, erstellt_am,
+      .select(`id, herkunft, kaeufer_name, kaeufer_email, auto_erstatten, demo, status, frist, erstellt_am,
         kaeufer:profiles!ticket_bestellungen_kaeufer_id_fkey(voller_name, avatar_url),
         tickets(id, preis, verguenstigt, status, an_kasse),
         ticket_online_erstattungen(vorgang, betrag, erledigt_am),
@@ -170,25 +170,27 @@ export function bestellungenAuswerten(bestellungen, jetzt = Date.now()) {
   const liste = (bestellungen ?? []).map(b => {
     const zustand = b.status === 'reserviert' && new Date(b.frist) <= jetzt ? 'verfallen' : b.status
     const laufend = zustand === 'reserviert' || zustand === 'bezahlt'
-    const aktiv = laufend ? b.tickets.filter(t => ['reserviert', 'gueltig', 'eingeloest'].includes(t.status)) : b.tickets
+    const aktiv = laufend ? b.tickets.filter(t => ['reserviert', 'gueltig', 'eingeloest', 'demo'].includes(t.status)) : b.tickets
     const zahlung = b.ticket_zahlungen?.[0] ?? null
     const erstattungen = (b.ticket_zahlungen ?? []).flatMap(z => z.ticket_erstattungen ?? [])
     const erstattetCent = summeCent(erstattungen, 'betrag')
     const storniertCent = summeCent(b.tickets.filter(t => t.status === 'storniert'), 'preis')
-    if (zustand === 'reserviert') stand.reserviert += aktiv.length
-    if (zustand === 'bezahlt') stand.gueltig += aktiv.length
     const online = zahlung?.methode === 'stripe'
     const offeneErstattungen = (b.ticket_online_erstattungen ?? []).filter(o => !o.erledigt_am)
-    if (online) stand.online += cent(zahlung.betrag) - erstattetCent
-    else {
-      stand.eingenommen += zahlung ? cent(zahlung.betrag) : 0
-      stand.erstattet += erstattetCent
+    if (!b.demo) {   // Demo zählt nirgends mit
+      if (zustand === 'reserviert') stand.reserviert += aktiv.length
+      if (zustand === 'bezahlt') stand.gueltig += aktiv.length
+      if (online) stand.online += cent(zahlung.betrag) - erstattetCent
+      else {
+        stand.eingenommen += zahlung ? cent(zahlung.betrag) : 0
+        stand.erstattet += erstattetCent
+      }
     }
     return {
       ...b, zustand, online: online || b.herkunft === 'shop', offeneErstattungen, gruppe: zustand === 'reserviert' ? 'offen' : zustand === 'bezahlt' ? 'bezahlt' : 'erledigt',
       anzahl: aktiv.length, betrag: summeCent(aktiv, 'preis') / 100, zahlung, erstattungen,
       // Teilstorno vor dem Bezahlen zählt nicht: erstattbar ist höchstens, was bezahlt und storniert wurde
-      erstattbar: zahlung && !b.auto_erstatten ? Math.max(Math.min(storniertCent, cent(zahlung.betrag) - summeCent(b.tickets.filter(t => ['gueltig', 'eingeloest'].includes(t.status)), 'preis')) - erstattetCent - summeCent(offeneErstattungen, 'betrag'), 0) / 100 : 0,
+      erstattbar: zahlung && !b.auto_erstatten ? Math.max(Math.min(storniertCent, cent(zahlung.betrag) - summeCent(b.tickets.filter(t => ['gueltig', 'eingeloest', 'demo'].includes(t.status)), 'preis')) - erstattetCent - summeCent(offeneErstattungen, 'betrag'), 0) / 100 : 0,
     }
   })
   // Eingenommen = bar in der Kasse verblieben; online = über Stripe, abzüglich Erstattungen

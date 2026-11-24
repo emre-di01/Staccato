@@ -108,7 +108,7 @@ function TicketZeile({ ev }) {
   const { data: bestellungen } = useBestellungen(ev.id)
   const { data: helfer = [] } = useTicketHelfer(ev.id)
   const { liste } = bestellungenAuswerten(bestellungen)
-  const zaehle = g => liste.filter(b => b.gruppe === g).length
+  const zaehle = g => liste.filter(b => b.gruppe === g && !b.demo).length
   const { data: e, isLoading, isError } = useTicketEinstellungen(ev.id)
   async function linkKopieren() {
     const link = shopLink(shopDaten.shop.slug, ev.id)

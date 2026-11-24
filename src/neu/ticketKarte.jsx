@@ -47,6 +47,7 @@ export function TicketKarte({ x: { ticket, nr }, anzahl, schule, bild, nutzbar }
   const { T, lang, toast } = useApp()
   const [qr, setQr] = useState(null)
   const benutzt = ticket.status === 'eingeloest'
+  const demo = ticket.status === 'demo'
   const titel = anzahl === 1 ? T('tk_dein_ticket') : T('tk_nr_von').replace('{nr}', nr).replace('{n}', anzahl)
 
   useEffect(() => {
@@ -76,7 +77,7 @@ export function TicketKarte({ x: { ticket, nr }, anzahl, schule, bild, nutzbar }
           <CircleCheck aria-hidden="true" size={26} />{T('tk_status_benutzt')}, {uhrzeit(ticket.eingeloest_am, schule.zeitzone ?? 'Europe/Berlin', lang)}
         </div>
       ) : nutzbar && <>
-        <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--success)' }}>{T('tk_status_bereit')}</div>
+        <div style={{ fontSize: 19, fontWeight: 800, textAlign: 'center', color: demo ? 'var(--danger)' : 'var(--success)' }}>{T(demo ? 'sh_demo_ticket' : 'tk_status_bereit')}</div>
         <div style={{ width: 'min(340px, 100%)', aspectRatio: '1', borderRadius: 18, background: '#FFFFFF', padding: 14, boxSizing: 'border-box' }}>
           {qr ? <img src={qr} alt={`${T('tk_qr_code')}, ${titel}`} style={{ width: '100%', height: '100%', display: 'block' }} /> : <Laden hoehe={280} />}
         </div>

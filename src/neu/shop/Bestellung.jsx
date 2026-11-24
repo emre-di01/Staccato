@@ -9,6 +9,7 @@ import { TicketKarte, useTicketBilder, useTicketDruck } from '../ticketKarte'
 import ShopRahmen, { h1 } from './Rahmen'
 import { shopAufruf } from './daten'
 
+const nutzbar = t => t.status === 'gueltig' || t.status === 'demo'
 const ABSTAND = 3000
 const VERSUCHE = 20   // rund eine Minute auf die Bestätigung warten
 
@@ -48,7 +49,7 @@ export default function Bestellung() {
     return <ShopRahmen><Leer text={T('shop_fehler_netz')}><Knopf onClick={() => { setO(null); setNeu(x => x + 1) }}>{T('shop_nochmal')}</Knopf></Leer></ShopRahmen>
   }
   return (
-    <ShopRahmen schule={o.schule} titel={[o.event.titel, o.schule.name].join(' – ')}>
+    <ShopRahmen schule={o.schule} testmodus={o.demo} titel={[o.event.titel, o.schule.name].join(' – ')}>
       {o.status === 'bezahlt' ? <Bezahlt o={o} />
         : o.status === 'reserviert' ? (versuch < VERSUCHE
           ? <Meldung titel={T('shop_pruefen')} text={T('shop_pruefen_text')} laedt />
@@ -82,7 +83,7 @@ function Meldung({ titel, text, laedt, children }) {
 function Bezahlt({ o }) {
   const { T, lang } = useApp()
   const alle = o.tickets.filter(t => t.code).map((ticket, i) => ({ ticket, nr: i + 1 }))
-  const gueltige = alle.filter(x => x.ticket.status === 'gueltig')
+  const gueltige = alle.filter(x => nutzbar(x.ticket))
   const storniert = o.tickets.filter(t => t.status === 'storniert').length
   const rest = { anzahl: alle.length, event: o.event, schule: o.schule }
   const bilder = useTicketBilder(gueltige, rest)
@@ -98,7 +99,7 @@ function Bezahlt({ o }) {
       <div style={{ marginTop: 4, fontSize: 18, lineHeight: 1.4, color: 'var(--text-2)' }}>{tagAusgeschrieben(o.event.beginn, o.schule.zeitzone, lang)}{o.event.ort && <><br />{o.event.ort}</>}</div>
       {gueltige.length > 0 && <Knopf voll variante="sekundaer" icon={Printer} onClick={drucken} disabled={druckt} style={{ marginTop: 16 }}>{T(gueltige.length === 1 ? 'tk_drucken_1' : 'tk_drucken')}</Knopf>}
       <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {alle.map(x => <TicketKarte key={x.ticket.id} x={x} anzahl={alle.length} schule={o.schule} bild={bilder[x.ticket.id]} nutzbar={x.ticket.status === 'gueltig'} />)}
+        {alle.map(x => <TicketKarte key={x.ticket.id} x={x} anzahl={alle.length} schule={o.schule} bild={bilder[x.ticket.id]} nutzbar={nutzbar(x.ticket)} />)}
         {storniert > 0 && <div style={{ textAlign: 'center', fontSize: 16, color: 'var(--text-2)' }}>{T('tk_x_storniert').replace('{n}', storniert)}{o.zurueck > 0 && <><br />{T('shop_zurueck').replace('{betrag}', geldKurz(o.zurueck, lang))}</>}</div>}
       </div>
     </>

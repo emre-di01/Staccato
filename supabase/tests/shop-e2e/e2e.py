@@ -19,24 +19,23 @@ def t(n,c,x=''):
     global ok,bad
     if c: ok+=1
     else: bad+=1; print('FEHLER',n,str(x)[:300])
-def hook(secret,typ,obj,schule=SCH,ts=None,live=False,sig=None):
+def hook(secret,typ,obj,schule=SCH,ts=None,live=True,sig=None):
     b=json.dumps({'type':typ,'livemode':live,'data':{'object':obj}}).encode(); ts=ts or int(time.time())
     s=sig or hmac.new(secret.encode(),f'{ts}.'.encode()+b,hashlib.sha256).hexdigest()
     return req(F+'stripe-webhook?schule='+schule,b,{'stripe-signature':f't={ts},v1={s}'})[0]
 def kauf(n=1,mail='gast@example.test',ip='203.0.113.5',**k): return shop({'X-Forwarded-For':ip+', 172.18.0.1'},**{**dict(aktion='kaufen',event_id=EV,anzahl=n,betrag=15*n,name='Gast Öz',email=mail,sprache='de',agb=True),**k})
 
 # Schlüssel
-t('ohne Anmeldung',konto(None,aktion='verbinden',schluessel='rk_test_abcdefghijkl')[0]==401)
-t('Schüler darf nicht',konto('U01',aktion='verbinden',schluessel='rk_test_abcdefghijkl')[0]==403)
+t('ohne Anmeldung',konto(None,aktion='verbinden',schluessel='rk_live_abcdefghijkl')[0]==401)
+t('Schüler darf nicht',konto('U01',aktion='verbinden',schluessel='rk_live_abcdefghijkl')[0]==403)
 t('Vollzugriff abgelehnt',konto(aktion='verbinden',schluessel='sk_test_abcdefghijkl')[1]['grund']=='vollzugriff')
 t('Format',konto(aktion='verbinden',schluessel='quatsch')[1]['grund']=='format')
-t('Livemodus gesperrt',konto(aktion='verbinden',schluessel='rk_live_abcdefghijkl')[1]['grund']=='livemodus')
-t('ungültiger Schlüssel',konto(aktion='verbinden',schluessel='rk_test_FALSCHabcdefg')[1]['grund']=='ungueltig')
-setz(norights=['refunds']); t('fehlende Rechte',konto(aktion='verbinden',schluessel='rk_test_abcdefghijkl')[1]['grund']=='rechte')
-setz(norights=['webhook_endpoints']); r=konto(aktion='verbinden',schluessel='rk_test_abcdefghijkl')[1]; t('Webhook von Hand nötig',r['grund']=='webhook_noetig' and r['url'].startswith('https://api.example.test/functions/v1/stripe-webhook?schule='+SCH),r)
-t('mit Webhook-Geheimnis von Hand',konto(aktion='verbinden',schluessel='rk_test_abcdefghijkl',webhook_geheim='whsec_'+'a'*20)[1].get('ok') is True)
-setz(norights=[]); r=konto(aktion='verbinden',schluessel='rk_test_GeheimerSchluessel1234')[1]; t('verbunden',r=={'ok':True,'livemode':False,'letzte4':'1234'},r)
-r=konto(aktion='verbinden',schluessel='rk_test_GeheimerSchluessel5678')[1]; t('neu verbinden räumt alten Webhook weg',r.get('ok') and len(st()['webhooks'])==1,st()['webhooks'])
+t('ungültiger Schlüssel',konto(aktion='verbinden',schluessel='rk_live_FALSCHabcdefg')[1]['grund']=='ungueltig')
+setz(norights=['refunds']); t('fehlende Rechte',konto(aktion='verbinden',schluessel='rk_live_abcdefghijkl')[1]['grund']=='rechte')
+setz(norights=['webhook_endpoints']); r=konto(aktion='verbinden',schluessel='rk_live_abcdefghijkl')[1]; t('Webhook von Hand nötig',r['grund']=='webhook_noetig' and r['url'].startswith('https://api.example.test/functions/v1/stripe-webhook?schule='+SCH),r)
+t('mit Webhook-Geheimnis von Hand',konto(aktion='verbinden',schluessel='rk_live_abcdefghijkl',webhook_geheim='whsec_'+'a'*20)[1].get('ok') is True)
+setz(norights=[]); r=konto(aktion='verbinden',schluessel='rk_live_GeheimerSchluessel1234')[1]; t('verbunden',r=={'ok':True,'livemode':True,'letzte4':'1234'},r)
+r=konto(aktion='verbinden',schluessel='rk_live_GeheimerSchluessel5678')[1]; t('neu verbinden räumt alten Webhook weg',r.get('ok') and len(st()['webhooks'])==1,st()['webhooks'])
 t('DB enthält keinen Klartext','GeheimerSchluessel' not in sql("select schluessel||webhook_geheim from schul_zahlungskonten") and sql("select count(*) from schul_zahlungskonten where schluessel like 'v1:%'")=='1')
 sec=list(st()['webhooks'].values())[0]['secret']
 t('REST liefert keine Schlüssel',req('http://127.0.0.1:18000/rest/v1/schul_zahlungskonten',None,{'Authorization':'Bearer '+env['U20']})[1]==[])
@@ -51,7 +50,7 @@ o=shop(aktion='bestellung',zugang=z)[1]; t('vor Zahlung keine Codes',o['status']
 t('falscher Zugang',shop(aktion='bestellung',zugang='a'*64)[0]==404 and shop(aktion='bestellung',zugang='x')[0]==404)
 s=pay(cs)
 t('Webhook ohne Signatur',req(F+'stripe-webhook?schule='+SCH,b'{}')[0]==400); t('falsche Signatur',hook(sec,'checkout.session.completed',s,sig='0'*64)==400); t('fremdes Geheimnis',hook('whsec_x','checkout.session.completed',s)==400)
-t('alte Signatur',hook(sec,'checkout.session.completed',s,ts=int(time.time())-900)==400); t('Livemode passt nicht',hook(sec,'checkout.session.completed',s,live=True)==400); t('andere Schule',hook(sec,'checkout.session.completed',s,schule='72222222-2222-2222-2222-222222222222')==400)
+t('alte Signatur',hook(sec,'checkout.session.completed',s,ts=int(time.time())-900)==400); t('Livemode passt nicht',hook(sec,'checkout.session.completed',s,live=False)==400); t('andere Schule',hook(sec,'checkout.session.completed',s,schule='72222222-2222-2222-2222-222222222222')==400)
 t('bis hier nichts bezahlt',sql("select count(*) from ticket_zahlungen")=='0')
 with cf.ThreadPoolExecutor(6) as ex: rs=list(ex.map(lambda _:hook(sec,'checkout.session.completed',s),range(6)))
 t('6x Webhook gleichzeitig',all(x==200 for x in rs),rs); t('eine Zahlung, 2 Tickets',sql("select count(*) from ticket_zahlungen")=='1' and sql("select count(*) from tickets where status='gueltig'")=='2')
@@ -128,4 +127,18 @@ t('Stornierte Tickets nicht nochmal geschickt',verw(aktion='mail',bestellung_id=
 sql("insert into schulen(id,name) values('82222222-2222-2222-2222-222222222222','Q'); insert into schul_zahlungskonten select '82222222-2222-2222-2222-222222222222',anbieter,schluessel,webhook_id,webhook_geheim,livemode,letzte4 from schul_zahlungskonten")
 t('kopierter Schlüssel nutzlos',hook(sec,'checkout.session.completed',s,schule='82222222-2222-2222-2222-222222222222')==500)
 t('trennen',konto(aktion='trennen')[1].get('ok') and len(st()['webhooks'])==0 and sql("select count(*) from schul_zahlungskonten where schule_id='%s'"%SCH)=='0'); t('Erstattung ohne Stripe: nichts storniert',verw(aktion='stornieren',bestellung_id=b4,ticket_ids=[],betrag=1,vorgang=uid())[1]['grund']=='kein_konto'); t('danach nichts im Shop',shop(aktion='info',slug='probe')[1]['events']==[]); t('GET abgelehnt',req(F+'shop')[0]==405)
+# Demo mit Testschlüssel
+sql("delete from shop_drossel; update ticket_einstellungen set kapazitaet=(select count(*) from tickets t join ticket_bestellungen b on b.id=t.bestellung_id where t.event_id='%s' and (t.status in ('gueltig','eingeloest') or (t.status='reserviert' and b.frist>now())))+1 where event_id='%s'"%(EV,EV)); n0=mails()['total']
+r=konto(aktion='verbinden',schluessel='rk_test_abcdefghijkl')[1]; t('Testschlüssel erlaubt',r.get('ok') and r['livemode'] is False,r); sec=list(st()['webhooks'].values())[-1]['secret']
+t('Shop zeigt Demo',shop(aktion='info',slug='probe')[1]['testmodus'] is True)
+c,k=kauf(1,'demo@example.test',ip='192.0.2.50'); t('Demo-Kauf',k.get('ok'),k); c,k5=kauf(1,'demo2@example.test',ip='192.0.2.51'); t('Demo belegt keinen Platz',k5.get('ok'),k5)
+cs=k['url'].split('/')[-1]; s=pay(cs); t('echte Meldung passt nicht zur Demo',hook(sec,'checkout.session.completed',s,live=True)==400); t('Demo bezahlt',hook(sec,'checkout.session.completed',s,live=False)==200)
+o=shop(aktion='bestellung',zugang=k['zugang'])[1]; t('Demo-Bestellung',o['demo'] is True and o['status']=='bezahlt' and o['tickets'][0]['status']=='demo' and len(o['tickets'][0]['code'])==32,o)
+t('keine gültigen Tickets',sql("select count(*) from tickets t join ticket_bestellungen b on b.id=t.bestellung_id where b.demo and t.status<>'demo'")=='0'); time.sleep(1); m=mails(); t('Mail als Demo gekennzeichnet',m['total']==n0+1 and m['messages'][0]['Subject'].startswith('[DEMO]'),m['messages'][0]['Subject'])
+def rpc(f,**d): return req('http://127.0.0.1:18000/rest/v1/rpc/'+f,d,{'Authorization':'Bearer '+env['U20']})
+sql("update events set beginn=now()+interval '1 hour' where id='%s'"%EV); x=rpc('ticket_scannen',p_event_id=EV,p_code=o['tickets'][0]['code'],p_scan_id=uid())[1]; t('Einlass lehnt Demo ab',x['ergebnis']=='demo',x)
+x=rpc('abendkasse_reservierungen',p_event_id=EV)[1]; t('Demo nicht an der Abendkasse',isinstance(x,list) and not any(q['name']=='Gast Öz' and q['id']==bid('demo@example.test') for q in x),x)
+bd=bid('demo@example.test'); r=verw(aktion='stornieren',bestellung_id=bd,ticket_ids=sql("select id from tickets where bestellung_id='%s'"%bd).split(),betrag=15,vorgang=uid())[1]; t('Demo-Storno',r.get('erstattung')=='erledigt' and refs(bd)==[1500],r)
+c,k6=kauf(1,'demo3@example.test',ip='192.0.2.52'); sql("update schul_zahlungskonten set livemode=true"); t('Schlüsselwechsel: Demo-Storno nur mit Testschlüssel',verw(aktion='stornieren',bestellung_id=bd,ticket_ids=[],betrag=1,vorgang=uid())[1]['grund']=='kein_konto'); sql("update schul_zahlungskonten set livemode=false")
+echt=sql("select count(*) from ticket_bestellungen where not demo"); t('Schüler löscht nicht',req('http://127.0.0.1:18000/rest/v1/rpc/shop_demo_loeschen',{'p_schule_id':SCH},{'Authorization':'Bearer '+env['U01']})[0] in (401,403)); x=rpc('shop_demo_loeschen',p_schule_id=SCH); t('Demo weggeräumt, Echtes bleibt',x[1]==3 and sql("select count(*) from ticket_bestellungen where demo")=='0' and sql("select count(*) from ticket_bestellungen where not demo")==echt,x)
 print(f'{ok} ok, {bad} Fehler')

@@ -50,7 +50,7 @@ export default function Shop() {
         {ev ? (
           <>
             {!einziges && <Zurueck onClick={() => zurueck({ event: null })}>{T('shop_alle')}</Zurueck>}
-            <Kauf key={ev.id} ev={ev} tz={d.schule.zeitzone} onInfo={i => gehe({ info: i })} onNeuLaden={refetch} />
+            <Kauf key={ev.id} ev={ev} demo={d.testmodus} tz={d.schule.zeitzone} onInfo={i => gehe({ info: i })} onNeuLaden={refetch} />
           </>
         ) : <EventListe events={d.events} tz={d.schule.zeitzone} onWahl={id => gehe({ event: id })} />}
       </div>
@@ -141,7 +141,7 @@ function EventListe({ events, tz, onWahl }) {
   )
 }
 
-function Kauf({ ev, tz, onInfo, onNeuLaden }) {
+function Kauf({ ev, demo, tz, onInfo, onNeuLaden }) {
   const { T, lang } = useApp()
   const max = ev.lage.max ?? 0
   const [anzahl, setAnzahl] = useState(1)
@@ -216,6 +216,7 @@ function Kauf({ ev, tz, onInfo, onNeuLaden }) {
           {/* „kaufen“: eindeutige Bezeichnung nach § 312j BGB */}
           <Knopf voll type="submit" disabled={sendet} style={{ height: 60, fontSize: 19 }}>{sendet ? T('shop_moment') : T('shop_kaufen').replace('{betrag}', geldKurz(betrag, lang))}</Knopf>
           <div style={{ fontSize: 15, color: 'var(--text-2)', textAlign: 'center' }}>{T('shop_stripe_hinweis')}</div>
+          {demo && <div style={{ padding: 14, borderRadius: 14, background: '#FDE68A', color: '#422006', fontSize: 16, lineHeight: 1.45 }}>{T('shop_demo_karte')}</div>}
         </form>
       )}
     </div>

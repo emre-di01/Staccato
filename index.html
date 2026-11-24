@@ -15,12 +15,19 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <!-- Fonts (non-render-blocking) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" /></noscript>
+    <!-- Fonts (non-render-blocking). Nicht im öffentlichen Ticketshop: dort werden keine Daten an Google übertragen -->
+    <script>
+      if (!/^\/shop\//.test(location.pathname)) {
+        var schrift = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap';
+        [['preconnect', 'https://fonts.googleapis.com'], ['preconnect', 'https://fonts.gstatic.com', true], ['stylesheet', schrift]].forEach(function (x) {
+          var l = document.createElement('link');
+          l.rel = x[0]; l.href = x[1];
+          if (x[2]) l.crossOrigin = '';
+          if (x[0] === 'stylesheet') { l.media = 'print'; l.onload = function () { l.media = 'all'; }; }
+          document.head.appendChild(l);
+        });
+      }
+    </script>
 
     <style>
       *, *::before, *::after { box-sizing: border-box; }

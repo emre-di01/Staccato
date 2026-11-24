@@ -61,7 +61,8 @@ describe('Shop', () => {
   it('einzelne Veranstaltung direkt kaufbar, Rechtstexte verlieren keine Eingaben', async () => {
     antworten({ info: angebot(), kaufen: { ok: false, grund: 'ausverkauft' } })
     await zeige('/shop/probe')
-    expect(text()).toContain('Testbetrieb')
+    expect(text()).toContain('Demo: Hier kannst du alles ausprobieren')
+    expect(text()).toContain('4242 4242 4242 4242')
     expect(text()).toContain('Noch 3 Plätze frei')
     await klick('Ein Ticket mehr')
     await ausfuellen()
@@ -113,6 +114,13 @@ describe('Bestellung', () => {
     expect(text()).toContain('Bezahlt!')
     expect(text()).toContain('g$&@example.test')
     expect(document.querySelector('article img').src).toContain('c'.repeat(32))
+  })
+  it('Demo-Tickets sind unübersehbar gekennzeichnet', async () => {
+    antworten({ bestellung: o({ demo: true, tickets: [{ id: 'aaaaaaaa-1', preis: 15, status: 'demo', code: 'c'.repeat(32) }] }) })
+    await zeige(`/shop/bestellung/${ZUGANG}`)
+    expect(text()).toContain('Es wird nichts abgebucht')
+    expect(text()).toContain('Demo-Ticket: gilt nicht am Einlass')
+    expect(text()).not.toContain(t('de', 'tk_status_bereit'))
   })
   it('Abbruch gibt Plätze frei', async () => {
     antworten({ abbrechen: o({ status: 'verfallen', tickets: [] }) })
@@ -234,7 +242,7 @@ describe('Einrichtung', () => {
     sb.konto = { verbunden: true, livemode: false, letzte4: '4242' }
     sb.shop = { slug: 'probe', aktiv: true, impressum: 'I', agb: 'A', datenschutz: 'D' }
     await zeige('/admin')
-    expect(text()).toContain('Testbetrieb · …4242')
+    expect(text()).toContain('Demo mit Testschlüssel · …4242')
     await klick('Speichern')
     expect(sb.upsert.mock.calls[0][0]).toMatchObject({ schule_id: 's', slug: 'probe', aktiv: true, agb: 'A' })
   })
@@ -258,6 +266,11 @@ describe('Veranstaltung und Bestellungen', () => {
     expect(einstellungenAusFormular({ ...form, shop_aktiv: true, mitglieder_reserve: '101' }).fehler).toBe('sh_fehler_reserve')
     expect(einstellungenAusFormular({ ...form, preis_normal: '0,40', shop_aktiv: true, mitglieder_reserve: '' }).fehler).toBe('sh_fehler_preis')
     expect(einstellungenAusFormular({ ...form, mitglieder_reserve: '999' }).werte).toMatchObject({ shop_aktiv: false, mitglieder_reserve: 0 })
+  })
+  it('Demo zählt nirgends mit', () => {
+    const { liste, stand } = bestellungenAuswerten([{ id: 'd', demo: true, herkunft: 'shop', status: 'bezahlt', tickets: [{ id: 't', preis: 15, status: 'demo' }], ticket_zahlungen: [{ id: 'z', methode: 'stripe', betrag: 15, ticket_erstattungen: [] }] }])
+    expect(stand).toEqual({ gueltig: 0, reserviert: 0, eingenommen: 0, erstattet: 0, online: 0 })
+    expect(liste[0]).toMatchObject({ anzahl: 1, betrag: 15, gruppe: 'bezahlt' })
   })
   it('trennt bar und online', () => {
     const b = (id, methode, herkunft) => ({ id, herkunft, status: 'bezahlt', tickets: [{ id, preis: 15, status: 'gueltig' }], ticket_zahlungen: [{ id, methode, betrag: 15, ticket_erstattungen: [] }] })

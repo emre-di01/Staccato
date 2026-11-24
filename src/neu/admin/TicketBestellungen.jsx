@@ -64,7 +64,7 @@ export default function TicketBestellungen({ ev, kapazitaet, onClose }) {
                 <div key={b.id}>
                   {i > 0 && <Trenner />}
                   <Zeile bild={<Avatar name={texte.name(b)} bild={b.kaeufer?.avatar_url} />} titel={texte.name(b)} wert={texte.geld(b.betrag)} wertFarbe="var(--text)" onClick={() => setOffenId(b.id)}
-                    untertitel={[b.herkunft === 'shop' ? T('sh_aus_shop') : null, texte.anzahl(b.anzahl), b.zustand === 'reserviert' ? T('tk_bis').replace('{zeit}', texte.zeitpunkt(b.frist)) : T(`tk_zustand_${b.zustand}`)].filter(Boolean).join(' · ')} />
+                    untertitel={[b.demo ? T('sh_demo') : b.herkunft === 'shop' ? T('sh_aus_shop') : null, texte.anzahl(b.anzahl), b.zustand === 'reserviert' ? T('tk_bis').replace('{zeit}', texte.zeitpunkt(b.frist)) : T(`tk_zustand_${b.zustand}`)].filter(Boolean).join(' · ')} />
                 </div>
               ))}
             </Gruppe>
@@ -87,7 +87,7 @@ function BestellungBlatt({ b, onClose }) {
   const [sendet, setSendet] = useState(false)
   const [fehler, setFehler] = useState('')
 
-  const stornierbar = b.tickets.filter(t => (b.zustand === 'reserviert' && t.status === 'reserviert') || t.status === 'gueltig' || (t.status === 'eingeloest' && t.an_kasse))
+  const stornierbar = b.tickets.filter(t => (b.zustand === 'reserviert' && t.status === 'reserviert') || ['gueltig', 'demo'].includes(t.status) || (t.status === 'eingeloest' && t.an_kasse))
   const summe = ids => b.tickets.filter(t => ids.includes(t.id)).reduce((s, t) => s + Math.round(t.preis * 100), 0) / 100
 
   async function senden(name, werte, meldung) {
@@ -191,6 +191,7 @@ function BestellungBlatt({ b, onClose }) {
     <Blatt titel={texte.name(b)} onClose={modus ? () => { setModus(null); setFehler(''); vorgang.current = null } : onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
+          {b.demo && <div style={{ display: 'inline-block', marginBottom: 8, padding: '4px 12px', borderRadius: 12, background: '#FDE68A', color: '#422006', fontSize: 15, fontWeight: 700 }}>{T('sh_demo')}</div>}
           <div style={{ fontSize: 19, fontWeight: 700 }}>{texte.anzahl(b.anzahl)} · {texte.geld(b.betrag)}</div>
           <div style={{ fontSize: 16, color: 'var(--text-2)' }}>
             {b.zustand === 'reserviert' ? T(b.online ? 'sh_bezahlt_gerade' : 'tk_bar_bis').replace('{zeit}', texte.zeitpunkt(b.frist)) : T(`tk_zustand_${b.zustand}`)}
@@ -249,7 +250,7 @@ function BestellungBlatt({ b, onClose }) {
         {modus === 'storno' && <Knopf voll variante="gefahr" icon={XCircle} onClick={stornieren} disabled={sendet}>{T('tk_stornieren')}</Knopf>}
         {modus === 'erstattung' && <Knopf voll onClick={erstatten} disabled={sendet}>{T(b.online ? 'sh_erstatten' : 'save')}</Knopf>}
         {modus === 'mail' && <Knopf voll icon={Mail} onClick={shopMail} disabled={sendet}>{T('tk_mail_senden')}</Knopf>}
-        {!modus && b.herkunft === 'shop' && b.zustand === 'bezahlt' && b.tickets.some(t => t.status === 'gueltig') && (
+        {!modus && b.herkunft === 'shop' && b.zustand === 'bezahlt' && b.tickets.some(t => ['gueltig', 'demo'].includes(t.status)) && (
           <Knopf voll variante="sekundaer" icon={Mail} disabled={sendet} onClick={() => { setEmail(b.kaeufer_email); setFehler(''); setModus('mail') }}>{T('tk_mail_senden')}</Knopf>
         )}
         {!modus && !b.online && b.zustand === 'reserviert' && <Knopf voll icon={Banknote} onClick={bezahlt} disabled={sendet}>{T('tk_geld_erhalten').replace('{betrag}', texte.geld(b.betrag))}</Knopf>}

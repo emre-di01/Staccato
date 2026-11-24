@@ -111,7 +111,7 @@ export function Scanner({ ev, onClose }) {
 
 const TEXTE = {
   ok: 'ei_ok', schon_eingeloest: 'ei_schon', storniert: 'ei_storniert', falsche_veranstaltung: 'ei_falsch',
-  unbekannt: 'ei_unbekannt', zu_frueh: 'ei_noch_zu_frueh', vorbei: 'ei_vorbei', verboten: 'ei_verboten', netz: 'ei_netz',
+  unbekannt: 'ei_unbekannt', zu_frueh: 'ei_noch_zu_frueh', vorbei: 'ei_vorbei', verboten: 'ei_verboten', netz: 'ei_netz', demo: 'ei_demo',
 }
 
 function Ergebnis({ r, zeit, onWeiter, onNochmal }) {

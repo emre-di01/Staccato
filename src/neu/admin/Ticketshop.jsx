@@ -31,7 +31,7 @@ export default function AdminTicketshop() {
 export const stripeLink = live => `https://dashboard.stripe.com/${live ? '' : 'test/'}apikeys/create?${new URLSearchParams([
   ['name', 'Staccato Tickets'], ...['rak_checkout_session_write', 'rak_charge_write', 'rak_webhook_write'].map(r => ['permissions[]', r])])}`
 
-const FEHLER = ['vollzugriff', 'format', 'livemodus', 'testmodus', 'ungueltig', 'rechte']
+const FEHLER = ['vollzugriff', 'format', 'livemodus', 'ungueltig', 'rechte']
 
 // Der Schlüssel geht nur an die Edge Function und wird nie wieder angezeigt
 function Stripe({ konto }) {
@@ -66,6 +66,14 @@ function Stripe({ konto }) {
     else setFehler(r.grund === 'rechte' ? T('sh_fehler_rechte').replace('{was}', r.was === 'refunds' ? 'Charges and Refunds' : 'Checkout Sessions') : T(`sh_fehler_${FEHLER.includes(r.grund) ? r.grund : 'allgemein'}`))
   }
 
+  async function demoLoeschen() {
+    if (!await confirm(T('sh_demo_loeschen_frage'), { confirmLabel: T('sh_demo_loeschen') })) return
+    const { data, error } = await supabase.rpc('shop_demo_loeschen', { p_schule_id: schule.id })
+    if (error) { toast(error.message, 'error'); return }
+    neuLaden('na-ticketshop', 'na-ticket-bestellungen')
+    toast(T('sh_demo_geloescht').replace('{n}', data), 'success')
+  }
+
   async function trennen() {
     if (!await confirm(T('sh_trennen_frage'), { confirmLabel: T('sh_trennen') })) return
     const r = await aufruf({ aktion: 'trennen' })
@@ -84,6 +92,15 @@ function Stripe({ konto }) {
           <Zeile icon={Unplug} iconFarbe="var(--danger)" titel={T('sh_trennen')} chevron={false} onClick={sendet ? undefined : trennen} />
         </Gruppe>
       )}
+      {konto.verbunden && !konto.livemode && (
+        <div style={{ margin: '12px 20px 0', padding: 16, borderRadius: 18, background: '#FDE68A', color: '#422006', fontSize: 16, lineHeight: 1.45 }}>
+          {T('sh_demo_hinweis')}
+          <div style={{ marginTop: 12 }}><Knopf klein onClick={demoLoeschen} disabled={sendet} style={{ background: '#422006', color: '#FFFFFF' }}>{T('sh_demo_loeschen')}</Knopf></div>
+        </div>
+      )}
+      {konto.verbunden && konto.livemode && konto.demos > 0 && (
+        <div style={{ margin: '12px 20px 0' }}><Knopf klein variante="sekundaer" onClick={demoLoeschen} disabled={sendet}>{T('sh_demo_loeschen')}</Knopf></div>
+      )}
       {(!konto.verbunden || aendern) && (
         <div style={{ marginTop: konto.verbunden ? 16 : 0 }}>
           <Kasten>
@@ -91,11 +108,16 @@ function Stripe({ konto }) {
             <ol style={{ margin: 0, paddingLeft: 22, fontSize: 16, lineHeight: 1.6 }}>
               {[1, 2, 3].map(i => <li key={i}>{T(`sh_schritt_${i}`)}</li>)}
             </ol>
-            <a href={stripeLink(SHOP_LIVE)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
-              <ExternalLink aria-hidden="true" size={20} />{T(SHOP_LIVE ? 'sh_stripe_oeffnen_echt' : 'sh_stripe_oeffnen')}
-            </a>
+            <div>
+              {(SHOP_LIVE ? [true, false] : [false]).map(live => (
+                <a key={String(live)} href={stripeLink(live)} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 48, fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
+                  <ExternalLink aria-hidden="true" size={20} style={{ flexShrink: 0 }} />{T(live ? 'sh_stripe_oeffnen_echt' : 'sh_stripe_oeffnen')}
+                </a>
+              ))}
+            </div>
+            {SHOP_LIVE && <div style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--text-2)' }}>{T('sh_demo_moeglich')}</div>}
             <Feld label={T('sh_schluessel')} hinweis={T('sh_schluessel_hinweis')}>
-              <input type="password" value={schluessel} onChange={e => { setSchluessel(e.target.value); setFehler('') }} placeholder={SHOP_LIVE ? 'rk_live_…' : 'rk_test_…'} autoComplete="off" spellCheck={false} style={eingabeStil} />
+              <input type="password" value={schluessel} onChange={e => { setSchluessel(e.target.value); setFehler('') }} placeholder={SHOP_LIVE ? 'rk_…' : 'rk_test_…'} autoComplete="off" spellCheck={false} style={eingabeStil} />
             </Feld>
             {webhook && <>
               <div role="status" style={{ fontSize: 16, lineHeight: 1.5 }}>{T('sh_webhook_text')}</div>

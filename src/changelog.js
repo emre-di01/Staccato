@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.16'
+export const CURRENT_VERSION = '2.9.17'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.17',
+    date: '2026-11-24',
+    features: [
+      {
+        icon: '🎟️',
+        de: 'Ticketshop als Demo: zum Zeigen und Ausprobieren, ohne echtes Geld und ohne gültige Tickets',
+        en: 'Ticket shop demo: show it and try it out, without real money and without valid tickets',
+        tr: 'Bilet satış sayfası demo olarak: gerçek para ve geçerli bilet olmadan göstermek ve denemek için',
+      },
+    ],
+  },
   {
     version: '2.9.16',
     date: '2026-11-24',

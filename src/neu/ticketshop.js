@@ -7,19 +7,20 @@ import { useApp } from '../context/AppContext'
 export const SHOP_LIVE = import.meta.env.VITE_TICKETSHOP === 'live'
 export const SHOP_SICHTBAR = SHOP_LIVE || import.meta.env.VITE_TICKETSHOP === 'test'
 
-// { shop: Zeile aus ticket_shops | null, konto: { verbunden, livemode, letzte4 } }
+// { shop: Zeile aus ticket_shops | null, konto: { verbunden, livemode, letzte4, demos } } – demos: Anzahl Demo-Bestellungen
 export function useTicketShop() {
   const { schule } = useApp()
   return useQuery({
     queryKey: ['na-ticketshop', schule?.id],
     enabled: !!schule?.id,
     queryFn: async () => {
-      const [s, k] = await Promise.all([
+      const [s, k, d] = await Promise.all([
         supabase.from('ticket_shops').select('*').eq('schule_id', schule.id).maybeSingle(),
         supabase.rpc('zahlungskonto_status', { p_schule_id: schule.id }),
+        supabase.from('ticket_bestellungen').select('id', { count: 'exact', head: true }).eq('schule_id', schule.id).eq('demo', true),
       ])
       if (s.error || k.error) throw s.error ?? k.error
-      return { shop: s.data, konto: k.data }
+      return { shop: s.data, konto: { ...k.data, demos: d.count ?? 0 } }
     },
   })
 }
