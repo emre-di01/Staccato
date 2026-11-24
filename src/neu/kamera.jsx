@@ -51,8 +51,8 @@ export function useKameraScan(onErkannt, formate, { dauerhaft = false } = {}) {
             }
           }
         } catch {
-          // einzelnes Bild nicht lesbar – weiter; meldet der Browser-Leser Fehler, QR-Codes künftig per jsQR
-          if (formate.includes('qr_code')) hatNativ = false
+          // einzelnes Bild nicht lesbar – weiter; meldet der Browser-Leser bei reinen QR-Scannern Fehler, künftig per jsQR (Strichcodes kann jsQR nicht)
+          if (formate.length === 1 && formate[0] === 'qr_code') hatNativ = false
         }
         if (erkannt && aktiv.current) {
           if (!dauerhaft) { stop(); meldenRef.current(erkannt); return }
