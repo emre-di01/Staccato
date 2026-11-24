@@ -22,15 +22,14 @@ vi.mock('../../lib/supabase', () => {
 vi.mock('../../context/AppContext', () => ({ useApp: () => ({ T: k => t('de', k), lang: 'de', zeitzone: 'Europe/Berlin', profil: { id: 'ich' }, schule: { id: 's' }, rolle: 'admin', toast() {}, confirm: async () => true }) }))
 const { default: AdminEvents } = await import('../admin/Events')
 let root
+const bis = async (f, ms = 4000) => { const ende = Date.now() + ms; while (!f() && Date.now() < ende) await act(() => new Promise(r => setTimeout(r, 25))); return f() }
 afterEach(() => { act(() => root.unmount()); document.body.innerHTML = '' })
 
 it('Admins können in Verwaltung → Events für sich reservieren', async () => {
   root = createRoot(document.body.appendChild(document.createElement('div')))
   await act(async () => root.render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><AdminEvents /></QueryClientProvider></MemoryRouter>))
-  await act(() => new Promise(r => setTimeout(r, 60)))
-  const knopf = [...document.querySelectorAll('button')].find(b => b.textContent === 'Tickets reservieren')
+  const knopf = await bis(() => [...document.querySelectorAll('button')].find(b => b.textContent === 'Tickets reservieren'))
   expect(knopf).toBeTruthy()
   await act(async () => knopf.click())
-  await act(() => new Promise(r => setTimeout(r, 30)))
-  expect(document.body.textContent).toContain('Wie viele Tickets?')
+  expect(await bis(() => document.body.textContent.includes('Wie viele Tickets?'))).toBe(true)
 })
