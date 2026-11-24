@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.12'
+export const CURRENT_VERSION = '2.9.13'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.13',
+    date: '2026-11-24',
+    features: [
+      {
+        icon: '📧',
+        de: 'Tickets per E-Mail: nach dem Reservieren kommt eine Bestätigung mit Betrag und Frist, nach dem Bezahlen das Ticket mit QR-Code',
+        en: 'Tickets by email: after reserving you get a confirmation with amount and deadline, after paying the ticket with its QR code',
+        tr: 'E-postayla bilet: Ayırtınca tutar ve son tarihle onay, ödeyince QR kodlu bilet gelir',
+      },
+    ],
+  },
   {
     version: '2.9.12',
     date: '2026-11-24',
