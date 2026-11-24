@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(136);
+SELECT plan(167);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -29,7 +29,7 @@ SELECT id::uuid, name, rolle::user_rolle, schule::uuid, schule::uuid FROM (VALUE
   ('7c000000-0000-0000-0000-000000000000', 'Schüler A', 'schueler', '71111111-1111-1111-1111-111111111111'),
   ('7d000000-0000-0000-0000-000000000000', 'Schüler 2', 'schueler', '71111111-1111-1111-1111-111111111111'),
   ('7e000000-0000-0000-0000-000000000000', 'Lehrer A',  'lehrer',   '71111111-1111-1111-1111-111111111111')) v(id, name, rolle, schule)
-ON CONFLICT (id) DO UPDATE SET rolle = EXCLUDED.rolle, schule_id = EXCLUDED.schule_id, letzte_schule_id = EXCLUDED.letzte_schule_id;
+ON CONFLICT (id) DO UPDATE SET voller_name = EXCLUDED.voller_name, rolle = EXCLUDED.rolle, schule_id = EXCLUDED.schule_id, letzte_schule_id = EXCLUDED.letzte_schule_id;
 INSERT INTO schul_mitgliedschaften (user_id, schule_id, rolle, aktiv)
 SELECT id, schule_id, rolle, true FROM profiles WHERE id::text LIKE '7_000000-0000-0000-0000-000000000000'
 ON CONFLICT (user_id, schule_id) DO UPDATE SET rolle = EXCLUDED.rolle, aktiv = true;
@@ -375,6 +375,72 @@ RESET ROLE;
 UPDATE events SET beginn = now() - interval '13 hours' WHERE id = '73000000-0000-0000-0000-000000000010';
 SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
 SELECT is(pg_temp.scan(10, 'scan-n'), 'vorbei', 'Nach der Veranstaltung nicht mehr scanbar');
+RESET ROLE;
+
+-- ── Abendkasse (Event 11 in 2 h: 5 Plätze, 15 €, Abendkasse 18 €; Event 12 morgen) ──
+UPDATE schul_mitgliedschaften SET aktiv = true WHERE user_id = '7d000000-0000-0000-0000-000000000000';
+INSERT INTO events (id, schule_id, titel, typ, beginn, oeffentlich, erstellt_von) VALUES
+  ('73000000-0000-0000-0000-000000000011', '71111111-1111-1111-1111-111111111111', 'Abendkasse', 'konzert', now() + interval '2 hours', true, '7a000000-0000-0000-0000-000000000000'),
+  ('73000000-0000-0000-0000-000000000012', '71111111-1111-1111-1111-111111111111', 'Morgen', 'konzert', now() + interval '26 hours', true, '7a000000-0000-0000-0000-000000000000');
+INSERT INTO ticket_einstellungen (event_id, aktiv, kapazitaet, preis_normal, preis_verguenstigt, kontingent, preis_abendkasse) VALUES
+  ('73000000-0000-0000-0000-000000000011', true, 5, 15, 8, 3, 18), ('73000000-0000-0000-0000-000000000012', true, 5, 15, 8, 3, NULL);
+INSERT INTO ticket_freigaben (event_id, profil_id, scannen, kasse) VALUES
+  ('73000000-0000-0000-0000-000000000011', '7e000000-0000-0000-0000-000000000000', false, true),
+  ('73000000-0000-0000-0000-000000000012', '7e000000-0000-0000-0000-000000000000', false, true),
+  ('73000000-0000-0000-0000-000000000011', '7d000000-0000-0000-0000-000000000000', true, false);
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT is((SELECT coalesce(r->>'grund', 'ok') FROM tickets_reservieren('73000000-0000-0000-0000-000000000011', 2, 16) r), 'ok', 'Reservierung für die Abendkasse');
+SELECT is((SELECT coalesce(r->>'grund', 'ok') FROM tickets_reservieren('73000000-0000-0000-0000-000000000012', 1, 8) r), 'ok', 'Reservierung für morgen');
+RESET ROLE;
+CREATE TEMP TABLE _ak AS SELECT event_id, id FROM ticket_bestellungen WHERE event_id IN ('73000000-0000-0000-0000-000000000011', '73000000-0000-0000-0000-000000000012');
+GRANT SELECT ON _ak TO authenticated;
+CREATE FUNCTION pg_temp.ak(p_event int, p_n int, p_betrag numeric, p_id text DEFAULT NULL) RETURNS text LANGUAGE sql AS
+  $$SELECT coalesce(r->>'grund', 'ok') FROM abendkasse_verkaufen(('73000000-0000-0000-0000-0000000000' || p_event)::uuid, p_n, p_betrag, coalesce(p_id::uuid, gen_random_uuid())) r$$;
+CREATE FUNCTION pg_temp.akb(p_event int) RETURNS uuid LANGUAGE sql AS $$SELECT id FROM _ak WHERE event_id = ('73000000-0000-0000-0000-0000000000' || p_event)::uuid$$;
+
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.ak(11, 1, 18)$$, '42501', NULL, 'Mitglied verkauft nicht');
+SELECT throws_ok($$SELECT abendkasse_kassieren(pg_temp.akb(11), 16)$$, '42501', NULL, 'Mitglied kassiert nicht');
+SELECT throws_ok($$SELECT abendkasse_reservierungen('73000000-0000-0000-0000-000000000011')$$, '42501', NULL, 'Mitglied sieht keine Reservierungsliste');
+SELECT is(meine_kassen_events(), '[]'::jsonb, 'Ohne Freigabe keine Kasse');
+RESET ROLE;
+SELECT pg_temp.als('7d000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT abendkasse_reservierungen('73000000-0000-0000-0000-000000000011')$$, '42501', NULL, 'Scanner sieht keine Namen');
+RESET ROLE;
+SELECT set_config('request.jwt.claims', '', true), set_config('request.jwt.claim.sub', '', true), set_config('request.jwt.claim.role', '', true);
+SELECT pg_temp.als('7b000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.ak(11, 1, 18)$$, '42501', NULL, 'Admin B verkauft nicht für Schule A');
+RESET ROLE;
+
+SELECT pg_temp.als('7e000000-0000-0000-0000-000000000000');
+SELECT is((SELECT array_agg(v->>'titel' || ' ' || (v->>'offen') || ' ' || (v->>'preis') || ' ' || (v->>'frei') ORDER BY v->>'beginn') FROM jsonb_array_elements(meine_kassen_events()) v WHERE v->>'titel' IN ('Abendkasse', 'Morgen')),
+  ARRAY['Abendkasse true 18.00 3', 'Morgen false 15.00 4'], 'Kasse: Preis, freie Plätze, Öffnung');
+SELECT is((SELECT (r->0) - 'id' FROM abendkasse_reservierungen('73000000-0000-0000-0000-000000000011') r), '{"name": "Schüler A", "anzahl": 2, "betrag": 16.00}'::jsonb, 'Reservierung mit Namen');
+SELECT is(pg_temp.ak(12, 1, 15), 'geschlossen', 'Am Vortag kein Abendkassenverkauf');
+SELECT is(pg_temp.ak(11, 0, 0), 'anzahl', 'Anzahl 0');
+SELECT is(pg_temp.ak(11, 1, 8), 'betrag', 'Keine Vergünstigung an der Abendkasse');
+SELECT is(pg_temp.ak(11, 1, 15), 'betrag', 'Normalpreis reicht nicht, wenn Abendkasse teurer ist');
+SELECT is(pg_temp.ak(11, 4, 72), 'zu_wenig_frei', 'Reservierte Plätze nicht verkaufbar');
+SELECT is(pg_temp.ak(11, 2, 36, '7f000000-0000-0000-0000-000000000021'), 'ok', '2 verkauft');
+SELECT is(pg_temp.ak(11, 2, 36, '7f000000-0000-0000-0000-000000000021'), 'ok', 'Wiederholung mit gleichem Vorgang');
+SELECT throws_ok($$SELECT pg_temp.ak(11, 1, 18, '7f000000-0000-0000-0000-000000000021')$$, '22023', NULL, 'Vorgang nicht für andere Anzahl');
+SELECT throws_ok($$SELECT pg_temp.ak(11, 2, 36, pg_temp.akb(11)::text)$$, '22023', NULL, 'Vorgang kapert keine fremde Bestellung');
+SELECT is((SELECT abendkasse_kassieren(pg_temp.akb(11), 15)->>'grund'), 'betrag', 'Falscher Betrag');
+SELECT is((SELECT abendkasse_kassieren(pg_temp.akb(11), 16)), '{"ok": true, "anzahl": 2, "eingelassen": true}'::jsonb, 'Reservierung kassiert und eingelassen, zum reservierten Preis');
+SELECT is((SELECT abendkasse_kassieren(pg_temp.akb(11), 16)), '{"ok": true, "anzahl": 2, "eingelassen": true}'::jsonb, 'Wiederholung bleibt ok');
+SELECT is((SELECT abendkasse_kassieren(pg_temp.akb(12), 8)), '{"ok": true, "anzahl": 1, "eingelassen": false}'::jsonb, 'Vor Öffnung: bezahlt, aber nicht eingelassen');
+SELECT is((SELECT v->>'kassiert' FROM jsonb_array_elements(meine_kassen_events()) v WHERE v->>'titel' = 'Abendkasse'), '52.00', 'Eigener Kassenstand');
+SELECT throws_ok($$SELECT tickets_stornieren('7f000000-0000-0000-0000-000000000021', ARRAY[gen_random_uuid()], 0)$$, '42501', NULL, 'Kasse storniert nicht');
+RESET ROLE;
+SELECT is((SELECT count(*) FROM ticket_zahlungen WHERE bestellung_id IN ('7f000000-0000-0000-0000-000000000021', pg_temp.akb(11))), 2::bigint, 'Je Vorgang genau eine Zahlung');
+SELECT is((SELECT array_agg(DISTINCT status || an_kasse) FROM tickets WHERE event_id = '73000000-0000-0000-0000-000000000011'), ARRAY['eingeloesttrue'], 'Alle an der Kasse eingelassen');
+SELECT is((SELECT status || an_kasse FROM tickets WHERE event_id = '73000000-0000-0000-0000-000000000012'), 'gueltigfalse', 'Ticket für morgen gültig mit QR');
+
+-- vertippt: Admin storniert Kassenverkauf
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is((SELECT coalesce(r->>'grund', 'ok') FROM tickets_stornieren('7f000000-0000-0000-0000-000000000021', (SELECT array_agg(id) FROM (SELECT id FROM tickets WHERE bestellung_id = '7f000000-0000-0000-0000-000000000021' LIMIT 1) q), 18) r), 'ok', 'Admin storniert Kassenticket mit Erstattung');
+SELECT is(pg_temp.ak(11, 2, 36), 'ok', 'Stornierter und freier Platz wieder verkaufbar');
+SELECT is(pg_temp.ak(11, 1, 18), 'zu_wenig_frei', 'Danach voll');
 RESET ROLE;
 
 -- Konto gelöscht: Bestellung bleibt ohne Personenbezug

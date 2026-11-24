@@ -1,7 +1,6 @@
-// Helfer am Einlass: Personen je Veranstaltung zum Scannen freigeben (nur Admins)
+// Helfer: Personen je Veranstaltung für „Scannen“ und „Kasse“ freigeben (nur Admins)
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Blatt, Suchfeld, Gruppe, Trenner, Zeile, Leer, Laden, FehlerText } from '../../ui'
@@ -13,7 +12,7 @@ export function useTicketHelfer(eventId) {
     queryKey: ['na-ticket-helfer', eventId],
     enabled: !!eventId,
     queryFn: async () => {
-      const { data, error } = await supabase.from('ticket_freigaben').select('profil_id, scannen, kasse').eq('event_id', eventId).eq('scannen', true)
+      const { data, error } = await supabase.from('ticket_freigaben').select('profil_id, scannen, kasse').eq('event_id', eventId)
       if (error) throw error
       return data
     },
@@ -36,24 +35,25 @@ export default function TicketHelfer({ ev, onClose }) {
       return data.filter(m => m.person).map(m => ({ ...m.person, rolle: m.rolle })).sort((a, b) => a.voller_name.localeCompare(b.voller_name))
     },
   })
-  const ids = new Set(helfer.map(h => h.profil_id))
-  const dabei = personen.filter(p => ids.has(p.id))
+  const rechte = new Map(helfer.map(h => [h.profil_id, { scannen: h.scannen, kasse: h.kasse }]))
+  const dabei = personen.filter(p => rechte.has(p.id))
   const q = suche.trim().toLowerCase()
-  const weitere = personen.filter(p => !ids.has(p.id) && (!q || p.voller_name.toLowerCase().includes(q)))
+  const weitere = personen.filter(p => !rechte.has(p.id) && (!q || p.voller_name.toLowerCase().includes(q)))
 
   async function ausfuehren(anfrage) {
     setSendet(true)
     const { error } = await anfrage
     setSendet(false)
     if (error) toast(error.message, 'error')
-    neuLaden('na-ticket-helfer', 'n-scan-events')
+    neuLaden('na-ticket-helfer', 'n-scan-events', 'n-kassen-events')
   }
-  // kasse nicht mitsenden: eine vorhandene Kassen-Freigabe bleibt erhalten
-  const dazu = p => ausfuehren(supabase.from('ticket_freigaben').upsert({ event_id: ev.id, profil_id: p.id, scannen: true }, { onConflict: 'event_id,profil_id' }))
-  const weg = p => {
-    const zeile = helfer.find(h => h.profil_id === p.id)
-    const tabelle = supabase.from('ticket_freigaben')
-    return ausfuehren((zeile?.kasse ? tabelle.update({ scannen: false }) : tabelle.delete()).eq('event_id', ev.id).eq('profil_id', p.id))
+  const tabelle = () => supabase.from('ticket_freigaben')
+  const dazu = p => ausfuehren(tabelle().insert({ event_id: ev.id, profil_id: p.id, scannen: true, kasse: false }))
+  // Ohne Häkchen ist die Person kein Helfer mehr
+  function setze(p, feld, an) {
+    const neu = { ...rechte.get(p.id), [feld]: an }
+    const zeile = neu.scannen || neu.kasse ? tabelle().update({ scannen: neu.scannen, kasse: neu.kasse }) : tabelle().delete()
+    return ausfuehren(zeile.eq('event_id', ev.id).eq('profil_id', p.id))
   }
 
   return (
@@ -66,10 +66,19 @@ export default function TicketHelfer({ ev, onClose }) {
               {dabei.map((p, i) => (
                 <div key={p.id}>
                   {i > 0 && <Trenner />}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 8px 8px 16px', minHeight: 56 }}>
-                    <Avatar name={p.voller_name} bild={p.avatar_url} groesse={36} />
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 600, overflowWrap: 'anywhere' }}>{p.voller_name}</span>
-                    <button onClick={() => weg(p)} disabled={sendet} aria-label={`${T('nv_entfernen')}: ${p.voller_name}`} style={{ width: 44, height: 44, borderRadius: 22, border: 'none', background: 'transparent', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X aria-hidden="true" size={20} /></button>
+                  <div style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar name={p.voller_name} bild={p.avatar_url} groesse={36} />
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 600, overflowWrap: 'anywhere' }}>{p.voller_name}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 24, marginTop: 4, paddingLeft: 48 }}>
+                      {[['scannen', 'ei_recht_scannen'], ['kasse', 'ei_recht_kasse']].map(([feld, label]) => (
+                        <label key={feld} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, fontSize: 17, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={rechte.get(p.id)[feld]} disabled={sendet} onChange={e => setze(p, feld, e.target.checked)} style={{ width: 22, height: 22, accentColor: 'var(--primary)' }} />
+                          {T(label)}
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}

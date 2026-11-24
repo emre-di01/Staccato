@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText, ScanLine, UserCheck } from 'lucide-react'
+import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText, ScanLine, UserCheck, Banknote } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt } from '../../ui'
@@ -120,6 +120,8 @@ function TicketZeile({ ev }) {
         <Zeile icon={UserCheck} titel={T('ei_helfer')} untertitel={helfer.length ? T(helfer.length === 1 ? 'ei_helfer_1' : 'ei_helfer_n').replace('{n}', helfer.length) : T('ei_helfer_keine')} onClick={() => setOffen('helfer')} />
         <Trenner />
         <Zeile icon={ScanLine} titel={T('ei_scannen')} onClick={() => navigate(`/einlass?event=${ev.id}`)} />
+        <Trenner />
+        <Zeile icon={Banknote} titel={T('ka_titel')} onClick={() => navigate(`/kasse?event=${ev.id}`)} />
       </>}
     </DetailGruppe>
     {offen === 'helfer' && <TicketHelfer ev={ev} onClose={() => setOffen(null)} />}

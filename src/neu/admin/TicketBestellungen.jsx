@@ -82,7 +82,7 @@ function BestellungBlatt({ b, onClose }) {
   const [sendet, setSendet] = useState(false)
   const [fehler, setFehler] = useState('')
 
-  const stornierbar = b.tickets.filter(t => (b.zustand === 'reserviert' && t.status === 'reserviert') || t.status === 'gueltig')
+  const stornierbar = b.tickets.filter(t => (b.zustand === 'reserviert' && t.status === 'reserviert') || t.status === 'gueltig' || (t.status === 'eingeloest' && t.an_kasse))
   const summe = ids => b.tickets.filter(t => ids.includes(t.id)).reduce((s, t) => s + Math.round(t.preis * 100), 0) / 100
 
   async function senden(name, werte, meldung) {

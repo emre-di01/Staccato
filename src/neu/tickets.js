@@ -144,7 +144,7 @@ export async function alleBestellungenLaden(eventId) {
     const { data, error } = await supabase.from('ticket_bestellungen')
       .select(`id, herkunft, kaeufer_name, status, frist, erstellt_am,
         kaeufer:profiles!ticket_bestellungen_kaeufer_id_fkey(voller_name, avatar_url),
-        tickets(id, preis, verguenstigt, status),
+        tickets(id, preis, verguenstigt, status, an_kasse),
         ticket_zahlungen(id, betrag, zeitpunkt, person:profiles!ticket_zahlungen_angenommen_von_fkey(voller_name),
           ticket_erstattungen(id, betrag, zeitpunkt, person:profiles!ticket_erstattungen_erstattet_von_fkey(voller_name)))`)
       .eq('event_id', eventId).order('erstellt_am', { ascending: false }).order('id').range(von, von + SEITE - 1)
@@ -288,4 +288,34 @@ export async function ticketScannen(eventId, code, scanId, pause = 600) {
     } catch { /* keine Verbindung – nochmal */ }
   }
   return { ergebnis: 'netz' }
+}
+
+// Veranstaltungen, bei denen ich kassieren darf
+export function useKassenEvents() {
+  const { profil, schule } = useApp()
+  return useQuery({
+    queryKey: ['n-kassen-events', profil?.id, schule?.id],
+    enabled: !!profil?.id,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('meine_kassen_events')
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+// Kassenvorgang mit Wiederholung bei Netzaussetzern (die Funktionen erkennen Wiederholungen selbst).
+// Ergebnis der Funktion oder { ok: false, grund: 'netz' | 'verboten' }
+export async function sicherAusfuehren(name, werte, pause = 600) {
+  for (let i = 0; i < VERSUCHE; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, pause))
+    try {
+      const abbruch = new Promise((_, nein) => setTimeout(() => nein(new Error('zeit')), ZEITLIMIT))
+      const { data, error } = await Promise.race([supabase.rpc(name, werte), abbruch])
+      if (!error) return data
+      if (error.code === '42501') return { ok: false, grund: 'verboten' }
+    } catch { /* keine Verbindung – nochmal */ }
+  }
+  return { ok: false, grund: 'netz' }
 }
