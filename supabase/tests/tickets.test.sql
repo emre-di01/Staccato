@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(113);
+SELECT plan(136);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -316,6 +316,67 @@ SELECT pg_temp.als('7e000000-0000-0000-0000-000000000000');
 SELECT is(meine_tickets(), '[]'::jsonb, 'Kasse sieht keine fremden Tickets; unbezahlt stornierte fehlen');
 RESET ROLE;
 
+-- ── Einlass (Event 9 heute Abend, Event 10 ebenfalls, Event 8 in 30 Tagen) ──
+INSERT INTO events (id, schule_id, titel, typ, beginn, oeffentlich, erstellt_von) VALUES
+  ('73000000-0000-0000-0000-000000000009', '71111111-1111-1111-1111-111111111111', 'Einlass', 'konzert', now() + interval '2 hours', false, '7a000000-0000-0000-0000-000000000000'),
+  ('73000000-0000-0000-0000-000000000010', '71111111-1111-1111-1111-111111111111', 'Nebenan', 'konzert', now() + interval '2 hours', false, '7a000000-0000-0000-0000-000000000000');
+INSERT INTO ticket_einstellungen (event_id, aktiv, kapazitaet, preis_normal) VALUES
+  ('73000000-0000-0000-0000-000000000009', true, 50, 10), ('73000000-0000-0000-0000-000000000010', true, 50, 10);
+INSERT INTO ticket_freigaben (event_id, profil_id, scannen, kasse) VALUES
+  ('73000000-0000-0000-0000-000000000009', '7d000000-0000-0000-0000-000000000000', true, false),
+  ('73000000-0000-0000-0000-000000000009', '7e000000-0000-0000-0000-000000000000', false, true);
+INSERT INTO ticket_bestellungen (id, schule_id, event_id, kaeufer_id, status) VALUES
+  ('74000000-0000-0000-0000-000000000009', '71111111-1111-1111-1111-111111111111', '73000000-0000-0000-0000-000000000009', '7c000000-0000-0000-0000-000000000000', 'bezahlt'),
+  ('74000000-0000-0000-0000-000000000010', '71111111-1111-1111-1111-111111111111', '73000000-0000-0000-0000-000000000010', '7c000000-0000-0000-0000-000000000000', 'bezahlt'),
+  ('74000000-0000-0000-0000-000000000011', '72222222-2222-2222-2222-222222222222', '73000000-0000-0000-0000-000000000003', '7b000000-0000-0000-0000-000000000000', 'bezahlt');
+INSERT INTO tickets (bestellung_id, event_id, preis, status, code) VALUES
+  ('74000000-0000-0000-0000-000000000009', '73000000-0000-0000-0000-000000000009', 10, 'gueltig', 'scan-a'),
+  ('74000000-0000-0000-0000-000000000009', '73000000-0000-0000-0000-000000000009', 10, 'gueltig', 'scan-b'),
+  ('74000000-0000-0000-0000-000000000009', '73000000-0000-0000-0000-000000000009', 10, 'storniert', 'scan-s'),
+  ('74000000-0000-0000-0000-000000000010', '73000000-0000-0000-0000-000000000010', 10, 'gueltig', 'scan-n'),
+  ('74000000-0000-0000-0000-000000000011', '73000000-0000-0000-0000-000000000003', 10, 'gueltig', 'scan-fremd');
+CREATE FUNCTION pg_temp.scan(p_event int, p_code text, p_id text DEFAULT NULL) RETURNS text LANGUAGE sql AS
+  $$SELECT ticket_scannen(('73000000-0000-0000-0000-0000000000' || lpad(p_event::text, 2, '0'))::uuid, p_code, coalesce(p_id::uuid, gen_random_uuid()))->>'ergebnis'$$;
+
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.scan(9, 'scan-a')$$, '42501', NULL, 'Käufer scannt nicht selbst');
+SELECT is(meine_scan_events(), '[]'::jsonb, 'Ohne Freigabe keine Einlass-Veranstaltungen');
+RESET ROLE;
+SELECT pg_temp.als('7e000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.scan(9, 'scan-a')$$, '42501', NULL, 'Freigabe „Kasse“ reicht nicht zum Scannen');
+RESET ROLE;
+SELECT pg_temp.als('7b000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.scan(9, 'scan-a')$$, '42501', NULL, 'Admin B scannt nicht bei Schule A');
+RESET ROLE;
+
+SELECT pg_temp.als('7d000000-0000-0000-0000-000000000000');
+SELECT is((SELECT array_agg(v->>'titel') FROM jsonb_array_elements(meine_scan_events()) v WHERE (v->>'scanbar')::boolean), ARRAY['Einlass'], 'Freigegebene Person sieht nur ihre Veranstaltung');
+SELECT throws_ok($$SELECT pg_temp.scan(10, 'scan-n')$$, '42501', NULL, 'Freigabe gilt nur für ihre Veranstaltung');
+SELECT is(pg_temp.scan(8, 'scan-a'), 'zu_frueh', 'Tage vorher nicht scanbar');
+SELECT is(pg_temp.scan(9, 'scan-a', '7f000000-0000-0000-0000-000000000001'), 'ok', 'Erster Scan');
+SELECT is(pg_temp.scan(9, 'scan-a', '7f000000-0000-0000-0000-000000000001'), 'ok', 'Wiederholung mit gleicher ID bleibt ok');
+SELECT is(pg_temp.scan(9, 'scan-a'), 'schon_eingeloest', 'Zweiter Scan abgelehnt');
+SELECT throws_ok($$SELECT pg_temp.scan(9, 'scan-b', '7f000000-0000-0000-0000-000000000001')$$, '22023', NULL, 'Scan-ID nicht für anderes Ticket nutzbar');
+SELECT is(pg_temp.scan(9, 'scan-s'), 'storniert', 'Storniertes Ticket');
+SELECT is(pg_temp.scan(9, 'scan-n'), 'falsche_veranstaltung', 'Andere Veranstaltung');
+SELECT is(pg_temp.scan(9, 'scan-fremd'), 'unbekannt', 'Ticket einer anderen Schule wird nicht verraten');
+SELECT is(pg_temp.scan(9, 'gibts-nicht'), 'unbekannt', 'Unbekannter Code');
+SELECT is(pg_temp.scan(9, NULL), 'unbekannt', 'Code NULL');
+SELECT is((SELECT ticket_scannen('73000000-0000-0000-0000-000000000009', 'scan-b', gen_random_uuid()) - 'eingeloest_am'), '{"ergebnis": "ok", "event_titel": null, "eingelassen": 2, "gesamt": 2}'::jsonb, 'Ergebnis ohne Namen und Preise, mit Zähler');
+SELECT is((SELECT count(*) FROM ticket_scans), 0::bigint, 'Scanner liest das Protokoll nicht');
+RESET ROLE;
+SELECT is((SELECT status FROM tickets WHERE code = 'scan-n'), 'gueltig', 'Falsche Veranstaltung entwertet nicht');
+SELECT is((SELECT status FROM tickets WHERE code = 'scan-fremd'), 'gueltig', 'Fremdes Ticket unverändert');
+SELECT is((SELECT count(*) FROM ticket_scans WHERE event_id = '73000000-0000-0000-0000-000000000009'), 8::bigint, 'Jeder Scan einmal protokolliert');
+UPDATE schul_mitgliedschaften SET aktiv = false WHERE user_id = '7d000000-0000-0000-0000-000000000000';
+SELECT pg_temp.als('7d000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.scan(9, 'scan-b')$$, '42501', NULL, 'Ausgetretene Person scannt nicht mehr');
+RESET ROLE;
+UPDATE events SET beginn = now() - interval '13 hours' WHERE id = '73000000-0000-0000-0000-000000000010';
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.scan(10, 'scan-n'), 'vorbei', 'Nach der Veranstaltung nicht mehr scanbar');
+RESET ROLE;
+
 -- Konto gelöscht: Bestellung bleibt ohne Personenbezug
 DELETE FROM profiles WHERE id = '7c000000-0000-0000-0000-000000000000';
 SELECT is((SELECT kaeufer_id FROM ticket_bestellungen WHERE id = '74000000-0000-0000-0000-000000000001'), NULL, 'Kontolöschung löst Käufer, Bestellung bleibt');
@@ -325,7 +386,7 @@ SELECT set_config('request.jwt.claims', '', true), set_config('request.jwt.claim
 UPDATE profiles SET rolle = 'superadmin', schule_id = '72222222-2222-2222-2222-222222222222', letzte_schule_id = '72222222-2222-2222-2222-222222222222' WHERE id = '7b000000-0000-0000-0000-000000000000';
 SELECT set_config('request.jwt.claims', '{"sub":"7b000000-0000-0000-0000-000000000000","role":"authenticated"}', true), set_config('request.jwt.claim.sub', '7b000000-0000-0000-0000-000000000000', true), set_config('request.jwt.claim.role', 'authenticated', true);
 SELECT lives_ok($$SELECT demo_schule_loeschen('71111111-1111-1111-1111-111111111111')$$, 'Demo-Schule mit Tickets löschbar');
-SELECT is((SELECT count(*) FROM ticket_bestellungen WHERE event_id::text LIKE '73%'), 0::bigint, 'Bestellungen der Schule sind weg');
+SELECT is((SELECT count(*) FROM ticket_bestellungen WHERE schule_id = '71111111-1111-1111-1111-111111111111'), 0::bigint, 'Bestellungen der Schule sind weg');
 
 SELECT * FROM finish();
 ROLLBACK;

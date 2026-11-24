@@ -12,7 +12,7 @@ import { adminReiter } from './admin/navigation'
 import AdminSeitenleiste from './admin/Seitenleiste'
 
 // Reiter der neuen Oberfläche je Rolle. `auch` = weitere Pfade, bei denen der Reiter aktiv ist.
-const GEMEINSAM = ['/einstellungen', '/profil', '/meine-dateien', '/tickets']
+const GEMEINSAM = ['/einstellungen', '/profil', '/meine-dateien', '/tickets', '/einlass']
 const REITER = {
   schueler: [
     { to: '/schueler',             icon: House,        label: 'n_tab_start',   auch: [] },

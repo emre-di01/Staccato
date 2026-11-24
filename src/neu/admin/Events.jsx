@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText } from 'lucide-react'
+import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText, ScanLine, UserCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt } from '../../ui'
@@ -9,6 +9,7 @@ import { useNeuLaden } from '../daten'
 import { uhrzeit } from '../zeit'
 import EventBlatt from '../lehrer/EventBlatt'
 import TicketBlatt from './TicketBlatt'
+import TicketHelfer, { useTicketHelfer } from './TicketHelfer'
 import TicketBestellungen, { useBestellungen } from './TicketBestellungen'
 import { useTicketEinstellungen, bestellungenAuswerten, euro } from '../tickets'
 import { EventBild, EventVorschau } from '../eventBild'
@@ -99,8 +100,10 @@ function EinladenBlatt({ ev, vorhanden, onClose, onFertig }) {
 function TicketZeile({ ev }) {
   const { T, lang } = useApp()
   const neuLaden = useNeuLaden()
-  const [offen, setOffen] = useState(null)   // null | 'einstellungen' | 'bestellungen'
+  const [offen, setOffen] = useState(null)   // null | 'einstellungen' | 'bestellungen' | 'helfer'
+  const navigate = useNavigate()
   const { data: bestellungen } = useBestellungen(ev.id)
+  const { data: helfer = [] } = useTicketHelfer(ev.id)
   const { liste } = bestellungenAuswerten(bestellungen)
   const zaehle = g => liste.filter(b => b.gruppe === g).length
   const { data: e, isLoading, isError } = useTicketEinstellungen(ev.id)
@@ -113,8 +116,13 @@ function TicketZeile({ ev }) {
       {e && <>
         <Trenner />
         <Zeile icon={ReceiptText} titel={T('tk_bestellungen')} untertitel={T('tk_bestellungen_stand').replace('{offen}', zaehle('offen')).replace('{bezahlt}', zaehle('bezahlt'))} onClick={() => setOffen('bestellungen')} />
+        <Trenner />
+        <Zeile icon={UserCheck} titel={T('ei_helfer')} untertitel={helfer.length ? T(helfer.length === 1 ? 'ei_helfer_1' : 'ei_helfer_n').replace('{n}', helfer.length) : T('ei_helfer_keine')} onClick={() => setOffen('helfer')} />
+        <Trenner />
+        <Zeile icon={ScanLine} titel={T('ei_scannen')} onClick={() => navigate(`/einlass?event=${ev.id}`)} />
       </>}
     </DetailGruppe>
+    {offen === 'helfer' && <TicketHelfer ev={ev} onClose={() => setOffen(null)} />}
     {offen === 'bestellungen' && <TicketBestellungen ev={ev} kapazitaet={e.kapazitaet} onClose={() => setOffen(null)} />}
     {offen === 'einstellungen' && <TicketBlatt ev={ev} einstellungen={e} onClose={() => setOffen(null)}
       onFertig={() => { setOffen(null); neuLaden('n-ticket-einstellungen', 'n-ticket-verkauf', 'n-ticket-info') }} />}

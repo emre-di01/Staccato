@@ -247,3 +247,45 @@ export function tagAusgeschrieben(iso, tz, lang, { mitZeit = true } = {}) {
   const tag = f({ weekday: 'long', day: 'numeric', month: 'long' })
   return mitZeit && uhr !== '23:59' ? `${tag}, ${uhr}` : tag
 }
+
+// ─── Einlass ──────────────────────────────────────────────────
+
+// Geheimer Code aus dem QR-Inhalt, sonst null
+export function ticketAusQr(text) {
+  const t = String(text ?? '').trim()
+  if (!t.startsWith(TICKET_PREFIX)) return null
+  const code = t.slice(TICKET_PREFIX.length)
+  return /^[0-9a-f]{32}$/.test(code) ? code : null
+}
+
+// Veranstaltungen, bei denen ich scannen darf (nur noch nicht vorbei)
+export function useScanEvents() {
+  const { profil, schule } = useApp()
+  return useQuery({
+    queryKey: ['n-scan-events', profil?.id, schule?.id],
+    enabled: !!profil?.id,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('meine_scan_events')
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+const VERSUCHE = 3
+const ZEITLIMIT = 6000
+// Scannen mit Wiederholung: Die Scan-ID bleibt gleich, deshalb entwertet eine Wiederholung nie doppelt.
+// Ergebnis wie ticket_scannen(), bei fehlender Verbindung { ergebnis: 'netz' }, ohne Berechtigung { ergebnis: 'verboten' }.
+export async function ticketScannen(eventId, code, scanId, pause = 600) {
+  for (let i = 0; i < VERSUCHE; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, pause))
+    try {
+      const abbruch = new Promise((_, nein) => setTimeout(() => nein(new Error('zeit')), ZEITLIMIT))
+      const { data, error } = await Promise.race([supabase.rpc('ticket_scannen', { p_event_id: eventId, p_code: code, p_scan_id: scanId }), abbruch])
+      if (!error) return data
+      if (error.code === '42501') return { ergebnis: 'verboten' }
+    } catch { /* keine Verbindung – nochmal */ }
+  }
+  return { ergebnis: 'netz' }
+}

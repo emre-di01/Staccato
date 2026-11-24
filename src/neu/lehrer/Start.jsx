@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Clock, MapPin, Users, Play, ClipboardCheck, Music, MessageCircle } from 'lucide-react'
 import { TicketStart } from '../EventTickets'
+import EinlassStart from '../einlass/EinlassStart'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Leer, Laden } from '../../ui'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
@@ -69,6 +70,7 @@ export default function LehrerStart() {
         </Link>
       }
     >
+      <EinlassStart />
       <TicketStart />
       <div style={{ marginTop: 16 }}>
         {isLoading ? <Laden hoehe={240} /> : naechste ? (

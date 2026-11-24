@@ -5,7 +5,7 @@ import {
   CalendarHeart, DoorOpen, Guitar, Package, Receipt, School, Target, FileText, Building2, Inbox,
 } from 'lucide-react'
 
-const GEMEINSAM = ['/einstellungen', '/profil', '/meine-dateien', '/tickets']
+const GEMEINSAM = ['/einstellungen', '/profil', '/meine-dateien', '/tickets', '/einlass']
 
 // Einträge je Bereich; `hinweis` erscheint auf den Bereichsseiten am Handy
 export function adminBereiche(abo) {

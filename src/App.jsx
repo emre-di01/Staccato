@@ -76,6 +76,7 @@ const NeuKurs              = lazy(() => import('./neu/seiten/Kurs'))
 const NeuDokumente         = lazy(() => import('./neu/seiten/Dokumente'))
 const NeuMeineDateien      = lazy(() => import('./neu/seiten/MeineDateien'))
 const NeuTickets           = lazy(() => import('./neu/seiten/Tickets'))
+const NeuEinlass           = lazy(() => import('./neu/einlass/Einlass'))
 const NeuProfil            = lazy(() => import('./neu/seiten/Profil'))
 const NeuEinstellungen     = lazy(() => import('./neu/seiten/Einstellungen'))
 const NeuHilfe             = lazy(() => import('./neu/seiten/Hilfe'))
@@ -329,6 +330,7 @@ function AppRoutes() {
           <Route path="/profil"         element={<DesignWahl alt={<ProfilSeite />} neu={<NeuProfil />} />} />
           <Route path="/einstellungen"  element={<DesignWahl alt={<Einstellungen />} neu={<NeuEinstellungen />} />} />
           <Route path="/tickets"        element={<DesignWahl alt={<Navigate to="/profil" replace />} neu={<NeuTickets />} />} />
+          <Route path="/einlass"        element={<DesignWahl alt={<Navigate to="/profil" replace />} neu={<NeuEinlass />} />} />
           <Route path="/meine-dateien"  element={<DesignWahl alt={<MeineDateien />} neu={<NeuMeineDateien />} />} />
         </Route>
       </Route>

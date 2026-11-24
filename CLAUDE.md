@@ -308,6 +308,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/session/:code` | `SchuelerSession` | public (no auth) |
 | `/beamer` | `NeuBeamer` (`src/neu/seiten/Beamer.jsx`) | public (no auth) |
 | `/tickets` | `NeuTickets` (nur neues Design) | all authenticated |
+| `/einlass` | `Einlass` (nur neues Design) | Admins und für die Veranstaltung freigegebene Personen (Server prüft) |
 | `/impressum` | `Impressum` | public |
 | `/datenschutz` | `Datenschutz` | public |
 | `/lizenzen` | `Lizenzen` | public |
@@ -668,6 +669,7 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261124000003_tickets_kasse.sql` | `ticket_zahlung_bestaetigen` (Admin oder Freigabe „Kasse“ via `darf_kassieren()`; erzeugt die QR-Codes), `tickets_stornieren` und `ticket_erstattung_erfassen` (nur Admin), `ticket_erstattbar`; Zahlungen/Erstattungen werden nur angelegt, nie geändert; Sperrreihenfolge immer zuerst `ticket_einstellungen` |
 | `20261124000004_meine_tickets.sql` | `meine_tickets()`: eigene Tickets mit Veranstaltungsdaten und QR-Codes, unabhängig von der aktuellen Sichtbarkeit der Veranstaltung (Seite `/tickets`, QR-Inhalt `staccato:ticket:<code>`) |
 | `20261124000005_tickets_frist_tagesende.sql` | `ticket_info()`: Zahlungsfrist endet um 23:59 Schulzeit am letzten Tag (höchstens Verkaufsende/Beginn) |
+| `20261124000006_tickets_scannen.sql` | Einlass: `ticket_scannen(event, code, scan_id)` (Admin oder Freigabe „Scannen“ via `darf_scannen()`; gleiche scan_id = gleiches Ergebnis; nur 12 h vor Beginn bis 6 h nach Ende), `meine_scan_events()`; Seite `/einlass`, Freigaben unter Admin → Events → Helfer |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

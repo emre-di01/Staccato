@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Plus, MessageCircle, UserPlus, Receipt, ClipboardCheck, Music, Inbox, Building2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { TicketStart } from '../EventTickets'
+import EinlassStart from '../einlass/EinlassStart'
 import { useApp } from '../../context/AppContext'
 import { Seite, Gruppe, Trenner, Zeile, Leer, Laden } from '../../ui'
 import { useOffeneVorschlaege } from '../../hooks/useOffeneVorschlaege'
@@ -122,6 +123,7 @@ export default function AdminStart() {
         )}
       </div>
 
+      <EinlassStart />
       <TicketStart />
 
       <div style={{ margin: '22px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>

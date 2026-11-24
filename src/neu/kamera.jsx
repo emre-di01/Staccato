@@ -6,7 +6,9 @@ import { useApp } from '../context/AppContext'
 
 // ─── Kamera-Scan (QR/Barcode) ─────────────────────────────────
 // Startet die Rückkamera und meldet den ersten erkannten Code; ohne BarcodeDetector per jsQR (nur QR).
-export function useKameraScan(onErkannt, formate) {
+// `dauerhaft`: Kamera läuft weiter und meldet jeden erkannten Code (Aufrufer filtert Wiederholungen).
+const JSQR_KANTE = 960   // jsQR erkennt sehr große Bilder schlecht und langsam
+export function useKameraScan(onErkannt, formate, { dauerhaft = false } = {}) {
   const { T } = useApp()
   const videoRef  = useRef(null)
   const canvasRef = useRef(null)
@@ -24,7 +26,7 @@ export function useKameraScan(onErkannt, formate) {
   }, [])
 
   const start = useCallback(async () => {
-    const hatNativ = typeof BarcodeDetector !== 'undefined'
+    let hatNativ = typeof BarcodeDetector !== 'undefined'
     function schleife() {
       if (!aktiv.current) return
       animRef.current = requestAnimationFrame(async () => {
@@ -38,7 +40,8 @@ export function useKameraScan(onErkannt, formate) {
             if (codes.length > 0) erkannt = codes[0].rawValue
           } else {
             const cvs = canvasRef.current
-            const w = vid.videoWidth, h = vid.videoHeight
+            const faktor = Math.min(1, JSQR_KANTE / Math.max(vid.videoWidth, vid.videoHeight, 1))
+            const w = Math.round(vid.videoWidth * faktor), h = Math.round(vid.videoHeight * faktor)
             if (w && h) {
               cvs.width = w; cvs.height = h
               const ctx = cvs.getContext('2d')
@@ -47,8 +50,14 @@ export function useKameraScan(onErkannt, formate) {
               if (res) erkannt = res.data
             }
           }
-        } catch { /* einzelnes Bild nicht lesbar – weiter */ }
-        if (erkannt && aktiv.current) { stop(); meldenRef.current(erkannt); return }
+        } catch {
+          // einzelnes Bild nicht lesbar – weiter; meldet der Browser-Leser Fehler, QR-Codes künftig per jsQR
+          if (formate.includes('qr_code')) hatNativ = false
+        }
+        if (erkannt && aktiv.current) {
+          if (!dauerhaft) { stop(); meldenRef.current(erkannt); return }
+          meldenRef.current(erkannt)
+        }
         schleife()
       })
     }
@@ -64,7 +73,7 @@ export function useKameraScan(onErkannt, formate) {
     } catch (e) {
       setFehler(T('inv_camera_error') + ' ' + (e.message ?? String(e)))
     }
-  }, [formate, stop, T])
+  }, [formate, dauerhaft, stop, T])
 
   useEffect(() => {
     aktiv.current = true

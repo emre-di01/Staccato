@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Leer, Laden } from '../../ui'
 import { useMeineEvents, useUngelesen } from '../daten'
 import { TicketStart } from '../EventTickets'
+import EinlassStart from '../einlass/EinlassStart'
 import { useKinder, useKinderStunden, vorname } from './daten'
 import { uhrzeit, tagLabel, datumLang, stundeDerSchule } from '../zeit'
 
@@ -40,6 +41,7 @@ export default function ElternStart() {
         </Link>
       }
     >
+      <EinlassStart />
       <TicketStart />
       {isLoading ? <div style={{ marginTop: 24 }}><Laden hoehe={160} /></div>
         : kinder.length === 0 ? <div style={{ marginTop: 24 }}><Leer text={T('ne_keine_kinder')} /></div>
