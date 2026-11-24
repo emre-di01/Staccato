@@ -378,6 +378,10 @@ verify_jwt = false
 [functions.demo-anfragen]
 verify_jwt = false
 
+# Prüft die Stripe-Signatur selbst
+[functions.stripe-webhook]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

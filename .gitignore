@@ -10,3 +10,4 @@ dist-dev/
 android/app/*.jks
 android/app/*.keystore
 .env.test
+supabase/tests/shop-e2e/e2e.env

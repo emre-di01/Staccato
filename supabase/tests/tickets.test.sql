@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(183);
+SELECT plan(245);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -486,6 +486,118 @@ RESET ROLE;
 SELECT pg_temp.als('7e000000-0000-0000-0000-000000000000');
 SELECT is(pg_temp.ein(3), 'schon_drin', 'Per QR eingelassenes nicht nochmal per Namen');
 RESET ROLE;
+
+-- ── Ticketshop (Schule A, Event 14: 6 Plätze, 15 €, 2 für Mitglieder zurückgehalten, höchstens 4) ──
+CREATE FUNCTION pg_temp.intern() RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true), set_config('request.jwt.claim.sub', '', true), set_config('request.jwt.claim.role', 'service_role', true);
+  SET LOCAL ROLE service_role;
+END $$;
+INSERT INTO events (id, schule_id, titel, typ, beginn, oeffentlich, erstellt_von) VALUES
+  ('73000000-0000-0000-0000-000000000014', '71111111-1111-1111-1111-111111111111', 'Shop', 'konzert', now() + interval '20 days', true, '7a000000-0000-0000-0000-000000000000');
+INSERT INTO ticket_einstellungen (event_id, aktiv, kapazitaet, preis_normal, preis_verguenstigt, kontingent, obergrenze, shop_aktiv, mitglieder_reserve)
+VALUES ('73000000-0000-0000-0000-000000000014', true, 6, 15, 8, 3, 4, true, 2);
+CREATE FUNCTION pg_temp.shop(p_n int, p_betrag numeric, p_mail text DEFAULT 'gast@example.test', p_name text DEFAULT 'Gast Eins', p_ip text DEFAULT 'ip1') RETURNS text LANGUAGE sql AS
+  $$SELECT coalesce(r->>'grund', 'ok') FROM shop_reservieren('73000000-0000-0000-0000-000000000014', p_n, p_betrag, p_name, p_mail, 'de', p_ip) r$$;
+
+-- Rechte
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT lives_ok($$INSERT INTO ticket_shops (schule_id, slug) VALUES ('71111111-1111-1111-1111-111111111111', 'schule-a')$$, 'Admin legt Shop an');
+SELECT throws_ok($$UPDATE ticket_shops SET aktiv = true WHERE schule_id = '71111111-1111-1111-1111-111111111111'$$, '23514', NULL, 'Ohne Impressum, AGB, Datenschutz kein Shop');
+SELECT throws_ok($$INSERT INTO ticket_shops (schule_id, slug) VALUES ('72222222-2222-2222-2222-222222222222', 'schule-b')$$, '42501', NULL, 'Kein Shop für fremde Schule');
+SELECT is((SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111')), '{"verbunden": false}'::jsonb, 'Noch kein Zahlungskonto');
+SELECT throws_ok($$INSERT INTO schul_zahlungskonten (schule_id, schluessel, webhook_geheim, livemode, letzte4) VALUES ('71111111-1111-1111-1111-111111111111', 'v1:x', 'v1:y', false, '1234')$$, '42501', NULL, 'Admin schreibt Schlüssel nicht direkt');
+SELECT throws_ok($$SELECT shop_info('schule-a')$$, '42501', NULL, 'Shop-Funktionen nicht für Nutzer');
+SELECT throws_ok($$SELECT shop_bezahlt('71111111-1111-1111-1111-111111111111', gen_random_uuid(), 'cs', 'pi', 15, 'eur')$$, '42501', NULL, 'Admin bucht keine Onlinezahlung');
+SELECT throws_ok($$SELECT shop_lage('73000000-0000-0000-0000-000000000014')$$, '42501', NULL, 'Lage nicht für Nutzer');
+SELECT throws_ok($$UPDATE ticket_shops SET slug = 'Nicht Erlaubt' WHERE schule_id = '71111111-1111-1111-1111-111111111111'$$, '23514', NULL, 'Ungültige Adresse');
+UPDATE ticket_shops SET impressum = 'I', agb = 'A', datenschutz = 'D', aktiv = true WHERE schule_id = '71111111-1111-1111-1111-111111111111';
+RESET ROLE;
+SELECT set_config('request.jwt.claims', '{"role":"anon"}', true), set_config('request.jwt.claim.sub', '', true), set_config('request.jwt.claim.role', 'anon', true);
+SELECT throws_ok($$SELECT shop_reservieren('73000000-0000-0000-0000-000000000014', 1, 15, 'X Y', 'a@b.de', 'de', 'ip')$$, '42501', NULL, 'Gast ruft Datenbank nicht direkt');
+SELECT throws_ok($$SELECT shop_bestellung(repeat('a', 64))$$, '42501', NULL, 'Gast liest Bestellungen nicht direkt');
+
+SELECT pg_temp.intern();
+SELECT is(pg_temp.shop(1, 15), 'nicht_verfuegbar', 'Ohne Zahlungskonto kein Verkauf');
+INSERT INTO schul_zahlungskonten (schule_id, schluessel, webhook_geheim, livemode, letzte4) VALUES ('71111111-1111-1111-1111-111111111111', 'v1:geheim', 'v1:geheim2', false, '4242');
+RESET ROLE;
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is((SELECT count(*) FROM schul_zahlungskonten), 0::bigint, 'Auch Admins lesen keine Schlüssel');
+SELECT is((SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111') - 'seit'), '{"verbunden": true, "livemode": false, "letzte4": "4242"}'::jsonb, 'Status ohne Schlüssel');
+RESET ROLE;
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT is((SELECT count(*) FROM schul_zahlungskonten) + (SELECT count(*) FROM ticket_shops), 0::bigint, 'Mitglieder sehen weder Schlüssel noch Shop-Einstellungen');
+SELECT throws_ok($$SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111')$$, '42501', NULL, 'Status nur für Admins');
+RESET ROLE;
+
+-- Verkauf
+SELECT pg_temp.intern();
+SELECT is((SELECT jsonb_array_length(shop_info('schule-a')->'events')), 1, 'Nur freigegebene Veranstaltungen im Shop');
+SELECT is((SELECT (shop_info('schule-a')->'events'->0->'lage') - 'verkauf_von'), '{"ok": true, "grund": null, "max": 4, "preis": 15.00, "knapp": 4}'::jsonb, '2 Plätze bleiben für Mitglieder');
+SELECT is((SELECT shop_info('gibt-es-nicht')), NULL, 'Unbekannter Shop');
+SELECT is(pg_temp.shop(1, 15, 'keine-mail'), 'angaben', 'Ungültige E-Mail');
+SELECT is(pg_temp.shop(1, 15, E'a@b.de\r\nBcc: x@y.de'), 'angaben', 'Keine Kopfzeilen in der E-Mail');
+SELECT is(pg_temp.shop(1, 15, 'a@b.de', ' '), 'angaben', 'Name fehlt');
+SELECT is(pg_temp.shop(5, 75), 'zu_wenig_frei', 'Nicht über freie Plätze');
+SELECT is(pg_temp.shop(1, 8), 'betrag', 'Gäste bekommen keinen Mitgliederpreis');
+SELECT is(pg_temp.shop(2, 30), 'ok', 'Gast reserviert 2');
+SELECT is(pg_temp.shop(1, 15), 'ok', 'Zweiter Versuch');
+SELECT is(pg_temp.shop(1, 15), 'ok', 'Dritter Versuch');
+SELECT is(pg_temp.shop(1, 15), 'zu_viele', 'Höchstens drei offene Vorgänge je E-Mail');
+SELECT is(pg_temp.shop(1, 15, 'neu@example.test'), 'ausverkauft', 'Shop voll, Mitgliederplätze bleiben');
+RESET ROLE;
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT is((SELECT ticket_info('73000000-0000-0000-0000-000000000014')->>'frei'), '2', 'Mitglieder sehen ihre 2 Plätze');
+RESET ROLE;
+
+SELECT pg_temp.intern();
+CREATE TEMP TABLE _sh AS SELECT b.id, b.zugang, (SELECT count(*) FROM tickets t WHERE t.bestellung_id = b.id) AS n, row_number() OVER (ORDER BY (SELECT count(*) FROM tickets t WHERE t.bestellung_id = b.id) DESC, b.id) AS nr
+  FROM ticket_bestellungen b WHERE event_id = '73000000-0000-0000-0000-000000000014';
+GRANT SELECT ON _sh TO authenticated;
+CREATE FUNCTION pg_temp.sh(p int) RETURNS uuid LANGUAGE sql AS $$SELECT id FROM _sh WHERE nr = p$$;
+CREATE FUNCTION pg_temp.bez(p int, p_cs text, p_pi text, p_betrag numeric, p_schule text DEFAULT '71111111-1111-1111-1111-111111111111', p_w text DEFAULT 'eur') RETURNS text LANGUAGE sql AS
+  $$SELECT shop_bezahlt(p_schule::uuid, pg_temp.sh(p), p_cs, p_pi, p_betrag, p_w)->>'ergebnis'$$;
+SELECT lives_ok($$SELECT shop_checkout_setzen(pg_temp.sh(1), 'cs_1'), shop_checkout_setzen(pg_temp.sh(2), 'cs_2'), shop_checkout_setzen(pg_temp.sh(3), 'cs_3')$$, 'Bezahlvorgänge gemerkt');
+SELECT throws_ok($$SELECT shop_checkout_setzen(pg_temp.sh(1), 'cs_x')$$, 'P0001', NULL, 'Bezahlvorgang nicht austauschbar');
+SELECT is(pg_temp.bez(1, 'cs_2', 'pi_1', 30), 'ungueltig', 'Fremder Bezahlvorgang');
+SELECT is(pg_temp.bez(1, 'cs_1', 'pi_1', 30, '72222222-2222-2222-2222-222222222222'), 'ungueltig', 'Webhook einer anderen Schule');
+SELECT is(pg_temp.bez(1, 'cs_1', 'pi_1', 30, '71111111-1111-1111-1111-111111111111', 'try'), 'ungueltig', 'Andere Währung');
+SELECT is((SELECT shop_bestellung((SELECT zugang FROM _sh WHERE nr = 1))->'tickets'->0->>'code'), NULL, 'Vor Zahlung kein Code');
+SELECT is(pg_temp.bez(1, 'cs_1', 'pi_1', 30), 'bezahlt', 'Zahlung verbucht');
+SELECT is(pg_temp.bez(1, 'cs_1', 'pi_1', 30), 'schon_bezahlt', 'Webhook doppelt: keine zweite Zahlung');
+SELECT is((SELECT count(*) FROM ticket_zahlungen WHERE externe_id = 'pi_1'), 1::bigint, 'Genau eine Zahlung');
+SELECT is((SELECT count(DISTINCT code) FROM tickets WHERE bestellung_id = pg_temp.sh(1) AND status = 'gueltig'), 2::bigint, 'Beide Tickets gültig mit Code');
+SELECT is((SELECT shop_mail_beanspruchen(pg_temp.sh(1))), true, 'Mail einmal beanspruchen');
+SELECT is((SELECT shop_mail_beanspruchen(pg_temp.sh(1))), false, 'Kein zweites Mal');
+SELECT is((SELECT shop_mail_beanspruchen(pg_temp.sh(2))), false, 'Keine Mail vor der Zahlung');
+SELECT is((SELECT shop_verwerfen(pg_temp.sh(1))), false, 'Bezahltes lässt sich nicht verwerfen');
+SELECT is((SELECT shop_verwerfen(pg_temp.sh(2))), true, 'Abgebrochener Vorgang gibt Plätze frei');
+SELECT is((SELECT shop_lage('73000000-0000-0000-0000-000000000014')->>'frei'), '1', 'Ein Platz wieder frei');
+SELECT is(pg_temp.bez(2, 'cs_2', 'pi_2', 15), 'bezahlt', 'Zahlung nach Abbruch: noch Platz, also gültig');
+SELECT is(pg_temp.bez(3, 'cs_3', 'pi_3', 14), 'erstatten', 'Falscher Betrag wird erstattet');
+SELECT is(pg_temp.bez(3, 'cs_3', 'pi_3', 14), 'erstatten', 'Solange nicht erstattet, bleibt es zu erstatten');
+SELECT lives_ok($$SELECT shop_erstattet('pi_3', 're_3', 14), shop_erstattet('pi_3', 're_3', 14)$$, 'Erstattung doppelt gemeldet');
+SELECT is((SELECT count(*) FROM ticket_erstattungen WHERE externe_id = 're_3'), 1::bigint, 'Nur einmal verbucht');
+SELECT is(pg_temp.bez(3, 'cs_3', 'pi_3', 14), 'schon_erstattet', 'Danach erledigt');
+SELECT throws_ok($$INSERT INTO ticket_erstattungen (zahlung_id, betrag) SELECT id, 5 FROM ticket_zahlungen WHERE externe_id = 'pi_1'$$, '23514', 'ticket_erstattung_online', 'Onlinezahlung nie bar erstatten');
+-- Ausverkauft und zu spät
+UPDATE ticket_einstellungen SET mitglieder_reserve = 0 WHERE event_id = '73000000-0000-0000-0000-000000000014';
+SELECT is(pg_temp.shop(1, 15, 'spaet@example.test', 'Spät', 'ip2'), 'ok', 'Später Gast');
+INSERT INTO _sh SELECT id, zugang, 1, 4 FROM ticket_bestellungen WHERE kaeufer_email = 'spaet@example.test';
+SELECT lives_ok($$SELECT shop_checkout_setzen(pg_temp.sh(4), 'cs_4')$$, 'Bezahlvorgang 4');
+UPDATE ticket_bestellungen SET frist = now() - interval '1 minute' WHERE id = pg_temp.sh(4);
+SELECT is(pg_temp.shop(3, 45, 'letzte@example.test', 'Letzte', 'ip3'), 'ok', 'Restliche Plätze an andere');
+SELECT is((SELECT shop_bestellung((SELECT zugang FROM _sh WHERE nr = 4))->>'status'), 'verfallen', 'Abgelaufen');
+SELECT is(pg_temp.bez(4, 'cs_4', 'pi_4', 15), 'erstatten', 'Zu spät und ausverkauft: erstatten statt überbuchen');
+SELECT is((SELECT count(*) <= 6 FROM tickets t JOIN ticket_bestellungen b ON b.id = t.bestellung_id WHERE t.event_id = '73000000-0000-0000-0000-000000000014' AND (t.status IN ('gueltig', 'eingeloest') OR (t.status = 'reserviert' AND b.frist > now()))), true, 'Nie überbucht');
+SELECT is((SELECT shop_bestellung('kurz')), NULL, 'Falscher Zugang');
+DELETE FROM shop_drossel; INSERT INTO shop_drossel (ip_hash) SELECT 'ipx' FROM generate_series(1, 15);
+SELECT is(pg_temp.shop(1, 15, 'bot@example.test', 'Bot', 'ipx'), 'zu_viele', 'Drossel je IP');
+RESET ROLE;
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT tickets_stornieren(pg_temp.sh(1), (SELECT array_agg(id) FROM tickets WHERE bestellung_id = pg_temp.sh(1)), 10)$$, '23514', NULL, 'Barerstattung für Onlinekauf gesperrt');
+RESET ROLE;
+SELECT set_config('request.jwt.claims', '', true), set_config('request.jwt.claim.sub', '', true), set_config('request.jwt.claim.role', '', true);
 
 -- Konto gelöscht: Bestellung bleibt ohne Personenbezug
 DELETE FROM profiles WHERE id = '7c000000-0000-0000-0000-000000000000';
