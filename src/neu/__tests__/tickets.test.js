@@ -1,0 +1,51 @@
+import { describe, it, expect, vi } from 'vitest'
+
+vi.mock('../../lib/supabase', () => ({ supabase: {} }))
+const { betragAus, einstellungenAusFormular } = await import('../tickets')
+
+const basis = {
+  aktiv: true, kapazitaet: '200', preis_normal: '15', ermaessigt: true, preis_verguenstigt: '8,50', preis_abendkasse: '', kontingent: '3', obergrenze: '10',
+  verkauf_von: '', verkauf_bis: '', frist_tage: '7', bis_abendkasse: false, freigabe_minuten: '30',
+}
+const fehler = teil => einstellungenAusFormular({ ...basis, ...teil }).fehler
+
+describe('betragAus', () => {
+  it('liest Komma und Punkt', () => {
+    expect(betragAus('12,50')).toBe(12.5)
+    expect(betragAus('12.5')).toBe(12.5)
+    expect(betragAus(' 0 ')).toBe(0)
+  })
+  it('leer ist null, Unsinn ist NaN', () => {
+    expect(betragAus('')).toBeNull()
+    for (const s of ['-1', '1,234', 'abc', '1.000,00']) expect(betragAus(s)).toBeNaN()
+  })
+})
+
+describe('einstellungenAusFormular', () => {
+  it('liefert Werte für die Datenbank', () => {
+    expect(einstellungenAusFormular(basis).werte).toMatchObject({
+      aktiv: true, kapazitaet: 200, preis_normal: 15, preis_verguenstigt: 8.5, kontingent: 3, obergrenze: 10,
+      verkauf_von: null, verkauf_bis: null, frist_tage: 7, bis_abendkasse: false, freigabe_minuten: 30,
+    })
+  })
+  it('ohne Vergünstigung kein Kontingent', () => {
+    expect(einstellungenAusFormular({ ...basis, ermaessigt: false, preis_verguenstigt: 'x' }).werte).toMatchObject({ preis_verguenstigt: null, kontingent: 0 })
+  })
+  it('Abendkassenpreis: leer, gleich oder höher als normal', () => {
+    expect(einstellungenAusFormular(basis).werte.preis_abendkasse).toBeNull()
+    expect(einstellungenAusFormular({ ...basis, preis_abendkasse: '15' }).werte.preis_abendkasse).toBe(15)
+    expect(einstellungenAusFormular({ ...basis, preis_abendkasse: '18,50' }).werte.preis_abendkasse).toBe(18.5)
+    expect(fehler({ preis_abendkasse: '10' })).toBe('tk_fehler_abendkasse')
+    expect(fehler({ preis_abendkasse: 'x' })).toBe('tk_fehler_preis')
+  })
+  it('lehnt ungültige Angaben ab', () => {
+    expect(fehler({ kapazitaet: '0' })).toBe('tk_fehler_kapazitaet')
+    expect(fehler({ preis_normal: '' })).toBe('tk_fehler_preis')
+    expect(fehler({ preis_verguenstigt: '20' })).toBe('tk_fehler_verguenstigt')
+    expect(fehler({ kontingent: '0' })).toBe('tk_fehler_kontingent')
+    expect(fehler({ obergrenze: '2' })).toBe('tk_fehler_kontingent_grenze')
+    expect(fehler({ verkauf_von: '2026-12-02T10:00', verkauf_bis: '2026-12-01T10:00' })).toBe('tk_fehler_zeitraum')
+    expect(fehler({ frist_tage: '0' })).toBe('tk_fehler_frist')
+    expect(fehler({ bis_abendkasse: true, freigabe_minuten: '' })).toBe('tk_fehler_freigabe')
+  })
+})

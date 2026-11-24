@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays } from 'lucide-react'
+import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt } from '../../ui'
 import { useNeuLaden } from '../daten'
 import { uhrzeit } from '../zeit'
 import EventBlatt from '../lehrer/EventBlatt'
+import TicketBlatt from './TicketBlatt'
+import { useTicketEinstellungen, euro } from '../tickets'
 import { EventBild, EventVorschau } from '../eventBild'
 import { useBreit, Avatar, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
@@ -92,6 +94,24 @@ function EinladenBlatt({ ev, vorhanden, onClose, onFertig }) {
   )
 }
 
+// Kurzfassung der Ticketeinstellungen, öffnet das Einstellungsblatt
+function TicketZeile({ ev }) {
+  const { T, lang } = useApp()
+  const neuLaden = useNeuLaden()
+  const [offen, setOffen] = useState(false)
+  const { data: e, isLoading, isError } = useTicketEinstellungen(ev.id)
+  const stand = isError ? T('tk_laden_fehler') : isLoading ? '…' : !e ? T('tk_nicht_eingerichtet')
+    : [T(e.aktiv ? 'tk_verkauf_an' : 'tk_verkauf_aus'), T('tk_x_plaetze').replace('{n}', e.kapazitaet), euro(e.preis_normal, lang)].join(' · ')
+  return <>
+    <DetailTitel>{T('tk_tickets')}</DetailTitel>
+    <DetailGruppe>
+      <Zeile icon={Ticket} titel={T('tk_einstellungen')} untertitel={stand} onClick={isLoading || isError ? undefined : () => setOffen(true)} />
+    </DetailGruppe>
+    {offen && <TicketBlatt ev={ev} einstellungen={e} onClose={() => setOffen(false)}
+      onFertig={() => { setOffen(false); neuLaden('n-ticket-einstellungen') }} />}
+  </>
+}
+
 function Detail({ ev, onBearbeiten, onEinladen }) {
   const { T, lang, zeitzone, confirm, toast } = useApp()
   const navigate = useNavigate()
@@ -128,6 +148,8 @@ function Detail({ ev, onBearbeiten, onEinladen }) {
           {ev.oeffentlich && <><Trenner /><Zeile icon={Globe} titel={T('nl_event_oeffentlich')} untertitel={T('nl_event_oeffentlich_hinweis')} chevron={false} /></>}
         </DetailGruppe>
       </>}
+
+      {ev.typ !== 'vorstandssitzung' && <TicketZeile ev={ev} />}
 
       <DetailTitel>{T('nv_teilnehmer')}</DetailTitel>
       {teilnehmer.length > 0 && (

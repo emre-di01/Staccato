@@ -27,7 +27,7 @@ function toInputVal(ts) {
 const leerForm = { titel: '', typ: 'veranstaltung', beginn: '', ende: '', ort: '', raum_id: '', beschreibung: '', oeffentlich: false }
 
 export default function AdminEvents() {
-  const { profil, T } = useApp()
+  const { profil, T, toast } = useApp()
   const navigate = useNavigate()
   const [events,    setEvents]    = useState([])
   const [profiles,  setProfiles]  = useState([])
@@ -172,6 +172,8 @@ export default function AdminEvents() {
 
   async function loeschen(id) {
     if (!confirm(T('confirm_delete'))) return
+    const { data: hatTickets, error: pruefFehler } = await supabase.rpc('event_hat_tickets', { p_event_id: id })
+    if (pruefFehler || hatTickets) { toast(pruefFehler?.message ?? T('tk_event_nicht_loeschbar'), 'error'); return }
 
     // Stücke löschen die ausschließlich in dieser Veranstaltung verwendet werden
     const { data: evStuecke } = await supabase.from('event_stuecke')

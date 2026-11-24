@@ -4,18 +4,11 @@ import { Trash2, ImagePlus, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useSchulweit } from '../rolle'
+import { inputWert } from '../zeit'
 import { Blatt, Feld, Knopf, SchalterZeile, Gruppe, eingabeStil } from '../../ui'
 import { EventBild, bildVerkleinern, eventBildHochladen, eventBildLoeschen } from '../eventBild'
 
 const TYPEN = ['konzert', 'vorspiel', 'pruefung', 'veranstaltung', 'sonstiges']
-
-// ISO → Wert für <input type="datetime-local"> (lokale Zeit des Geräts, wie bisher)
-function inputWert(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const p = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
-}
 
 // Lieder, die nur in dieser Veranstaltung vorkommen, mit ihren Dateien entfernen (vor dem Löschen des Events)
 async function verwaisteLiederLoeschen(eventId) {
@@ -110,6 +103,10 @@ export default function EventBlatt({ ev, onClose, onFertig }) {
   }
 
   async function loeschen() {
+    // Veranstaltungen mit Ticketbestellungen bleiben erhalten (vor dem Aufräumen von Liedern und Bild prüfen)
+    const { data: hatTickets, error: pruefFehler } = await supabase.rpc('event_hat_tickets', { p_event_id: ev.id })
+    if (pruefFehler) { toast(pruefFehler.message, 'error'); return }
+    if (hatTickets) { toast(T('tk_event_nicht_loeschbar'), 'error'); return }
     const ok = await confirm(T('nl_event_loeschen_frage'), { confirmLabel: T('delete') })
     if (!ok) return
     if (schulweit) await verwaisteLiederLoeschen(ev.id)

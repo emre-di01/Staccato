@@ -81,3 +81,11 @@ export function montagVon(key) {
 export function kalenderFormat(key, lang, opt) {
   return new Intl.DateTimeFormat(LOCALE[lang] ?? 'de-DE', { ...opt, timeZone: 'UTC' }).format(new Date(key + 'T12:00:00Z'))
 }
+
+// ISO → Wert für <input type="datetime-local"> (lokale Zeit des Geräts, wie bisher)
+export function inputWert(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const p = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}

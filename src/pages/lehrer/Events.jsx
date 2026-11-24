@@ -26,7 +26,7 @@ function toInputVal(ts) {
 const leerForm = { titel: '', typ: 'veranstaltung', beginn: '', ende: '', ort: '', beschreibung: '', oeffentlich: false }
 
 export default function LehrerEvents() {
-  const { profil, rolle, schule, T } = useApp()
+  const { profil, rolle, schule, T, toast } = useApp()
   const navigate = useNavigate()
   const [events,  setEvents]  = useState([])
   const [laden,   setLaden]   = useState(true)
@@ -107,6 +107,8 @@ export default function LehrerEvents() {
 
   async function loeschen(id) {
     if (!confirm(T('confirm_delete'))) return
+    const { data: hatTickets, error: pruefFehler } = await supabase.rpc('event_hat_tickets', { p_event_id: id })
+    if (pruefFehler || hatTickets) { toast(pruefFehler?.message ?? T('tk_event_nicht_loeschbar'), 'error'); return }
     const { error } = await supabase.from('events').delete().eq('id', id)
     if (error) setFehler(error.message)
     else await ladeEvents()
