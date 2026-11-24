@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import nodemailer from 'npm:nodemailer@6'
+import { hash } from '../_shared/krypto.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +20,11 @@ const transport = nodemailer.createTransport({
   auth: { user: SMTP_USER, pass: SMTP_PASS },
 })
 
+// Letzte öffentliche Adresse: interne stammen von unseren Proxys, weiter vorn stehende kann der Client fälschen (wie in shop)
+function adresse(req: Request) {
+  return (req.headers.get('x-forwarded-for') ?? '').split(',').map(x => x.trim()).filter(x => x && !/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|f[cd]|fe80)/i.test(x)).pop()
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS })
@@ -31,6 +37,10 @@ serve(async (req) => {
   const { name, email, schul_name, beschreibung } = body
   if (!name?.trim() || !email?.trim() || !schul_name?.trim()) {
     return new Response(JSON.stringify({ error: 'Name, E-Mail und Schulname sind erforderlich.' }), { status: 400, headers: CORS })
+  }
+
+  if ([name, email, schul_name].some(x => typeof x !== 'string' || x.length > 200) || (beschreibung ?? '').length > 2000) {
+    return new Response(JSON.stringify({ error: 'Angaben sind zu lang.' }), { status: 400, headers: CORS })
   }
 
   const supabase = createClient(
@@ -48,9 +58,22 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Zu viele ausstehende Anfragen für diese E-Mail-Adresse.' }), { status: 429, headers: CORS })
   }
 
+  // Jede Anfrage löst Mails aus: höchstens 3 je Anschluss und Stunde, 30 insgesamt am Tag
+  const ip = adresse(req)
+  const ipHash = await hash(ip ?? '-')
+  const seit = (ms: number) => new Date(Date.now() - ms).toISOString()
+  const [{ count: jeIp, error: e1 }, { count: gesamt, error: e2 }] = await Promise.all([
+    supabase.from('demo_anfragen').select('id', { count: 'exact', head: true }).eq('ip_hash', ipHash).gte('erstellt_am', seit(3600_000)),
+    supabase.from('demo_anfragen').select('id', { count: 'exact', head: true }).gte('erstellt_am', seit(86400_000)),
+  ])
+  if (e1 || e2) return new Response(JSON.stringify({ error: 'Fehler beim Speichern.' }), { status: 500, headers: CORS })
+  if ((jeIp ?? 0) >= 3 || (gesamt ?? 0) >= 30) {
+    return new Response(JSON.stringify({ error: 'Zu viele Anfragen. Bitte später noch einmal versuchen.' }), { status: 429, headers: CORS })
+  }
+
   const { data: anfrage, error } = await supabase
     .from('demo_anfragen')
-    .insert({ name: name.trim(), email: email.trim().toLowerCase(), schul_name: schul_name.trim(), beschreibung: beschreibung?.trim() ?? null })
+    .insert({ name: name.trim(), email: email.trim().toLowerCase(), schul_name: schul_name.trim(), beschreibung: beschreibung?.trim() ?? null, ip_hash: ipHash })
     .select('id')
     .single()
 

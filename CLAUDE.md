@@ -166,6 +166,8 @@ Die `.env`-Datei muss vor `supabase start` gesourced werden, damit Edge Function
 
 `--ignore-health-check` ist nötig: Das CLI prüft beim Start `https://api.401dev.de/rest-admin/v1/ready`, nginx blockt diesen Pfad mit 403, und das CLI stoppt danach alle Container wieder.
 
+**API- und Signaturschlüssel sind eigene** (`STACCATO_*` in `supabase/.env`, `supabase/signing_keys.json`, beide gitignored). Ohne sie nimmt die CLI öffentlich bekannte Standardschlüssel = Vollzugriff für jeden; `signing_keys_path` und die `*_key`-Zeilen in `config.toml` nie entfernen. Neu erzeugen: `infra/schluessel/erzeugen.mjs`. Das Docker-Netz `supabase_network_staccato` ist mit `host_binding_ipv4=127.0.0.1` angelegt, dadurch lauschen die Supabase-Ports nur lokal; beim Neuanlegen diese Option mitgeben und `lyrica` wieder verbinden. Integrationstests nie auf dem Server gegen `127.0.0.1:54321` (= Prod) laufen lassen.
+
 Nach einem Wechsel des JWT-Secrets ändert sich der anon-Key (`supabase status -o env`). Dann `.env.prod` und das GitHub-Secret `VITE_SUPABASE_ANON_KEY` anpassen und `./deploy.sh prod` ausführen.
 
 **NIEMALS** `supabase db reset` auf einer laufenden Instanz mit Daten ausführen — löscht alle Daten unwiderruflich.  
@@ -680,6 +682,7 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261124000010_shop_nicht_bar.sql` | Shop-Bestellungen sind nicht bar kassierbar (`ticket_zahlung_bestaetigen` → `nicht_offen`) und stehen während des Bezahlens nicht in `abendkasse_reservierungen` |
 | `20261124000011_shop_nachbetreuung.sql` | Shop: `ticket_online_erstattungen` (Auftrag je Vorgang, offen bis Stripe bestätigt), `ticket_bestellungen.auto_erstatten`, `shop_storno_beginnen`/`shop_erstattung_info`/`_fertig`/`_abgelehnt`, `shop_email_aendern` (neuer Link + neue QR-Codes), `shop_nochmal`; Edge Function `shop-verwaltung` (Admins: mail, stornieren, wiederholen). Online bezahlte Tickets nur darüber stornieren |
 | `20261124000012_shop_demo.sql` | Shop als Demo mit Stripe-Testschlüssel (auch Prod): `ticket_bestellungen.demo`, Ticketstatus `demo` (zählt nirgends mit, Einlass meldet `demo`), `shop_demo_loeschen(schule)` räumt nur Demo-Bestellungen weg |
+| `20261124000013_session_codes_demo_drossel.sql` | Laufende Live-Stunden samt Beitrittscode nur noch für Teilnehmer (`ist_session_teilnehmer()`) und Kurslehrer lesbar (vorher auch ohne Anmeldung); `demo_anfragen` nur noch über die Function, `ip_hash` für die Drossel |
 
 > **Ticketshop:** `VITE_TICKETSHOP` = leer (Admins sehen nichts), `test` (dev) oder `live` (Prod). Functions: `STRIPE_LIVE_ERLAUBT=true` (Prod) erlaubt echte Schlüssel (`rk_live_`); Testschlüssel gehen überall und machen den Shop zur Demo. `ZAHLUNG_SCHLUESSEL`, `OEFFENTLICHE_API_URL`, `STRIPE_LIVE_ERLAUBT` stehen in `config.toml`/`supabase/.env`. Neue Functions und geänderte Secrets kennt der Edge-Container erst nach Neuanlage (`docker restart` reicht nicht). **`supabase secrets set` nie im Projektordner ausführen** – lädt alle Prod-Werte aus `[edge_runtime.secrets]` mit hoch.
 

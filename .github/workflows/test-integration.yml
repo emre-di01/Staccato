@@ -24,6 +24,12 @@ jobs:
         with:
           version: 2.90.0
 
+      - name: Wegwerf-Schlüssel für die Testinstanz
+        run: |
+          echo '[]' > supabase/signing_keys.json
+          supabase gen signing-key --algorithm ES256 --yes
+          node infra/schluessel/erzeugen.mjs supabase/signing_keys.json >> $GITHUB_ENV
+
       - name: Start Supabase
         run: supabase start --ignore-health-check
         # supabase start zieht Docker-Images und läuft Migrationen + seed.sql

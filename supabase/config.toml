@@ -121,7 +121,8 @@ file_size_limit = "15MiB"
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
-enabled = true
+# Aus: die Zugangsdaten sind feste, öffentlich bekannte CLI-Werte
+enabled = false
 
 # Image transformation API is available to Supabase Pro plan.
 # [storage.image_transformation]
@@ -160,10 +161,15 @@ jwt_expiry = 3600
 # Eigenes Secret statt des öffentlichen Supabase-Defaults (Wert in supabase/.env, gitignored).
 # supabase/.env MUSS vor `supabase start` gesourced sein. Hintergrund: docs/security-incident-2026-10-27.md
 jwt_secret = "env(STACCATO_JWT_SECRET)"
+# Eigene API-Schlüssel (supabase/.env) und eigener Signaturschlüssel. Ohne sie nimmt die CLI öffentlich bekannte Standardwerte!
+anon_key = "env(STACCATO_ANON_KEY)"
+service_role_key = "env(STACCATO_SERVICE_ROLE_KEY)"
+publishable_key = "env(STACCATO_PUBLISHABLE_KEY)"
+secret_key = "env(STACCATO_SECRET_KEY)"
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
-# signing_keys_path = "./signing_keys.json"
+signing_keys_path = "./signing_keys.json"
 # If disabled, the refresh token will never expire.
 enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
