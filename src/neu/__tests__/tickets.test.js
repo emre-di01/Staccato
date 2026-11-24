@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('../../lib/supabase', () => ({ supabase: {} }))
 vi.mock('../../context/AppContext', () => ({ useApp: () => ({}) }))
-const { betragAus, einstellungenAusFormular, preisBerechnen, aktiveBestellungen } = await import('../tickets')
+const { betragAus, einstellungenAusFormular, preisBerechnen, aktiveBestellungen, bestellungenAuswerten } = await import('../tickets')
 
 const basis = {
   aktiv: true, kapazitaet: '200', preis_normal: '15', ermaessigt: true, preis_verguenstigt: '8,50', preis_abendkasse: '', kontingent: '3', obergrenze: '10',
@@ -77,5 +77,36 @@ describe('aktiveBestellungen', () => {
       { id: 5, status: 'bezahlt', frist: null, tickets: [t('storniert')] },
     ], jetzt)
     expect(liste.map(b => [b.id, b.anzahl, b.betrag])).toEqual([[1, 2, 23], [4, 1, 8]])
+  })
+})
+
+describe('bestellungenAuswerten', () => {
+  const jetzt = new Date('2026-12-01T12:00:00Z').getTime()
+  const t = (status, preis) => ({ id: `${status}${preis}`, status, preis })
+  const { liste, stand } = bestellungenAuswerten([
+    { id: 'offen', status: 'reserviert', frist: '2026-12-02T00:00:00Z', tickets: [t('reserviert', 8), t('storniert', 15)], ticket_zahlungen: [] },
+    { id: 'abgelaufen', status: 'reserviert', frist: '2026-11-30T00:00:00Z', tickets: [t('reserviert', 8)], ticket_zahlungen: [] },
+    { id: 'teil', status: 'bezahlt', tickets: [t('gueltig', 8), t('eingeloest', 8), t('storniert', 15)], ticket_zahlungen: [{ betrag: 31, ticket_erstattungen: [{ betrag: 10 }] }] },
+    { id: 'vorher', status: 'bezahlt', tickets: [t('gueltig', 8), t('storniert', 15)], ticket_zahlungen: [{ betrag: 8, ticket_erstattungen: [] }] },
+    { id: 'gratis', status: 'storniert', tickets: [t('storniert', 0)], ticket_zahlungen: [] },
+  ], jetzt)
+  const b = id => liste.find(x => x.id === id)
+
+  it('ordnet Zustand und Filtergruppe zu', () => {
+    expect(liste.map(x => [x.id, x.zustand, x.gruppe])).toEqual([
+      ['offen', 'reserviert', 'offen'], ['abgelaufen', 'verfallen', 'erledigt'], ['teil', 'bezahlt', 'bezahlt'],
+      ['vorher', 'bezahlt', 'bezahlt'], ['gratis', 'storniert', 'erledigt']])
+  })
+  it('rechnet nur laufende Tickets', () => {
+    expect([b('offen').anzahl, b('offen').betrag]).toEqual([1, 8])
+    expect([b('teil').anzahl, b('teil').betrag]).toEqual([2, 16])
+  })
+  it('erstattbar: nur was bezahlt, storniert und noch nicht erstattet ist', () => {
+    expect(b('teil').erstattbar).toBe(5)
+    expect(b('vorher').erstattbar).toBe(0)
+    expect(b('offen').erstattbar).toBe(0)
+  })
+  it('Gesamtstand', () => {
+    expect(stand).toEqual({ gueltig: 3, reserviert: 1, eingenommen: 29, erstattet: 10 })
   })
 })

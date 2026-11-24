@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(70);
+SELECT plan(107);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -209,6 +209,93 @@ UPDATE profiles SET rolle = 'vorstand' WHERE id = '7d000000-0000-0000-0000-00000
 SELECT is(pg_temp.abweichung('7d000000-0000-0000-0000-000000000000'), 0::bigint, 'sieht_event = RLS (Vorstand)');
 RESET ROLE;
 SELECT throws_ok($$SELECT set_config('request.jwt.claims', '', true), set_config('request.jwt.claim.sub', '', true), ticket_info('73000000-0000-0000-0000-000000000004')$$, '42501', NULL, 'ticket_info nur angemeldet');
+
+-- ── Kasse, Storno, Erstattung (Event 8: 6 Plätze; 7c bestellt 4 = 3×8 + 15 = 39 €, 7e bestellt 1) ──
+INSERT INTO events (id, schule_id, titel, typ, beginn, oeffentlich, erstellt_von) VALUES
+  ('73000000-0000-0000-0000-000000000008', '71111111-1111-1111-1111-111111111111', 'Kasse', 'konzert', now() + interval '30 days', true, '7a000000-0000-0000-0000-000000000000');
+INSERT INTO ticket_einstellungen (event_id, aktiv, kapazitaet, preis_normal, preis_verguenstigt, kontingent, obergrenze) VALUES
+  ('73000000-0000-0000-0000-000000000008', true, 6, 15, 8, 3, 4);
+INSERT INTO ticket_freigaben (event_id, profil_id, kasse, scannen) VALUES
+  ('73000000-0000-0000-0000-000000000008', '7e000000-0000-0000-0000-000000000000', true, false),
+  ('73000000-0000-0000-0000-000000000008', '7d000000-0000-0000-0000-000000000000', false, true);
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.res(8, 4, 39), 'ok', 'Kasse: 4 Tickets reserviert');
+RESET ROLE;
+SELECT pg_temp.als('7e000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.res(8, 1, 8), 'ok', 'Kasse: 1 Ticket reserviert');
+RESET ROLE;
+CREATE TEMP TABLE _b AS SELECT kaeufer_id, id FROM ticket_bestellungen WHERE event_id = '73000000-0000-0000-0000-000000000008';
+CREATE TEMP TABLE _t8 AS SELECT t.id, t.preis, row_number() OVER (ORDER BY t.preis DESC, t.id) AS nr FROM tickets t JOIN _b b ON b.id = t.bestellung_id WHERE b.kaeufer_id::text LIKE '7c%';
+GRANT SELECT ON _b, _t8 TO authenticated;
+CREATE FUNCTION pg_temp.b(p text) RETURNS uuid LANGUAGE sql AS $$SELECT id FROM _b WHERE kaeufer_id::text LIKE p || '%'$$;
+CREATE FUNCTION pg_temp.tk(VARIADIC p int[]) RETURNS uuid[] LANGUAGE sql AS $$SELECT array_agg(id) FROM _t8 WHERE nr = ANY (p)$$;
+CREATE FUNCTION pg_temp.zahl(p text, n numeric) RETURNS text LANGUAGE sql AS $$SELECT coalesce(r->>'grund', 'ok') FROM ticket_zahlung_bestaetigen(pg_temp.b(p), n) r$$;
+CREATE FUNCTION pg_temp.storno(p text, t uuid[], n numeric) RETURNS text LANGUAGE sql AS $$SELECT coalesce(r->>'grund', 'ok') FROM tickets_stornieren(pg_temp.b(p), t, n) r$$;
+CREATE FUNCTION pg_temp.erst(p text, n numeric) RETURNS text LANGUAGE sql AS $$SELECT coalesce(r->>'grund', 'ok') FROM ticket_erstattung_erfassen(pg_temp.b(p), n) r$$;
+
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.zahl('7c', 39)$$, '42501', NULL, 'Käufer bestätigt nicht selbst');
+SELECT throws_ok($$SELECT pg_temp.storno('7c', pg_temp.tk(1), 0)$$, '42501', NULL, 'Käufer storniert nicht selbst');
+RESET ROLE;
+SELECT pg_temp.als('7d000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.zahl('7c', 39)$$, '42501', NULL, 'Freigabe „Scannen“ reicht nicht zum Kassieren');
+RESET ROLE;
+SELECT pg_temp.als('7e000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.storno('7c', pg_temp.tk(1), 0)$$, '42501', NULL, 'Kasse storniert nicht');
+SELECT throws_ok($$SELECT pg_temp.erst('7c', 1)$$, '42501', NULL, 'Kasse erstattet nicht');
+SELECT is(ticket_erstattbar(pg_temp.b('7c')), 0::numeric, 'Kasse erfährt nichts über Erstattungen');
+SELECT is(pg_temp.zahl('7c', 38), 'betrag', 'Falscher Betrag');
+SELECT is(pg_temp.zahl('7c', NULL), 'betrag', 'Betrag NULL');
+SELECT is(pg_temp.zahl('7c', 39), 'ok', 'Kasse bestätigt Geldeingang');
+SELECT is(pg_temp.zahl('7c', 39), 'nicht_offen', 'Nicht doppelt kassierbar');
+RESET ROLE;
+SELECT is((SELECT (z.betrag, z.angenommen_von)::text FROM ticket_zahlungen z WHERE bestellung_id = pg_temp.b('7c')), '(39.00,7e000000-0000-0000-0000-000000000000)', 'Betrag und Person gespeichert');
+SELECT is((SELECT count(DISTINCT code) FROM tickets WHERE bestellung_id = pg_temp.b('7c') AND status = 'gueltig'), 4::bigint, 'Jedes Ticket gültig mit eigenem Code');
+-- andere Schule
+SELECT set_config('request.jwt.claims', '', true), set_config('request.jwt.claim.sub', '', true), set_config('request.jwt.claim.role', '', true);
+SELECT pg_temp.als('7b000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT pg_temp.zahl('7e', 8)$$, '42501', NULL, 'Admin B kassiert nicht für Schule A');
+SELECT throws_ok($$SELECT pg_temp.storno('7c', pg_temp.tk(1), 0)$$, '42501', NULL, 'Admin B storniert nicht für Schule A');
+RESET ROLE;
+
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.storno('7c', ARRAY[]::uuid[], 0), 'auswahl', 'Storno ohne Auswahl');
+SELECT is(pg_temp.storno('7e', pg_temp.tk(1), 0), 'nicht_stornierbar', 'Ticket aus anderer Bestellung');
+SELECT is(pg_temp.storno('7c', pg_temp.tk(1), 15.01), 'erstattung', 'Erstattung höher als Ticketpreis');
+SELECT is(pg_temp.storno('7c', pg_temp.tk(1), -1), 'erstattung', 'Negative Erstattung');
+SELECT is(pg_temp.storno('7c', pg_temp.tk(1), 10), 'ok', 'Teilstorno mit Teilerstattung');
+SELECT is(pg_temp.storno('7c', pg_temp.tk(1), 0), 'nicht_stornierbar', 'Nicht doppelt stornierbar');
+SELECT is(ticket_erstattbar(pg_temp.b('7c')), 5::numeric, 'Rest von 5 € erstattbar');
+SELECT is(pg_temp.erst('7c', 6), 'erstattung', 'Nicht mehr als offen erstatten');
+SELECT is(pg_temp.erst('7c', 5), 'ok', 'Rest nachträglich erstatten');
+SELECT is(pg_temp.erst('7c', 0.01), 'erstattung', 'Danach nichts mehr erstattbar');
+SELECT is((SELECT status FROM ticket_bestellungen WHERE id = pg_temp.b('7c')), 'bezahlt', 'Teilstorno lässt Bestellung bezahlt');
+RESET ROLE;
+UPDATE tickets SET status = 'eingeloest', eingeloest_am = now() WHERE id = ANY (pg_temp.tk(2));
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.storno('7c', pg_temp.tk(2, 3), 0), 'nicht_stornierbar', 'Eingelöstes Ticket nicht stornierbar');
+SELECT is(pg_temp.storno('7c', pg_temp.tk(3, 4), 0), 'ok', 'Rest stornieren ohne Erstattung');
+SELECT is((SELECT status FROM ticket_bestellungen WHERE id = pg_temp.b('7c')), 'bezahlt', 'Mit eingelöstem Ticket bleibt sie bezahlt');
+RESET ROLE;
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT is((ticket_info('73000000-0000-0000-0000-000000000008') - ARRAY['frist','verkauf_von','preis_normal','preis_verguenstigt','grund','ok']),
+  '{"frei": 4, "max": 3, "meine": 1, "rest_verguenstigt": 2}'::jsonb, 'Storno gibt Plätze und Kontingent frei');
+RESET ROLE;
+-- unbezahlt stornieren / abgelaufen
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.storno('7e', (SELECT array_agg(id) FROM tickets WHERE bestellung_id = pg_temp.b('7e')), 8), 'erstattung', 'Unbezahltes nicht erstattbar');
+RESET ROLE;
+UPDATE ticket_bestellungen SET frist = now() - interval '1 minute' WHERE id = pg_temp.b('7e');
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.zahl('7e', 8), 'verfallen', 'Abgelaufene Reservierung nicht mehr kassierbar');
+RESET ROLE;
+UPDATE ticket_bestellungen SET frist = now() + interval '1 day' WHERE id = pg_temp.b('7e');
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(pg_temp.storno('7e', (SELECT array_agg(id) FROM tickets WHERE bestellung_id = pg_temp.b('7e')), 0), 'ok', 'Unbezahltes stornieren');
+SELECT is((SELECT status FROM ticket_bestellungen WHERE id = pg_temp.b('7e')), 'storniert', 'Komplett stornierte Bestellung');
+SELECT is(pg_temp.zahl('7e', 0), 'nicht_offen', 'Stornierte Bestellung nicht kassierbar');
+SELECT throws_ok($$SELECT ticket_zahlung_bestaetigen(gen_random_uuid(), 1)$$, '42501', NULL, 'Unbekannte Bestellung');
+RESET ROLE;
 
 -- Konto gelöscht: Bestellung bleibt ohne Personenbezug
 DELETE FROM profiles WHERE id = '7c000000-0000-0000-0000-000000000000';

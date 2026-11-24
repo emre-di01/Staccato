@@ -134,3 +134,52 @@ export function aktiveBestellungen(bestellungen, jetzt = Date.now()) {
     })
     .filter(b => b.anzahl > 0)
 }
+
+// ─── Bestellungen einer Veranstaltung (Admins) ────────────────
+
+const SEITE = 500   // unter dem Zeilenlimit der API
+export async function alleBestellungenLaden(eventId) {
+  const alle = []
+  for (let von = 0; ; von += SEITE) {
+    const { data, error } = await supabase.from('ticket_bestellungen')
+      .select(`id, herkunft, kaeufer_name, status, frist, erstellt_am,
+        kaeufer:profiles!ticket_bestellungen_kaeufer_id_fkey(voller_name, avatar_url),
+        tickets(id, preis, verguenstigt, status),
+        ticket_zahlungen(id, betrag, zeitpunkt, person:profiles!ticket_zahlungen_angenommen_von_fkey(voller_name),
+          ticket_erstattungen(id, betrag, zeitpunkt, person:profiles!ticket_erstattungen_erstattet_von_fkey(voller_name)))`)
+      .eq('event_id', eventId).order('erstellt_am', { ascending: false }).order('id').range(von, von + SEITE - 1)
+    if (error) throw error
+    alle.push(...data)
+    if (data.length < SEITE) return alle
+  }
+}
+
+const cent = betrag => Math.round(betrag * 100)
+const summeCent = (liste, feld) => liste.reduce((s, x) => s + cent(x[feld]), 0)
+
+// Ergänzt je Bestellung: zustand (reserviert | bezahlt | storniert | verfallen, abgelaufene Frist = verfallen),
+// gruppe (Filter), anzahl und betrag, Zahlung, Erstattungen, noch erstattbarer Betrag. Dazu der Gesamtstand.
+export function bestellungenAuswerten(bestellungen, jetzt = Date.now()) {
+  const stand = { gueltig: 0, reserviert: 0, eingenommen: 0, erstattet: 0 }
+  const liste = (bestellungen ?? []).map(b => {
+    const zustand = b.status === 'reserviert' && new Date(b.frist) <= jetzt ? 'verfallen' : b.status
+    const laufend = zustand === 'reserviert' || zustand === 'bezahlt'
+    const aktiv = laufend ? b.tickets.filter(t => ['reserviert', 'gueltig', 'eingeloest'].includes(t.status)) : b.tickets
+    const zahlung = b.ticket_zahlungen?.[0] ?? null
+    const erstattungen = (b.ticket_zahlungen ?? []).flatMap(z => z.ticket_erstattungen ?? [])
+    const erstattetCent = summeCent(erstattungen, 'betrag')
+    const storniertCent = summeCent(b.tickets.filter(t => t.status === 'storniert'), 'preis')
+    if (zustand === 'reserviert') stand.reserviert += aktiv.length
+    if (zustand === 'bezahlt') stand.gueltig += aktiv.length
+    stand.eingenommen += zahlung ? cent(zahlung.betrag) : 0
+    stand.erstattet += erstattetCent
+    return {
+      ...b, zustand, gruppe: zustand === 'reserviert' ? 'offen' : zustand === 'bezahlt' ? 'bezahlt' : 'erledigt',
+      anzahl: aktiv.length, betrag: summeCent(aktiv, 'preis') / 100, zahlung, erstattungen,
+      // Teilstorno vor dem Bezahlen zählt nicht: erstattbar ist höchstens, was bezahlt und storniert wurde
+      erstattbar: zahlung ? Math.max(Math.min(storniertCent, cent(zahlung.betrag) - summeCent(b.tickets.filter(t => ['gueltig', 'eingeloest'].includes(t.status)), 'preis')) - erstattetCent, 0) / 100 : 0,
+    }
+  })
+  // Eingenommen = in der Kasse verblieben
+  return { liste, stand: { ...stand, eingenommen: (stand.eingenommen - stand.erstattet) / 100, erstattet: stand.erstattet / 100 } }
+}

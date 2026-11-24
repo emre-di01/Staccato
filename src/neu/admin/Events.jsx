@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket } from 'lucide-react'
+import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt } from '../../ui'
@@ -9,7 +9,8 @@ import { useNeuLaden } from '../daten'
 import { uhrzeit } from '../zeit'
 import EventBlatt from '../lehrer/EventBlatt'
 import TicketBlatt from './TicketBlatt'
-import { useTicketEinstellungen, euro } from '../tickets'
+import TicketBestellungen, { useBestellungen } from './TicketBestellungen'
+import { useTicketEinstellungen, bestellungenAuswerten, euro } from '../tickets'
 import { EventBild, EventVorschau } from '../eventBild'
 import { useBreit, Avatar, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
@@ -98,17 +99,25 @@ function EinladenBlatt({ ev, vorhanden, onClose, onFertig }) {
 function TicketZeile({ ev }) {
   const { T, lang } = useApp()
   const neuLaden = useNeuLaden()
-  const [offen, setOffen] = useState(false)
+  const [offen, setOffen] = useState(null)   // null | 'einstellungen' | 'bestellungen'
+  const { data: bestellungen } = useBestellungen(ev.id)
+  const { liste } = bestellungenAuswerten(bestellungen)
+  const zaehle = g => liste.filter(b => b.gruppe === g).length
   const { data: e, isLoading, isError } = useTicketEinstellungen(ev.id)
   const stand = isError ? T('tk_laden_fehler') : isLoading ? '…' : !e ? T('tk_nicht_eingerichtet')
     : [T(e.aktiv ? 'tk_verkauf_an' : 'tk_verkauf_aus'), T('tk_x_plaetze').replace('{n}', e.kapazitaet), euro(e.preis_normal, lang)].join(' · ')
   return <>
     <DetailTitel>{T('tk_tickets')}</DetailTitel>
     <DetailGruppe>
-      <Zeile icon={Ticket} titel={T('tk_einstellungen')} untertitel={stand} onClick={isLoading || isError ? undefined : () => setOffen(true)} />
+      <Zeile icon={Ticket} titel={T('tk_einstellungen')} untertitel={stand} onClick={isLoading || isError ? undefined : () => setOffen('einstellungen')} />
+      {e && <>
+        <Trenner />
+        <Zeile icon={ReceiptText} titel={T('tk_bestellungen')} untertitel={T('tk_bestellungen_stand').replace('{offen}', zaehle('offen')).replace('{bezahlt}', zaehle('bezahlt'))} onClick={() => setOffen('bestellungen')} />
+      </>}
     </DetailGruppe>
-    {offen && <TicketBlatt ev={ev} einstellungen={e} onClose={() => setOffen(false)}
-      onFertig={() => { setOffen(false); neuLaden('n-ticket-einstellungen', 'n-ticket-verkauf', 'n-ticket-info') }} />}
+    {offen === 'bestellungen' && <TicketBestellungen ev={ev} kapazitaet={e.kapazitaet} onClose={() => setOffen(null)} />}
+    {offen === 'einstellungen' && <TicketBlatt ev={ev} einstellungen={e} onClose={() => setOffen(null)}
+      onFertig={() => { setOffen(null); neuLaden('n-ticket-einstellungen', 'n-ticket-verkauf', 'n-ticket-info') }} />}
   </>
 }
 

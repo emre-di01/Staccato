@@ -10,7 +10,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
 const db = vi.hoisted(() => ({ rpc: null, tabellen: {}, geschrieben: null }))
 vi.mock('../../lib/supabase', () => {
   const abfrage = name => {
-    const q = { select: () => q, eq: () => q, order: () => q, maybeSingle: () => q,
+    const q = { select: () => q, eq: () => q, order: () => q, range: () => q, maybeSingle: () => q,
       insert: werte => { db.geschrieben = { name, werte }; return Promise.resolve({ error: null }) },
       update: werte => { db.geschrieben = { name, werte }; return { eq: () => Promise.resolve({ error: db.updateFehler ?? null }) } },
       then: ok => ok({ data: db.tabellen[name] ?? [], error: null }) }
@@ -19,18 +19,20 @@ vi.mock('../../lib/supabase', () => {
   return { supabase: { from: abfrage, rpc: (...a) => db.rpc(...a) } }
 })
 const toast = vi.fn()
+const confirm = vi.fn(async () => true)
 vi.mock('../../context/AppContext', () => ({
-  useApp: () => ({ T: k => t('de', k), lang: 'de', zeitzone: 'Europe/Berlin', profil: { id: 'ich' }, schule: { id: 's' }, toast }),
+  useApp: () => ({ T: k => t('de', k), lang: 'de', zeitzone: 'Europe/Berlin', profil: { id: 'ich' }, schule: { id: 's' }, toast, confirm }),
 }))
 const { EventTickets } = await import('../EventTickets')
 const { default: TicketBlatt } = await import('../admin/TicketBlatt')
+const { default: TicketBestellungen } = await import('../admin/TicketBestellungen')
 
 const ev = { id: 'ev1', titel: 'Winterkonzert', beginn: '2099-12-12T18:00:00Z', oeffentlich: false }
 const info = { ok: true, grund: null, frei: 40, meine: 0, max: 10, rest_verguenstigt: 3, preis_normal: 15, preis_verguenstigt: 8.5, frist: '2099-12-01T17:00:00Z' }
 let root
 const warte = () => act(() => new Promise(r => setTimeout(r, 20)))
-const text = () => document.body.textContent.replace(/ /g, ' ')
-const knopf = name => [...document.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') ?? b.textContent).replace(/ /g, ' ') === name)
+const text = () => document.body.textContent.replace(/\u00a0/g, ' ')
+const knopf = name => [...document.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') ?? b.textContent).replace(/\u00a0/g, ' ') === name)
 const klick = async name => { await act(async () => knopf(name).click()); await warte() }
 async function zeige(el) {
   const div = document.body.appendChild(document.createElement('div'))
@@ -116,5 +118,48 @@ describe('TicketBlatt', () => {
     await setze('Plätze insgesamt', '10')
     await klick('Speichern')
     expect(text()).toContain('Es sind schon 42 Plätze belegt')
+  })
+})
+
+describe('TicketBestellungen', () => {
+  const bestellung = teil => ({ id: 'b1', herkunft: 'mitglied', status: 'reserviert', frist: '2099-12-01T17:00:00Z', erstellt_am: '2099-11-20T10:00:00Z', kaeufer: { voller_name: 'Ayla Test' },
+    tickets: [{ id: 't1', preis: 8.5, verguenstigt: true, status: 'reserviert' }, { id: 't2', preis: 15, verguenstigt: false, status: 'reserviert' }], ticket_zahlungen: [], ...teil })
+  const personKnopf = () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('Ayla Test'))
+
+  it('bestätigt den Geldeingang mit dem angezeigten Betrag', async () => {
+    db.tabellen.ticket_bestellungen = [bestellung()]
+    db.rpc = vi.fn(async () => ({ data: { ok: true }, error: null }))
+    await zeige(<TicketBestellungen ev={ev} kapazitaet={100} onClose={() => {}} />)
+    expect(text()).toContain('2 / 100')
+    await act(async () => personKnopf().click())
+    await klick('23,50 € bar erhalten')
+    expect(confirm.mock.calls.at(-1)[0]).toContain('Ayla Test')
+    expect(db.rpc).toHaveBeenCalledWith('ticket_zahlung_bestaetigen', { p_bestellung_id: 'b1', p_betrag: 23.5 })
+  })
+
+  it('storniert ausgewählte Tickets mit Erstattung', async () => {
+    db.tabellen.ticket_bestellungen = [bestellung({ status: 'bezahlt', frist: null, tickets: [{ id: 't1', preis: 8.5, verguenstigt: true, status: 'gueltig' }, { id: 't2', preis: 15, verguenstigt: false, status: 'gueltig' }],
+      ticket_zahlungen: [{ id: 'z', betrag: 23.5, zeitpunkt: '2099-11-21T10:00:00Z', person: { voller_name: 'Admin' }, ticket_erstattungen: [] }] })]
+    db.rpc = vi.fn(async () => ({ data: { ok: true }, error: null }))
+    await zeige(<TicketBestellungen ev={ev} kapazitaet={100} onClose={() => {}} />)
+    await klick('Bezahlt (1)')
+    await act(async () => personKnopf().click())
+    await klick('Tickets stornieren')
+    expect(document.querySelector('input').type).toBe('checkbox')
+    await act(async () => document.querySelector('input[type=checkbox]').click())
+    expect(document.querySelector('input:not([type=checkbox])').value).toBe('15,00')
+    await klick('Tickets stornieren')
+    expect(db.rpc).toHaveBeenCalledWith('tickets_stornieren', { p_bestellung_id: 'b1', p_ticket_ids: ['t2'], p_erstattung: 15 })
+  })
+
+  it('storniert nichts ohne Bestätigung', async () => {
+    db.tabellen.ticket_bestellungen = [bestellung()]
+    db.rpc = vi.fn()
+    confirm.mockResolvedValueOnce(false)
+    await zeige(<TicketBestellungen ev={ev} kapazitaet={100} onClose={() => {}} />)
+    await act(async () => personKnopf().click())
+    await klick('Tickets stornieren')
+    await klick('Tickets stornieren')
+    expect(db.rpc).not.toHaveBeenCalled()
   })
 })
