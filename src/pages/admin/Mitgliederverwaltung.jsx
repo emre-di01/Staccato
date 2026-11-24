@@ -284,11 +284,19 @@ export function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
 // ─── Einladung senden Modal ───────────────────────────────────
 
 export function EinladungModal({ onClose, T }) {
-  const { schule, profil } = useApp()
+  const { toast } = useApp()
   const [form,   setForm]   = useState({ email: '', rolle: 'schueler' })
   const [laden,  setLaden]  = useState(false)
   const [fehler, setFehler] = useState('')
-  const [erfolg, setErfolg] = useState(null) // { action, message }
+  const [erfolg, setErfolg] = useState(null) // { action, message, mailFehler?, link? }
+
+  // Link zusätzlich selbst verschicken (WhatsApp o. Ä.), falls die E-Mail nicht ankommt
+  function linkWeitergeben() {
+    if (navigator.share) { navigator.share({ url: erfolg.link }).catch(() => {}); return }
+    navigator.clipboard?.writeText(erfolg.link).then(
+      () => toast(T('inv_link_kopiert'), 'success'),
+      () => toast(erfolg.link, 'info', 15000))
+  }
 
   async function senden() {
     if (!form.email) { setFehler(T('all_fields_required')); return }
@@ -311,18 +319,10 @@ export function EinladungModal({ onClose, T }) {
     }
 
     if (action === 'einladung_erstellt') {
-      // Einladungs-E-Mail versenden
-      await supabase.functions.invoke('send-email', {
-        body: {
-          type:       'schuleinladung',
-          email:      data.email,
-          token:      data.token,
-          schule_name:          schule?.name ?? 'Staccato',
-          eingeladen_von_name:  profil?.voller_name,
-          rolle:                form.rolle,
-        },
-      }).catch(console.error)
-      setErfolg({ action, message: T('invitation_sent') })
+      // Einladungs-E-Mail versenden. invoke() wirft bei Serverfehlern nicht, das Ergebnis steht in `error`.
+      const { error: mailErr } = await supabase.functions.invoke('send-email', { body: { type: 'schuleinladung', token: data.token } })
+      setErfolg({ action, mailFehler: !!mailErr, link: `${window.location.origin}/einladung/${data.token}`,
+        message: T(mailErr ? 'nl_kv_einladung_ohne_mail' : 'invitation_sent') })
     } else if (action === 'mitgliedschaft_erstellt') {
       setErfolg({ action, message: T('invitation_direct') })
     }
@@ -336,17 +336,19 @@ export function EinladungModal({ onClose, T }) {
         {erfolg ? (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>
-              {erfolg.action === 'einladung_erstellt' ? '📧' : '✅'}
+              {erfolg.mailFehler ? '⚠️' : erfolg.action === 'einladung_erstellt' ? '📧' : '✅'}
             </div>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
               {erfolg.message}
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
-              {erfolg.action === 'einladung_erstellt'
-                ? 'Der Einladungslink wurde per E-Mail versendet. Er ist 7 Tage gültig.'
-                : 'Die Person wurde direkt als Mitglied hinzugefügt.'
-              }
+              {T(erfolg.mailFehler ? 'inv_mail_fehler_hinweis' : erfolg.action === 'einladung_erstellt' ? 'inv_mail_hinweis' : 'inv_direkt_hinweis')}
             </div>
+            {erfolg.link && (
+              <button onClick={linkWeitergeben} style={{ ...s.btnSek, marginTop: 16, width: '100%' }}>
+                {T(navigator.share ? 'inv_link_verschicken' : 'inv_link_kopieren')}
+              </button>
+            )}
             <button onClick={onClose} style={{ ...s.btnPri, marginTop: 20, width: '100%' }}>
               {T('close')}
             </button>
@@ -363,7 +365,7 @@ export function EinladungModal({ onClose, T }) {
               </select>
             </Feld>
             <div style={{ fontSize: 12, color: 'var(--text-3)', background: 'var(--bg)', borderRadius: 'var(--radius)', padding: '10px 12px', lineHeight: 1.5 }}>
-              💡 Hat die Person bereits ein Konto, wird sie direkt hinzugefügt. Andernfalls erhält sie einen Einladungslink per E-Mail.
+              💡 {T('inv_hinweis')}
             </div>
             {fehler && <p style={s.fehler}>{fehler}</p>}
             <div style={s.btnRow}>
