@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.13'
+export const CURRENT_VERSION = '2.9.14'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.14',
+    date: '2026-11-24',
+    features: [
+      {
+        icon: '🎟️',
+        de: 'Admins können Tickets für sich jetzt direkt unter Verwaltung → Events reservieren',
+        en: 'Admins can now reserve tickets for themselves directly under Administration → Events',
+        tr: 'Yöneticiler kendileri için bileti artık doğrudan Yönetim → Etkinlikler altında ayırtabilir',
+      },
+    ],
+  },
   {
     version: '2.9.13',
     date: '2026-11-24',
