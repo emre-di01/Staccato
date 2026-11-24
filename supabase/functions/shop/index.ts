@@ -1,7 +1,7 @@
 // Öffentlicher Ticketshop (ohne Anmeldung): Angebot, Kauf starten, Bestellung ansehen, abbrechen
 import { hash } from '../_shared/krypto.ts'
 import { stripe } from '../_shared/stripe.ts'
-import { abschliessen, APP_URL, db, konto, rpc, schluesselVon } from '../_shared/shop.ts'
+import { abschliessen, APP_URL, db, konto, mailBereit, rpc, schluesselVon, ticketsSenden } from '../_shared/shop.ts'
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' }
 const antwort = (d: unknown, status = 200) => new Response(JSON.stringify(d), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -18,6 +18,7 @@ Deno.serve(async req => {
       case 'info': return await info(String(b.slug ?? ''))
       case 'kaufen': return await kaufen(req, b)
       case 'bestellung': return await bestellung(String(b.zugang ?? ''))
+      case 'nochmal': return await nochmal(req, String(b.slug ?? ''), String(b.email ?? ''), b.website)
       case 'abbrechen': return await abbrechen(String(b.zugang ?? ''))
       default: return antwort({ ok: false, grund: 'angaben' }, 400)
     }
@@ -39,12 +40,16 @@ async function info(slug: string) {
   return antwort({ ok: true, ...r })
 }
 
+// Letzte öffentliche Adresse: interne stammen von unseren Proxys, weiter vorn stehende kann der Client fälschen
+function adresse(req: Request) {
+  return (req.headers.get('x-forwarded-for') ?? '').split(',').map(x => x.trim()).filter(x => x && !/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|f[cd]|fe80)/i.test(x)).pop()
+}
+
 async function kaufen(req: Request, b: Record<string, unknown>) {
   if (b.website) return antwort({ ok: false, grund: 'angaben' }, 400)   // unsichtbares Feld, nur Bots füllen es aus
   if (!UUID.test(String(b.event_id ?? '')) || b.agb !== true) return antwort({ ok: false, grund: 'angaben' }, 400)
   const d = db()
-  // Letzte öffentliche Adresse: interne stammen von unseren Proxys, weiter vorn stehende kann der Client fälschen
-  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',').map(x => x.trim()).filter(x => x && !/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|f[cd]|fe80)/i.test(x)).pop()
+  const ip = adresse(req)
   const r = await rpc(d, 'shop_reservieren', {
     p_event_id: b.event_id, p_anzahl: Number.isInteger(b.anzahl) ? b.anzahl : null, p_betrag: typeof b.betrag === 'number' ? b.betrag : null,
     p_name: String(b.name ?? ''), p_email: String(b.email ?? ''), p_sprache: String(b.sprache ?? 'de'), p_ip_hash: ip ? await hash(ip) : null,
@@ -75,7 +80,7 @@ async function laden(d: ReturnType<typeof db>, zugang: string) {
 }
 // nur, was der Käufer sehen darf
 // deno-lint-ignore no-explicit-any
-const oeffentlich = (o: any) => ({ ok: true, status: o.status, name: o.name, email: o.email, betrag: o.betrag, slug: o.slug, event: o.event, schule: o.schule, tickets: o.tickets })
+const oeffentlich = (o: any) => ({ ok: true, status: o.status, name: o.name, email: o.email, betrag: o.betrag, slug: o.slug, zurueck: o.zurueck, automatisch: o.automatisch, event: o.event, schule: o.schule, tickets: o.tickets })
 
 async function bestellung(zugang: string) {
   const d = db()
@@ -108,4 +113,26 @@ async function abbrechen(zugang: string) {
     await rpc(d, 'shop_verwerfen', { p_bestellung_id: o.id })
   }
   return antwort(oeffentlich(await laden(d, zugang)))
+}
+
+// Tickets nochmal schicken. Immer dieselbe Antwort und im Hintergrund verschickt: niemand erfährt (auch nicht über die Dauer),
+// ob es zu einer Adresse Tickets gibt. Geschickt wird nur an die hinterlegte Adresse.
+async function nochmal(req: Request, slug: string, email: string, website: unknown) {
+  if (website || !/^[a-z0-9-]{3,40}$/.test(slug) || email.length > 200 || !email.includes('@')) return antwort({ ok: false, grund: 'angaben' }, 400)
+  if (!mailBereit()) { console.warn('[shop] kein Mailversand eingerichtet'); return antwort({ ok: false, grund: 'kein_mailversand' }) }
+  const d = db()
+  const ip = adresse(req)
+  const r = await rpc(d, 'shop_nochmal', { p_slug: slug, p_email: email, p_ip_hash: ip ? await hash(ip) : null })
+  if (!r.ok) return antwort(r)
+  const senden = async () => {
+    for (const id of r.ids) {
+      try { await ticketsSenden(d, id) } catch (e) {
+        console.error('[shop] nochmal', (e as Error).message)
+        await rpc(d, 'shop_mail_beanspruchen', { p_bestellung_id: id, p_zurueck: true }).catch(() => {})
+      }
+    }
+  }
+  // @ts-ignore EdgeRuntime gibt es nur in der Laufzeit
+  EdgeRuntime.waitUntil(senden())
+  return antwort({ ok: true })
 }

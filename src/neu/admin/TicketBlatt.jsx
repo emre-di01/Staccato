@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { Blatt, Feld, Knopf, SchalterZeile, Gruppe, FehlerText, eingabeStil } from '../../ui'
 import { inputWert } from '../zeit'
 import { einstellungenAusFormular } from '../tickets'
+import { SHOP_SICHTBAR, useTicketShop } from '../ticketshop'
 
 const betragText = wert => wert == null ? '' : Number(wert).toFixed(2).replace('.', ',')
 
@@ -17,7 +18,9 @@ export default function TicketBlatt({ ev, einstellungen: e, onClose, onFertig })
     preis_abendkasse: betragText(e?.preis_abendkasse),
     verkauf_von: inputWert(e?.verkauf_von), verkauf_bis: inputWert(e?.verkauf_bis), frist_tage: String(e?.frist_tage ?? 7),
     bis_abendkasse: e?.bis_abendkasse ?? false, freigabe_minuten: String(e?.freigabe_minuten ?? 30),
+    shop_aktiv: e?.shop_aktiv ?? false, mitglieder_reserve: String(e?.mitglieder_reserve ?? 0),
   })
+  const { data: shopDaten } = useTicketShop()
   const [fehler, setFehler] = useState('')
   const [sendet, setSendet] = useState(false)
   const setze = (k, v) => { setFehler(''); setForm(f => ({ ...f, [k]: v })) }
@@ -69,6 +72,15 @@ export default function TicketBlatt({ ev, einstellungen: e, onClose, onFertig })
         {form.bis_abendkasse
           ? <Feld label={T('tk_freigabe_minuten')} hinweis={T('tk_freigabe_minuten_hinweis')}><input {...eingabe('freigabe_minuten', 'numeric')} /></Feld>
           : <Feld label={T('tk_frist_tage')} hinweis={T('tk_frist_tage_hinweis')}><input {...eingabe('frist_tage', 'numeric')} /></Feld>}
+
+        {SHOP_SICHTBAR && <Gruppe style={{ margin: 0 }}>
+          <SchalterZeile titel={T('sh_event')} untertitel={T('sh_event_hinweis')} an={form.shop_aktiv} onChange={v => setze('shop_aktiv', v)} />
+        </Gruppe>}
+        {SHOP_SICHTBAR && form.shop_aktiv && <>
+          {shopDaten && !(shopDaten.shop?.aktiv && shopDaten.konto.verbunden) && <div role="status" style={{ fontSize: 15, color: 'var(--text-2)' }}>{T('sh_event_kein_shop')}</div>}
+          {!ev.oeffentlich && <div role="status" style={{ fontSize: 15, color: 'var(--text-2)' }}>{T('sh_event_nicht_oeffentlich')}</div>}
+          <Feld label={T('sh_reserve')} hinweis={T('sh_reserve_hinweis')}><input {...eingabe('mitglieder_reserve', 'numeric')} /></Feld>
+        </>}
 
         {fehler && <FehlerText>{fehler}</FehlerText>}
         <Knopf voll onClick={speichern} disabled={sendet}>{T('save')}</Knopf>

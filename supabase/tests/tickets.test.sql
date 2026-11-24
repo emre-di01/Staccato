@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(245);
+SELECT plan(258);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -530,6 +530,17 @@ SELECT is((SELECT count(*) FROM schul_zahlungskonten) + (SELECT count(*) FROM ti
 SELECT throws_ok($$SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111')$$, '42501', NULL, 'Status nur für Admins');
 RESET ROLE;
 
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT shop_storno_beginnen(gen_random_uuid(), NULL, 1, gen_random_uuid(), NULL)$$, '42501', NULL, 'Admin startet Storno nicht direkt');
+SELECT throws_ok($$SELECT shop_erstattung_fertig(gen_random_uuid(), '[]')$$, '42501', NULL, 'Admin bestätigt keine Erstattung');
+SELECT throws_ok($$SELECT shop_erstattung_abgelehnt(gen_random_uuid(), 0)$$, '42501', NULL, 'Ablehnung nur intern');
+SELECT throws_ok($$SELECT shop_erstattung_info(gen_random_uuid())$$, '42501', NULL, 'Erstattungsangaben nur intern');
+SELECT throws_ok($$SELECT shop_email_aendern(gen_random_uuid(), 'a@b.de')$$, '42501', NULL, 'E-Mail ändern nur intern');
+SELECT throws_ok($$SELECT shop_nochmal('schule-a', 'a@b.de', 'x')$$, '42501', NULL, 'Nochmal schicken nur intern');
+SELECT throws_ok($$INSERT INTO ticket_online_erstattungen (vorgang, bestellung_id, zahlung_id, betrag) VALUES (gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), 5)$$, '42501', NULL, 'Niemand legt Erstattungen direkt an');
+SELECT is((SELECT count(*) FROM ticket_online_erstattungen), 0::bigint, 'Lesbar für Admins');
+RESET ROLE;
+
 -- Verkauf
 SELECT pg_temp.intern();
 SELECT is((SELECT jsonb_array_length(shop_info('schule-a')->'events')), 1, 'Nur freigegebene Veranstaltungen im Shop');
@@ -541,6 +552,15 @@ SELECT is(pg_temp.shop(1, 15, 'a@b.de', ' '), 'angaben', 'Name fehlt');
 SELECT is(pg_temp.shop(5, 75), 'zu_wenig_frei', 'Nicht über freie Plätze');
 SELECT is(pg_temp.shop(1, 8), 'betrag', 'Gäste bekommen keinen Mitgliederpreis');
 SELECT is(pg_temp.shop(2, 30), 'ok', 'Gast reserviert 2');
+RESET ROLE;
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is((SELECT ticket_zahlung_bestaetigen(id, 30)->>'grund' FROM ticket_bestellungen WHERE kaeufer_email = 'gast@example.test'), 'nicht_offen', 'Shop-Bestellung nicht bar kassierbar');
+SELECT is((SELECT abendkasse_kassieren(id, 30)->>'grund' FROM ticket_bestellungen WHERE kaeufer_email = 'gast@example.test'), 'nicht_offen', 'Auch nicht an der Abendkasse');
+SELECT is((SELECT count(*) FROM ticket_zahlungen z JOIN ticket_bestellungen b ON b.id = z.bestellung_id WHERE b.kaeufer_email = 'gast@example.test'), 0::bigint, 'Keine Barzahlung gebucht');
+SELECT is((SELECT status FROM ticket_bestellungen WHERE kaeufer_email = 'gast@example.test'), 'reserviert', 'Bleibt reserviert');
+SELECT is(abendkasse_reservierungen('73000000-0000-0000-0000-000000000014'), '[]'::jsonb, 'Laufender Onlinekauf steht nicht in der Kassenliste');
+RESET ROLE;
+SELECT pg_temp.intern();
 SELECT is(pg_temp.shop(1, 15), 'ok', 'Zweiter Versuch');
 SELECT is(pg_temp.shop(1, 15), 'ok', 'Dritter Versuch');
 SELECT is(pg_temp.shop(1, 15), 'zu_viele', 'Höchstens drei offene Vorgänge je E-Mail');

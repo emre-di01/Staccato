@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText, ScanLine, UserCheck, Banknote } from 'lucide-react'
+import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText, ScanLine, UserCheck, Banknote, Store } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt } from '../../ui'
@@ -13,6 +13,7 @@ import { EventTickets } from '../EventTickets'
 import TicketHelfer, { useTicketHelfer } from './TicketHelfer'
 import TicketBestellungen, { useBestellungen } from './TicketBestellungen'
 import { useTicketEinstellungen, bestellungenAuswerten, euro } from '../tickets'
+import { shopLink, useTicketShop } from '../ticketshop'
 import { EventBild, EventVorschau } from '../eventBild'
 import { useBreit, Avatar, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
@@ -99,7 +100,8 @@ function EinladenBlatt({ ev, vorhanden, onClose, onFertig }) {
 
 // Kurzfassung der Ticketeinstellungen, öffnet das Einstellungsblatt
 function TicketZeile({ ev }) {
-  const { T, lang } = useApp()
+  const { T, lang, toast } = useApp()
+  const { data: shopDaten } = useTicketShop()
   const neuLaden = useNeuLaden()
   const [offen, setOffen] = useState(null)   // null | 'einstellungen' | 'bestellungen' | 'helfer'
   const navigate = useNavigate()
@@ -108,6 +110,10 @@ function TicketZeile({ ev }) {
   const { liste } = bestellungenAuswerten(bestellungen)
   const zaehle = g => liste.filter(b => b.gruppe === g).length
   const { data: e, isLoading, isError } = useTicketEinstellungen(ev.id)
+  async function linkKopieren() {
+    const link = shopLink(shopDaten.shop.slug, ev.id)
+    try { await navigator.clipboard.writeText(link); toast(T('sh_kopiert'), 'success') } catch { toast(link, 'info') }
+  }
   const stand = isError ? T('tk_laden_fehler') : isLoading ? '…' : !e ? T('tk_nicht_eingerichtet')
     : [T(e.aktiv ? 'tk_verkauf_an' : 'tk_verkauf_aus'), T('tk_x_plaetze').replace('{n}', e.kapazitaet), euro(e.preis_normal, lang)].join(' · ')
   return <>
@@ -117,6 +123,10 @@ function TicketZeile({ ev }) {
       {e && <>
         <Trenner />
         <Zeile icon={ReceiptText} titel={T('tk_bestellungen')} untertitel={T('tk_bestellungen_stand').replace('{offen}', zaehle('offen')).replace('{bezahlt}', zaehle('bezahlt'))} onClick={() => setOffen('bestellungen')} />
+        {e.shop_aktiv && e.aktiv && ev.oeffentlich && shopDaten?.shop?.aktiv && shopDaten.konto.verbunden && <>
+          <Trenner />
+          <Zeile icon={Store} titel={T('sh_event_link')} untertitel={T('sh_event_link_hinweis')} chevron={false} onClick={linkKopieren} />
+        </>}
         <Trenner />
         <Zeile icon={UserCheck} titel={T('ei_helfer')} untertitel={helfer.length ? T(helfer.length === 1 ? 'ei_helfer_1' : 'ei_helfer_n').replace('{n}', helfer.length) : T('ei_helfer_keine')} onClick={() => setOffen('helfer')} />
         <Trenner />

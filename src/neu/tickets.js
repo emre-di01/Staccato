@@ -62,8 +62,13 @@ export function einstellungenAusFormular(f) {
   const freigabe_minuten = ganzzahl(f.freigabe_minuten)
   if (f.bis_abendkasse && !(freigabe_minuten >= 0)) return { fehler: 'tk_fehler_freigabe' }
 
+  const mitglieder_reserve = f.shop_aktiv ? ganzzahl(f.mitglieder_reserve || '0') : 0
+  if (f.shop_aktiv && !(preis_normal >= 0.5)) return { fehler: 'sh_fehler_preis' }   // Stripe nimmt mindestens 0,50 €
+  if (!(mitglieder_reserve >= 0 && mitglieder_reserve <= kapazitaet)) return { fehler: 'sh_fehler_reserve' }
+
   return {
     werte: {
+      shop_aktiv: !!f.shop_aktiv, mitglieder_reserve,
       aktiv: !!f.aktiv, kapazitaet, preis_normal, preis_verguenstigt, preis_abendkasse, kontingent, obergrenze, verkauf_von, verkauf_bis,
       frist_tage: frist_tage > 0 ? frist_tage : 7, bis_abendkasse: !!f.bis_abendkasse,
       freigabe_minuten: freigabe_minuten >= 0 ? freigabe_minuten : 30,
@@ -142,10 +147,11 @@ export async function alleBestellungenLaden(eventId) {
   const alle = []
   for (let von = 0; ; von += SEITE) {
     const { data, error } = await supabase.from('ticket_bestellungen')
-      .select(`id, herkunft, kaeufer_name, status, frist, erstellt_am,
+      .select(`id, herkunft, kaeufer_name, kaeufer_email, auto_erstatten, status, frist, erstellt_am,
         kaeufer:profiles!ticket_bestellungen_kaeufer_id_fkey(voller_name, avatar_url),
         tickets(id, preis, verguenstigt, status, an_kasse),
-        ticket_zahlungen(id, betrag, zeitpunkt, person:profiles!ticket_zahlungen_angenommen_von_fkey(voller_name),
+        ticket_online_erstattungen(vorgang, betrag, erledigt_am),
+        ticket_zahlungen(id, methode, betrag, zeitpunkt, person:profiles!ticket_zahlungen_angenommen_von_fkey(voller_name),
           ticket_erstattungen(id, betrag, zeitpunkt, person:profiles!ticket_erstattungen_erstattet_von_fkey(voller_name)))`)
       .eq('event_id', eventId).order('erstellt_am', { ascending: false }).order('id').range(von, von + SEITE - 1)
     if (error) throw error
@@ -160,7 +166,7 @@ const summeCent = (liste, feld) => liste.reduce((s, x) => s + cent(x[feld]), 0)
 // Ergänzt je Bestellung: zustand (reserviert | bezahlt | storniert | verfallen, abgelaufene Frist = verfallen),
 // gruppe (Filter), anzahl und betrag, Zahlung, Erstattungen, noch erstattbarer Betrag. Dazu der Gesamtstand.
 export function bestellungenAuswerten(bestellungen, jetzt = Date.now()) {
-  const stand = { gueltig: 0, reserviert: 0, eingenommen: 0, erstattet: 0 }
+  const stand = { gueltig: 0, reserviert: 0, eingenommen: 0, erstattet: 0, online: 0 }
   const liste = (bestellungen ?? []).map(b => {
     const zustand = b.status === 'reserviert' && new Date(b.frist) <= jetzt ? 'verfallen' : b.status
     const laufend = zustand === 'reserviert' || zustand === 'bezahlt'
@@ -171,17 +177,22 @@ export function bestellungenAuswerten(bestellungen, jetzt = Date.now()) {
     const storniertCent = summeCent(b.tickets.filter(t => t.status === 'storniert'), 'preis')
     if (zustand === 'reserviert') stand.reserviert += aktiv.length
     if (zustand === 'bezahlt') stand.gueltig += aktiv.length
-    stand.eingenommen += zahlung ? cent(zahlung.betrag) : 0
-    stand.erstattet += erstattetCent
+    const online = zahlung?.methode === 'stripe'
+    const offeneErstattungen = (b.ticket_online_erstattungen ?? []).filter(o => !o.erledigt_am)
+    if (online) stand.online += cent(zahlung.betrag) - erstattetCent
+    else {
+      stand.eingenommen += zahlung ? cent(zahlung.betrag) : 0
+      stand.erstattet += erstattetCent
+    }
     return {
-      ...b, zustand, gruppe: zustand === 'reserviert' ? 'offen' : zustand === 'bezahlt' ? 'bezahlt' : 'erledigt',
+      ...b, zustand, online: online || b.herkunft === 'shop', offeneErstattungen, gruppe: zustand === 'reserviert' ? 'offen' : zustand === 'bezahlt' ? 'bezahlt' : 'erledigt',
       anzahl: aktiv.length, betrag: summeCent(aktiv, 'preis') / 100, zahlung, erstattungen,
       // Teilstorno vor dem Bezahlen zählt nicht: erstattbar ist höchstens, was bezahlt und storniert wurde
-      erstattbar: zahlung ? Math.max(Math.min(storniertCent, cent(zahlung.betrag) - summeCent(b.tickets.filter(t => ['gueltig', 'eingeloest'].includes(t.status)), 'preis')) - erstattetCent, 0) / 100 : 0,
+      erstattbar: zahlung && !b.auto_erstatten ? Math.max(Math.min(storniertCent, cent(zahlung.betrag) - summeCent(b.tickets.filter(t => ['gueltig', 'eingeloest'].includes(t.status)), 'preis')) - erstattetCent - summeCent(offeneErstattungen, 'betrag'), 0) / 100 : 0,
     }
   })
-  // Eingenommen = in der Kasse verblieben
-  return { liste, stand: { ...stand, eingenommen: (stand.eingenommen - stand.erstattet) / 100, erstattet: stand.erstattet / 100 } }
+  // Eingenommen = bar in der Kasse verblieben; online = über Stripe, abzüglich Erstattungen
+  return { liste, stand: { ...stand, eingenommen: (stand.eingenommen - stand.erstattet) / 100, erstattet: stand.erstattet / 100, online: stand.online / 100 } }
 }
 
 // ─── Eigene Tickets mit QR-Code ───────────────────────────────
@@ -325,4 +336,14 @@ export async function sicherAusfuehren(name, werte, pause = 600) {
 export async function ticketMailSenden(bestellungId, art = 'tickets') {
   const { error } = await supabase.functions.invoke('send-email', { body: { type: art, bestellung_id: bestellungId } })
   return !error
+}
+
+// Shop-Bestellung verwalten (Admins): Tickets schicken, stornieren, online erstatten. Ohne Verbindung { ok: false, grund: 'netz' }
+export async function shopVerwalten(bestellungId, werte) {
+  try {
+    const { data, error } = await supabase.functions.invoke('shop-verwaltung', { body: { bestellung_id: bestellungId, ...werte } })
+    if (!error) return data
+    const antwort = await error.context?.json?.().catch(() => null)
+    return antwort?.grund ? antwort : { ok: false, grund: 'netz' }
+  } catch { return { ok: false, grund: 'netz' } }
 }

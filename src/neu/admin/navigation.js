@@ -2,8 +2,9 @@
 // Reiter (Handy) und die Bereichsseiten „Unterricht“ und „Verwaltung“.
 import {
   House, Music, Users, LayoutGrid, CircleUser, BookOpen, CalendarDays, ListMusic, UserPlus,
-  CalendarHeart, DoorOpen, Guitar, Package, Receipt, School, Target, FileText, Building2, Inbox,
+  CalendarHeart, DoorOpen, Guitar, Package, Receipt, School, Store, Target, FileText, Building2, Inbox,
 } from 'lucide-react'
+import { SHOP_SICHTBAR } from '../ticketshop'
 
 const GEMEINSAM = ['/einstellungen', '/profil', '/meine-dateien', '/tickets', '/einlass', '/kasse']
 
@@ -24,6 +25,7 @@ export function adminBereiche(abo) {
       { to: '/admin/raeume',        icon: DoorOpen,      label: 'rooms',       hinweis: 'na_raeume_hinweis' },
       { to: '/admin/instrumente',   icon: Guitar,        label: 'instruments', hinweis: 'na_instrumente_hinweis' },
       ...(abo?.hatInventar !== false ? [{ to: '/admin/inventar', icon: Package, label: 'inventar', hinweis: 'na_inventar_hinweis' }] : []),
+      ...(SHOP_SICHTBAR ? [{ to: '/admin/ticketshop', icon: Store, label: 'sh_titel', hinweis: 'sh_nav_hinweis' }] : []),
       { to: '/admin/rechnungen',    icon: Receipt,       label: 'na_finanzen', hinweis: 'na_finanzen_hinweis' },
       { to: '/admin/einstellungen', icon: School,        label: 'na_schule',   hinweis: 'na_schule_hinweis' },
     ],

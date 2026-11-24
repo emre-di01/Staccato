@@ -45,7 +45,14 @@ class T(G):
             s['status']='expired'; return J(s)
         if path.startswith('/v1/checkout/sessions/'): return J(ST['sessions'][path.split('/')[-1]])
         if path=='/v1/refunds' and self.command=='POST':
-            s=[x for x in ST['sessions'].values() if x['payment_intent']==f['payment_intent']][0]; r={'id':'re_'+uuid.uuid4().hex[:10],'amount':s['amount_total']}; ST['refunds'][r['id']]=f['payment_intent']; return merk(r)
+            s=[x for x in ST['sessions'].values() if x['payment_intent']==f['payment_intent']][0]; weg=sum(r['amount'] for r in ST['refunds'].values() if r['payment_intent']==f['payment_intent']); amt=int(f.get('amount') or s['amount_total']-weg)
+            if ST.get('ablehnen'): ST['idem'][ik]={'error':{'code':'insufficient'}}; return J({'error':{'code':'balance_insufficient','message':'kein Guthaben'}},400)
+            if amt<=0 or weg+amt>s['amount_total']: return J({'error':{'code':'charge_already_refunded','message':'zu viel'}},400)
+            r={'id':'re_'+uuid.uuid4().hex[:10],'amount':amt,'status':'succeeded','payment_intent':f['payment_intent'],'metadata':{'vorgang':f['metadata[vorgang]']} if 'metadata[vorgang]' in f else {}}; ST['refunds'][r['id']]=r
+            if ST.get('verloren'): ST['verloren']=False; return J({'error':{'code':'api_error','message':'Antwort verloren'}},500)
+            return merk(r)
+        if path=='/v1/refunds' and 'payment_intent=' in self.path:
+            pi=p.parse_qs(self.path.split('?')[1])['payment_intent'][0]; return J({'data':[r for r in ST['refunds'].values() if r['payment_intent']==pi]})
         if path=='/v1/webhook_endpoints' and self.command=='POST':
             w={'id':'we_'+uuid.uuid4().hex[:8],'secret':'whsec_'+uuid.uuid4().hex,'url':f['url']}; ST['webhooks'][w['id']]=w; return J(w)
         if path.startswith('/v1/webhook_endpoints/') and self.command=='DELETE': ST['webhooks'].pop(path.split('/')[-1],None); return J({'deleted':True})

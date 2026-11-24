@@ -79,8 +79,53 @@ with cf.ThreadPoolExecutor(10) as ex: rs=list(ex.map(lambda i:kauf(1,'p%d@exampl
 t('10 gleichzeitig auf 4 Plätze',sum(1 for r in rs if r.get('ok'))==4,[r.get('grund','ok') for r in rs])
 for i in range(16): r=kauf(1,'z%d@example.test'%i,ip='1.2.3.%d, 198.51.100.99'%i)[1]
 t('Bremse trotz gefälschter IP',r['grund']=='zu_viele',r)
+# Nachbetreuung
+def verw(who='U20',**d): return req(F+'shop-verwaltung',d,{'Authorization':'Bearer '+env[who]} if who else {})
+def bid(m): return sql("select id from ticket_bestellungen where kaeufer_email='%s' and status='bezahlt' limit 1"%m)
+def tix(b): return sql("select id from tickets where bestellung_id='%s' and status='gueltig' order by id"%b).split()
+def uid(): import uuid; return str(uuid.uuid4())
+def nochmal(m,ip='192.0.2.1',**k): r=shop({'X-Forwarded-For':ip},**{**dict(aktion='nochmal',slug='probe',email=m),**k}); time.sleep(1.5); return r
+b1=bid('gast@example.test'); n0=mails()['total']
+t('nochmal: zu früh, keine Mail',nochmal('gast@example.test')[1]=={'ok':True} and mails()['total']==n0)
+sql("update ticket_bestellungen set mail_am=now()-interval '11 minutes' where id='%s'"%b1); r=nochmal(' GAST@example.test '); m=mails()
+t('nochmal schickt',r[1]=={'ok':True} and m['total']==n0+1 and m['messages'][0]['To'][0]['Address']=='gast@example.test',(r,m['total']))
+t('unbekannte Adresse: gleiche Antwort, keine Mail',nochmal('niemand@example.test')==(200,{'ok':True}) and mails()['total']==n0+1)
+sql("update ticket_bestellungen set mail_am=now()-interval '11 minutes' where id='%s'"%b1); t('anderer Shop',nochmal('gast@example.test',slug='anderer')[1]=={'ok':True} and mails()['total']==n0+1)
+t('nochmal: Bot',nochmal('gast@example.test',website='x')[1]['grund']=='angaben')
+for i in range(9): r=shop({'X-Forwarded-For':'192.0.2.9'},aktion='nochmal',slug='probe',email='x%d@example.test'%i)[1]
+t('nochmal gebremst',r['grund']=='zu_viele',r)
+t('Verwaltung ohne Anmeldung',verw(None,aktion='mail',bestellung_id=b1)[0]==401); t('Schüler darf nicht',verw('U01',aktion='mail',bestellung_id=b1)[0]==403 and verw('U01',aktion='stornieren',bestellung_id=b1,ticket_ids=tix(b1),betrag=15,vorgang=uid())[0]==403); t('unbekannte Bestellung',verw(aktion='mail',bestellung_id=uid())[0]==403)
+alt=sql("select string_agg(code,',' order by id) from tickets where bestellung_id='%s'"%b1); n0=mails()['total']
+t('Admin schickt erneut',verw(aktion='mail',bestellung_id=b1,email='gast@example.test')[1]=={'ok':True,'geaendert':False} and mails()['total']==n0+1 and alt==sql("select string_agg(code,',' order by id) from tickets where bestellung_id='%s'"%b1))
+t('ungültige Adresse',verw(aktion='mail',bestellung_id=b1,email='quatsch')[1]['grund']=='angaben' and mails()['total']==n0+1)
+r=verw(aktion='mail',bestellung_id=b1,email='richtig@example.test')[1]; m=mails(); t('Adresse korrigiert',r=={'ok':True,'geaendert':True} and m['messages'][0]['To'][0]['Address']=='richtig@example.test',r)
+neu=sql("select string_agg(code,',' order by id) from tickets where bestellung_id='%s'"%b1); t('alte Codes und alter Link ungültig',not set(alt.split(','))&set(neu.split(',')) and shop(aktion='bestellung',zugang=z)[0]==404)
+z=sql("select zugang from ticket_bestellungen where id='%s'"%b1); t('neuer Link geht',[q['code'] for q in shop(aktion='bestellung',zugang=z)[1]['tickets']]==neu.split(','))
+def refs(b): pi=sql("select externe_id from ticket_zahlungen where bestellung_id='%s'"%b); return [r['amount'] for r in st()['refunds'].values() if r['payment_intent']==pi]
+def gebucht(b): return sql("select coalesce(sum(r.betrag),0) from ticket_erstattungen r join ticket_zahlungen z on z.id=r.zahlung_id where z.bestellung_id='%s'"%b)
+T=tix(b1); v=uid(); t('zu viel',verw(aktion='stornieren',bestellung_id=b1,ticket_ids=T[:1],betrag=15.01,vorgang=v)[1]['grund']=='erstattung' and verw(aktion='stornieren',bestellung_id=b1,ticket_ids=T[:1],betrag=-1,vorgang=v)[1]['grund']=='erstattung' and verw(aktion='stornieren',bestellung_id=b1,ticket_ids=[],betrag=5,vorgang=v)[1]['grund']=='erstattung' and len(tix(b1))==2)
+with cf.ThreadPoolExecutor(5) as ex: rs=list(ex.map(lambda _:verw(aktion='stornieren',bestellung_id=b1,ticket_ids=T[:1],betrag=15,vorgang=v)[1],range(5)))
+t('5x gleicher Storno: eine Erstattung',all(x.get('ok') for x in rs) and refs(b1)==[1500] and gebucht(b1)=='15.00' and len(tix(b1))==1,(rs,refs(b1)))
+o=shop(aktion='bestellung',zugang=z)[1]; t('Käufer sieht Rest',o['status']=='bezahlt' and o['zurueck']==15 and sorted(x['status'] for x in o['tickets'])==['gueltig','storniert'],o)
+setz(fail='refunds'); v=uid(); r=verw(aktion='stornieren',bestellung_id=b1,ticket_ids=T[1:],betrag=10,vorgang=v)[1]; setz(fail=None)
+t('Stripe-Ausfall: storniert, Erstattung offen',r=={'ok':True,'erstattung':'offen'} and refs(b1)==[1500] and shop(aktion='bestellung',zugang=z)[1]['zurueck']==25,r)
+t('offene zählen mit',verw(aktion='stornieren',bestellung_id=b1,ticket_ids=[],betrag=6,vorgang=uid())[1]['grund']=='erstattung')
+t('fremder Vorgang',verw(aktion='wiederholen',bestellung_id=bid('letzter@example.test'),vorgang=v)[0]==400)
+t('wiederholen',verw(aktion='wiederholen',bestellung_id=b1,vorgang=v)[1]['erstattung']=='erledigt' and verw(aktion='wiederholen',bestellung_id=b1,vorgang=v)[1]['erstattung']=='erledigt' and sorted(refs(b1))==[1000,1500],refs(b1))
+setz(verloren=True); v=uid(); r=verw(aktion='stornieren',bestellung_id=b1,ticket_ids=[],betrag=5,vorgang=v)[1]; r2=verw(aktion='wiederholen',bestellung_id=b1,vorgang=v)[1]
+t('Antwort verloren: nicht doppelt',r['erstattung']=='offen' and r2['erstattung']=='erledigt' and sorted(refs(b1))==[500,1000,1500] and gebucht(b1)=='30.00',(r,r2,refs(b1)))
+t('nichts mehr erstattbar',verw(aktion='stornieren',bestellung_id=b1,ticket_ids=[],betrag=0.01,vorgang=uid())[1]['grund']=='erstattung' and shop(aktion='bestellung',zugang=z)[1]['status']=='storniert')
+b2=bid('letzter@example.test'); v=uid(); setz(ablehnen=True); r=verw(aktion='stornieren',bestellung_id=b2,ticket_ids=tix(b2),betrag=15,vorgang=v)[1]; setz(ablehnen=False); r2=verw(aktion='wiederholen',bestellung_id=b2,vorgang=v)[1]
+t('Ablehnung blockiert Wiederholung nicht',r['erstattung']=='offen' and r2['erstattung']=='erledigt' and refs(b2)==[1500],(r,r2))
+b3=bid('ohne@example.test'); pi=sql("select externe_id from ticket_zahlungen where bestellung_id='%s'"%b3); k=req('http://127.0.0.1:18001/v1/refunds',('payment_intent=%s&amount=1500'%pi).encode(),{'Authorization':'Bearer rk_test_x','Content-Type':'application/x-www-form-urlencoded'})
+r=verw(aktion='stornieren',bestellung_id=b3,ticket_ids=tix(b3),betrag=15,vorgang=uid())[1]; t('schon im Dashboard erstattet: nicht nochmal',r['erstattung']=='erledigt' and refs(b3)==[1500] and gebucht(b3)=='15.00',(r,refs(b3)))
+b4=bid('neu@example.test'); sql("update ticket_bestellungen set mail_am=null where id='%s'"%b4); r=verw(aktion='stornieren',bestellung_id=b4,ticket_ids=tix(b4),betrag=0,vorgang=uid())[1]; cs=sql("select checkout_id from ticket_bestellungen where id='%s'"%b4)
+t('Storno ohne Geld; wiederholte Stripe-Meldung erstattet nichts',r=={'ok':True,'erstattung':'keine'} and hook(sec,'checkout.session.completed',st()['sessions'][cs])==200 and refs(b4)==[] ,(r,refs(b4)))
+t('später doch erstatten',verw(aktion='stornieren',bestellung_id=b4,ticket_ids=[],betrag=7.5,vorgang=uid())[1]['erstattung']=='erledigt' and refs(b4)==[750])
+t('automatisch Erstattetes nicht nochmal',verw(aktion='stornieren',bestellung_id=sql("select id from ticket_bestellungen where auto_erstatten"),ticket_ids=[],betrag=1,vorgang=uid())[1]['grund']=='nicht_stornierbar')
+t('Stornierte Tickets nicht nochmal geschickt',verw(aktion='mail',bestellung_id=b4,email='neu@example.test')[1]['grund']=='nicht_moeglich')
 # Schlüssel einer anderen Schule untergeschoben
 sql("insert into schulen(id,name) values('82222222-2222-2222-2222-222222222222','Q'); insert into schul_zahlungskonten select '82222222-2222-2222-2222-222222222222',anbieter,schluessel,webhook_id,webhook_geheim,livemode,letzte4 from schul_zahlungskonten")
 t('kopierter Schlüssel nutzlos',hook(sec,'checkout.session.completed',s,schule='82222222-2222-2222-2222-222222222222')==500)
-t('trennen',konto(aktion='trennen')[1].get('ok') and len(st()['webhooks'])==0 and sql("select count(*) from schul_zahlungskonten where schule_id='%s'"%SCH)=='0'); t('danach nichts im Shop',shop(aktion='info',slug='probe')[1]['events']==[]); t('GET abgelehnt',req(F+'shop')[0]==405)
+t('trennen',konto(aktion='trennen')[1].get('ok') and len(st()['webhooks'])==0 and sql("select count(*) from schul_zahlungskonten where schule_id='%s'"%SCH)=='0'); t('Erstattung ohne Stripe: nichts storniert',verw(aktion='stornieren',bestellung_id=b4,ticket_ids=[],betrag=1,vorgang=uid())[1]['grund']=='kein_konto'); t('danach nichts im Shop',shop(aktion='info',slug='probe')[1]['events']==[]); t('GET abgelehnt',req(F+'shop')[0]==405)
 print(f'{ok} ok, {bad} Fehler')

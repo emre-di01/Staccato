@@ -107,7 +107,7 @@ describe('bestellungenAuswerten', () => {
     expect(b('offen').erstattbar).toBe(0)
   })
   it('Gesamtstand', () => {
-    expect(stand).toEqual({ gueltig: 3, reserviert: 1, eingenommen: 29, erstattet: 10 })
+    expect(stand).toEqual({ gueltig: 3, reserviert: 1, eingenommen: 29, erstattet: 10, online: 0 })
   })
 })
 

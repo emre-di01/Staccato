@@ -2,6 +2,7 @@ import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile } from '../../ui'
 import { adminBereiche } from './navigation'
 
+const GELD = ['/admin/ticketshop', '/admin/rechnungen', '/admin/einstellungen']
 const FARBEN = ['var(--primary)', '#2563EB', '#15803D', '#5B3A6E', '#B91C1C', 'var(--text-2)']
 
 function Liste({ eintraege }) {
@@ -34,10 +35,10 @@ export default function AdminBereich({ bereich }) {
   return (
     <Seite titel={T('na_tab_verwaltung')}>
       <Abschnitt titel={T('na_schulbetrieb')} style={{ marginTop: 24 }}>
-        <Liste eintraege={b.verwaltung.slice(0, -2)} />
+        <Liste eintraege={b.verwaltung.filter(e => !GELD.includes(e.to))} />
       </Abschnitt>
       <Abschnitt titel={T('na_geld_und_schule')}>
-        <Liste eintraege={b.verwaltung.slice(-2)} />
+        <Liste eintraege={b.verwaltung.filter(e => GELD.includes(e.to))} />
       </Abschnitt>
       {b.vorstand.length > 0 && (
         <Abschnitt titel={T('na_vorstand')}>

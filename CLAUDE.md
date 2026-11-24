@@ -226,7 +226,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.14** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.15** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -310,6 +310,9 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/tickets` | `NeuTickets` (nur neues Design) | all authenticated |
 | `/einlass` | `Einlass` (nur neues Design) | Admins und für die Veranstaltung freigegebene Personen (Server prüft) |
 | `/kasse` | `Kasse` (nur neues Design) | Admins und Personen mit Freigabe „Kasse“ (Server prüft) |
+| `/shop/:slug` | `Shop` (`src/neu/shop/`) | public (no auth), Ticketshop einer Schule |
+| `/shop/bestellung/:zugang` | `Bestellung` | public (persönlicher Link des Käufers) |
+| `/admin/ticketshop` | `AdminTicketshop` (nur neues Design) | admin, superadmin |
 | `/impressum` | `Impressum` | public |
 | `/datenschutz` | `Datenschutz` | public |
 | `/lizenzen` | `Lizenzen` | public |
@@ -673,7 +676,11 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261124000006_tickets_scannen.sql` | Einlass: `ticket_scannen(event, code, scan_id)` (Admin oder Freigabe „Scannen“ via `darf_scannen()`; gleiche scan_id = gleiches Ergebnis; nur 12 h vor Beginn bis 6 h nach Ende), `meine_scan_events()`; Seite `/einlass`, Freigaben unter Admin → Events → Helfer |
 | `20261124000007_tickets_abendkasse.sql` | Abendkasse (3 h vor Beginn bis Ende; Admin oder Freigabe „Kasse“): `abendkasse_verkaufen` (p_vorgang = Bestell-ID, wiederholbar), `abendkasse_kassieren`, `abendkasse_reservierungen`, `meine_kassen_events`; `tickets.an_kasse` = an der Kasse direkt eingelassen, nur diese eingelösten Tickets sind stornierbar; Seite `/kasse` |
 | `20261124000008_tickets_einlass_per_name.sql` | `abendkasse_einlassen(bestellung, ticket_ids)`: bezahlte Tickets ohne Handy/Ausdruck per Namen einlassen (nur bei offener Abendkasse); `abendkasse_reservierungen` liefert auch bezahlte, noch nicht eingelöste Tickets (nie Codes) |
-| `20261124000009_ticketshop.sql` | Öffentlicher Ticketshop (nur Unterbau, noch keine Seite): `ticket_shops` (Adresse, Pflichttexte), `schul_zahlungskonten` (Stripe-Schlüssel je Schule verschlüsselt, RLS ohne Policies — Schlüssel NIE in `schulen`, die ist für alle lesbar), `shop_*`-Funktionen nur intern (`ist_intern()`); Edge Functions `shop` (Gäste), `stripe-webhook` (Signatur, je Schule `?schule=`), `zahlungskonto` (Admin). Benötigt `ZAHLUNG_SCHLUESSEL` (32 Byte base64), `OEFFENTLICHE_API_URL` (Prod), für Live-Schlüssel `STRIPE_LIVE_ERLAUBT=true`. Gesamttest: `supabase/tests/shop-e2e/` |
+| `20261124000009_ticketshop.sql` | Öffentlicher Ticketshop (Unterbau): `ticket_shops` (Adresse, Pflichttexte), `schul_zahlungskonten` (Stripe-Schlüssel je Schule verschlüsselt, RLS ohne Policies — Schlüssel NIE in `schulen`, die ist für alle lesbar), `shop_*`-Funktionen nur intern (`ist_intern()`); Edge Functions `shop` (Gäste), `stripe-webhook` (Signatur, je Schule `?schule=`), `zahlungskonto` (Admin). Benötigt `ZAHLUNG_SCHLUESSEL` (32 Byte base64), `OEFFENTLICHE_API_URL` (Prod), für Live-Schlüssel `STRIPE_LIVE_ERLAUBT=true`. Gesamttest: `supabase/tests/shop-e2e/` |
+| `20261124000010_shop_nicht_bar.sql` | Shop-Bestellungen sind nicht bar kassierbar (`ticket_zahlung_bestaetigen` → `nicht_offen`) und stehen während des Bezahlens nicht in `abendkasse_reservierungen` |
+| `20261124000011_shop_nachbetreuung.sql` | Shop: `ticket_online_erstattungen` (Auftrag je Vorgang, offen bis Stripe bestätigt), `ticket_bestellungen.auto_erstatten`, `shop_storno_beginnen`/`shop_erstattung_info`/`_fertig`/`_abgelehnt`, `shop_email_aendern` (neuer Link + neue QR-Codes), `shop_nochmal`; Edge Function `shop-verwaltung` (Admins: mail, stornieren, wiederholen). Online bezahlte Tickets nur darüber stornieren |
+
+> **Ticketshop freischalten:** Oberfläche für Admins nur mit `VITE_TICKETSHOP=1` (dev: an, Prod: aus). Prod braucht vorher `ZAHLUNG_SCHLUESSEL` und `OEFFENTLICHE_API_URL` in `config.toml`/`supabase/.env` und einen Neustart des Stacks, weil der Edge-Container neue Functions nicht per `docker restart` kennt. **`supabase secrets set` nie im Projektordner ausführen** – lädt alle Prod-Werte aus `[edge_runtime.secrets]` mit hoch.
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 
