@@ -1,9 +1,39 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.11'
+export const CURRENT_VERSION = '2.9.12'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.12',
+    date: '2026-11-24',
+    features: [
+      {
+        icon: '🎟️',
+        de: 'Tickets für Veranstaltungen: in der App reservieren, bar bezahlen – danach erscheint das Ticket mit QR-Code auf der Startseite',
+        en: 'Tickets for events: reserve in the app, pay in cash – the ticket with its QR code then appears on the home page',
+        tr: 'Etkinlikler için bilet: Uygulamada ayırt, nakit öde – ardından QR kodlu bilet ana sayfada görünür',
+      },
+      {
+        icon: '📤',
+        de: 'Tickets verschicken oder ausdrucken: jedes Ticket lässt sich als Bild weitergeben',
+        en: 'Send or print tickets: every ticket can be passed on as an image',
+        tr: 'Biletleri gönder veya yazdır: Her bilet resim olarak paylaşılabilir',
+      },
+      {
+        icon: '✅',
+        de: 'Für das Team: Tickets am Einlass scannen und an der Abendkasse verkaufen – Helfer werden pro Veranstaltung freigegeben',
+        en: 'For the team: scan tickets at the entrance and sell at the box office – helpers are allowed per event',
+        tr: 'Ekip için: Girişte bilet okut ve gişede sat – görevliler etkinlik bazında yetkilendirilir',
+      },
+      {
+        icon: '✉️',
+        de: 'Einladungen: Kommt die E-Mail nicht an, lässt sich der Link selbst verschicken',
+        en: 'Invitations: if the email does not arrive, you can send the link yourself',
+        tr: 'Davetler: E-posta gelmezse bağlantıyı kendin gönderebilirsin',
+      },
+    ],
+  },
   {
     version: '2.9.11',
     date: '2026-11-20',
