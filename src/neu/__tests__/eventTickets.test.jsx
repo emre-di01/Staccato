@@ -16,7 +16,7 @@ vi.mock('../../lib/supabase', () => {
       then: ok => ok({ data: db.tabellen[name] ?? [], error: null }) }
     return q
   }
-  return { supabase: { from: abfrage, rpc: (...a) => db.rpc(...a) } }
+  return { supabase: { from: abfrage, rpc: (...a) => db.rpc(...a), functions: { invoke: (...a) => db.invoke(...a) } } }
 })
 vi.mock('../ticketPdf', () => ({
   ticketPdf: async () => new File(['x'], 'Ticket.pdf', { type: 'application/pdf' }),
@@ -46,7 +46,7 @@ async function zeige(el) {
   await act(async () => root.render(<MemoryRouter><QueryClientProvider client={qc}>{el}</QueryClientProvider></MemoryRouter>))
   await warte()
 }
-beforeEach(() => { db.tabellen = {}; db.geschrieben = null; db.updateFehler = null; toast.mockClear() })
+beforeEach(() => { db.tabellen = {}; db.geschrieben = null; db.updateFehler = null; db.invoke = vi.fn(async () => ({ error: null })); toast.mockClear() })
 afterEach(() => { act(() => root.unmount()); document.body.innerHTML = '' })
 
 describe('EventTickets', () => {
@@ -147,6 +147,21 @@ describe('TicketBestellungen', () => {
     await klick('23,50 € bar erhalten')
     expect(confirm.mock.calls.at(-1)[0]).toContain('Ayla Test')
     expect(db.rpc).toHaveBeenCalledWith('ticket_zahlung_bestaetigen', { p_bestellung_id: 'b1', p_betrag: 23.5 })
+    expect(db.invoke).toHaveBeenCalledWith('send-email', { body: { type: 'tickets', bestellung_id: 'b1' } })
+    expect(toast).toHaveBeenLastCalledWith('Tickets per E-Mail gesendet', 'success')
+  })
+
+  it('sendet keine Mail, wenn der Geldeingang abgelehnt wird, und meldet Mailfehler', async () => {
+    db.tabellen.ticket_bestellungen = [bestellung()]
+    db.rpc = vi.fn(async () => ({ data: { ok: false, grund: 'verfallen' }, error: null }))
+    await zeige(<TicketBestellungen ev={ev} kapazitaet={100} onClose={() => {}} />)
+    await act(async () => personKnopf().click())
+    await klick('23,50 € bar erhalten')
+    expect(db.invoke).not.toHaveBeenCalled()
+    db.rpc = vi.fn(async () => ({ data: { ok: true }, error: null }))
+    db.invoke = vi.fn(async () => ({ error: new Error('500') }))
+    await klick('23,50 € bar erhalten')
+    expect(toast.mock.calls.at(-1)).toEqual([expect.stringContaining('konnte nicht gesendet werden'), 'warning'])
   })
 
   it('storniert ausgewählte Tickets mit Erstattung', async () => {

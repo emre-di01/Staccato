@@ -1,13 +1,13 @@
 // Ticketbestellungen einer Veranstaltung: Geldeingang bestätigen, stornieren, Erstattung festhalten (nur Admins)
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, Undo2, XCircle } from 'lucide-react'
+import { Banknote, Mail, Undo2, XCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Blatt, Feld, Knopf, Segment, Suchfeld, Gruppe, Trenner, Zeile, Leer, Laden, FehlerText, eingabeStil } from '../../ui'
 import { useNeuLaden } from '../daten'
 import { tagLabel, uhrzeit } from '../zeit'
-import { alleBestellungenLaden, bestellungenAuswerten, betragAus, euro } from '../tickets'
+import { alleBestellungenLaden, bestellungenAuswerten, betragAus, euro, ticketMailSenden } from '../tickets'
 import { Avatar } from './ListeDetail'
 
 const FILTER = ['offen', 'bezahlt', 'erledigt']
@@ -91,15 +91,23 @@ function BestellungBlatt({ b, onClose }) {
     const { data, error } = await supabase.rpc(name, { p_bestellung_id: b.id, ...werte })
     setSendet(false)
     neuLaden('na-ticket-bestellungen', 'n-ticket-bestellungen', 'n-ticket-info', 'n-meine-tickets')
-    if (error || !data.ok) { setFehler(error ? error.message : T(`tk_kasse_${data.grund}`)); return }
+    if (error || !data.ok) { setFehler(error ? error.message : T(`tk_kasse_${data.grund}`)); return false }
     setModus(null)
     toast(T(meldung), 'success')
+    return true
+  }
+
+  async function mailen() {
+    setSendet(true)
+    const ok = await ticketMailSenden(b.id)
+    setSendet(false)
+    toast(T(ok ? 'tk_mail_gesendet' : 'tk_mail_fehler'), ok ? 'success' : 'warning')
   }
 
   async function bezahlt() {
     const frage = T('tk_geld_frage').replace('{betrag}', texte.geld(b.betrag)).replace('{name}', texte.name(b))
     if (!await confirm(frage, { confirmLabel: T('tk_geld_ja'), dangerous: false })) return
-    senden('ticket_zahlung_bestaetigen', { p_betrag: b.betrag }, 'tk_geld_bestaetigt')
+    if (await senden('ticket_zahlung_bestaetigen', { p_betrag: b.betrag }, 'tk_geld_bestaetigt') && b.kaeufer) await mailen()
   }
 
   function stornoStarten() {
@@ -180,6 +188,7 @@ function BestellungBlatt({ b, onClose }) {
         {modus === 'storno' && <Knopf voll variante="gefahr" icon={XCircle} onClick={stornieren} disabled={sendet}>{T('tk_stornieren')}</Knopf>}
         {modus === 'erstattung' && <Knopf voll onClick={erstatten} disabled={sendet}>{T('save')}</Knopf>}
         {!modus && b.zustand === 'reserviert' && <Knopf voll icon={Banknote} onClick={bezahlt} disabled={sendet}>{T('tk_geld_erhalten').replace('{betrag}', texte.geld(b.betrag))}</Knopf>}
+        {!modus && b.kaeufer && b.tickets.some(t => t.status === 'gueltig') && <Knopf voll variante="sekundaer" icon={Mail} onClick={mailen} disabled={sendet}>{T('tk_mail_senden')}</Knopf>}
         {!modus && b.erstattbar > 0 && (
           <Knopf voll variante="rahmen" icon={Undo2} disabled={sendet} onClick={() => { setBetrag(texte.eingabe(b.erstattbar)); setFehler(''); setModus('erstattung') }}>{T('tk_erstattung_erfassen')}</Knopf>
         )}

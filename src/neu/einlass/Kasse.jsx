@@ -8,7 +8,7 @@ import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt, FehlerText } from '../../ui'
 import { useBasis } from '../rolle'
 import { useNeuLaden } from '../daten'
-import { useKassenEvents, sicherAusfuehren, geldKurz, tagAusgeschrieben } from '../tickets'
+import { useKassenEvents, sicherAusfuehren, ticketMailSenden, geldKurz, tagAusgeschrieben } from '../tickets'
 
 const GRUENDE = ['schon_drin', 'geschlossen', 'anzahl', 'zu_wenig_frei', 'betrag', 'nicht_offen', 'verfallen', 'verboten', 'netz']
 
@@ -162,11 +162,14 @@ function Reserviert({ ev, onFertig }) {
 }
 
 function KassierenBlatt({ r, offen, onClose, onFertig }) {
-  const { T, lang } = useApp()
+  const { T, lang, toast } = useApp()
   const { sendet, fehler, ausfuehren } = useKassenAktion()
   async function kassieren() {
     const x = await ausfuehren('abendkasse_kassieren', { p_bestellung_id: r.id, p_betrag: r.betrag })
-    if (x) onFertig(x)
+    if (!x) return
+    onFertig(x)
+    // Vor der Öffnung bekommt die Person ihr Ticket; an der offenen Kasse geht sie direkt rein
+    if (!x.eingelassen && !await ticketMailSenden(r.id)) toast(T('tk_mail_fehler'), 'warning')
   }
   return (
     <Blatt titel={r.name} onClose={onClose}>

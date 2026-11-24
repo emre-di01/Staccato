@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { t } from '../../i18n/translations'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
-const sb = vi.hoisted(() => ({ rpc: vi.fn(), geschrieben: [], freigaben: [] }))
+const sb = vi.hoisted(() => ({ invoke: vi.fn(async () => ({ error: null })), rpc: vi.fn(), geschrieben: [], freigaben: [] }))
 vi.mock('../../lib/supabase', () => {
   const tabelle = name => {
     const q = { select: () => q, eq: () => q,
@@ -16,7 +16,7 @@ vi.mock('../../lib/supabase', () => {
       then: ok => ok({ data: name === 'ticket_freigaben' ? sb.freigaben : [{ rolle: 'schueler', person: { id: 'p1', voller_name: 'Ayla Test' } }], error: null }) }
     return q
   }
-  return { supabase: { rpc: sb.rpc, from: tabelle } }
+  return { supabase: { rpc: sb.rpc, from: tabelle, functions: { invoke: sb.invoke } } }
 })
 vi.mock('../../context/AppContext', () => ({ useApp: () => ({ T: k => t('de', k), lang: 'de', zeitzone: 'Europe/Berlin', profil: { id: 'ich' }, schule: { id: 's' }, rolle: 'schueler', toast: () => {} }) }))
 const { sicherAusfuehren } = await import('../tickets')
@@ -37,7 +37,7 @@ async function zeige(el) {
 }
 const antworten = karte => sb.rpc.mockImplementation(async name => { const a = karte[name] ?? []; return a instanceof Error ? Promise.reject(a) : { data: a, error: null } })
 const aufrufe = name => sb.rpc.mock.calls.filter(c => c[0] === name).map(c => c[1])
-beforeEach(() => { sb.rpc.mockReset(); sb.geschrieben = []; sb.freigaben = [] })
+beforeEach(() => { sb.rpc.mockReset(); sb.invoke.mockClear(); sb.geschrieben = []; sb.freigaben = [] })
 afterEach(() => { act(() => root?.unmount()); root = null; document.body.innerHTML = '' })
 
 describe('Kasse', () => {
@@ -84,6 +84,7 @@ describe('Kasse', () => {
     await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('Ayla Test')).click())
     await klick('24 € bar erhalten')
     expect(aufrufe('abendkasse_kassieren')).toEqual([{ p_bestellung_id: 'b1', p_betrag: 24 }])
+    expect(sb.invoke).not.toHaveBeenCalled()              // geht direkt rein, braucht kein Ticket
     expect(text()).toContain('2 Personen einlassen')
   })
 
@@ -94,6 +95,7 @@ describe('Kasse', () => {
     await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('Ayla Test')).click())
     await klick('8 € bar erhalten')
     expect(text()).toContain('Geldeingang bestätigt')
+    expect(sb.invoke).toHaveBeenCalledWith('send-email', { body: { type: 'tickets', bestellung_id: 'b1' } })
     expect(text()).not.toContain('einlassen')
     await klick('Weiter')
     await klick('Neu verkaufen')

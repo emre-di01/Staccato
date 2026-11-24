@@ -69,6 +69,7 @@ serve(async (req) => {
     else if (type === 'neues_dokument')  await sendNeuesDokument(body, supabase)
     else if (type === 'rsvp_erinnerung')  await sendRsvpErinnerung(body, supabase)
     else if (type === 'schuleinladung')   await sendSchuleinladung(body, supabase, user.id)
+    else if (type === 'tickets')          await sendTickets(body, supabase, userClient, user.id)
     else return new Response(JSON.stringify({ error: 'Unknown type' }), { status: 400, headers: CORS })
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -515,6 +516,42 @@ async function sendSchuleinladung(body: Record<string, unknown>, supabase: Retur
       </p>
     `),
   })
+}
+
+// ─── Tickets ──────────────────────────────────────────────────
+
+// Gültige Tickets einer Bestellung an den Käufer. Auslösen dürfen der Käufer selbst und wer für die
+// Veranstaltung kassieren darf (darf_kassieren wird mit den Rechten des Aufrufers geprüft).
+async function sendTickets(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>, userClient: ReturnType<typeof createClient>, absenderId: string) {
+  const { bestellung_id } = body as { bestellung_id: string }
+  const { data: b } = await supabase.from('ticket_bestellungen')
+    .select('id, event_id, kaeufer_id, events(titel, beginn, ort, raeume(name)), schulen(name, zeitzone)')
+    .eq('id', bestellung_id).single()
+  if (!b) throw new Error('Bestellung nicht gefunden')
+  if (b.kaeufer_id !== absenderId) {
+    const { data: darf } = await userClient.rpc('darf_kassieren', { p_event_id: b.event_id })
+    if (darf !== true) throw new Error('Bestellung nicht gefunden')
+  }
+  if (!b.kaeufer_id) throw new Error('Kein Empfänger')
+
+  const [{ data: tickets }, { data: profil }, { data: { user } }] = await Promise.all([
+    supabase.from('tickets').select('id, code').eq('bestellung_id', b.id).eq('status', 'gueltig').order('preis').order('id'),
+    supabase.from('profiles').select('voller_name, sprache').eq('id', b.kaeufer_id).single(),
+    supabase.auth.admin.getUserById(b.kaeufer_id as string),
+  ])
+  if (!tickets?.length) throw new Error('Keine gültigen Tickets')
+  if (!user?.email) throw new Error('Keine E-Mail-Adresse')
+
+  const event = b.events as { titel: string; beginn: string; ort: string | null; raeume: { name: string } | null }
+  const { ticketMail } = await import('./tickets.ts')
+  const mail = await ticketMail({
+    name: (profil?.voller_name as string) ?? '', lang: (profil?.sprache as string) ?? 'de',
+    event: { titel: event.titel, beginn: event.beginn, ort: event.ort || event.raeume?.name || null },
+    schule: b.schulen as { name: string; zeitzone: string | null },
+    tickets: tickets as { id: string; code: string }[],
+    link: `${APP_URL}/tickets?event=${b.event_id}`,
+  })
+  await transport.sendMail({ from: SMTP_FROM, to: user.email, subject: mail.subject, html: html(mail.content), attachments: mail.attachments })
 }
 
 // ─── Helpers ──────────────────────────────────────────────────

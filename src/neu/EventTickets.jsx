@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { Blatt, Knopf, Laden, FehlerText } from '../ui'
 import { useNeuLaden } from './daten'
-import { useTicketVerkauf, useMeineBestellungen, useMeineTickets, useTicketInfo, ticketsNachEvent, preisBerechnen, aktiveBestellungen, geldKurz, tagAusgeschrieben } from './tickets'
+import { useTicketVerkauf, useMeineBestellungen, useMeineTickets, useTicketInfo, ticketsNachEvent, preisBerechnen, aktiveBestellungen, geldKurz, tagAusgeschrieben, ticketMailSenden } from './tickets'
 
 const GRUENDE = ['nicht_verfuegbar', 'kein_mitglied', 'noch_nicht', 'beendet', 'ausverkauft', 'obergrenze', 'zu_wenig_frei', 'preis_geaendert', 'anzahl']
 
@@ -92,6 +92,7 @@ export function ReservierenBlatt({ ev, onClose }) {
     neuLaden('n-ticket-info', 'n-ticket-bestellungen', 'n-meine-tickets')
     if (error || !data.ok) { setFehler(error ? error.message : grundText(data.grund)); return }
     setFertig(data)
+    if (data.status === 'bezahlt') ticketMailSenden(data.bestellung_id).catch(() => {})   // kostenlos: sofort gültig
   }
 
   if (fertig) return (
