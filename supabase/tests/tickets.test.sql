@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(107);
+SELECT plan(112);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -295,6 +295,19 @@ SELECT is(pg_temp.storno('7e', (SELECT array_agg(id) FROM tickets WHERE bestellu
 SELECT is((SELECT status FROM ticket_bestellungen WHERE id = pg_temp.b('7e')), 'storniert', 'Komplett stornierte Bestellung');
 SELECT is(pg_temp.zahl('7e', 0), 'nicht_offen', 'Stornierte Bestellung nicht kassierbar');
 SELECT throws_ok($$SELECT ticket_zahlung_bestaetigen(gen_random_uuid(), 1)$$, '42501', NULL, 'Unbekannte Bestellung');
+RESET ROLE;
+
+-- ── Eigene Tickets ──
+UPDATE events SET oeffentlich = false WHERE id = '73000000-0000-0000-0000-000000000008';
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT is((SELECT count(*) FROM events WHERE id = '73000000-0000-0000-0000-000000000008'), 0::bigint, 'Event ist für den Käufer nicht mehr sichtbar');
+SELECT is((SELECT array_agg(tk->>'status' ORDER BY tk->>'status') FROM jsonb_array_elements(meine_tickets()) b, jsonb_array_elements(b->'tickets') tk
+  WHERE b->'event'->>'id' = '73000000-0000-0000-0000-000000000008'), ARRAY['eingeloest','storniert','storniert','storniert'], 'Tickets bleiben trotzdem abrufbar');
+SELECT is((SELECT count(*) FROM jsonb_array_elements(meine_tickets()) b, jsonb_array_elements(b->'tickets') tk WHERE (tk->>'code' IS NOT NULL) <> (tk->>'status' IN ('gueltig', 'eingeloest'))), 0::bigint, 'Codes nur für gültige und eingelöste Tickets');
+SELECT is((SELECT count(*) FROM jsonb_array_elements(meine_tickets()) b WHERE b->>'status' = 'verfallen'), 0::bigint, 'Verfallene fehlen');
+RESET ROLE;
+SELECT pg_temp.als('7e000000-0000-0000-0000-000000000000');
+SELECT is(meine_tickets(), '[]'::jsonb, 'Kasse sieht keine fremden Tickets; unbezahlt stornierte fehlen');
 RESET ROLE;
 
 -- Konto gelöscht: Bestellung bleibt ohne Personenbezug

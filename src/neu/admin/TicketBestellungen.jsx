@@ -90,7 +90,7 @@ function BestellungBlatt({ b, onClose }) {
     setFehler('')
     const { data, error } = await supabase.rpc(name, { p_bestellung_id: b.id, ...werte })
     setSendet(false)
-    neuLaden('na-ticket-bestellungen', 'n-ticket-bestellungen', 'n-ticket-info')
+    neuLaden('na-ticket-bestellungen', 'n-ticket-bestellungen', 'n-ticket-info', 'n-meine-tickets')
     if (error || !data.ok) { setFehler(error ? error.message : T(`tk_kasse_${data.grund}`)); return }
     setModus(null)
     toast(T(meldung), 'success')

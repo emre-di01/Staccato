@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut, Users, CalendarDays, Wrench, Building2, Inbox } from 'lucide-react'
+import { MessageCircle, FolderOpen, Music, FileText, Radio, CircleHelp, Settings, School, LogOut, Users, CalendarDays, Wrench, Building2, Inbox, Ticket } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Segment, Schalter } from '../../ui'
 import LiveBeitretenBlatt from '../LiveBeitretenBlatt'
 import { useUngelesen } from '../daten'
 import { useBasis } from '../rolle'
+import { useTicketVerkauf, useMeineBestellungen } from '../tickets'
 
 export default function NeuIch() {
   const { profil, rolle, schule, schulenListe, T, farbmodus, setFarbmodus, schriftStufe, setSchriftStufe, liquid, setLiquid, setNeuesDesign, abmelden } = useApp()
   const navigate = useNavigate()
   const { data: ungelesen = [] } = useUngelesen()
+  const { data: verkauf = [] } = useTicketVerkauf()
+  const { data: bestellungen = [] } = useMeineBestellungen()
   const [joinOffen, setJoinOffen] = useState(false)
   const basis = useBasis()
   const lehrer = rolle === 'lehrer'
@@ -53,6 +56,8 @@ export default function NeuIch() {
     <Zeile key="live" icon={Radio} titel={T('n_live_beitreten')} untertitel={T('n_live_untertitel')} onClick={() => setJoinOffen(true)} />,
     <Zeile key="werkzeuge" icon={Wrench} titel={T('tools_title')} untertitel={T('n_werkzeuge_untertitel')} to={`${basis}/tools`} />,
   ]
+  // Tickets nur zeigen, wenn die Schule welche verkauft oder es eigene Bestellungen gibt
+  if (verkauf.length || bestellungen.length) eintraege.splice(1, 0, <Zeile key="tickets" icon={Ticket} titel={T('tk_meine_tickets')} untertitel={T('tk_meine_tickets_hinweis')} to="/tickets" />)
   const weitere = [
     ...(schulenListe?.length > 1 ? [<Zeile key="schule" icon={School} titel={T('n_schule_wechseln')} untertitel={schule?.name} to="/schulen" />] : []),
     <Zeile key="einstellungen" icon={Settings} titel={T('n_weitere_einstellungen')} untertitel={T('n_einstellungen_untertitel')} to="/einstellungen" />,

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('../../lib/supabase', () => ({ supabase: {} }))
 vi.mock('../../context/AppContext', () => ({ useApp: () => ({}) }))
-const { betragAus, einstellungenAusFormular, preisBerechnen, aktiveBestellungen, bestellungenAuswerten } = await import('../tickets')
+const { betragAus, einstellungenAusFormular, preisBerechnen, aktiveBestellungen, bestellungenAuswerten, ticketsNachEvent, ticketNummer } = await import('../tickets')
 
 const basis = {
   aktiv: true, kapazitaet: '200', preis_normal: '15', ermaessigt: true, preis_verguenstigt: '8,50', preis_abendkasse: '', kontingent: '3', obergrenze: '10',
@@ -108,5 +108,29 @@ describe('bestellungenAuswerten', () => {
   })
   it('Gesamtstand', () => {
     expect(stand).toEqual({ gueltig: 3, reserviert: 1, eingenommen: 29, erstattet: 10 })
+  })
+})
+
+describe('ticketsNachEvent', () => {
+  const jetzt = new Date('2026-12-01T12:00:00Z').getTime()
+  const event = (id, beginn, ende = null) => ({ id, titel: id, beginn, ende })
+  const t = (id, status) => ({ id, status, preis: 8, code: ['gueltig', 'eingeloest'].includes(status) ? 'c' + id : null })
+  const gruppen = ticketsNachEvent([
+    { id: 'b1', status: 'bezahlt', event: event('a', '2026-12-01T10:00:00Z'), tickets: [t('1', 'eingeloest'), t('2', 'storniert'), t('3', 'gueltig')] },
+    { id: 'b2', status: 'reserviert', frist: '2026-12-02T10:00:00Z', event: event('a', '2026-12-01T10:00:00Z'), tickets: [t('4', 'reserviert'), t('5', 'reserviert')] },
+    { id: 'b3', status: 'bezahlt', event: event('b', '2026-12-01T08:00:00Z', '2026-12-01T11:00:00Z'), tickets: [t('6', 'gueltig')] },
+    { id: 'b4', status: 'reserviert', frist: '2026-12-01T11:00:00Z', event: event('c', '2026-12-05T08:00:00Z'), tickets: [t('7', 'reserviert')] },
+  ], jetzt)
+  it('fasst je Veranstaltung zusammen und nummeriert nur nutzbare Tickets', () => {
+    expect(gruppen.map(g => g.event.id)).toEqual(['a', 'b'])   // c: nur abgelaufene Reservierung
+    expect(gruppen[0].tickets.map(x => [x.ticket.id, x.nr])).toEqual([['1', 1], ['3', 2]])
+    expect(gruppen[0].storniert).toBe(1)
+    expect(gruppen[0].offen).toEqual([{ id: 'b2', frist: '2026-12-02T10:00:00Z', anzahl: 2, betrag: 16 }])
+  })
+  it('läuft ohne Endzeit noch nach Beginn, mit Endzeit bis zum Ende', () => {
+    expect(gruppen.map(g => g.vergangen)).toEqual([false, true])
+  })
+  it('Ticketnummer verrät den Code nicht', () => {
+    expect(ticketNummer({ id: '0a1b2c3d-ffff', code: 'geheim' })).toBe('0A1B2C3D')
   })
 })

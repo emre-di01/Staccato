@@ -1,6 +1,7 @@
 // Tickets einer Veranstaltung für Mitglieder: Knopf auf der Terminkarte und Blatt zum Reservieren
 import { useState } from 'react'
-import { Minus, Plus, Ticket } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Minus, Plus, QrCode, Ticket } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { Blatt, Knopf, Gruppe, Trenner, Zeile, Laden, FehlerText } from '../ui'
@@ -49,6 +50,7 @@ function ReservierenBlatt({ ev, meine, onClose }) {
   const { T, toast } = useApp()
   const texte = useTexte()
   const neuLaden = useNeuLaden()
+  const navigate = useNavigate()
   const { data: info, isLoading, isError } = useTicketInfo(ev.id)
   const [gewaehlt, setGewaehlt] = useState(1)
   const [sendet, setSendet] = useState(false)
@@ -65,7 +67,7 @@ function ReservierenBlatt({ ev, meine, onClose }) {
     setFehler('')
     const { data, error } = await supabase.rpc('tickets_reservieren', { p_event_id: ev.id, p_anzahl: anzahl, p_betrag: preis.betrag })
     setSendet(false)
-    neuLaden('n-ticket-info', 'n-ticket-bestellungen')
+    neuLaden('n-ticket-info', 'n-ticket-bestellungen', 'n-meine-tickets')
     if (error || !data.ok) { setFehler(error ? error.message : grundText(data.grund)); return }
     setGewaehlt(1)
     toast(T(data.status === 'bezahlt' ? 'tk_sofort_gueltig' : 'tk_reserviert'), 'success')
@@ -90,6 +92,8 @@ function ReservierenBlatt({ ev, meine, onClose }) {
             ))}
           </Gruppe>
         )}
+
+        {meine.some(b => b.status === 'bezahlt') && <Knopf voll variante="sekundaer" icon={QrCode} onClick={() => navigate(`/tickets?event=${ev.id}`)}>{T('tk_qr_zeigen')}</Knopf>}
 
         {isLoading ? <Laden hoehe={160} /> : isError ? <FehlerText>{T('tk_laden_fehler')}</FehlerText>
           : !info.ok ? <p role="status" style={{ margin: 0, fontSize: 17, color: 'var(--text-2)' }}>{grundText(info.grund)}</p> : <>

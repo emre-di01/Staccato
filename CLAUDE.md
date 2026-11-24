@@ -307,6 +307,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/einstellungen` | `Einstellungen` | all authenticated |
 | `/session/:code` | `SchuelerSession` | public (no auth) |
 | `/beamer` | `NeuBeamer` (`src/neu/seiten/Beamer.jsx`) | public (no auth) |
+| `/tickets` | `NeuTickets` (nur neues Design) | all authenticated |
 | `/impressum` | `Impressum` | public |
 | `/datenschutz` | `Datenschutz` | public |
 | `/lizenzen` | `Lizenzen` | public |
@@ -665,6 +666,7 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261124000001_tickets_preis_abendkasse.sql` | `ticket_einstellungen.preis_abendkasse` (null = Normalpreis, nie darunter); an der Abendkasse keine vergünstigten Tickets |
 | `20261124000002_tickets_reservieren.sql` | `ticket_info(event)`, `tickets_reservieren(event, anzahl, betrag)` (sperrt `ticket_einstellungen`-Zeile, Server rechnet, abweichender Betrag → `preis_geaendert`; Summe 0 € sofort gültig), `tickets_bereinigen()` + pg_cron `tickets-verfall` (alle 15 min); `sieht_event()` bildet die events-Policies für SECURITY-DEFINER-Funktionen nach — bei Policy-Änderungen mitziehen; `meine_daten_exportieren()` um Ticketbestellungen ergänzt |
 | `20261124000003_tickets_kasse.sql` | `ticket_zahlung_bestaetigen` (Admin oder Freigabe „Kasse“ via `darf_kassieren()`; erzeugt die QR-Codes), `tickets_stornieren` und `ticket_erstattung_erfassen` (nur Admin), `ticket_erstattbar`; Zahlungen/Erstattungen werden nur angelegt, nie geändert; Sperrreihenfolge immer zuerst `ticket_einstellungen` |
+| `20261124000004_meine_tickets.sql` | `meine_tickets()`: eigene Tickets mit Veranstaltungsdaten und QR-Codes, unabhängig von der aktuellen Sichtbarkeit der Veranstaltung (Seite `/tickets`, QR-Inhalt `staccato:ticket:<code>`) |
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

@@ -183,3 +183,50 @@ export function bestellungenAuswerten(bestellungen, jetzt = Date.now()) {
   // Eingenommen = in der Kasse verblieben
   return { liste, stand: { ...stand, eingenommen: (stand.eingenommen - stand.erstattet) / 100, erstattet: stand.erstattet / 100 } }
 }
+
+// ─── Eigene Tickets mit QR-Code ───────────────────────────────
+
+// Nur der Zufallscode, keine persönlichen Daten; kein Link, die Handy-Kamera öffnet damit nichts
+export const TICKET_PREFIX = 'staccato:ticket:'
+export const ticketQrInhalt = code => TICKET_PREFIX + code
+
+// Kurze Nummer für Rückfragen – aus der Ticket-ID, nicht aus dem geheimen Code
+export const ticketNummer = ticket => ticket.id.slice(0, 8).toUpperCase()
+
+export function useMeineTickets() {
+  const { profil } = useApp()
+  return useQuery({
+    queryKey: ['n-meine-tickets', profil?.id],
+    enabled: !!profil?.id,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('meine_tickets')
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+const NACHLAUF = 6 * 60 * 60 * 1000   // ohne Endzeit gilt eine Veranstaltung 6 h nach Beginn als vorbei
+
+// Bestellungen je Veranstaltung zusammenfassen:
+// { event, schule, vergangen, tickets: [{ ticket, nr }] (gültig/eingelöst), offen: [Reservierungen], storniert: Anzahl }
+export function ticketsNachEvent(bestellungen, jetzt = Date.now()) {
+  const gruppen = new Map()
+  for (const b of bestellungen ?? []) {
+    if (!gruppen.has(b.event.id)) {
+      const ende = b.event.ende ? new Date(b.event.ende).getTime() : new Date(b.event.beginn).getTime() + NACHLAUF
+      gruppen.set(b.event.id, { event: b.event, schule: b.schule, vergangen: ende < jetzt, tickets: [], offen: [], storniert: 0 })
+    }
+    const g = gruppen.get(b.event.id)
+    for (const t of b.tickets ?? []) {
+      if (t.code) g.tickets.push({ ticket: t, nr: g.tickets.length + 1 })
+      else if (t.status === 'storniert') g.storniert++
+    }
+    if (b.status === 'reserviert' && new Date(b.frist) > jetzt) {
+      const reserviert = (b.tickets ?? []).filter(t => t.status === 'reserviert')
+      if (reserviert.length) g.offen.push({ id: b.id, frist: b.frist, anzahl: reserviert.length, betrag: summeCent(reserviert, 'preis') / 100 })
+    }
+  }
+  return [...gruppen.values()].filter(g => g.tickets.length || g.offen.length || g.storniert)
+}

@@ -21,10 +21,11 @@ vi.mock('../../lib/supabase', () => {
 const toast = vi.fn()
 const confirm = vi.fn(async () => true)
 vi.mock('../../context/AppContext', () => ({
-  useApp: () => ({ T: k => t('de', k), lang: 'de', zeitzone: 'Europe/Berlin', profil: { id: 'ich' }, schule: { id: 's' }, toast, confirm }),
+  useApp: () => ({ T: k => t('de', k), lang: 'de', zeitzone: 'Europe/Berlin', profil: { id: 'ich' }, rolle: 'schueler', schule: { id: 's', name: 'Chor' }, toast, confirm }),
 }))
 const { EventTickets } = await import('../EventTickets')
 const { default: TicketBlatt } = await import('../admin/TicketBlatt')
+const { default: NeuTickets } = await import('../seiten/Tickets')
 const { default: TicketBestellungen } = await import('../admin/TicketBestellungen')
 
 const ev = { id: 'ev1', titel: 'Winterkonzert', beginn: '2099-12-12T18:00:00Z', oeffentlich: false }
@@ -161,5 +162,23 @@ describe('TicketBestellungen', () => {
     await klick('Tickets stornieren')
     await klick('Tickets stornieren')
     expect(db.rpc).not.toHaveBeenCalled()
+  })
+})
+
+describe('NeuTickets', () => {
+  it('zeigt QR-Codes, blättert und kennzeichnet eingelöste', async () => {
+    db.rpc = async () => ({ error: null, data: [{ id: 'b', status: 'bezahlt', frist: null, schule: { name: 'Chor', zeitzone: 'Europe/Berlin' },
+      event: { id: 'ev1', titel: 'Winterkonzert', beginn: ev.beginn, ende: null, ort: 'Aula', bild_pfad: null },
+      tickets: [{ id: 'aaaaaaaa-1', preis: 8, status: 'eingeloest', code: 'c1', eingeloest_am: '2099-12-12T17:30:00Z' }, { id: 'bbbbbbbb-2', preis: 8, status: 'gueltig', code: 'c2' }] }] })
+    await zeige(<NeuTickets />)
+    expect(text()).toContain('2 Tickets · 1 eingelöst')
+    await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('QR-Codes anzeigen')).click())
+    await warte()
+    expect(text()).toContain('Ticket 2 von 2')          // beginnt beim ersten gültigen
+    expect(document.querySelector('img[alt="QR-Code BBBBBBBB"]')).not.toBeNull()
+    expect(knopf('Als PDF speichern')).toBeTruthy()
+    await klick('Vorheriges Ticket')
+    expect(text()).toContain('18:30')
+    expect(knopf('Ticket weitergeben')).toBeUndefined()
   })
 })

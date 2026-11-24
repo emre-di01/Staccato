@@ -10,6 +10,7 @@ import { schulZeitZuIso, tagKey, uhrzeit, plusTage, montagVon, kalenderFormat } 
 import { useBreit, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 import { raumQrInhalt } from '../einchecken'
 import { schulfarbenTokens } from '../schulfarbe'
+import { bildLaden, passend } from '../zeichnen'
 
 export const FARBEN = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#14b8a6']
 
@@ -185,20 +186,6 @@ function RaumQrBlatt({ raum, onClose }) {
       </div>
     </Blatt>
   )
-}
-
-function bildLaden(src, cors) {
-  return new Promise((ok, err) => {
-    const i = new Image()
-    if (cors) i.crossOrigin = 'anonymous'
-    i.onload = () => ok(i); i.onerror = err; i.src = src
-  })
-}
-
-// Größte Schrift (bis max), mit der der Text in die Breite passt
-function passend(ctx, text, max, min, breite, gewicht) {
-  let g = max
-  do { ctx.font = `${gewicht} ${g}px Inter, system-ui, sans-serif`; g -= 2 } while (g > min && ctx.measureText(text).width > breite)
 }
 
 // A4-Aushang (150 dpi) in Schulfarbe: Kopf mit Logo + Schulname, Raum-Pill in Raumfarbe, QR-Karte, 3 Schritte
