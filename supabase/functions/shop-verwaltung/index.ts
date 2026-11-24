@@ -17,7 +17,7 @@ Deno.serve(async req => {
     const b = await req.json()
     if (!UUID.test(String(b.bestellung_id ?? ''))) return antwort({ ok: false, grund: 'angaben' }, 400)
     const d = db()
-    const { data: o } = await d.from('ticket_bestellungen').select('id, schule_id, herkunft, kaeufer_email').eq('id', b.bestellung_id).maybeSingle()
+    const { data: o } = await d.from('ticket_bestellungen').select('id, schule_id, herkunft, kaeufer_email, demo').eq('id', b.bestellung_id).maybeSingle()
     const { data: darf } = o ? await nutzer.rpc('ist_admin_von_schule', { p_schule_id: o.schule_id }) : { data: false }
     if (darf !== true || o.herkunft !== 'shop') return antwort({ ok: false, grund: 'verboten' }, 403)
     switch (b.aktion) {
@@ -32,7 +32,7 @@ Deno.serve(async req => {
   }
 })
 
-interface Bestellung { id: string; schule_id: string; kaeufer_email: string }
+interface Bestellung { id: string; schule_id: string; kaeufer_email: string; demo: boolean }
 
 async function mail(d: DB, o: Bestellung, email: unknown) {
   // Erst prüfen: ohne Mailversand bekäme der Käufer neue Codes, ohne sie je zu sehen
@@ -53,7 +53,8 @@ async function stornieren(d: DB, o: Bestellung, von: string, b: Record<string, u
   const ids = Array.isArray(b.ticket_ids) ? b.ticket_ids.map(String) : []
   if (!UUID.test(String(b.vorgang ?? '')) || ids.some(i => !UUID.test(i)) || typeof b.betrag !== 'number') return antwort({ ok: false, grund: 'angaben' }, 400)
   // Ohne Stripe-Konto ließe sich nichts erstatten: nicht erst stornieren und dann hängen bleiben
-  if (b.betrag > 0 && !await konto(d, o.schule_id)) return antwort({ ok: false, grund: 'kein_konto' })
+  // (auch nicht mit dem Schlüssel des anderen Modus)
+  if (b.betrag > 0 && (await konto(d, o.schule_id))?.livemode !== !o.demo) return antwort({ ok: false, grund: 'kein_konto' })
   const r = await rpc(d, 'shop_storno_beginnen', { p_bestellung_id: o.id, p_ticket_ids: ids, p_betrag: b.betrag, p_vorgang: b.vorgang, p_von: von })
   if (!r.ok) return antwort(r)
   return antwort({ ok: true, erstattung: r.erstatten ? await erstatten(d, String(b.vorgang)) : 'keine' })

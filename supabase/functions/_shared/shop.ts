@@ -56,10 +56,15 @@ export const mailBereit = () => !!Deno.env.get('SMTP_USER')
 export async function ticketsSenden(d: DB, bestellung: string): Promise<boolean> {
   const { data: b } = await d.from('ticket_bestellungen').select('zugang').eq('id', bestellung).single()
   const o = await rpc(d, 'shop_bestellung', { p_zugang: b.zugang })
-  const gueltig = (o.tickets as { id: string; code: string; status: string }[]).filter(t => t.status === 'gueltig')
+  const gueltig = (o.tickets as { id: string; code: string; status: string }[]).filter(t => t.status === 'gueltig' || t.status === 'demo')
   if (!gueltig.length) return false
   const [{ ticketMail }, { default: nodemailer }] = await Promise.all([import('../send-email/tickets.ts'), import('npm:nodemailer@6')])
   const mail = await ticketMail({ name: o.name, lang: o.sprache ?? 'de', event: o.event, schule: o.schule, tickets: gueltig, link: `${APP_URL}/shop/bestellung/${b.zugang}` })
+  if (o.demo) {
+    const hinweis = ({ en: 'Demo: these tickets are not valid for admission. Nothing was charged.', tr: 'Demo: Bu biletler girişte geçerli değildir. Ödeme alınmadı.' } as Record<string, string>)[o.sprache] ?? 'Demo: Diese Tickets gelten nicht am Einlass. Es wurde nichts abgebucht.'
+    mail.subject = `[DEMO] ${mail.subject}`
+    mail.content = `<p style="margin:0 0 20px;padding:14px 16px;border-radius:12px;background:#fde68a;color:#422006;font-weight:700">${hinweis}</p>${mail.content}`
+  }
   const port = parseInt(Deno.env.get('SMTP_PORT') ?? '465')
   const t = nodemailer.createTransport({ host: Deno.env.get('SMTP_HOST'), port, secure: port === 465, auth: { user: Deno.env.get('SMTP_USER'), pass: Deno.env.get('SMTP_PASS') } })
   await t.sendMail({

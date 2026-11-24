@@ -57,7 +57,8 @@ async function kaufen(req: Request, b: Record<string, unknown>) {
   if (!r.ok) return antwort(r)
   try {
     const k = await konto(d, r.schule_id)
-    if (!k) throw new Error('Kein Zahlungskonto')
+    // Schlüssel zwischendurch gewechselt: nie echtes Geld für Demo-Tickets oder umgekehrt
+    if (!k || k.livemode === r.demo) throw new Error('Kein passendes Zahlungskonto')
     const { data: ev } = await d.from('events').select('titel').eq('id', b.event_id).single()
     const s = await stripe(await schluesselVon(k, r.schule_id), 'POST', 'checkout/sessions', {
       mode: 'payment', payment_method_types: ['card'], client_reference_id: r.bestellung_id, locale: ['de', 'en', 'tr'].includes(String(b.sprache)) ? b.sprache : 'auto',
@@ -80,7 +81,7 @@ async function laden(d: ReturnType<typeof db>, zugang: string) {
 }
 // nur, was der Käufer sehen darf
 // deno-lint-ignore no-explicit-any
-const oeffentlich = (o: any) => ({ ok: true, status: o.status, name: o.name, email: o.email, betrag: o.betrag, slug: o.slug, zurueck: o.zurueck, automatisch: o.automatisch, event: o.event, schule: o.schule, tickets: o.tickets })
+const oeffentlich = (o: any) => ({ ok: true, demo: o.demo, status: o.status, name: o.name, email: o.email, betrag: o.betrag, slug: o.slug, zurueck: o.zurueck, automatisch: o.automatisch, event: o.event, schule: o.schule, tickets: o.tickets })
 
 async function bestellung(zugang: string) {
   const d = db()
