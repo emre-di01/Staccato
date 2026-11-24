@@ -70,6 +70,7 @@ serve(async (req) => {
     else if (type === 'rsvp_erinnerung')  await sendRsvpErinnerung(body, supabase)
     else if (type === 'schuleinladung')   await sendSchuleinladung(body, supabase, user.id)
     else if (type === 'tickets')          await sendTickets(body, supabase, userClient, user.id)
+    else if (type === 'ticket_reservierung') await sendReservierung(body, supabase, user.id)
     else return new Response(JSON.stringify({ error: 'Unknown type' }), { status: 400, headers: CORS })
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...CORS, 'Content-Type': 'application/json' } })
@@ -552,6 +553,37 @@ async function sendTickets(body: Record<string, unknown>, supabase: ReturnType<t
     link: `${APP_URL}/tickets?event=${b.event_id}`,
   })
   await transport.sendMail({ from: SMTP_FROM, to: user.email, subject: mail.subject, html: html(mail.content), attachments: mail.attachments })
+}
+
+// Bestätigung der eigenen Reservierung mit Betrag und Frist (nur an den Käufer, nur von ihm ausgelöst)
+async function sendReservierung(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>, absenderId: string) {
+  const { bestellung_id } = body as { bestellung_id: string }
+  const { data: b } = await supabase.from('ticket_bestellungen')
+    .select('id, event_id, kaeufer_id, status, frist, events(titel, beginn, ort, raeume(name)), schulen(name, zeitzone)')
+    .eq('id', bestellung_id).single()
+  if (!b || b.kaeufer_id !== absenderId || b.status !== 'reserviert' || new Date(b.frist as string) <= new Date()) {
+    throw new Error('Reservierung nicht gefunden')
+  }
+  const [{ data: tickets }, { data: profil }, { data: { user } }] = await Promise.all([
+    supabase.from('tickets').select('preis').eq('bestellung_id', b.id).eq('status', 'reserviert'),
+    supabase.from('profiles').select('voller_name, sprache').eq('id', absenderId).single(),
+    supabase.auth.admin.getUserById(absenderId),
+  ])
+  if (!tickets?.length) throw new Error('Keine reservierten Tickets')
+  if (!user?.email) throw new Error('Keine E-Mail-Adresse')
+
+  const event = b.events as { titel: string; beginn: string; ort: string | null; raeume: { name: string } | null }
+  const { reservierungMail } = await import('./reservierung.ts')
+  const mail = reservierungMail({
+    name: (profil?.voller_name as string) ?? '', lang: (profil?.sprache as string) ?? 'de',
+    event: { titel: event.titel, beginn: event.beginn, ort: event.ort || event.raeume?.name || null },
+    schule: b.schulen as { name: string; zeitzone: string | null },
+    anzahl: tickets.length,
+    betrag: tickets.reduce((s, t) => s + Math.round(Number(t.preis) * 100), 0) / 100,
+    frist: b.frist as string,
+    link: `${APP_URL}/tickets?event=${b.event_id}`,
+  })
+  await transport.sendMail({ from: SMTP_FROM, to: user.email, subject: mail.subject, html: html(mail.content) })
 }
 
 // ─── Helpers ──────────────────────────────────────────────────

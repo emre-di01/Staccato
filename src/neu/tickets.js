@@ -321,7 +321,8 @@ export async function sicherAusfuehren(name, werte, pause = 600) {
 }
 
 // Gültige Tickets einer Bestellung per Mail an den Käufer. true, wenn die Mail rausging.
-export async function ticketMailSenden(bestellungId) {
-  const { error } = await supabase.functions.invoke('send-email', { body: { type: 'tickets', bestellung_id: bestellungId } })
+// art 'ticket_reservierung': stattdessen Betrag und Zahlungsfrist (nur für die eigene Reservierung).
+export async function ticketMailSenden(bestellungId, art = 'tickets') {
+  const { error } = await supabase.functions.invoke('send-email', { body: { type: art, bestellung_id: bestellungId } })
   return !error
 }

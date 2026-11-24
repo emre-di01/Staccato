@@ -57,7 +57,7 @@ describe('EventTickets', () => {
 
   it('rechnet die Summe, reserviert und sagt, was jetzt zu tun ist', async () => {
     db.tabellen.ticket_einstellungen = [{ event_id: 'ev1' }]
-    const rpc = vi.fn(async name => ({ data: name === 'ticket_info' ? info : { ok: true, status: 'reserviert', betrag: 55.5, frist: '2099-12-04T22:59:00Z' }, error: null }))
+    const rpc = vi.fn(async name => ({ data: name === 'ticket_info' ? info : { ok: true, bestellung_id: 'neu', status: 'reserviert', betrag: 55.5, frist: '2099-12-04T22:59:00Z' }, error: null }))
     db.rpc = rpc
     await zeige(<EventTickets ev={ev} />)
     await klick('Tickets reservieren')
@@ -68,6 +68,7 @@ describe('EventTickets', () => {
     await klick('Reservieren')
     expect(rpc).toHaveBeenCalledWith('tickets_reservieren', { p_event_id: 'ev1', p_anzahl: 5, p_betrag: 55.5 })
     expect(text()).toContain('Reserviert!')
+    expect(db.invoke).toHaveBeenCalledWith('send-email', { body: { type: 'ticket_reservierung', bestellung_id: 'neu' } })
     expect(text()).toContain('Bitte 55,50 € bar bezahlen bis Freitag, 4. Dezember.')   // 23:59 → ohne Uhrzeit
   })
 
@@ -79,6 +80,18 @@ describe('EventTickets', () => {
     await klick('Reservieren')
     expect(text()).toContain('Der Preis hat sich geändert')
     expect(text()).not.toContain('Reserviert!')
+    expect(db.invoke).not.toHaveBeenCalled()
+  })
+
+  it('verschickt kostenlose Tickets sofort; ein Mailfehler stört die Reservierung nicht', async () => {
+    db.tabellen.ticket_einstellungen = [{ event_id: 'ev1' }]
+    db.invoke = vi.fn(async () => { throw new Error('offline') })
+    db.rpc = async name => ({ data: name === 'ticket_info' ? { ...info, rest_verguenstigt: 0, preis_normal: 0 } : { ok: true, bestellung_id: 'gratis', status: 'bezahlt', betrag: 0, frist: null }, error: null })
+    await zeige(<EventTickets ev={ev} />)
+    await klick('Tickets reservieren')
+    await klick('Reservieren')
+    expect(text()).toContain('Dein Ticket ist da!')
+    expect(db.invoke).toHaveBeenCalledWith('send-email', { body: { type: 'tickets', bestellung_id: 'gratis' } })
   })
 
   it('zeigt nur den Grund, wenn nichts geht', async () => {

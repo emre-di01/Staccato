@@ -92,7 +92,8 @@ export function ReservierenBlatt({ ev, onClose }) {
     neuLaden('n-ticket-info', 'n-ticket-bestellungen', 'n-meine-tickets')
     if (error || !data.ok) { setFehler(error ? error.message : grundText(data.grund)); return }
     setFertig(data)
-    if (data.status === 'bezahlt') ticketMailSenden(data.bestellung_id).catch(() => {})   // kostenlos: sofort gültig
+    // Mail im Hintergrund; kostenlose Tickets sind sofort gültig. Alles Nötige steht auch in der App.
+    ticketMailSenden(data.bestellung_id, data.status === 'bezahlt' ? 'tickets' : 'ticket_reservierung').catch(() => {})
   }
 
   if (fertig) return (
