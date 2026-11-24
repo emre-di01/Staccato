@@ -7,6 +7,7 @@ import { Seite, Segment, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt, Fehl
 import { useBasis } from '../rolle'
 import { tagLabel, uhrzeit } from '../zeit'
 import { EventBild } from '../eventBild'
+import { dateiSpeichern } from '../dateiSpeichern'
 import { useMeineTickets, ticketsNachEvent, ticketQrInhalt, ticketNummer, euro } from '../tickets'
 
 // Eigene Tickets: je Veranstaltung QR-Codes, PDF und offene Reservierungen
@@ -74,6 +75,7 @@ function TicketAnsicht({ g, onClose }) {
   const texte = useTexte()
   const [index, setIndex] = useState(() => Math.max(0, g.tickets.findIndex(x => x.ticket.status === 'gueltig')))
   const [qr, setQr] = useState(null)
+  const [einzeln, setEinzeln] = useState(null)   // vorbereitetes PDF des angezeigten Tickets
   const [arbeitet, setArbeitet] = useState(false)
   const { ticket, nr } = g.tickets[Math.min(index, g.tickets.length - 1)]
   const eingeloest = ticket.status === 'eingeloest'
@@ -86,16 +88,42 @@ function TicketAnsicht({ g, onClose }) {
     return () => { aktuell = false }
   }, [ticket.id, ticket.code])
 
-  async function pdf(tickets, teilen) {
+  // PDF schon beim Öffnen erzeugen: Handys erlauben „Teilen“ nur unmittelbar nach dem Tippen
+  useEffect(() => {
+    if (eingeloest) return
+    let aktuell = true
+    pdfErzeugen([{ ticket, nr }]).then(
+      datei => { if (aktuell) setEinzeln({ id: ticket.id, datei }) },
+      () => { if (aktuell) setEinzeln({ id: ticket.id, datei: null }) })
+    return () => { aktuell = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket.id, nr, eingeloest, g.tickets.length, lang])
+
+  async function pdfErzeugen(tickets) {
+    const { ticketPdf } = await import('../ticketPdf')
+    return ticketPdf({ tickets, anzahl: g.tickets.length, event: g.event, schule: g.schule, T, lang })
+  }
+
+  const bereit = einzeln?.id === ticket.id ? einzeln : null
+  const teilbar = !!bereit?.datei && !!navigator.canShare?.({ files: [bereit.datei] })
+
+  // Kein await vor navigator.share, sonst verweigert der Browser das Teilen
+  function weitergeben() {
+    if (!bereit?.datei) { toast(T('tk_pdf_fehler'), 'error'); return }
+    if (!teilbar) { dateiSpeichern(bereit.datei); toast(T('tk_gespeichert_pdf'), 'success'); return }
+    navigator.share({ files: [bereit.datei] }).catch(e => {
+      if (e?.name === 'AbortError') return   // vom Nutzer abgebrochen
+      dateiSpeichern(bereit.datei)
+      toast(T('tk_gespeichert_pdf'), 'success')
+    })
+  }
+
+  async function allesSpeichern() {
     setArbeitet(true)
     try {
-      const { ticketPdf, dateiSpeichern } = await import('../ticketPdf')
-      const datei = await ticketPdf({ tickets, anzahl: g.tickets.length, event: g.event, schule: g.schule, T, lang })
-      if (teilen && navigator.canShare?.({ files: [datei] })) await navigator.share({ files: [datei], title: g.event.titel })
-      else dateiSpeichern(datei)
-    } catch (e) {
-      if (e?.name !== 'AbortError') toast(T('tk_pdf_fehler'), 'error')   // AbortError: Teilen abgebrochen
-    }
+      dateiSpeichern(await pdfErzeugen(gueltige))
+      toast(T('tk_gespeichert_pdf'), 'success')
+    } catch { toast(T('tk_pdf_fehler'), 'error') }
     setArbeitet(false)
   }
 
@@ -122,11 +150,11 @@ function TicketAnsicht({ g, onClose }) {
         </div>
         {!eingeloest && <>
           <p style={{ margin: 0, textAlign: 'center', fontSize: 15, lineHeight: 1.45, color: 'var(--text-2)' }}>{T('tk_ticket_hinweis')}</p>
-          <Knopf voll icon={Share2} disabled={arbeitet} onClick={() => pdf([{ ticket, nr }], true)}>{T('tk_weitergeben')}</Knopf>
+          <Knopf voll icon={teilbar || !bereit ? Share2 : Download} disabled={!bereit} onClick={weitergeben}>{T(bereit && !teilbar ? 'tk_pdf' : 'tk_weitergeben')}</Knopf>
         </>}
-        {gueltige.length > 0 && (
-          <Knopf voll variante="sekundaer" icon={Download} disabled={arbeitet} onClick={() => pdf(gueltige)}>
-            {T(gueltige.length === 1 ? 'tk_pdf' : 'tk_pdf_alle').replace('{n}', gueltige.length)}
+        {gueltige.length > 1 && (
+          <Knopf voll variante="sekundaer" icon={Download} disabled={arbeitet} onClick={allesSpeichern}>
+            {T('tk_pdf_alle').replace('{n}', gueltige.length)}
           </Knopf>
         )}
       </div>

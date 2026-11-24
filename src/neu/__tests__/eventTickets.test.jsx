@@ -18,6 +18,7 @@ vi.mock('../../lib/supabase', () => {
   }
   return { supabase: { from: abfrage, rpc: (...a) => db.rpc(...a) } }
 })
+vi.mock('../ticketPdf', () => ({ ticketPdf: async () => new File(['x'], 'Ticket.pdf', { type: 'application/pdf' }) }))
 const toast = vi.fn()
 const confirm = vi.fn(async () => true)
 vi.mock('../../context/AppContext', () => ({
@@ -166,19 +167,52 @@ describe('TicketBestellungen', () => {
 })
 
 describe('NeuTickets', () => {
-  it('zeigt QR-Codes, blättert und kennzeichnet eingelöste', async () => {
-    db.rpc = async () => ({ error: null, data: [{ id: 'b', status: 'bezahlt', frist: null, schule: { name: 'Chor', zeitzone: 'Europe/Berlin' },
-      event: { id: 'ev1', titel: 'Winterkonzert', beginn: ev.beginn, ende: null, ort: 'Aula', bild_pfad: null },
-      tickets: [{ id: 'aaaaaaaa-1', preis: 8, status: 'eingeloest', code: 'c1', eingeloest_am: '2099-12-12T17:30:00Z' }, { id: 'bbbbbbbb-2', preis: 8, status: 'gueltig', code: 'c2' }] }] })
+  const daten = [{ id: 'b', status: 'bezahlt', frist: null, schule: { name: 'Chor', zeitzone: 'Europe/Berlin' },
+    event: { id: 'ev1', titel: 'Winterkonzert', beginn: ev.beginn, ende: null, ort: 'Aula', bild_pfad: null },
+    tickets: [{ id: 'aaaaaaaa-1', preis: 8, status: 'eingeloest', code: 'c1', eingeloest_am: '2099-12-12T17:30:00Z' }, { id: 'bbbbbbbb-2', preis: 8, status: 'gueltig', code: 'c2' }] }]
+  const oeffnen = async () => {
+    db.rpc = async () => ({ error: null, data: daten })
     await zeige(<NeuTickets />)
-    expect(text()).toContain('2 Tickets · 1 eingelöst')
     await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('QR-Codes anzeigen')).click())
     await warte()
+  }
+  afterEach(() => { delete navigator.share; delete navigator.canShare })
+
+  it('zeigt QR-Codes, blättert und kennzeichnet eingelöste', async () => {
+    await oeffnen()
+    expect(text()).toContain('2 Tickets · 1 eingelöst')
     expect(text()).toContain('Ticket 2 von 2')          // beginnt beim ersten gültigen
     expect(document.querySelector('img[alt="QR-Code BBBBBBBB"]')).not.toBeNull()
-    expect(knopf('Als PDF speichern')).toBeTruthy()
     await klick('Vorheriges Ticket')
     expect(text()).toContain('18:30')
     expect(knopf('Ticket weitergeben')).toBeUndefined()
+  })
+
+  it('teilt das vorbereitete PDF noch im selben Klick', async () => {
+    navigator.canShare = () => true
+    navigator.share = vi.fn(async () => {})
+    await oeffnen()
+    const k = knopf('Ticket weitergeben')
+    expect(k.disabled).toBe(false)
+    k.click()                                            // ohne Warten: share muss synchron aufgerufen werden
+    expect(navigator.share).toHaveBeenCalledTimes(1)
+    expect(navigator.share.mock.calls[0][0].files[0].name).toBe('Ticket.pdf')
+  })
+
+  it('speichert stattdessen, wenn der Browser das Teilen ablehnt', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:x'); URL.revokeObjectURL = vi.fn()
+    HTMLAnchorElement.prototype.click = vi.fn()
+    navigator.canShare = () => true
+    navigator.share = vi.fn(async () => { throw Object.assign(new Error('x'), { name: 'NotAllowedError' }) })
+    await oeffnen()
+    await klick('Ticket weitergeben')
+    expect(URL.createObjectURL).toHaveBeenCalled()
+    expect(toast).toHaveBeenCalledWith('PDF gespeichert', 'success')
+  })
+
+  it('bietet ohne Teilen-Funktion das Speichern an', async () => {
+    await oeffnen()
+    expect(knopf('Ticket weitergeben')).toBeUndefined()
+    expect(knopf('Als PDF speichern')).toBeTruthy()
   })
 })

@@ -84,12 +84,3 @@ export async function ticketPdf({ tickets, anzahl, event, schule, T, lang }) {
   const name = `${T('tk_tickets')}_${event.titel}`.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)
   return new File([doc.output('blob')], `${name}.pdf`, { type: 'application/pdf' })
 }
-
-export function dateiSpeichern(datei) {
-  const url = URL.createObjectURL(datei)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = datei.name
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
