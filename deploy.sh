@@ -5,6 +5,7 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 MIGRATIONS_DIR="supabase/migrations"
 DB_CONTAINER="supabase_db_staccato"
 EDGE_CONTAINER="supabase_edge_runtime_staccato"
+KONG_CONTAINER="supabase_kong_staccato"
 
 # ─── Hilfsfunktionen ───────────────────────────────────────────────────────────
 
@@ -58,6 +59,25 @@ apply_pending_migrations() {
   fi
 }
 
+# Der Edge-Container bekommt beim Neustart evtl. eine neue interne IP; Kong merkt sich die alte (→ 502, 2026-11-24).
+# Deshalb warten, bis er antwortet, Gateway neu laden und prüfen.
+edge_gateway_aktualisieren() {
+  local ip i code
+  for i in $(seq 1 30); do
+    ip=$(docker inspect "$EDGE_CONTAINER" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+    if [ -n "$ip" ] && curl -sf -m 3 -o /dev/null "http://$ip:8081/_internal/health"; then break; fi
+    sleep 1
+  done
+  docker exec "$KONG_CONTAINER" kong reload > /dev/null 2>&1 || true
+  for i in $(seq 1 15); do
+    sleep 2
+    # 400/401 = Function erreicht (Anmeldung/Angaben fehlen), 5xx = Gateway findet sie nicht
+    code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:54321/functions/v1/kalender -d '{}' || true)
+    case "$code" in 2*|4*) log "Edge Functions erreichbar ($code)."; return 0 ;; esac
+  done
+  echo "WARNUNG: Edge Functions antworten nicht (zuletzt $code). Prüfen: docker logs $EDGE_CONTAINER"
+}
+
 # ─── Prod (main) ──────────────────────────────────────────────────────────────
 
 deploy_prod() {
@@ -72,6 +92,7 @@ deploy_prod() {
   apply_pending_migrations
   log "Edge Functions neu laden (Container-Restart)..."
   docker restart "$EDGE_CONTAINER"
+  edge_gateway_aktualisieren
   log "Frontend bauen..."
   npm run build
   log "=== PROD fertig. ==="
