@@ -1,4 +1,4 @@
-// Abendkasse: neu verkaufen (ohne Namen) oder Reservierung kassieren; danach direkt einlassen
+// Abendkasse: neu verkaufen (ohne Namen) oder per Namen kassieren bzw. bezahlte Tickets einlassen
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -10,7 +10,7 @@ import { useBasis } from '../rolle'
 import { useNeuLaden } from '../daten'
 import { useKassenEvents, sicherAusfuehren, geldKurz, tagAusgeschrieben } from '../tickets'
 
-const GRUENDE = ['geschlossen', 'anzahl', 'zu_wenig_frei', 'betrag', 'nicht_offen', 'verfallen', 'verboten', 'netz']
+const GRUENDE = ['schon_drin', 'geschlossen', 'anzahl', 'zu_wenig_frei', 'betrag', 'nicht_offen', 'verfallen', 'verboten', 'netz']
 
 export default function Kasse() {
   const { T, lang } = useApp()
@@ -147,13 +147,16 @@ function Reserviert({ ev, onFertig }) {
               {treffer.map((r, i) => (
                 <div key={r.id}>
                   {i > 0 && <Trenner />}
-                  <Zeile icon={UserSearch} titel={r.name} untertitel={r.anzahl === 1 ? T('tk_1_ticket') : T('tk_x_tickets').replace('{n}', r.anzahl)} wert={geldKurz(r.betrag, lang)} wertFarbe="var(--text)" onClick={() => setGewaehlt(r)} />
+                  <Zeile icon={UserSearch} titel={r.name} untertitel={r.anzahl === 1 ? T('tk_1_ticket') : T('tk_x_tickets').replace('{n}', r.anzahl)} onClick={() => setGewaehlt(r)}
+                    wert={r.status === 'bezahlt' ? T('tk_filter_bezahlt') : geldKurz(r.betrag, lang)} wertFarbe={r.status === 'bezahlt' ? 'var(--success)' : 'var(--text)'} />
                 </div>
               ))}
             </Gruppe>
           )}
       </div>
-      {gewaehlt && <KassierenBlatt r={gewaehlt} offen={ev.offen} onClose={() => setGewaehlt(null)} onFertig={x => { setGewaehlt(null); onFertig(x) }} />}
+      {gewaehlt && (gewaehlt.status === 'bezahlt'
+        ? <EinlassenBlatt r={gewaehlt} ev={ev} onClose={() => setGewaehlt(null)} onFertig={x => { setGewaehlt(null); onFertig(x) }} />
+        : <KassierenBlatt r={gewaehlt} offen={ev.offen} onClose={() => setGewaehlt(null)} onFertig={x => { setGewaehlt(null); onFertig(x) }} />)}
     </>
   )
 }
@@ -173,6 +176,39 @@ function KassierenBlatt({ r, offen, onClose, onFertig }) {
         {!offen && <div style={{ fontSize: 16, color: 'var(--text-2)' }}>{T('ka_vorher_hinweis')}</div>}
         {fehler && <div role="alert"><FehlerText>{fehler}</FehlerText></div>}
         <Knopf voll icon={Banknote} onClick={kassieren} disabled={sendet} style={{ height: 64, fontSize: 20 }}>{T('tk_geld_erhalten').replace('{betrag}', geldKurz(r.betrag, lang))}</Knopf>
+      </div>
+    </Blatt>
+  )
+}
+
+// Schon bezahlt, aber ohne Handy und Ausdruck
+function EinlassenBlatt({ r, ev, onClose, onFertig }) {
+  const { T, lang } = useApp()
+  const neuLaden = useNeuLaden()
+  const { sendet, fehler, netz, ausfuehren } = useKassenAktion()
+  const [anzahl, setAnzahl] = useState(r.anzahl)
+  const [versucht, setVersucht] = useState(false)   // nach einem Netzfehler dieselben Tickets wiederholen
+  async function einlassen() {
+    setVersucht(true)
+    const x = await ausfuehren('abendkasse_einlassen', { p_bestellung_id: r.id, p_ticket_ids: r.ticket_ids.slice(0, anzahl) })
+    if (x) onFertig({ anzahl: x.anzahl, eingelassen: true })
+    else neuLaden('n-kasse-reservierungen')
+  }
+  return (
+    <Blatt titel={r.name} onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--success)' }}>{T('tk_filter_bezahlt')}</div>
+        {!ev.offen ? <p role="status" style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{T('ka_offen_ab').replace('{zeit}', tagAusgeschrieben(ev.ab, ev.zeitzone, lang))}</p> : <>
+          {r.anzahl > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <Knopf variante="rahmen" aria-label={T('tk_weniger')} style={rund} disabled={versucht || anzahl <= 1} onClick={() => setAnzahl(anzahl - 1)}><Minus aria-hidden="true" size={30} /></Knopf>
+              <span aria-live="polite" style={{ minWidth: 64, fontSize: 44, fontWeight: 800 }}>{anzahl}</span>
+              <Knopf variante="rahmen" aria-label={T('tk_mehr')} style={rund} disabled={versucht || anzahl >= r.anzahl} onClick={() => setAnzahl(anzahl + 1)}><Plus aria-hidden="true" size={30} /></Knopf>
+            </div>
+          )}
+          {fehler && <div role="alert"><FehlerText>{fehler}</FehlerText></div>}
+          <Knopf voll icon={CircleCheck} onClick={einlassen} disabled={sendet || (!!fehler && !netz)} style={{ height: 64, fontSize: 20 }}>{T(anzahl === 1 ? 'ka_einlassen_1' : 'ka_einlassen_n').replace('{n}', anzahl)}</Knopf>
+        </>}
       </div>
     </Blatt>
   )

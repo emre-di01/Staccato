@@ -79,7 +79,7 @@ describe('Kasse', () => {
     antworten({ meine_kassen_events: [ev], abendkasse_kassieren: { ok: true, anzahl: 2, eingelassen: true },
       abendkasse_reservierungen: [{ id: 'b1', name: 'Ayla Test', anzahl: 2, betrag: 24 }, { id: 'b2', name: 'Murat Y.', anzahl: 1, betrag: 8 }] })
     await zeige(<Kasse />)
-    await klick('Reserviert')
+    await klick('Name suchen')
     expect(text()).toContain('Murat Y.')
     await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('Ayla Test')).click())
     await klick('24 € bar erhalten')
@@ -108,6 +108,31 @@ describe('Kasse', () => {
     await klick('Abbrechen und neu beginnen')
     await klick('18 € bar erhalten')
     expect(new Set(aufrufe('abendkasse_verkaufen').map(w => w.p_vorgang)).size).toBe(2)
+  })
+
+  it('lässt Bezahlte per Namen ein, auch nur einen Teil', async () => {
+    antworten({ meine_kassen_events: [ev], abendkasse_einlassen: { ok: true, anzahl: 2 },
+      abendkasse_reservierungen: [{ id: 'b3', name: 'Fatma K.', status: 'bezahlt', anzahl: 3, betrag: 45, ticket_ids: ['a', 'b', 'c'] }] })
+    await zeige(<Kasse />)
+    await klick('Name suchen')
+    expect(text()).toContain('Bezahlt')
+    await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('Fatma K.')).click())
+    expect(knopf('45 € bar erhalten')).toBeUndefined()
+    await klick('Weniger Tickets')
+    await klick('2 Personen einlassen')
+    expect(aufrufe('abendkasse_einlassen')).toEqual([{ p_bestellung_id: 'b3', p_ticket_ids: ['a', 'b'] }])
+    expect(text()).toContain('Stempel nicht vergessen')
+  })
+
+  it('erklärt, wenn ein Ticket schon drin ist', async () => {
+    antworten({ meine_kassen_events: [ev], abendkasse_einlassen: { ok: false, grund: 'schon_drin' },
+      abendkasse_reservierungen: [{ id: 'b3', name: 'Fatma K.', status: 'bezahlt', anzahl: 1, betrag: 15, ticket_ids: ['a'] }] })
+    await zeige(<Kasse />)
+    await klick('Name suchen')
+    await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.includes('Fatma K.')).click())
+    await klick('1 Person einlassen')
+    expect(text()).toContain('schon drin')
+    expect(text()).not.toContain('Stempel')
   })
 
   it('zeigt ausverkauft', async () => {
