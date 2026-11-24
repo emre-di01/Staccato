@@ -3,8 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 
-// Erst sichtbar, wenn die Edge Functions der Umgebung laufen (dev: VITE_TICKETSHOP=1 in .env.dev)
-export const SHOP_SICHTBAR = import.meta.env.VITE_TICKETSHOP === '1'
+// VITE_TICKETSHOP: leer = Shop für Admins unsichtbar, 'test' = Stripe-Testmodus (dev), 'live' = echtes Geld (Prod, mit STRIPE_LIVE_ERLAUBT)
+export const SHOP_LIVE = import.meta.env.VITE_TICKETSHOP === 'live'
+export const SHOP_SICHTBAR = SHOP_LIVE || import.meta.env.VITE_TICKETSHOP === 'test'
 
 // { shop: Zeile aus ticket_shops | null, konto: { verbunden, livemode, letzte4 } }
 export function useTicketShop() {

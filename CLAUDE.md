@@ -226,7 +226,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.15** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.16** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -680,7 +680,7 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261124000010_shop_nicht_bar.sql` | Shop-Bestellungen sind nicht bar kassierbar (`ticket_zahlung_bestaetigen` → `nicht_offen`) und stehen während des Bezahlens nicht in `abendkasse_reservierungen` |
 | `20261124000011_shop_nachbetreuung.sql` | Shop: `ticket_online_erstattungen` (Auftrag je Vorgang, offen bis Stripe bestätigt), `ticket_bestellungen.auto_erstatten`, `shop_storno_beginnen`/`shop_erstattung_info`/`_fertig`/`_abgelehnt`, `shop_email_aendern` (neuer Link + neue QR-Codes), `shop_nochmal`; Edge Function `shop-verwaltung` (Admins: mail, stornieren, wiederholen). Online bezahlte Tickets nur darüber stornieren |
 
-> **Ticketshop freischalten:** Oberfläche für Admins nur mit `VITE_TICKETSHOP=1` (dev: an, Prod: aus). Prod braucht vorher `ZAHLUNG_SCHLUESSEL` und `OEFFENTLICHE_API_URL` in `config.toml`/`supabase/.env` und einen Neustart des Stacks, weil der Edge-Container neue Functions nicht per `docker restart` kennt. **`supabase secrets set` nie im Projektordner ausführen** – lädt alle Prod-Werte aus `[edge_runtime.secrets]` mit hoch.
+> **Ticketshop:** `VITE_TICKETSHOP` = leer (Admins sehen nichts), `test` (dev) oder `live` (Prod). Functions: `STRIPE_LIVE_ERLAUBT=true` (Prod) nimmt nur echte Schlüssel (`rk_live_`), sonst nur Testschlüssel. `ZAHLUNG_SCHLUESSEL`, `OEFFENTLICHE_API_URL`, `STRIPE_LIVE_ERLAUBT` stehen in `config.toml`/`supabase/.env`. Neue Functions und geänderte Secrets kennt der Edge-Container erst nach Neuanlage (`docker restart` reicht nicht). **`supabase secrets set` nie im Projektordner ausführen** – lädt alle Prod-Werte aus `[edge_runtime.secrets]` mit hoch.
 
 **Important — `seed.sql`:** The view `mitglieder_mit_email` is defined in `seed.sql`, not in any migration. It must stay there because views that join `auth.users` cannot use the standard migration flow reliably. `seed.sql` is idempotent (all storage policies use `DO $$ BEGIN...EXCEPTION WHEN duplicate_object THEN NULL; END $$`). Note: migration `20260512000004` also updates this view — both must be kept in sync.
 

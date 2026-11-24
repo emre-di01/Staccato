@@ -34,13 +34,15 @@ Deno.serve(async req => {
   }
 })
 
-// grund: vollzugriff | format | livemodus | ungueltig | rechte | webhook_noetig
+// grund: vollzugriff | format | livemodus | testmodus | ungueltig | rechte | webhook_noetig
 async function verbinden(d: ReturnType<typeof db>, nutzerId: string, schule: string, schluessel: string, geheim: string | null) {
   if (/^sk_/.test(schluessel)) return antwort({ ok: false, grund: 'vollzugriff' })
   const m = /^rk_(test|live)_[A-Za-z0-9]{10,}$/.exec(schluessel)
   if (!m || (geheim && !/^whsec_[A-Za-z0-9+/=]{10,}$/.test(geheim))) return antwort({ ok: false, grund: 'format' })
   const livemode = m[1] === 'live'
-  if (livemode && Deno.env.get('STRIPE_LIVE_ERLAUBT') !== 'true') return antwort({ ok: false, grund: 'livemodus' })
+  // Mit echtem Geld nur echte Schlüssel: ein Testschlüssel gäbe dort gültige Tickets ohne Bezahlung
+  const echt = Deno.env.get('STRIPE_LIVE_ERLAUBT') === 'true'
+  if (livemode !== echt) return antwort({ ok: false, grund: livemode ? 'livemodus' : 'testmodus' })
 
   // Rechte prüfen: Bezahlvorgänge und Erstattungen
   for (const pfad of ['checkout/sessions?limit=1', 'refunds?limit=1']) {

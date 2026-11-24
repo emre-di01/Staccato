@@ -394,6 +394,10 @@ inspector_port = 8083
 deno_version = 2
 
 [edge_runtime.secrets]
+# Ticketshop: 32 Byte base64. Geht er verloren, müssen alle Schulen Stripe neu verbinden
+ZAHLUNG_SCHLUESSEL = "env(ZAHLUNG_SCHLUESSEL)"
+OEFFENTLICHE_API_URL = "env(OEFFENTLICHE_API_URL)"
+STRIPE_LIVE_ERLAUBT = "env(STRIPE_LIVE_ERLAUBT)"
 SMTP_HOST = "env(SMTP_HOST)"
 SMTP_PORT = "env(SMTP_PORT)"
 SMTP_USER = "env(SMTP_USER)"

@@ -17,7 +17,7 @@ vi.mock('../ticketPdf', () => ({ ticketBilder: async () => {}, ticketPdf: async 
 vi.mock('qrcode', () => ({ default: { toDataURL: async x => `data:${x}` } }))
 const { default: Shop } = await import('../shop/Shop')
 const { default: Bestellung } = await import('../shop/Bestellung')
-const { default: AdminTicketshop, STRIPE_LINK } = await import('../admin/Ticketshop')
+const { default: AdminTicketshop, stripeLink } = await import('../admin/Ticketshop')
 const { default: TicketBestellungen } = await import('../admin/TicketBestellungen')
 const { slugAus, SLUG } = await import('../ticketshop')
 const { summe } = await import('../shop/daten')
@@ -239,7 +239,8 @@ describe('Einrichtung', () => {
     expect(sb.upsert.mock.calls[0][0]).toMatchObject({ schule_id: 's', slug: 'probe', aktiv: true, agb: 'A' })
   })
   it('Stripe-Link wählt genau die drei nötigen Rechte vor', () => {
-    const u = new URL(STRIPE_LINK)
+    expect(stripeLink(true)).toMatch(/^https:\/\/dashboard\.stripe\.com\/apikeys\/create\?/)
+    const u = new URL(stripeLink(false))
     expect(u.origin + u.pathname).toBe('https://dashboard.stripe.com/test/apikeys/create')
     expect(u.searchParams.getAll('permissions[]')).toEqual(['rak_checkout_session_write', 'rak_charge_write', 'rak_webhook_write'])
   })

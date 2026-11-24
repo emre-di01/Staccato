@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.15'
+export const CURRENT_VERSION = '2.9.16'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.16',
+    date: '2026-11-24',
+    features: [
+      {
+        icon: '🎟️',
+        de: 'Ticketshop: Schulen können Tickets online an Gäste verkaufen (Verwaltung → Ticketshop)',
+        en: 'Ticket shop: schools can sell tickets to guests online (Administration → Ticket shop)',
+        tr: 'Bilet satış sayfası: Okullar misafirlere internetten bilet satabilir (Yönetim → Bilet satış sayfası)',
+      },
+    ],
+  },
   {
     version: '2.9.15',
     date: '2026-11-24',

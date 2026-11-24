@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Abschnitt, Gruppe, Trenner, Zeile, Feld, Knopf, SchalterZeile, FehlerText, Laden, eingabeStil } from '../../ui'
 import { useNeuLaden } from '../daten'
-import { SLUG, shopLink, slugAus, useTicketShop } from '../ticketshop'
+import { SHOP_LIVE, SLUG, shopLink, slugAus, useTicketShop } from '../ticketshop'
 
 function Kasten({ children }) {
   return <div style={{ margin: '0 20px', padding: 20, borderRadius: 18, background: 'var(--n-fill)', display: 'flex', flexDirection: 'column', gap: 16 }}>{children}</div>
@@ -27,11 +27,11 @@ export default function AdminTicketshop() {
   )
 }
 
-// Öffnet in Stripe direkt das Formular für einen eingeschränkten Schlüssel (Testmodus), die drei nötigen Rechte sind vorausgewählt
-export const STRIPE_LINK = `https://dashboard.stripe.com/test/apikeys/create?${new URLSearchParams([
+// Öffnet in Stripe direkt das Formular für einen eingeschränkten Schlüssel, die drei nötigen Rechte sind vorausgewählt
+export const stripeLink = live => `https://dashboard.stripe.com/${live ? '' : 'test/'}apikeys/create?${new URLSearchParams([
   ['name', 'Staccato Tickets'], ...['rak_checkout_session_write', 'rak_charge_write', 'rak_webhook_write'].map(r => ['permissions[]', r])])}`
 
-const FEHLER = ['vollzugriff', 'format', 'livemodus', 'ungueltig', 'rechte']
+const FEHLER = ['vollzugriff', 'format', 'livemodus', 'testmodus', 'ungueltig', 'rechte']
 
 // Der Schlüssel geht nur an die Edge Function und wird nie wieder angezeigt
 function Stripe({ konto }) {
@@ -91,11 +91,11 @@ function Stripe({ konto }) {
             <ol style={{ margin: 0, paddingLeft: 22, fontSize: 16, lineHeight: 1.6 }}>
               {[1, 2, 3].map(i => <li key={i}>{T(`sh_schritt_${i}`)}</li>)}
             </ol>
-            <a href={STRIPE_LINK} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
-              <ExternalLink aria-hidden="true" size={20} />{T('sh_stripe_oeffnen')}
+            <a href={stripeLink(SHOP_LIVE)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 17, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>
+              <ExternalLink aria-hidden="true" size={20} />{T(SHOP_LIVE ? 'sh_stripe_oeffnen_echt' : 'sh_stripe_oeffnen')}
             </a>
             <Feld label={T('sh_schluessel')} hinweis={T('sh_schluessel_hinweis')}>
-              <input type="password" value={schluessel} onChange={e => { setSchluessel(e.target.value); setFehler('') }} placeholder="rk_test_…" autoComplete="off" spellCheck={false} style={eingabeStil} />
+              <input type="password" value={schluessel} onChange={e => { setSchluessel(e.target.value); setFehler('') }} placeholder={SHOP_LIVE ? 'rk_live_…' : 'rk_test_…'} autoComplete="off" spellCheck={false} style={eingabeStil} />
             </Feld>
             {webhook && <>
               <div role="status" style={{ fontSize: 16, lineHeight: 1.5 }}>{T('sh_webhook_text')}</div>
