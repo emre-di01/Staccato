@@ -59,7 +59,7 @@ t('Shop nennt Anbieter',shop(aktion='info',slug='probe')[1]['anbieter']=='sumup'
 
 # Kauf
 k=kauf(2); t('Kauf',k.get('ok') and k['url'].startswith('https://checkout.sumup.test/'),k); z=k['zugang']; i=k['url'].split('/')[-1]; c=st()['checkouts'][i]
-t('SumUp-Angaben',c['amount']==30 and c['currency']=='EUR' and c['merchant_code']=='MLIVE001' and c['checkout_reference']==bid('su@example.test') and c['redirect_url'].endswith('/shop/bestellung/'+z) and c['return_url']=='https://api.example.test/functions/v1/sumup-webhook?schule='+SCH and c['hosted_checkout']=={'enabled':True},c)
+t('SumUp-Angaben',c['amount']==30 and c['currency']=='EUR' and c['merchant_code']=='MLIVE001' and c['checkout_reference']==bid('su@example.test') and c['redirect_url']=='https://app.example.test/shop/bestellung' and z not in json.dumps(c) and c['return_url']=='https://api.example.test/functions/v1/sumup-webhook?schule='+SCH and c['hosted_checkout']=={'enabled':True},c)
 o=best(z); t('vor Zahlung keine Codes',o['status']=='reserviert' and all(x['code'] is None for x in o['tickets'])); t('keine internen Felder',not {'checkout_id','schule_id','id','anbieter'}&set(o),o)
 t('Meldung ohne Zahlung ändert nichts',hook(i)==200 and best(z)['status']=='reserviert')
 n=len(st()['log']); t('Unbekannte Meldung ohne Rückfrage',hook(str(uuid.uuid4()))==200 and hook(i,'72222222-2222-2222-2222-222222222222')==200 and len(st()['log'])==n); t('Unsinn abgelehnt',req(F+'sumup-webhook?schule=x',{'id':i})[0]==400 and req(F+'sumup-webhook?schule='+SCH,b'xx')[0]==400 and req(F+'sumup-webhook')[0]==405)

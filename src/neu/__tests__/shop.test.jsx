@@ -17,6 +17,7 @@ vi.mock('../ticketPdf', () => ({ ticketBilder: async () => {}, ticketPdf: async 
 vi.mock('qrcode', () => ({ default: { toDataURL: async x => `data:${x}` } }))
 const { default: Shop } = await import('../shop/Shop')
 const { default: Bestellung } = await import('../shop/Bestellung')
+const { default: Rueckkehr } = await import('../shop/Rueckkehr')
 const { default: AdminTicketshop, stripeLink } = await import('../admin/Ticketshop')
 const { default: TicketshopSumup } = await import('../admin/TicketshopSumup')
 const { default: TicketBestellungen } = await import('../admin/TicketBestellungen')
@@ -41,7 +42,7 @@ async function zeige(pfad) {
   root = createRoot(document.body.appendChild(document.createElement('div')))
   await act(async () => root.render(
     <MemoryRouter initialEntries={[pfad]}><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <Routes><Route path="/shop/bestellung/:zugang" element={<Bestellung />} /><Route path="/shop/:slug" element={<Shop />} /><Route path="/bestellungen" element={<TicketBestellungen ev={{ id: 'ev1' }} kapazitaet={10} onClose={() => {}} />} /><Route path="/admin" element={<AdminTicketshop />} /><Route path="/admin/ticketshop" element={<p>Ticketshop-Seite</p>} /><Route path="/admin/ticketshop/sumup" element={<TicketshopSumup />} /></Routes>
+      <Routes><Route path="/shop/bestellung" element={<Rueckkehr />} /><Route path="/shop/bestellung/:zugang" element={<Bestellung />} /><Route path="/shop/:slug" element={<Shop />} /><Route path="/bestellungen" element={<TicketBestellungen ev={{ id: 'ev1' }} kapazitaet={10} onClose={() => {}} />} /><Route path="/admin" element={<AdminTicketshop />} /><Route path="/admin/ticketshop" element={<p>Ticketshop-Seite</p>} /><Route path="/admin/ticketshop/sumup" element={<TicketshopSumup />} /></Routes>
     </QueryClientProvider></MemoryRouter>))
   await warte()
 }
@@ -239,6 +240,36 @@ describe('Nachbetreuung', () => {
     await tippe(document.querySelector('input[type="email"]'), ' Richtig@example.test')
     await klick('Tickets per E-Mail senden')
     expect(aufrufe('mail')).toEqual([{ bestellung_id: 'b1', aktion: 'mail', email: 'richtig@example.test' }])
+  })
+})
+
+describe('Rückkehr von der Bezahlseite', () => {
+  afterEach(() => sessionStorage.clear())
+  const o = { ok: true, status: 'bezahlt', name: 'G', email: 'g@example.test', betrag: 15, slug: 'probe', zurueck: 0, event, schule, tickets: [{ id: 't1', preis: 15, status: 'gueltig', code: 'c'.repeat(32) }] }
+  it('findet die Bestellung dieses Tabs und vergisst sie dann', async () => {
+    sessionStorage.setItem('staccato_shop_bestellung', ZUGANG)
+    antworten({ bestellung: o })
+    await zeige('/shop/bestellung')
+    expect(aufrufe('bestellung')[0].zugang).toBe(ZUGANG)
+    expect(text()).toContain('Bezahlt!')
+    expect(sessionStorage.getItem('staccato_shop_bestellung')).toBeNull()
+  })
+  it('Abbruch gibt die Plätze frei', async () => {
+    sessionStorage.setItem('staccato_shop_bestellung', ZUGANG)
+    antworten({ abbrechen: { ...o, status: 'verfallen' } })
+    await zeige('/shop/bestellung?abbruch=1')
+    expect(aufrufe('abbrechen')[0].zugang).toBe(ZUGANG)
+  })
+  it('anderer Browser: kein Zugriff, Hinweis auf die E-Mail', async () => {
+    await zeige('/shop/bestellung')
+    expect(text()).toContain('per E-Mail')
+    expect(sb.invoke).not.toHaveBeenCalled()
+  })
+  it('Unsinn im Speicher wird ignoriert', async () => {
+    sessionStorage.setItem('staccato_shop_bestellung', '../../admin')
+    await zeige('/shop/bestellung?abbruch=1')
+    expect(text()).toContain('Kauf abgebrochen')
+    expect(sb.invoke).not.toHaveBeenCalled()
   })
 })
 

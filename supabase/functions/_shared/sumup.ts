@@ -115,7 +115,7 @@ export async function bezahlseite(token: string, k: Konto, r: any, anzahl: numbe
   const c = await sumup(token, 'POST', 'v0.1/checkouts', {
     checkout_reference: r.bestellung_id, amount: Math.round(r.preis * 100) * anzahl / 100, currency: 'EUR', merchant_code: k.haendler,
     description: `${anzahl} × ${titel}`.slice(0, 200), hosted_checkout: { enabled: true },
-    redirect_url: `${APP_URL}/shop/bestellung/${r.zugang}`, return_url: `${basis()}/functions/v1/sumup-webhook?schule=${r.schule_id}`,
+    redirect_url: `${APP_URL}/shop/bestellung`, return_url: `${basis()}/functions/v1/sumup-webhook?schule=${r.schule_id}`,
     valid_until: new Date(Date.now() + 31 * 60_000).toISOString(),
   })
   if (!c.id || !/^https:\/\//.test(c.hosted_checkout_url ?? '')) throw new Error('SumUp: keine Bezahlseite erhalten')

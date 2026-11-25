@@ -228,7 +228,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.21** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.22** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -313,6 +313,7 @@ Six roles: `superadmin`, `admin`, `lehrer` (teacher), `schueler` (student), `elt
 | `/einlass` | `Einlass` (nur neues Design) | Admins und für die Veranstaltung freigegebene Personen (Server prüft) |
 | `/kasse` | `Kasse` (nur neues Design) | Admins und Personen mit Freigabe „Kasse“ (Server prüft) |
 | `/shop/:slug` | `Shop` (`src/neu/shop/`) | public (no auth), Ticketshop einer Schule |
+| `/shop/bestellung` | `Rueckkehr` | public (neutrale Rückkehr von der Bezahlseite, Bestellung nur aus sessionStorage) |
 | `/shop/bestellung/:zugang` | `Bestellung` | public (persönlicher Link des Käufers) |
 | `/admin/ticketshop` | `AdminTicketshop` (nur neues Design) | admin, superadmin |
 | `/admin/ticketshop/sumup` | `TicketshopSumup` (Rückkehr der SumUp-Anmeldung) | admin, superadmin |

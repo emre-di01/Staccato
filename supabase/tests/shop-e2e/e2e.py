@@ -45,7 +45,7 @@ t('unbekannter Shop',shop(aktion='info',slug='nix-da')[0]==404); t('Slug-Unsinn'
 # Kauf
 t('ohne AGB',kauf(agb=False)[1]['grund']=='angaben'); t('Honigtopf',kauf(website='x')[1]['grund']=='angaben'); t('Preis manipuliert',kauf(betrag=1)[1]['grund']=='betrag'); t('Anzahl als Text',kauf(anzahl='1')[1]['grund']=='anzahl')
 c,k=kauf(2); t('Kauf',k.get('ok') and k['url'].startswith('https://checkout'),k); z=k['zugang']; cs=k['url'].split('/')[-1]; f=st()['sessions'][cs]['form']
-t('Stripe-Angaben',f['line_items[0][price_data][unit_amount]']=='1500' and f['mode']=='payment' and f['success_url'].endswith(z) and 1800<int(f['expires_at'])-time.time()<1900 and f['customer_email']=='gast@example.test',f)
+t('Stripe-Angaben',f['line_items[0][price_data][unit_amount]']=='1500' and f['mode']=='payment' and f['success_url']=='https://app.example.test/shop/bestellung' and z not in json.dumps(f) and 1800<int(f['expires_at'])-time.time()<1900 and f['customer_email']=='gast@example.test',f)
 o=shop(aktion='bestellung',zugang=z)[1]; t('vor Zahlung keine Codes',o['status']=='reserviert' and all(x['code'] is None for x in o['tickets']),o); t('keine internen Felder',not {'checkout_id','schule_id','id'}&set(o))
 t('falscher Zugang',shop(aktion='bestellung',zugang='a'*64)[0]==404 and shop(aktion='bestellung',zugang='x')[0]==404)
 s=pay(cs)

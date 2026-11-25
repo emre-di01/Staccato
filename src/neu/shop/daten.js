@@ -31,3 +31,18 @@ export const emailGueltig = e => /^[^@\s<>",;]+@[^@\s<>",;]+\.[^@\s<>",;]{2,}$/.
 // Gründe, für die es einen eigenen Text gibt (shop_fehler_<grund>)
 export const GRUENDE = ['angaben', 'anzahl', 'ausverkauft', 'zu_wenig_frei', 'betrag', 'zu_viele', 'beendet', 'noch_nicht', 'nicht_verfuegbar', 'netz', 'fehler', 'allgemein']
 export const fehlerText = (T, grund) => T(`shop_fehler_${GRUENDE.includes(grund) ? grund : 'fehler'}`)
+
+// Begonnene Bestellung nur in diesem Tab merken (Rückkehr von der Bezahlseite), nicht dauerhaft auf dem Gerät
+const MERKER = 'staccato_shop_bestellung'
+export function bestellungMerken(zugang) {
+  try { sessionStorage.setItem(MERKER, zugang) } catch { /* gesperrt: Rückkehr zeigt den Hinweis auf die E-Mail */ }
+}
+export function bestellungHolen() {
+  try {
+    const z = sessionStorage.getItem(MERKER)
+    return /^[0-9a-f]{64}$/.test(z ?? '') ? z : null
+  } catch { return null }
+}
+export function bestellungVergessen() {
+  try { sessionStorage.removeItem(MERKER) } catch { /* gesperrt */ }
+}

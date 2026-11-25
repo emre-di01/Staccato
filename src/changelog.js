@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.21'
+export const CURRENT_VERSION = '2.9.22'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.22',
+    date: '2026-11-25',
+    features: [
+      {
+        icon: '🔒',
+        de: 'Ticketshop: Zahlungsanbieter bekommen keinen Link mehr, über den sich eine Bestellung ansehen lässt',
+        en: 'Ticket shop: payment providers no longer receive a link that shows an order',
+        tr: 'Bilet satış sayfası: Ödeme sağlayıcıları artık siparişi gösteren bir bağlantı almaz',
+      },
+    ],
+  },
   {
     version: '2.9.21',
     date: '2026-11-25',

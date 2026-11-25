@@ -1,4 +1,4 @@
-// Bestellung über den persönlichen Link (/shop/bestellung/:zugang): Rückkehr von Stripe, Tickets ansehen
+// Bestellung über den persönlichen Link (/shop/bestellung/:zugang): Zahlung prüfen, Tickets ansehen
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CircleCheck, Printer } from 'lucide-react'
@@ -7,7 +7,7 @@ import { Knopf, Laden, Leer } from '../../ui'
 import { geldKurz, tagAusgeschrieben } from '../tickets'
 import { TicketKarte, useTicketBilder, useTicketDruck } from '../ticketKarte'
 import ShopRahmen, { h1 } from './Rahmen'
-import { shopAufruf } from './daten'
+import { bestellungVergessen, shopAufruf } from './daten'
 
 const nutzbar = t => t.status === 'gueltig' || t.status === 'demo'
 const ABSTAND = 3000
@@ -32,6 +32,7 @@ export default function Bestellung() {
   useEffect(() => {
     let aktuell = true
     let uhr
+    bestellungVergessen()   // steht jetzt in der Adresse
     const laden = async i => {
       const r = await shopAufruf(abbruch && i === 0 ? 'abbrechen' : 'bestellung', { zugang })
       if (!aktuell) return

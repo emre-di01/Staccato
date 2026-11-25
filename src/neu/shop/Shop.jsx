@@ -9,7 +9,7 @@ import { geldKurz, tagAusgeschrieben } from '../tickets'
 import { ANBIETER } from '../ticketshop'
 import LangerText from '../LangerText'
 import ShopRahmen, { h1, textKnopf } from './Rahmen'
-import { bildAdresse, emailGueltig, fehlerText, nameGueltig, shopAufruf, summe } from './daten'
+import { bestellungMerken, bildAdresse, emailGueltig, fehlerText, nameGueltig, shopAufruf, summe } from './daten'
 
 const INFOS = ['impressum', 'agb', 'datenschutz']
 const ANSICHTEN = [...INFOS, 'nochmal']
@@ -180,7 +180,7 @@ function Kauf({ ev, demo, anbieter, tz, onInfo, onNeuLaden }) {
     setFehler('')
     setSendet(true)
     const r = await shopAufruf('kaufen', { event_id: ev.id, anzahl: n, betrag, name: name.trim(), email: email.trim(), sprache: lang, agb, website })
-    if (r?.ok && r.url) { window.location.assign(r.url); return }
+    if (r?.ok && r.url) { bestellungMerken(r.zugang); window.location.assign(r.url); return }
     laeuft.current = false
     setSendet(false)
     setFehler(fehlerText(T, r?.grund))

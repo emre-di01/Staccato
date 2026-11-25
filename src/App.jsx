@@ -52,6 +52,7 @@ const Platzhalter          = lazy(() => import('./pages/Platzhalter'))
 const SchuelerSession      = lazy(() => import('./pages/SchuelerSession'))
 const ShopSeite            = lazy(() => import('./neu/shop/Shop'))
 const ShopBestellung       = lazy(() => import('./neu/shop/Bestellung'))
+const ShopRueckkehr        = lazy(() => import('./neu/shop/Rueckkehr'))
 const NeuAdminTicketshop   = lazy(() => import('./neu/admin/Ticketshop'))
 const NeuAdminSumup        = lazy(() => import('./neu/admin/TicketshopSumup'))
 const NeuBeamer            = lazy(() => import('./neu/seiten/Beamer'))
@@ -325,6 +326,7 @@ function AppRoutes() {
       <Route path="/beamer" element={<NeuBeamer />} />
 
       {/* Ticketshop (Gäste, ohne Anmeldung) */}
+      <Route path="/shop/bestellung" element={<ShopRueckkehr />} />
       <Route path="/shop/bestellung/:zugang" element={<ShopBestellung />} />
       <Route path="/shop/:slug" element={<ShopSeite />} />
 

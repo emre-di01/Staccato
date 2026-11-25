@@ -71,7 +71,8 @@ async function kaufen(req: Request, b: Record<string, unknown>) {
       customer_email: String(b.email).trim().toLowerCase(),
       line_items: [{ quantity: b.anzahl, price_data: { currency: 'eur', unit_amount: Math.round(r.preis * 100), product_data: { name: String(ev.titel).slice(0, 200) } } }],
       payment_intent_data: { metadata: { bestellung: r.bestellung_id } },
-      success_url: `${APP_URL}/shop/bestellung/${r.zugang}`, cancel_url: `${APP_URL}/shop/bestellung/${r.zugang}?abbruch=1`,
+      // neutral, ohne Zugang zur Bestellung: den kennt nur der Browser des Käufers
+      success_url: `${APP_URL}/shop/bestellung`, cancel_url: `${APP_URL}/shop/bestellung?abbruch=1`,
       expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
     }, `checkout-${r.bestellung_id}`)
     await rpc(d, 'shop_checkout_setzen', { p_bestellung_id: r.bestellung_id, p_checkout_id: s.id })
