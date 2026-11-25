@@ -1,4 +1,4 @@
-// Öffentlicher Ticketshop einer Schule (/shop/:slug): Veranstaltung wählen, kaufen, weiter zu Stripe
+// Öffentlicher Ticketshop einer Schule (/shop/:slug): Veranstaltung wählen, kaufen, weiter zu Stripe oder SumUp
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { ChevronLeft, Minus, Plus, Ticket } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Feld, FehlerText, Knopf, Laden, Leer, eingabeStil } from '../../ui'
 import { geldKurz, tagAusgeschrieben } from '../tickets'
+import { ANBIETER } from '../ticketshop'
 import LangerText from '../LangerText'
 import ShopRahmen, { h1, textKnopf } from './Rahmen'
 import { bildAdresse, emailGueltig, fehlerText, nameGueltig, shopAufruf, summe } from './daten'
@@ -51,7 +52,7 @@ export default function Shop() {
         {ev ? (
           <>
             {!einziges && <Zurueck onClick={() => zurueck({ event: null })}>{T('shop_alle')}</Zurueck>}
-            <Kauf key={ev.id} ev={ev} demo={d.testmodus} tz={d.schule.zeitzone} onInfo={i => gehe({ info: i })} onNeuLaden={refetch} />
+            <Kauf key={ev.id} ev={ev} demo={d.testmodus} anbieter={d.anbieter} tz={d.schule.zeitzone} onInfo={i => gehe({ info: i })} onNeuLaden={refetch} />
           </>
         ) : <EventListe events={d.events} tz={d.schule.zeitzone} onWahl={id => gehe({ event: id })} />}
       </div>
@@ -147,7 +148,7 @@ function EventListe({ events, tz, onWahl }) {
   )
 }
 
-function Kauf({ ev, demo, tz, onInfo, onNeuLaden }) {
+function Kauf({ ev, demo, anbieter, tz, onInfo, onNeuLaden }) {
   const { T, lang } = useApp()
   const max = ev.lage.max ?? 0
   const [anzahl, setAnzahl] = useState(1)
@@ -221,8 +222,8 @@ function Kauf({ ev, demo, tz, onInfo, onNeuLaden }) {
           {fehler && <FehlerText>{fehler}</FehlerText>}
           {/* „kaufen“: eindeutige Bezeichnung nach § 312j BGB */}
           <Knopf voll type="submit" disabled={sendet} style={{ height: 60, fontSize: 19 }}>{sendet ? T('shop_moment') : T('shop_kaufen').replace('{betrag}', geldKurz(betrag, lang))}</Knopf>
-          <div style={{ fontSize: 15, color: 'var(--text-2)', textAlign: 'center' }}>{T('shop_stripe_hinweis')}</div>
-          {demo && <div style={{ padding: 14, borderRadius: 14, background: '#FDE68A', color: '#422006', fontSize: 16, lineHeight: 1.45 }}>{T('shop_demo_karte')}</div>}
+          <div style={{ fontSize: 15, color: 'var(--text-2)', textAlign: 'center' }}>{T('shop_stripe_hinweis').replaceAll('{anbieter}', ANBIETER[anbieter] ?? ANBIETER.stripe)}</div>
+          {demo && <div style={{ padding: 14, borderRadius: 14, background: '#FDE68A', color: '#422006', fontSize: 16, lineHeight: 1.45 }}>{T(anbieter === 'sumup' ? 'shop_demo_karte_sumup' : 'shop_demo_karte')}</div>}
         </form>
       )}
     </div>

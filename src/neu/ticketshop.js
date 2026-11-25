@@ -7,7 +7,10 @@ import { useApp } from '../context/AppContext'
 export const SHOP_LIVE = import.meta.env.VITE_TICKETSHOP === 'live'
 export const SHOP_SICHTBAR = SHOP_LIVE || import.meta.env.VITE_TICKETSHOP === 'test'
 
-// { shop: Zeile aus ticket_shops | null, konto: { verbunden, livemode, letzte4, demos } } – demos: Anzahl Demo-Bestellungen
+export const ANBIETER = { stripe: 'Stripe', sumup: 'SumUp' }
+
+// { shop: Zeile aus ticket_shops | null, konto: { verbunden, anbieter, livemode, letzte4, konten, demos } }
+// Oberste Ebene = im Shop aktives Konto, konten = alle verbundenen; demos: Anzahl Demo-Bestellungen
 export function useTicketShop() {
   const { schule } = useApp()
   return useQuery({
@@ -20,7 +23,7 @@ export function useTicketShop() {
         supabase.from('ticket_bestellungen').select('id', { count: 'exact', head: true }).eq('schule_id', schule.id).eq('demo', true),
       ])
       if (s.error || k.error) throw s.error ?? k.error
-      return { shop: s.data, konto: { ...k.data, demos: d.count ?? 0 } }
+      return { shop: s.data, konto: { konten: [], ...k.data, demos: d.count ?? 0 } }
     },
   })
 }

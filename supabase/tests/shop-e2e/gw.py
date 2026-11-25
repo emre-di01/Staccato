@@ -1,4 +1,4 @@
-# Gateway (/rest/v1 → PostgREST, /auth/v1/user aus dem JWT) und nachgebautes Stripe auf :8001
+# Gateway (/rest/v1 → PostgREST, /auth/v1/user aus dem JWT), nachgebautes Stripe auf :8001 und SumUp auf :8002
 import json,base64,threading,time,urllib.request as u,urllib.parse as p,uuid,hmac,hashlib
 from http.server import *
 ST={'sessions':{},'refunds':{},'webhooks':{},'idem':{},'log':[],'fail':None,'norights':[]}
@@ -58,5 +58,62 @@ class T(G):
         if path.startswith('/v1/webhook_endpoints/') and self.command=='DELETE': ST['webhooks'].pop(path.split('/')[-1],None); return J({'deleted':True})
         return J({'data':[]})
     do_GET=do_POST=do_PATCH=do_DELETE=do
+SU={'checkouts':{},'tx':{},'refresh':'r0','access':{},'log':[],'fail':None,'haendler':{'MLIVE001':{'sandbox':False,'default_currency':'EUR'}},'scope':'payments transactions.history user.profile_readonly','verloren':False,'ablehnen':False,'entzogen':False,'n':0,'langsam':0,'verzoegert':False}
+LOCK=threading.Lock()
+class U(G):
+    def do(self):
+        n=int(self.headers.get('Content-Length') or 0); raw=self.rfile.read(n).decode() if n else ''; path=self.path.split('?')[0]; J=lambda d,c=200: self.out(c,json.dumps(d).encode(),'application/json')
+        if path.startswith('/_'):
+            b=json.loads(raw) if raw else {}
+            if path=='/_state': return J(SU)
+            if path=='/_set': SU.update(b); return J({})
+            c=SU['checkouts'][b['id']]
+            if path=='/_expire': c['status']='EXPIRED'; return J(c)
+            t='tx-'+b['id']; c.update(status='PAID',transaction_id=t,transactions=[{'id':'tx-fehl','status':'FAILED'},{'id':t,'status':'SUCCESSFUL'}]); SU['tx'][t]={'id':t,'amount':c['amount'],'status':'SUCCESSFUL','simple_status':'SUCCESSFUL','transaction_events':[],'events':[]}; return J(c)
+        SU['log'].append([self.command,path,raw])
+        if path=='/token':
+            f=dict(p.parse_qsl(raw))
+            if f.get('client_secret')!='geheim': return J({'error':'invalid_client'},401)
+            with LOCK:
+                if f['grant_type']=='authorization_code' and not f['code'].startswith('gut'): return J({'error':'invalid_grant'},400)
+                if f['grant_type']=='refresh_token' and (SU['entzogen'] or f['refresh_token']!=SU['refresh']): return J({'error':'invalid_grant'},400)
+                SU['n']+=1; a='at%d'%SU['n']; SU['refresh']='r%d'%SU['n']; SU['access'][a]=True
+            time.sleep(SU['langsam'])
+            return J({'access_token':a,'refresh_token':SU['refresh'],'expires_in':SU.get('dauer',3600),'scope':SU['scope']})
+        key=(self.headers.get('Authorization') or '')[7:]
+        if not (key.startswith('sup_sk_') and 'FALSCH' not in key) and key not in SU['access']: return J({'message':'unauthorized'},401)
+        if SU['fail'] and SU['fail'] in path: return J({'message':'geheime interne Meldung'},500)
+        if path=='/v0.1/memberships': return J({'items':[{'type':'merchant','resource':{'id':k,'type':'merchant','name':'Haus '+k}} for k in SU['haendler']]+[{'type':'organization','resource':{'id':'ORG','type':'organization'}}]})
+        if path.startswith('/v1/merchants/'):
+            m=SU['haendler'].get(path.split('/')[-1]); return J({'merchant_code':path.split('/')[-1],**m}) if m else J({'title':'nf'},404)
+        if path=='/v0.1/checkouts' and self.command=='GET': return J([]) if 'KEINRECHT' not in key else J({'message':'forbidden'},403)
+        if path=='/v0.1/checkouts':
+            b=json.loads(raw)
+            if any(c['checkout_reference']==b['checkout_reference'] for c in SU['checkouts'].values()): return J({'error_code':'DUPLICATED_CHECKOUT'},409)
+            i=str(uuid.uuid4()); SU['checkouts'][i]={**b,'id':i,'status':'PENDING','hosted_checkout_url':'https://checkout.sumup.test/pay/'+i,'transactions':[]}; return J(SU['checkouts'][i],201)
+        if path.startswith('/v0.1/checkouts/'):
+            c=SU['checkouts'].get(path.split('/')[-1])
+            if not c: return J({'error_code':'NOT_FOUND'},404)
+            if self.command=='DELETE':
+                if c['status']!='PENDING': return J({'error_code':'CHECKOUT_PROCESSED'},409)
+                c['status']='EXPIRED'
+            return J(c)
+        if path.startswith('/v2.1/merchants/'):
+            t=SU['tx'].get(p.parse_qs(self.path.split('?')[1])['id'][0]); 
+            if t and SU['verzoegert']: t={**t,'transaction_events':[],'events':[]}
+            return J(t) if t else J({'title':'nf'},404)
+        if path.endswith('/refunds'):
+            t=SU['tx'][path.split('/')[-2]]; b=json.loads(raw) if raw else {}
+            with LOCK:
+                weg=sum(round(e['amount']*100) for e in t['transaction_events']); amt=b.get('amount') or round(t['amount']*100)-weg
+                if SU['ablehnen']: return J({'title':'Bad Request'},400)
+                if amt<=0 or weg+amt>round(t['amount']*100): return J({'title':'zu viel'},400)
+                t['transaction_events'].append({'event_type':'REFUND','status':'REFUNDED','amount':amt/100}); t['events'].append({'type':'REFUND','status':'REFUNDED','amount':amt/100})
+            time.sleep(0.2)
+            if SU['verloren']: SU['verloren']=False; return J({'title':'weg'},502)
+            return J({},201)
+        return J({'title':'nf'},404)
+    do_GET=do_POST=do_PATCH=do_DELETE=do
+threading.Thread(target=ThreadingHTTPServer(('0.0.0.0',8002),U).serve_forever,daemon=True).start()
 threading.Thread(target=ThreadingHTTPServer(('0.0.0.0',8001),T).serve_forever,daemon=True).start()
 ThreadingHTTPServer(('0.0.0.0',8000),G).serve_forever()

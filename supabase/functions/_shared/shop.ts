@@ -1,4 +1,4 @@
-// Gemeinsames von „shop“ und „stripe-webhook“: Schlüssel laden, Zahlung abschließen, Tickets verschicken
+// Gemeinsames des Ticketshops: Konto laden, Stripe-Zahlung abschließen (SumUp: sumup.ts), Tickets verschicken
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { entschluesseln } from './krypto.ts'
 import { stripe } from './stripe.ts'
@@ -14,9 +14,13 @@ export async function rpc(d: DB, name: string, werte: Record<string, unknown>) {
   return data
 }
 
-export async function konto(d: DB, schuleId: string) {
-  const { data } = await d.from('schul_zahlungskonten').select('schluessel, webhook_geheim, webhook_id, livemode').eq('schule_id', schuleId).maybeSingle()
-  return data as { schluessel: string; webhook_geheim: string; webhook_id: string | null; livemode: boolean } | null
+export type Anbieter = 'stripe' | 'sumup'
+export interface Konto { anbieter: Anbieter; schluessel: string; webhook_geheim: string | null; webhook_id: string | null; livemode: boolean; art: 'schluessel' | 'oauth'; haendler: string | null; neu_verbinden: boolean }
+// Immer mit Anbieter: laufende Bestellungen gehören zu dem Konto, über das sie begonnen wurden
+export async function konto(d: DB, schuleId: string, anbieter: Anbieter | null): Promise<Konto | null> {
+  if (!anbieter) return null
+  const { data } = await d.from('schul_zahlungskonten').select('anbieter, schluessel, webhook_geheim, webhook_id, livemode, art, haendler, neu_verbinden').eq('schule_id', schuleId).eq('anbieter', anbieter).maybeSingle()
+  return data
 }
 export const schluesselVon = (k: { schluessel: string }, schuleId: string) => entschluesseln(k.schluessel, schuleId, 'api')
 

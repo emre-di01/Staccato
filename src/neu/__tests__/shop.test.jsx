@@ -7,10 +7,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { t } from '../../i18n/translations'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
-const sb = vi.hoisted(() => ({ invoke: vi.fn(), upsert: vi.fn(async () => ({ error: null })), bestellungen: [], shop: null, konto: { verbunden: false } }))
+const sb = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn(), upsert: vi.fn(async () => ({ error: null })), bestellungen: [], shop: null, konto: { verbunden: false } }))
 vi.mock('../../lib/supabase', () => {
   const q = { select: () => q, eq: () => q, order: () => q, range: async () => ({ data: sb.bestellungen, error: null }), maybeSingle: async () => ({ data: sb.shop, error: null }), upsert: sb.upsert }
-  return { supabase: { from: () => q, rpc: async () => ({ data: sb.konto, error: null }), functions: { invoke: sb.invoke } } }
+  return { supabase: { from: () => q, rpc: async (...a) => { sb.rpc(...a); return { data: a[0] === 'zahlungskonto_waehlen' ? true : sb.konto, error: null } }, functions: { invoke: sb.invoke } } }
 })
 vi.mock('../../context/AppContext', () => ({ useApp: () => ({ T: k => t('de', k), lang: 'de', setLang() {}, darkMode: false, schule: { id: 's', name: 'Müzik Şule & Co.' }, toast() {}, confirm: async () => true }) }))
 vi.mock('../ticketPdf', () => ({ ticketBilder: async () => {}, ticketPdf: async () => new File([], 'x.pdf') }))
@@ -18,6 +18,7 @@ vi.mock('qrcode', () => ({ default: { toDataURL: async x => `data:${x}` } }))
 const { default: Shop } = await import('../shop/Shop')
 const { default: Bestellung } = await import('../shop/Bestellung')
 const { default: AdminTicketshop, stripeLink } = await import('../admin/Ticketshop')
+const { default: TicketshopSumup } = await import('../admin/TicketshopSumup')
 const { default: TicketBestellungen } = await import('../admin/TicketBestellungen')
 const { slugAus, SLUG } = await import('../ticketshop')
 const { summe, bildAdresse } = await import('../shop/daten')
@@ -40,7 +41,7 @@ async function zeige(pfad) {
   root = createRoot(document.body.appendChild(document.createElement('div')))
   await act(async () => root.render(
     <MemoryRouter initialEntries={[pfad]}><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <Routes><Route path="/shop/bestellung/:zugang" element={<Bestellung />} /><Route path="/shop/:slug" element={<Shop />} /><Route path="/bestellungen" element={<TicketBestellungen ev={{ id: 'ev1' }} kapazitaet={10} onClose={() => {}} />} /><Route path="/admin" element={<AdminTicketshop />} /></Routes>
+      <Routes><Route path="/shop/bestellung/:zugang" element={<Bestellung />} /><Route path="/shop/:slug" element={<Shop />} /><Route path="/bestellungen" element={<TicketBestellungen ev={{ id: 'ev1' }} kapazitaet={10} onClose={() => {}} />} /><Route path="/admin" element={<AdminTicketshop />} /><Route path="/admin/ticketshop" element={<p>Ticketshop-Seite</p>} /><Route path="/admin/ticketshop/sumup" element={<TicketshopSumup />} /></Routes>
     </QueryClientProvider></MemoryRouter>))
   await warte()
 }
@@ -50,7 +51,7 @@ const antworten = karte => sb.invoke.mockImplementation(async (name, { body }) =
   return r?.http ? { data: null, error: { context: { json: async () => r.body } } } : { data: r, error: null }
 })
 const aufrufe = aktion => sb.invoke.mock.calls.map(c => c[1].body).filter(b => b.aktion === aktion)
-beforeEach(() => { sb.invoke.mockReset(); sb.upsert.mockClear(); sb.shop = null; sb.konto = { verbunden: false }; window.scrollTo = () => {} })
+beforeEach(() => { sb.invoke.mockReset(); sb.rpc.mockClear(); sb.upsert.mockClear(); sb.shop = null; sb.konto = { verbunden: false, konten: [] }; window.scrollTo = () => {} })
 afterEach(() => { act(() => root?.unmount()); root = null; document.body.innerHTML = '' })
 
 describe('Shop', () => {
@@ -225,6 +226,12 @@ describe('Nachbetreuung', () => {
     await klick('Nochmal versuchen')
     expect(aufrufe('wiederholen')).toEqual([{ bestellung_id: 'b1', aktion: 'wiederholen', vorgang: 'v1' }])
   })
+  it('SumUp-Zahlung: zählt als online, Frage nennt SumUp', async () => {
+    const z = { id: 'z', methode: 'sumup', betrag: 30, zeitpunkt: '2026-11-24T10:01:00Z', ticket_erstattungen: [] }
+    const { stand } = bestellungenAuswerten([bestellung({ ticket_zahlungen: [z] })])
+    expect(stand.online).toBe(30)
+    expect(stand.eingenommen).toBe(0)
+  })
   it('E-Mail korrigieren', async () => {
     antworten({ mail: { ok: true, geaendert: true } })
     await oeffnen(bestellung())
@@ -257,16 +264,95 @@ describe('Einrichtung', () => {
     expect(text()).toContain('Bitte Impressum, AGB und Datenschutz ausfüllen.')
     for (const f of document.querySelectorAll('textarea')) await tippe(f, 'Text')
     await klick('Speichern')
-    expect(text()).toContain('Bitte zuerst Stripe verbinden.')
+    expect(text()).toContain('Bitte zuerst Stripe oder SumUp verbinden.')
     expect(sb.upsert).not.toHaveBeenCalled()
   })
   it('speichert', async () => {
-    sb.konto = { verbunden: true, livemode: false, letzte4: '4242' }
+    sb.konto = { verbunden: true, anbieter: 'stripe', livemode: false, letzte4: '4242', konten: [{ anbieter: 'stripe', aktiv: true, livemode: false, letzte4: '4242', art: 'schluessel' }] }
     sb.shop = { slug: 'probe', aktiv: true, impressum: 'I', agb: 'A', datenschutz: 'D' }
     await zeige('/admin')
     expect(text()).toContain('Demo mit Testschlüssel · …4242')
     await klick('Speichern')
     expect(sb.upsert.mock.calls[0][0]).toMatchObject({ schule_id: 's', slug: 'probe', aktiv: true, agb: 'A' })
+  })
+  const beide = { verbunden: true, anbieter: 'stripe', livemode: true, letzte4: '1111', konten: [
+    { anbieter: 'stripe', aktiv: true, livemode: true, letzte4: '1111', art: 'schluessel' }, { anbieter: 'sumup', aktiv: false, livemode: true, letzte4: '2222', art: 'oauth' }] }
+  it('SumUp per Schlüssel mit Händlerauswahl', async () => {
+    antworten({ sumup_moeglich: { ok: true, oauth: false }, sumup_schluessel: b => b.haendler ? { ok: true } : { ok: false, grund: 'haendler', liste: [{ code: 'M1', name: 'Verein', sandbox: false }, { code: 'M2', name: 'Test', sandbox: true }] } })
+    await zeige('/admin')
+    await klick('SumUp')
+    await warte()
+    expect(knopf('Mit SumUp verbinden')).toBeFalsy()
+    expect(text()).toContain('vollen Zugriff')
+    await tippe(document.querySelector('input[type="password"]'), ' sup_sk_abc ')
+    await klick('Verbinden')
+    await klick('Test (Demo)')
+    expect(aufrufe('sumup_schluessel')).toEqual([{ schule_id: 's', aktion: 'sumup_schluessel', schluessel: 'sup_sk_abc' }, { schule_id: 's', aktion: 'sumup_schluessel', schluessel: 'sup_sk_abc', haendler: 'M2' }])
+    expect(document.querySelector('input[type="password"]').value).toBe('')
+  })
+  it('Schlüssel im falschen Reiter und echtes Konto werden erklärt', async () => {
+    antworten({ sumup_moeglich: { ok: true, oauth: false }, sumup_schluessel: { ok: false, grund: 'livemodus', konto: 'Musikverein' } })
+    await zeige('/admin')
+    await tippe(document.querySelector('input[type="password"]'), 'sup_sk_abc')
+    await klick('Verbinden')
+    expect(text()).toContain('Das ist ein Schlüssel von SumUp')
+    await klick('SumUp')
+    await warte()
+    await tippe(document.querySelector('input[type="password"]'), 'rk_test_abc')
+    await klick('Verbinden')
+    expect(text()).toContain('Das ist ein Schlüssel von Stripe')
+    expect(sb.invoke.mock.calls.filter(c => c[1].body.aktion !== 'sumup_moeglich')).toEqual([])
+    await tippe(document.querySelector('input[type="password"]'), 'sup_sk_abc')
+    await klick('Verbinden')
+    expect(text()).toContain('echten Konto „Musikverein“')
+    expect(text()).not.toContain('rk_test_')
+  })
+  it('SumUp-Anmeldung wird angeboten, Schlüssel nur auf Wunsch', async () => {
+    antworten({ sumup_moeglich: { ok: true, oauth: true }, sumup_start: { ok: false, grund: 'nicht_eingerichtet' } })
+    await zeige('/admin')
+    await klick('SumUp')
+    await warte()
+    expect(document.querySelector('input[type="password"]')).toBeNull()
+    await klick('Mit SumUp verbinden')
+    expect(text()).toContain('noch nicht eingerichtet')
+    await klick('Stattdessen API-Schlüssel eintragen')
+    expect(document.querySelector('input[type="password"]')).toBeTruthy()
+  })
+  it('zweiter Anbieter lässt sich im Shop verwenden und einzeln trennen', async () => {
+    sb.konto = beide
+    antworten({ trennen: { ok: true } })
+    await zeige('/admin')
+    expect(text()).toContain('Wird im Shop verwendet')
+    await klick('SumUp')
+    expect(text()).toContain('SumUp ist verbunden')
+    await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.startsWith('Im Shop verwenden')).click())
+    await warte()
+    expect(sb.rpc).toHaveBeenCalledWith('zahlungskonto_waehlen', { p_schule_id: 's', p_anbieter: 'sumup' })
+    await act(async () => [...document.querySelectorAll('button')].find(b => b.textContent.startsWith('SumUp trennen')).click())
+    await warte()
+    expect(aufrufe('trennen')).toEqual([{ schule_id: 's', aktion: 'trennen', anbieter: 'sumup' }])
+  })
+  it('abgelaufene SumUp-Verbindung wird gemeldet', async () => {
+    sb.konto = { verbunden: true, anbieter: 'sumup', livemode: true, letzte4: '2222', konten: [{ ...beide.konten[1], aktiv: true, neu_verbinden: true }] }
+    antworten({ sumup_moeglich: { ok: true, oauth: true } })
+    await zeige('/admin')
+    expect(text()).toContain('SumUp hat die Verbindung beendet')
+    await warte()
+    expect(knopf('Mit SumUp verbinden')).toBeTruthy()
+  })
+  it('Rückkehr von SumUp: Code nur einmal an die Function und aus der Adresse entfernt', async () => {
+    window.history.replaceState(null, '', '/admin/ticketshop/sumup?code=geheim&state=abc')
+    antworten({ sumup_fertig: { ok: true } })
+    await zeige('/admin/ticketshop/sumup')
+    expect(aufrufe('sumup_fertig')).toEqual([{ aktion: 'sumup_fertig', state: 'abc', code: 'geheim' }])
+    expect(window.location.search).toBe('')
+    expect(text()).toContain('Ticketshop-Seite')
+  })
+  it('Rückkehr abgebrochen', async () => {
+    window.history.replaceState(null, '', '/admin/ticketshop/sumup?error=access_denied&state=abc')
+    await zeige('/admin/ticketshop/sumup')
+    expect(text()).toContain('abgebrochen')
+    expect(sb.invoke).not.toHaveBeenCalled()
   })
   it('Stripe-Link wählt genau die drei nötigen Rechte vor', () => {
     expect(stripeLink(true)).toMatch(/^https:\/\/dashboard\.stripe\.com\/apikeys\/create\?/)

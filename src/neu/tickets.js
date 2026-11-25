@@ -63,7 +63,7 @@ export function einstellungenAusFormular(f) {
   if (f.bis_abendkasse && !(freigabe_minuten >= 0)) return { fehler: 'tk_fehler_freigabe' }
 
   const mitglieder_reserve = f.shop_aktiv ? ganzzahl(f.mitglieder_reserve || '0') : 0
-  if (f.shop_aktiv && !(preis_normal >= 0.5)) return { fehler: 'sh_fehler_preis' }   // Stripe nimmt mindestens 0,50 €
+  if (f.shop_aktiv && !(preis_normal >= 0.5)) return { fehler: 'sh_fehler_preis' }   // Stripe nimmt mindestens 0,50 €, SumUp evtl. mehr
   if (!(mitglieder_reserve >= 0 && mitglieder_reserve <= kapazitaet)) return { fehler: 'sh_fehler_reserve' }
 
   return {
@@ -175,7 +175,7 @@ export function bestellungenAuswerten(bestellungen, jetzt = Date.now()) {
     const erstattungen = (b.ticket_zahlungen ?? []).flatMap(z => z.ticket_erstattungen ?? [])
     const erstattetCent = summeCent(erstattungen, 'betrag')
     const storniertCent = summeCent(b.tickets.filter(t => t.status === 'storniert'), 'preis')
-    const online = zahlung?.methode === 'stripe'
+    const online = ['stripe', 'sumup'].includes(zahlung?.methode)
     const offeneErstattungen = (b.ticket_online_erstattungen ?? []).filter(o => !o.erledigt_am)
     if (!b.demo) {   // Demo zählt nirgends mit
       if (zustand === 'reserviert') stand.reserviert += aktiv.length
@@ -193,7 +193,7 @@ export function bestellungenAuswerten(bestellungen, jetzt = Date.now()) {
       erstattbar: zahlung && !b.auto_erstatten ? Math.max(Math.min(storniertCent, cent(zahlung.betrag) - summeCent(b.tickets.filter(t => ['gueltig', 'eingeloest', 'demo'].includes(t.status)), 'preis')) - erstattetCent - summeCent(offeneErstattungen, 'betrag'), 0) / 100 : 0,
     }
   })
-  // Eingenommen = bar in der Kasse verblieben; online = über Stripe, abzüglich Erstattungen
+  // Eingenommen = bar in der Kasse verblieben; online = über Stripe/SumUp, abzüglich Erstattungen
   return { liste, stand: { ...stand, eingenommen: (stand.eingenommen - stand.erstattet) / 100, erstattet: stand.erstattet / 100, online: stand.online / 100 } }
 }
 

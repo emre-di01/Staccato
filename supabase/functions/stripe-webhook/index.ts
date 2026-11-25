@@ -13,8 +13,8 @@ Deno.serve(async req => {
   const roh = await req.text()
   try {
     const d = db()
-    const k = await konto(d, schule)
-    if (!k || !await signaturGueltig(roh, req.headers.get('stripe-signature'), await entschluesseln(k.webhook_geheim, schule, 'webhook'))) {
+    const k = await konto(d, schule, 'stripe')
+    if (!k || !await signaturGueltig(roh, req.headers.get('stripe-signature'), await entschluesseln(k.webhook_geheim!, schule, 'webhook'))) {
       return new Response('', { status: 400 })
     }
     const ev = JSON.parse(roh)

@@ -8,5 +8,5 @@ for i in $(seq 1 40); do docker exec staccato_ticket_test pg_isready -U postgres
 docker exec -i staccato_ticket_test psql -U supabase_admin -h 127.0.0.1 -q postgres < $S/schema.sql >/dev/null 2>&1
 Q="docker exec -i staccato_ticket_test psql -U postgres -h 127.0.0.1 -q -v ON_ERROR_STOP=1 postgres"
 echo "insert into schulen(id,name) values ('00000000-0000-0000-0000-000000000001','Standard')" | $Q
-for r in 1 2; do for f in supabase/migrations/20261124*; do $Q --single-transaction < $f 2>&1 | grep -vE "NOTICE|schedule|^-+$|^ +[0-9]+$|^\(1 row|^$"; done; done
+for r in 1 2; do for f in supabase/migrations/202611{24,25}*; do $Q --single-transaction < $f 2>&1 | grep -vE "NOTICE|schedule|^-+$|^ +[0-9]+$|^\(1 row|^$"; done; done
 rm -f $S/schema.sql

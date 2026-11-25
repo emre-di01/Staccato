@@ -53,6 +53,7 @@ const SchuelerSession      = lazy(() => import('./pages/SchuelerSession'))
 const ShopSeite            = lazy(() => import('./neu/shop/Shop'))
 const ShopBestellung       = lazy(() => import('./neu/shop/Bestellung'))
 const NeuAdminTicketshop   = lazy(() => import('./neu/admin/Ticketshop'))
+const NeuAdminSumup        = lazy(() => import('./neu/admin/TicketshopSumup'))
 const NeuBeamer            = lazy(() => import('./neu/seiten/Beamer'))
 const Repertoire           = lazy(() => import('./pages/Repertoire'))
 const Nachrichten          = lazy(() => import('./pages/Nachrichten'))
@@ -182,6 +183,7 @@ function AppRoutes() {
           <Route path="/admin"                  element={<DesignWahl alt={<AdminDashboard />} neu={<NeuAdminStart />} />} />
           <Route path="/admin/unterricht"       element={<DesignWahl alt={<Navigate to="/admin/kurse" replace />} neu={<NeuAdminBereich bereich="unterricht" />} />} />
           <Route path="/admin/ticketshop"       element={<DesignWahl alt={<Navigate to="/admin" replace />} neu={<NeuAdminTicketshop />} />} />
+          <Route path="/admin/ticketshop/sumup" element={<DesignWahl alt={<Navigate to="/admin" replace />} neu={<NeuAdminSumup />} />} />
           <Route path="/admin/verwaltung"       element={<DesignWahl alt={<Navigate to="/admin" replace />} neu={<NeuAdminBereich bereich="verwaltung" />} />} />
           <Route path="/admin/ich"              element={<DesignWahl alt={<Navigate to="/einstellungen" replace />} neu={<NeuIch />} />} />
           <Route path="/admin/mitglieder"       element={<DesignWahl alt={<Mitgliederverwaltung />} neu={<NeuAdminMitglieder />} />} />

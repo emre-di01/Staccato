@@ -392,6 +392,9 @@ verify_jwt = false
 [functions.stripe-webhook]
 verify_jwt = false
 
+[functions.sumup-webhook]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
@@ -408,6 +411,8 @@ deno_version = 2
 ZAHLUNG_SCHLUESSEL = "env(ZAHLUNG_SCHLUESSEL)"
 OEFFENTLICHE_API_URL = "env(OEFFENTLICHE_API_URL)"
 STRIPE_LIVE_ERLAUBT = "env(STRIPE_LIVE_ERLAUBT)"
+SUMUP_CLIENT_ID = "env(SUMUP_CLIENT_ID)"
+SUMUP_CLIENT_SECRET = "env(SUMUP_CLIENT_SECRET)"
 SMTP_HOST = "env(SMTP_HOST)"
 SMTP_PORT = "env(SMTP_PORT)"
 SMTP_USER = "env(SMTP_USER)"

@@ -1,6 +1,7 @@
 // Öffentlicher Ticketshop (ohne Anmeldung): Angebot, Kauf starten, Bestellung ansehen, abbrechen
 import { hash } from '../_shared/krypto.ts'
 import { stripe } from '../_shared/stripe.ts'
+import { bezahlseite, bezahlseiteSchliessen, vorgangPruefen, zugang as sumupZugang } from '../_shared/sumup.ts'
 import { abschliessen, APP_URL, db, konto, mailBereit, rpc, schluesselVon, ticketsSenden } from '../_shared/shop.ts'
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' }
@@ -56,10 +57,15 @@ async function kaufen(req: Request, b: Record<string, unknown>) {
   })
   if (!r.ok) return antwort(r)
   try {
-    const k = await konto(d, r.schule_id)
+    const k = await konto(d, r.schule_id, r.anbieter)
     // Schlüssel zwischendurch gewechselt: nie echtes Geld für Demo-Tickets oder umgekehrt
     if (!k || k.livemode === r.demo) throw new Error('Kein passendes Zahlungskonto')
     const { data: ev } = await d.from('events').select('titel').eq('id', b.event_id).single()
+    if (k.anbieter === 'sumup') {
+      const c = await bezahlseite(await sumupZugang(d, k, r.schule_id), k, r, b.anzahl as number, String(ev.titel))
+      await rpc(d, 'shop_checkout_setzen', { p_bestellung_id: r.bestellung_id, p_checkout_id: c.id })
+      return antwort({ ok: true, url: c.url, zugang: r.zugang })
+    }
     const s = await stripe(await schluesselVon(k, r.schule_id), 'POST', 'checkout/sessions', {
       mode: 'payment', payment_method_types: ['card'], client_reference_id: r.bestellung_id, locale: ['de', 'en', 'tr'].includes(String(b.sprache)) ? b.sprache : 'auto',
       customer_email: String(b.email).trim().toLowerCase(),
@@ -87,11 +93,14 @@ async function bestellung(zugang: string) {
   const d = db()
   let o = await laden(d, zugang)
   if (!o) return antwort({ ok: false, grund: 'nicht_gefunden' }, 404)
-  // Webhook noch nicht da: direkt bei Stripe nachfragen
+  // Meldung noch nicht da: direkt beim Anbieter nachfragen
   if (o.checkout_id && (o.status === 'reserviert' || o.status === 'verfallen')) {
     try {
-      const k = await konto(d, o.schule_id)
-      if (k) {
+      const k = await konto(d, o.schule_id, o.anbieter)
+      if (k?.anbieter === 'sumup') {
+        await vorgangPruefen(d, k, o)
+        o = await laden(d, zugang)
+      } else if (k) {
         const schluessel = await schluesselVon(k, o.schule_id)
         const s = await stripe(schluessel, 'GET', `checkout/sessions/${encodeURIComponent(o.checkout_id)}`)
         if (s.payment_status === 'paid') { await abschliessen(d, o.schule_id, schluessel, s); o = await laden(d, zugang) }
@@ -106,9 +115,13 @@ async function abbrechen(zugang: string) {
   const o = await laden(d, zugang)
   if (!o) return antwort({ ok: false, grund: 'nicht_gefunden' }, 404)
   if (o.status === 'reserviert' && o.checkout_id) {
-    const k = await konto(d, o.schule_id)
+    const k = await konto(d, o.schule_id, o.anbieter)
     // Erst die Bezahlseite schließen; klappt das nicht (z. B. gerade bezahlt), bleibt die Reservierung bestehen
-    if (k) {
+    if (k?.anbieter === 'sumup') {
+      let zu = false
+      try { zu = await bezahlseiteSchliessen(await sumupZugang(d, k, o.schule_id), o.checkout_id) } catch { /* nicht erreichbar */ }
+      if (!zu) return await bestellung(zugang)
+    } else if (k) {
       try { await stripe(await schluesselVon(k, o.schule_id), 'POST', `checkout/sessions/${encodeURIComponent(o.checkout_id)}/expire`, {}) } catch { return await bestellung(zugang) }
     }
     await rpc(d, 'shop_verwerfen', { p_bestellung_id: o.id })

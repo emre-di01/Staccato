@@ -505,7 +505,7 @@ SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
 SELECT lives_ok($$INSERT INTO ticket_shops (schule_id, slug) VALUES ('71111111-1111-1111-1111-111111111111', 'schule-a')$$, 'Admin legt Shop an');
 SELECT throws_ok($$UPDATE ticket_shops SET aktiv = true WHERE schule_id = '71111111-1111-1111-1111-111111111111'$$, '23514', NULL, 'Ohne Impressum, AGB, Datenschutz kein Shop');
 SELECT throws_ok($$INSERT INTO ticket_shops (schule_id, slug) VALUES ('72222222-2222-2222-2222-222222222222', 'schule-b')$$, '42501', NULL, 'Kein Shop für fremde Schule');
-SELECT is((SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111')), '{"verbunden": false}'::jsonb, 'Noch kein Zahlungskonto');
+SELECT is((SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111')), '{"konten": [], "verbunden": false}'::jsonb, 'Noch kein Zahlungskonto');
 SELECT throws_ok($$INSERT INTO schul_zahlungskonten (schule_id, schluessel, webhook_geheim, livemode, letzte4) VALUES ('71111111-1111-1111-1111-111111111111', 'v1:x', 'v1:y', false, '1234')$$, '42501', NULL, 'Admin schreibt Schlüssel nicht direkt');
 SELECT throws_ok($$SELECT shop_info('schule-a')$$, '42501', NULL, 'Shop-Funktionen nicht für Nutzer');
 SELECT throws_ok($$SELECT shop_bezahlt('71111111-1111-1111-1111-111111111111', gen_random_uuid(), 'cs', 'pi', 15, 'eur')$$, '42501', NULL, 'Admin bucht keine Onlinezahlung');
@@ -523,7 +523,7 @@ INSERT INTO schul_zahlungskonten (schule_id, schluessel, webhook_geheim, livemod
 RESET ROLE;
 SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
 SELECT is((SELECT count(*) FROM schul_zahlungskonten), 0::bigint, 'Auch Admins lesen keine Schlüssel');
-SELECT is((SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111') - 'seit'), '{"verbunden": true, "livemode": true, "letzte4": "4242"}'::jsonb, 'Status ohne Schlüssel');
+SELECT is((SELECT zahlungskonto_status('71111111-1111-1111-1111-111111111111') - 'seit'), '{"konten": [{"art": "schluessel", "aktiv": true, "letzte4": "4242", "anbieter": "stripe", "haendler": null, "livemode": true, "neu_verbinden": false}], "verbunden": true, "anbieter": "stripe", "livemode": true, "letzte4": "4242"}'::jsonb, 'Status ohne Schlüssel');
 RESET ROLE;
 SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
 SELECT is((SELECT count(*) FROM schul_zahlungskonten) + (SELECT count(*) FROM ticket_shops), 0::bigint, 'Mitglieder sehen weder Schlüssel noch Shop-Einstellungen');

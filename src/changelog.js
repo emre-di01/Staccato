@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.19'
+export const CURRENT_VERSION = '2.9.20'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.20',
+    date: '2026-11-25',
+    features: [
+      {
+        icon: '💳',
+        de: 'Ticketshop: Schulen können jetzt neben Stripe auch SumUp als Zahlungsanbieter verbinden',
+        en: 'Ticket shop: schools can now connect SumUp as a payment provider alongside Stripe',
+        tr: 'Bilet satış sayfası: Okullar artık Stripe yanında SumUp’ı da ödeme sağlayıcısı olarak bağlayabilir',
+      },
+    ],
+  },
   {
     version: '2.9.19',
     date: '2026-11-25',

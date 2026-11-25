@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Blatt, Feld, Knopf, Segment, Suchfeld, Gruppe, Trenner, Zeile, Leer, Laden, FehlerText, eingabeStil } from '../../ui'
 import { useNeuLaden } from '../daten'
+import { ANBIETER } from '../ticketshop'
 import { tagLabel, uhrzeit } from '../zeit'
 import { alleBestellungenLaden, bestellungenAuswerten, betragAus, euro, shopVerwalten, ticketMailSenden } from '../tickets'
 import { Avatar } from './ListeDetail'
@@ -109,7 +110,8 @@ function BestellungBlatt({ b, onClose }) {
     toast(T(ok ? 'tk_mail_gesendet' : 'tk_mail_fehler'), ok ? 'success' : 'warning')
   }
 
-  // Online bezahlt: stornieren und über Stripe erstatten
+  // Online bezahlt: stornieren und über Stripe bzw. SumUp erstatten
+  const mitAnbieter = text => text.replaceAll('{anbieter}', ANBIETER[b.zahlung?.methode] ?? ANBIETER.stripe)
   async function onlineStorno(ids, wert) {
     vorgang.current ??= crypto.randomUUID()
     setSendet(true)
@@ -118,7 +120,7 @@ function BestellungBlatt({ b, onClose }) {
     setSendet(false)
     if (r.grund !== 'netz' && r.grund !== 'fehler') vorgang.current = null
     neuLaden('na-ticket-bestellungen')
-    if (!r.ok) { setFehler(T(GRUENDE.includes(r.grund) ? `sh_verw_${r.grund}` : 'sh_verw_netz')); return }
+    if (!r.ok) { setFehler(mitAnbieter(T(GRUENDE.includes(r.grund) ? `sh_verw_${r.grund}` : 'sh_verw_netz'))); return }
     setModus(null)
     if (r.erstattung === 'offen') toast(T('sh_erstattung_haengt'), 'warning', 8000)
     else toast(T(ids.length ? 'tk_storniert' : 'sh_erstattung_fertig'), 'success')
@@ -142,7 +144,7 @@ function BestellungBlatt({ b, onClose }) {
     const r = await shopVerwalten(b.id, { aktion: 'mail', email: neu })
     setSendet(false)
     if (r.geaendert) neuLaden('na-ticket-bestellungen')
-    if (!r.ok) { setFehler(T(GRUENDE.includes(r.grund) ? `sh_verw_${r.grund}` : 'sh_verw_netz')); return }
+    if (!r.ok) { setFehler(mitAnbieter(T(GRUENDE.includes(r.grund) ? `sh_verw_${r.grund}` : 'sh_verw_netz'))); return }
     setModus(null)
     toast(T('tk_mail_gesendet'), 'success')
   }
@@ -171,7 +173,7 @@ function BestellungBlatt({ b, onClose }) {
     const erstattung = b.zahlung ? betragAus(betrag) ?? 0 : 0
     if (Number.isNaN(erstattung) || erstattung > summe(auswahl)) { setFehler(T('tk_kasse_erstattung')); return }
     if (!auswahl.length) { setFehler(T('tk_kasse_auswahl')); return }
-    const frage = T(b.online ? (erstattung > 0 ? 'sh_storno_frage' : 'sh_storno_frage_ohne') : b.zahlung ? 'tk_storno_frage_bezahlt' : 'tk_storno_frage').replace('{tickets}', texte.anzahl(auswahl.length)).replace('{betrag}', texte.geld(erstattung))
+    const frage = mitAnbieter(T(b.online ? (erstattung > 0 ? 'sh_storno_frage' : 'sh_storno_frage_ohne') : b.zahlung ? 'tk_storno_frage_bezahlt' : 'tk_storno_frage')).replace('{tickets}', texte.anzahl(auswahl.length)).replace('{betrag}', texte.geld(erstattung))
     if (!await confirm(frage, { confirmLabel: T('tk_stornieren') })) return
     if (b.online) onlineStorno(auswahl, erstattung)
     else senden('tickets_stornieren', { p_ticket_ids: auswahl, p_erstattung: erstattung }, 'tk_storniert')
@@ -181,7 +183,7 @@ function BestellungBlatt({ b, onClose }) {
     const wert = betragAus(betrag)
     if (!(wert > 0) || wert > b.erstattbar) { setFehler(T('tk_kasse_erstattung')); return }
     if (b.online) {
-      if (await confirm(T('sh_erstattung_frage').replace('{betrag}', texte.geld(wert)), { confirmLabel: T('sh_erstatten'), dangerous: false })) onlineStorno([], wert)
+      if (await confirm(mitAnbieter(T('sh_erstattung_frage')).replace('{betrag}', texte.geld(wert)), { confirmLabel: T('sh_erstatten'), dangerous: false })) onlineStorno([], wert)
       return
     }
     senden('ticket_erstattung_erfassen', { p_betrag: wert }, 'tk_erstattung_erfasst')
