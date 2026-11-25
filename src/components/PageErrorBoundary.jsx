@@ -18,7 +18,7 @@ function Fallback({ error, resetErrorBoundary }) {
         {error?.message ?? 'Unbekannter Fehler'}
       </div>
       <button
-        onClick={resetErrorBoundary}
+        onClick={() => (/import|chunk|module|preload/i.test(error?.message ?? '') ? window.location.reload() : resetErrorBoundary())}
         style={{
           padding: '10px 24px', borderRadius: 'var(--radius)', border: 'none',
           background: 'var(--primary)', color: 'var(--primary-fg)',

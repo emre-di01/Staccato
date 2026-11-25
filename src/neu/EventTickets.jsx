@@ -71,7 +71,7 @@ export function ReservierenBlatt({ ev, onClose }) {
   const { T, lang, zeitzone } = useApp()
   const neuLaden = useNeuLaden()
   const navigate = useNavigate()
-  const { data: info, isLoading, isError } = useTicketInfo(ev.id)
+  const { data: info, isLoading, isLoadingError: isError } = useTicketInfo(ev.id)
   const [gewaehlt, setGewaehlt] = useState(1)
   const [sendet, setSendet] = useState(false)
   const [fehler, setFehler] = useState('')

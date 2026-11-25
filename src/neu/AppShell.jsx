@@ -10,6 +10,8 @@ import { UI_CSS } from '../ui'
 import { useUngelesen } from './daten'
 import { adminReiter } from './admin/navigation'
 import AdminSeitenleiste from './admin/Seitenleiste'
+import ZiehenAktualisieren from './ZiehenAktualisieren'
+import { istRuhig, useVersionBereit } from '../lib/aktualisieren'
 
 // Reiter der neuen Oberfläche je Rolle. `auch` = weitere Pfade, bei denen der Reiter aktiv ist.
 const GEMEINSAM = ['/einstellungen', '/profil', '/meine-dateien', '/tickets', '/einlass', '/kasse']
@@ -89,6 +91,8 @@ export default function AppShell() {
   const { data: ungelesen = [] } = useUngelesen()
   const neueSeite = passt(NEUE_SEITEN, pathname)
   const vollbild  = passt(VOLLBILD, pathname)
+  // Neue Version: der nächste Tipp auf einen Reiter lädt die App vollständig neu
+  const neueVersion = useVersionBereit()
 
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
 
@@ -108,7 +112,7 @@ export default function AppShell() {
             const Icon = r.icon
             const badge = badgeFuer(r)
             return (
-              <Link key={r.to} to={r.to} aria-current={aktiv ? 'page' : undefined} style={{
+              <Link key={r.to} to={r.to} reloadDocument={neueVersion} aria-current={aktiv ? 'page' : undefined} style={{
                 display: 'flex', alignItems: 'center', gap: 14, minHeight: 52, padding: '0 14px', borderRadius: 14, textDecoration: 'none',
                 fontSize: 17, fontWeight: aktiv ? 700 : 500, color: aktiv ? 'var(--primary)' : 'var(--text)',
                 background: aktiv ? 'var(--n-tint)' : 'transparent',
@@ -138,7 +142,7 @@ export default function AppShell() {
             const Icon = r.icon
             const badge = badgeFuer(r)
             return (
-              <Link key={r.to} to={r.to} aria-current={aktiv ? 'page' : undefined} style={{
+              <Link key={r.to} to={r.to} reloadDocument={neueVersion} aria-current={aktiv ? 'page' : undefined} style={{
                 flex: 1, minHeight: 56, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
                 textDecoration: 'none', fontSize: 13, fontWeight: aktiv ? 700 : 500, color: aktiv ? 'var(--primary)' : 'var(--text-2)', position: 'relative',
               }}>
@@ -151,6 +155,7 @@ export default function AppShell() {
         </nav>
       )}
 
+      <ZiehenAktualisieren aktiv={!vollbild && !istRuhig(pathname)} />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       {confirmState && (
         <ConfirmModal

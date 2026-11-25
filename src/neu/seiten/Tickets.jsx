@@ -14,7 +14,7 @@ export default function NeuTickets() {
   const basis = useBasis()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { data, isLoading, isError } = useMeineTickets()
+  const { data, isLoading, isLoadingError: isError } = useMeineTickets()
 
   const gruppen = ticketsNachEvent(data)
   const kommend = gruppen.filter(g => !g.vergangen)

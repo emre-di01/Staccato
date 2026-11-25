@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { House, MessageCircle, CircleUser, ChevronDown } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
+import { useVersionBereit } from '../../lib/aktualisieren'
 import { adminBereiche, SUPERADMIN_EINTRAEGE } from './navigation'
 
 const aktivBei = (to, pfad) => pfad === to || pfad.startsWith(to + '/')
@@ -9,9 +10,10 @@ const aktivBei = (to, pfad) => pfad === to || pfad.startsWith(to + '/')
 function Eintrag({ to, icon: Icon, label, badge, gross, auch = [] }) {
   const { T } = useApp()
   const { pathname } = useLocation()
+  const neueVersion = useVersionBereit()
   const aktiv = to === '/admin' ? pathname === to : [to, ...auch].some(p => aktivBei(p, pathname))
   return (
-    <Link to={to} aria-current={aktiv ? 'page' : undefined} style={{
+    <Link to={to} reloadDocument={neueVersion} aria-current={aktiv ? 'page' : undefined} style={{
       display: 'flex', alignItems: 'center', gap: 14, minHeight: gross ? 48 : 44, padding: '0 14px', borderRadius: gross ? 14 : 12, textDecoration: 'none',
       fontSize: 17, fontWeight: aktiv ? 700 : 500, color: aktiv ? 'var(--primary)' : 'var(--text)', background: aktiv ? 'var(--n-tint)' : 'transparent',
     }}>

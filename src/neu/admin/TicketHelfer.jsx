@@ -24,7 +24,7 @@ export default function TicketHelfer({ ev, onClose }) {
   const neuLaden = useNeuLaden()
   const [suche, setSuche] = useState('')
   const [sendet, setSendet] = useState(false)
-  const { data: helfer = [], isError } = useTicketHelfer(ev.id)
+  const { data: helfer = [], isLoadingError: isError } = useTicketHelfer(ev.id)
   const { data: personen = [], isLoading } = useQuery({
     queryKey: ['na-schulmitglieder', schule?.id],
     enabled: !!schule?.id,

@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.18'
+export const CURRENT_VERSION = '2.9.19'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.19',
+    date: '2026-11-25',
+    features: [
+      {
+        icon: '🔄',
+        de: 'Immer aktuell: Beim Zurückkehren in die App wird nachgeladen. Auf dem Handy oben nach unten ziehen lädt neu, die App muss dafür nicht mehr geschlossen werden',
+        en: 'Always up to date: content refreshes when you return to the app. On your phone, pull down at the top to reload; there is no need to close the app anymore',
+        tr: 'Her zaman güncel: Uygulamaya dönünce içerik yenilenir. Telefonda en üstten aşağı çekerek yenileyebilirsin, uygulamayı kapatmak gerekmez',
+      },
+      {
+        icon: '🗑️',
+        de: 'Veranstaltungen: Vergangene lassen sich jetzt auch mit Ticketbestellungen löschen, und das Scannen verschwindet nach dem Ende von der Startseite',
+        en: 'Events: past events can now be deleted even with ticket orders, and scanning disappears from the start page once an event is over',
+        tr: 'Etkinlikler: Geçmiş etkinlikler artık bilet siparişi olsa da silinebilir, bilet tarama etkinlik bitince ana sayfadan kalkar',
+      },
+    ],
+  },
   {
     version: '2.9.18',
     date: '2026-11-24',

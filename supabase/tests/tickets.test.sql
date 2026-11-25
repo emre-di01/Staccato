@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(258);
+SELECT plan(276);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -617,6 +617,49 @@ RESET ROLE;
 SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
 SELECT throws_ok($$SELECT tickets_stornieren(pg_temp.sh(1), (SELECT array_agg(id) FROM tickets WHERE bestellung_id = pg_temp.sh(1)), 10)$$, '23514', NULL, 'Barerstattung für Onlinekauf gesperrt');
 RESET ROLE;
+SELECT set_config('request.jwt.claims', '', true), set_config('request.jwt.claim.sub', '', true), set_config('request.jwt.claim.role', '', true);
+
+-- ── Vergangene Veranstaltungen löschen ──
+INSERT INTO events (id, schule_id, titel, typ, beginn, oeffentlich, erstellt_von) VALUES
+  ('73000000-0000-0000-0000-0000000000d1', '71111111-1111-1111-1111-111111111111', 'Alt bezahlt',   'konzert', now() - interval '8 hours', true, '7a000000-0000-0000-0000-000000000000'),
+  ('73000000-0000-0000-0000-0000000000d2', '71111111-1111-1111-1111-111111111111', 'Alt kostenlos', 'konzert', now() - interval '2 days', true, '7a000000-0000-0000-0000-000000000000'),
+  ('73000000-0000-0000-0000-0000000000d3', '71111111-1111-1111-1111-111111111111', 'Läuft noch',    'konzert', now() - interval '1 hour', true, '7a000000-0000-0000-0000-000000000000'),
+  ('73000000-0000-0000-0000-0000000000d4', '71111111-1111-1111-1111-111111111111', 'Alt Demo',      'konzert', now() - interval '2 days', true, '7a000000-0000-0000-0000-000000000000');
+INSERT INTO ticket_einstellungen (event_id, aktiv, kapazitaet, preis_normal)
+SELECT ('73000000-0000-0000-0000-0000000000d' || n)::uuid, true, 5, 15 FROM generate_series(1, 4) n;
+INSERT INTO ticket_bestellungen (id, schule_id, event_id, kaeufer_id, status, demo)
+SELECT ('74000000-0000-0000-0000-0000000000d' || n)::uuid, '71111111-1111-1111-1111-111111111111', ('73000000-0000-0000-0000-0000000000d' || n)::uuid, '7d000000-0000-0000-0000-000000000000', 'bezahlt', n = 4 FROM generate_series(1, 4) n;
+INSERT INTO tickets (bestellung_id, event_id, preis, status, code)
+SELECT id, event_id, 15, 'gueltig', repeat(right(id::text, 2), 16) FROM ticket_bestellungen WHERE id::text LIKE '74%d_';
+INSERT INTO ticket_zahlungen (bestellung_id, betrag) VALUES
+  ('74000000-0000-0000-0000-0000000000d1', 15), ('74000000-0000-0000-0000-0000000000d2', 0), ('74000000-0000-0000-0000-0000000000d4', 15);
+INSERT INTO event_teilnehmer (event_id, profil_id) VALUES ('73000000-0000-0000-0000-0000000000d1', '7d000000-0000-0000-0000-000000000000');
+SELECT pg_temp.als('7e000000-0000-0000-0000-000000000000');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d1')->>'grund', 'kein_admin', 'Lehrkraft löscht keine Veranstaltung mit Bestellungen');
+RESET ROLE;
+SELECT pg_temp.als('7b000000-0000-0000-0000-000000000000');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d1')->>'grund', 'kein_admin', 'Admin einer anderen Schule auch nicht');
+RESET ROLE;
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d3')->>'grund', 'nicht_vorbei', 'Laufende Veranstaltung bleibt');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d1', true), '{"ok": true, "art": "ausblenden"}', 'Vorabprüfung: bezahlt');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d2', true), '{"ok": true, "art": "endgueltig"}', 'Vorabprüfung: kostenlos');
+SELECT is((SELECT count(*) FROM events WHERE id::text LIKE '73%d_'), 4::bigint, 'Vorabprüfung ändert nichts');
+SELECT is((SELECT count(*) FROM jsonb_array_elements(meine_scan_events()) x WHERE x->>'titel' = 'Alt bezahlt'), 1::bigint, 'Vorher noch im Einlass');
+SELECT throws_ok($$UPDATE events SET geloescht_am = now() WHERE id = '73000000-0000-0000-0000-0000000000d1'$$, '42501', NULL, 'geloescht_am nicht direkt setzbar');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d1')->>'art', 'ausblenden', 'Bezahlt: ausgeblendet');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d1')->>'art', 'ausblenden', 'Wiederholung ist gefahrlos');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d2')->>'art', 'endgueltig', 'Kostenlos: endgültig');
+SELECT is(event_loeschen('73000000-0000-0000-0000-0000000000d4')->>'art', 'endgueltig', 'Nur Demo: endgültig');
+SELECT is((SELECT string_agg(titel, ',') FROM events WHERE id::text LIKE '73%d_'), 'Läuft noch', 'Gelöschte sind nicht mehr sichtbar');
+SELECT is((SELECT count(*) FROM jsonb_array_elements(meine_scan_events()) x WHERE x->>'titel' = 'Alt bezahlt'), 0::bigint, 'Nicht mehr im Einlass');
+RESET ROLE;
+SELECT pg_temp.als('7d000000-0000-0000-0000-000000000000');
+SELECT is((SELECT count(*) FROM jsonb_array_elements(meine_tickets()) x WHERE x->'event'->>'titel' LIKE 'Alt%'), 0::bigint, 'Nicht mehr bei den eigenen Tickets');
+RESET ROLE;
+SELECT is((SELECT count(*) FROM ticket_zahlungen WHERE bestellung_id = '74000000-0000-0000-0000-0000000000d1'), 1::bigint, 'Zahlung bleibt als Beleg');
+SELECT is((SELECT count(*) FROM ticket_bestellungen WHERE id IN ('74000000-0000-0000-0000-0000000000d2', '74000000-0000-0000-0000-0000000000d4')), 0::bigint, 'Bestellungen ohne Geld sind weg');
+SELECT is((SELECT count(*) FROM event_teilnehmer WHERE event_id = '73000000-0000-0000-0000-0000000000d1'), 0::bigint, 'Aus Kalender-Abos entfernt');
 SELECT set_config('request.jwt.claims', '', true), set_config('request.jwt.claim.sub', '', true), set_config('request.jwt.claim.role', '', true);
 
 -- Konto gelöscht: Bestellung bleibt ohne Personenbezug

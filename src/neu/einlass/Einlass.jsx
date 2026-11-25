@@ -20,7 +20,7 @@ export default function Einlass() {
   const navigate = useNavigate()
   const neuLaden = useNeuLaden()
   const [params] = useSearchParams()
-  const { data: events = [], isLoading, isError } = useScanEvents()
+  const { data: events = [], isLoading, isLoadingError: isError } = useScanEvents()
   const [scannt, setScannt] = useState(false)
   const schliessen = useCallback(() => { setScannt(false); neuLaden('n-scan-events', 'na-ticket-bestellungen') }, [neuLaden])
 

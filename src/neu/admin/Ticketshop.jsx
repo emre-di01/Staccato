@@ -17,7 +17,7 @@ async function kopieren(text, T, toast) {
 
 export default function AdminTicketshop() {
   const { T, schule } = useApp()
-  const { data, isLoading, isError } = useTicketShop()
+  const { data, isLoading, isLoadingError: isError } = useTicketShop()
   return (
     <Seite titel={T('sh_titel')} zurueck={{ to: '/admin/verwaltung', label: T('na_tab_verwaltung') }}>
       {isLoading ? <div style={{ marginTop: 24 }}><Laden hoehe={300} /></div>

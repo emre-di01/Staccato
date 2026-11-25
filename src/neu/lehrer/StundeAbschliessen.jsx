@@ -21,7 +21,7 @@ export default function StundeAbschliessen() {
   const { id } = useParams()
   const { state } = useLocation()
   const { T } = useApp()
-  const { data: st, isLoading, error } = useStunde(id)
+  const { data: st, isLoading, isLoadingError: error } = useStunde(id)
   const basis = useBasis()
   const zurueck = state?.zurueck ?? { to: basis, label: T('n_tab_start') }
 

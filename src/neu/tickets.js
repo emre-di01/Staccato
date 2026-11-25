@@ -271,13 +271,18 @@ export function ticketAusQr(text) {
   return /^[0-9a-f]{32}$/.test(code) ? code : null
 }
 
+// Ende in ms; ohne Endzeit 6 h nach Beginn (wie auf dem Server). Danach ist Scannen noch SCAN_NACHLAUF lang möglich.
+export const eventEnde = ev => (ev.ende ? Date.parse(ev.ende) : Date.parse(ev.beginn) + 6 * 3600000)
+export const SCAN_NACHLAUF = 6 * 3600000
+
 // Veranstaltungen, bei denen ich scannen darf (nur noch nicht vorbei)
-export function useScanEvents() {
+export function useScanEvents(nachladen = false) {
   const { profil, schule } = useApp()
   return useQuery({
     queryKey: ['n-scan-events', profil?.id, schule?.id],
     enabled: !!profil?.id,
     staleTime: 0,
+    refetchInterval: nachladen && 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('meine_scan_events')
       if (error) throw error
@@ -304,12 +309,13 @@ export async function ticketScannen(eventId, code, scanId, pause = 600) {
 }
 
 // Veranstaltungen, bei denen ich kassieren darf
-export function useKassenEvents() {
+export function useKassenEvents(nachladen = false) {
   const { profil, schule } = useApp()
   return useQuery({
     queryKey: ['n-kassen-events', profil?.id, schule?.id],
     enabled: !!profil?.id,
     staleTime: 0,
+    refetchInterval: nachladen && 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('meine_kassen_events')
       if (error) throw error

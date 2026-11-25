@@ -17,7 +17,7 @@ export default function Kasse() {
   const basis = useBasis()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { data: events = [], isLoading, isError } = useKassenEvents()
+  const { data: events = [], isLoading, isLoadingError: isError } = useKassenEvents()
   const offene = events.filter(e => e.offen)
   const ev = params.get('event') ? events.find(e => e.id === params.get('event')) : (events.length === 1 ? events[0] : offene.length === 1 ? offene[0] : null)
   const zurueck = params.get('event') ? { onClick: () => window.history.state?.idx > 0 ? navigate(-1) : navigate(basis), label: T('back') } : { to: basis, label: T('n_tab_start') }

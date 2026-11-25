@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil, Music, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText, ScanLine, UserCheck, Banknote, Store } from 'lucide-react'
+import { Plus, Pencil, Music, Trash2, UserPlus, X, Globe, CalendarDays, Ticket, ReceiptText, ScanLine, UserCheck, Banknote, Store } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { Seite, Segment, Suchfeld, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, Blatt } from '../../ui'
@@ -12,9 +12,10 @@ import TicketBlatt from './TicketBlatt'
 import { EventTickets } from '../EventTickets'
 import TicketHelfer, { useTicketHelfer } from './TicketHelfer'
 import TicketBestellungen, { useBestellungen } from './TicketBestellungen'
-import { useTicketEinstellungen, bestellungenAuswerten, euro } from '../tickets'
+import { useTicketEinstellungen, bestellungenAuswerten, euro, eventEnde, SCAN_NACHLAUF } from '../tickets'
 import { shopLink, useTicketShop } from '../ticketshop'
 import { EventBild, EventVorschau } from '../eventBild'
+import { useEventLoeschen } from '../eventLoeschen'
 import { useBreit, Avatar, ListeDetail, DetailTitel, DetailGruppe, Info } from './ListeDetail'
 
 const LOCALE = { de: 'de-DE', en: 'en-GB', tr: 'tr-TR' }
@@ -129,10 +130,14 @@ function TicketZeile({ ev }) {
         </>}
         <Trenner />
         <Zeile icon={UserCheck} titel={T('ei_helfer')} untertitel={helfer.length ? T(helfer.length === 1 ? 'ei_helfer_1' : 'ei_helfer_n').replace('{n}', helfer.length) : T('ei_helfer_keine')} onClick={() => setOffen('helfer')} />
-        <Trenner />
-        <Zeile icon={ScanLine} titel={T('ei_scannen')} onClick={() => navigate(`/einlass?event=${ev.id}`)} />
-        <Trenner />
-        <Zeile icon={Banknote} titel={T('ka_titel')} onClick={() => navigate(`/kasse?event=${ev.id}`)} />
+        {Date.now() <= eventEnde(ev) + SCAN_NACHLAUF && <>
+          <Trenner />
+          <Zeile icon={ScanLine} titel={T('ei_scannen')} onClick={() => navigate(`/einlass?event=${ev.id}`)} />
+        </>}
+        {Date.now() <= eventEnde(ev) && <>
+          <Trenner />
+          <Zeile icon={Banknote} titel={T('ka_titel')} onClick={() => navigate(`/kasse?event=${ev.id}`)} />
+        </>}
       </>}
     </DetailGruppe>
     {/* Admins reservieren hier auch für sich selbst */}
@@ -144,7 +149,7 @@ function TicketZeile({ ev }) {
   </>
 }
 
-function Detail({ ev, onBearbeiten, onEinladen }) {
+function Detail({ ev, onBearbeiten, onEinladen, onLoeschen }) {
   const { T, lang, zeitzone, confirm, toast } = useApp()
   const navigate = useNavigate()
   const neuLaden = useNeuLaden()
@@ -210,6 +215,7 @@ function Detail({ ev, onBearbeiten, onEinladen }) {
           )
         })}
       </DetailGruppe>
+      <div style={{ marginTop: 28 }}><Knopf voll variante="gefahr" icon={Trash2} onClick={onLoeschen}>{T('nl_event_loeschen')}</Knopf></div>
     </div>
   )
 }
@@ -232,13 +238,19 @@ export default function AdminEvents() {
     .filter(ev => !q || ev.titel.toLowerCase().includes(q))
   if (zeitraum === 'vergangen') liste.reverse()
   const gewaehlt = events.find(e => e.id === gewaehltId) ?? (breit ? liste[0] : null)
-  const aktualisieren = () => neuLaden('na-events', 'na-event-teilnehmer', 'n-events', 'na-start')
+  const eventLoeschen = useEventLoeschen()
+  const aktualisieren = () => neuLaden('na-events', 'na-event-teilnehmer', 'n-events', 'na-start', 'n-scan-events', 'n-kassen-events', 'n-meine-tickets')
+  async function loeschen(ev) {
+    if (!await eventLoeschen(ev)) return
+    setGewaehltId(null)
+    aktualisieren()
+  }
 
   return (
     <Seite breit titel={T('events')} rechts={<Knopf klein variante="tint" icon={Plus} onClick={() => setBlatt('neu')}>{T('nv_neu')}</Knopf>}>
       <ListeDetail breit={breit} detailLabel={gewaehlt?.titel} blattTitel={T('events')}
         onSchliessen={() => setGewaehltId(null)} blattVerstecken={!!blatt}
-        detail={gewaehlt && <Detail key={gewaehlt.id} ev={gewaehlt} onBearbeiten={() => setBlatt(gewaehlt)}
+        detail={gewaehlt && <Detail key={gewaehlt.id} ev={gewaehlt} onBearbeiten={() => setBlatt(gewaehlt)} onLoeschen={() => loeschen(gewaehlt)}
           onEinladen={() => { setGewaehltId(gewaehlt.id); setBlatt('einladen') }} />}
         liste={<>
           <Segment label={T('n_filter')} wert={zeitraum} onChange={v => { setZeitraum(v); setGewaehltId(null) }} style={{ margin: '0 20px' }}
