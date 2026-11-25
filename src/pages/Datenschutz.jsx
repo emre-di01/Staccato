@@ -17,7 +17,7 @@ export default function Datenschutz() {
       <section style={sek}>
         <h2 style={h2}>2. Art der Plattform</h2>
         <p style={p}>Staccato ist eine Musikschul-Verwaltungssoftware, die als privates Hobby-Projekt entwickelt und betrieben wird. Die Plattform wird einzelnen Musikschulen zur Verwaltung ihrer Schüler, Kurse und Lehrpläne bereitgestellt. Die jeweilige Musikschule ist datenschutzrechtlich eigenverantwortlicher Verantwortlicher für die von ihr eingegebenen Daten ihrer Mitglieder.</p>
-        <p style={{ ...p, marginTop: 10 }}>Staccato ist verfügbar als Web-App (<strong>app.staccato-music.de</strong>) sowie als native Android-App im <strong>Google Play Store</strong>. Beide Varianten greifen auf dieselbe Server-Infrastruktur zu und unterliegen denselben Datenschutzbestimmungen.</p>
+        <p style={{ ...p, marginTop: 10 }}>Staccato ist verfügbar als Web-App (<strong>app.staccato-music.de</strong>) sowie als Android-App (Veröffentlichung im Google Play Store in Vorbereitung). Beide Varianten greifen auf dieselbe Server-Infrastruktur zu und unterliegen denselben Datenschutzbestimmungen.</p>
       </section>
 
       <section style={sek}>
@@ -31,6 +31,10 @@ export default function Datenschutz() {
           <li><strong>Technische Daten:</strong> Login-Zeitpunkte, Sitzungsinformationen (Session-Token), Push-Notification-Token (gerätegebundener Bezeichner für Benachrichtigungen via Web Push oder Firebase Cloud Messaging, nur bei aktivierten Push-Benachrichtigungen)</li>
           <li><strong>Einstellungen:</strong> Sprachpräferenz, Design (lokal im Gerätespeicher, kein Server-Zugriff)</li>
           <li><strong>Dateien:</strong> Hochgeladene Dokumente (z. B. Aufnahmeformulare, Noten, Audiodateien)</li>
+          <li><strong>Nachrichten und Veranstaltungen:</strong> Nachrichten innerhalb der Musikschule, Zu- und Absagen</li>
+          <li><strong>Tickets:</strong> Name, E-Mail-Adresse (bei Gästen im Ticketshop), bestellte Tickets, Zahlungs- und Erstattungsbeträge, Zeitpunkt des Einlasses. Kartendaten werden nicht in Staccato gespeichert. Zum Schutz vor Missbrauch wird die IP-Adresse beim Kauf nur als Prüfsumme gespeichert und nach 24 Stunden mit dem nächsten Vorgang gelöscht.</li>
+          <li><strong>Live-Unterricht:</strong> Teilnahme, Reaktionen; bei Gästen ohne Konto der selbst angegebene Name</li>
+          <li><strong>Server-Protokolle:</strong> IP-Adresse, Zeitpunkt, aufgerufene Adresse und Browserkennung, zur Sicherheit und Fehlersuche (Webserver: in der Regel 14 Tage)</li>
         </ul>
       </section>
 
@@ -42,17 +46,20 @@ export default function Datenschutz() {
           <li>Anwesenheitserfassung und Unterrichtsplanung (Art. 6 Abs. 1 lit. b DSGVO)</li>
           <li>Kommunikation zwischen Lehrern, Schülern und Eltern (Art. 6 Abs. 1 lit. b DSGVO)</li>
           <li>Bereitstellung von Unterrichtsmaterialien und Repertoire (Art. 6 Abs. 1 lit. b DSGVO)</li>
+          <li>Ticketverkauf, Einlass und Erstattung (Art. 6 Abs. 1 lit. b DSGVO); Aufbewahrung von Zahlungsbelegen aufgrund gesetzlicher Pflichten (Art. 6 Abs. 1 lit. c DSGVO)</li>
+          <li>Betrieb, Sicherheit und Missbrauchsschutz (Art. 6 Abs. 1 lit. f DSGVO)</li>
           <li>Vereinsverwaltung (Ziele, Protokolle, Inventar) für Vorstandsmitglieder (Art. 6 Abs. 1 lit. b DSGVO)</li>
           <li>Abrechnung der Unterrichts- bzw. Mitgliedsbeiträge, Rechnungsstellung und Einzug per SEPA-Lastschrift durch die jeweilige Musikschule (Art. 6 Abs. 1 lit. b DSGVO); Aufbewahrung von Rechnungen und Buchungsbelegen aufgrund gesetzlicher Pflichten (Art. 6 Abs. 1 lit. c DSGVO i.&nbsp;V.&nbsp;m. § 147 AO, § 257 HGB)</li>
         </ul>
-        <p style={{ ...p, marginTop: 10 }}>Zahlungsdaten werden von der Musikschule oder von Ihnen selbst (z.&nbsp;B. beim Annehmen einer Einladung oder im Profil) eingetragen und ausschließlich von der jeweiligen Musikschule genutzt. Einsehen können sie nur die Verwaltung (Administratoren) dieser Musikschule, die betroffene Person selbst sowie die Lehrkräfte des jeweiligen Schülers, soweit sie Anmeldeformulare erstellen. Eine Weitergabe an Dritte erfolgt nicht – mit Ausnahme der für den Lastschrifteinzug erforderlichen Übermittlung durch die Musikschule an ihre Bank.</p>
+        <p style={{ ...p, marginTop: 10 }}>Zahlungsdaten werden von der Musikschule oder von Ihnen selbst (z.&nbsp;B. beim Annehmen einer Einladung oder im Profil) eingetragen und ausschließlich von der jeweiligen Musikschule genutzt. Einsehen können sie nur die Verwaltung (Administratoren) dieser Musikschule, die betroffene Person selbst sowie die Lehrkräfte des jeweiligen Schülers, soweit sie Anmeldeformulare erstellen. Die Bankverbindung wird nicht an Dritte weitergegeben – mit Ausnahme der für den Lastschrifteinzug erforderlichen Übermittlung durch die Musikschule an ihre Bank. Online-Zahlungen für Tickets sind in Abschnitt 7 beschrieben.</p>
       </section>
 
       <section style={sek}>
         <h2 style={h2}>5. Hosting und Speicherung</h2>
         <p style={p}>
-          Alle Daten werden auf einem eigenen Server gespeichert, der sich in Deutschland befindet. Die Datenbankinfrastruktur basiert auf <strong>Supabase (selbst gehostet)</strong>. Es findet keine Übertragung personenbezogener Daten in Drittländer außerhalb der EU statt.<br /><br />
-          Dateien (Noten, Audiodateien, Dokumente) werden verschlüsselt in einem internen Objekt-Storage abgelegt und sind ausschließlich über zeitlich begrenzte, signierte URLs zugänglich.
+          Die Daten der Plattform werden auf einem gemieteten Server in Deutschland gespeichert (Anbieter: 1blu). Die Datenbankinfrastruktur basiert auf <strong>Supabase (selbst betrieben)</strong>. E-Mails der Plattform (z. B. Einladungen, Tickets) werden über den Mailserver von 1blu verschickt.<br /><br />
+          Einige Funktionen rufen Dienste anderer Anbieter auf. Dabei werden Daten, mindestens die IP-Adresse, an diese übermittelt, teils auch außerhalb der EU. Welche das sind, steht in Abschnitt 7.<br /><br />
+          Dateien (Noten, Audiodateien, Dokumente) liegen in einem geschützten Speicher und sind nur mit Berechtigung über zeitlich begrenzte, signierte Adressen abrufbar. Ausnahme: Profilbilder sind für alle abrufbar, die ihre genaue Adresse kennen.
         </p>
       </section>
 
@@ -63,7 +70,8 @@ export default function Datenschutz() {
           <li><strong>Sitzungsdaten (Supabase Auth):</strong> Für sichere Anmeldung und Authentifizierung. Werden beim Abmelden gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
           <li><strong>Design-Einstellungen:</strong> Theme, Dark Mode und Sprache (kein Server-Zugriff). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
           <li><strong>Versionsinformation:</strong> Gesehene Changelog-Version (kein Server-Zugriff). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
-          <li><strong>Push-Notification-Token:</strong> Gerätegebundener Token für den Empfang von Push-Benachrichtigungen (Web Push via OneSignal im Browser; Firebase Cloud Messaging in der Android-App). Wird auf dem Server gespeichert, solange Push-Benachrichtigungen aktiviert sind. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
+          <li><strong>Zwischenspeicher der Web-App:</strong> Zuletzt geladene Inhalte (bis zu 24 Stunden) und Dateien (bis zu 30 Tage), damit die App auch bei schlechter Verbindung funktioniert. Sie bleiben auf dem Gerät, auch nach dem Abmelden, und lassen sich über die Browser-Einstellungen („Websitedaten löschen“) entfernen. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO</li>
+          <li><strong>Push-Notification-Token:</strong> Gerätegebundener Token für den Empfang von Push-Benachrichtigungen (Web Push im Browser; Firebase Cloud Messaging in der Android-App). Wird auf dem Server gespeichert, solange Push-Benachrichtigungen aktiviert sind. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO</li>
         </ul>
         <p style={{ ...p, marginTop: 16 }}>Auf der <strong>Marketingwebsite (staccato-music.de)</strong> wird Google Analytics eingesetzt — ausschließlich nach Ihrer ausdrücklichen Einwilligung (Cookie-Banner). Google Analytics setzt Cookies (<code>_ga</code>, <code>_ga_*</code>) zur Analyse des Nutzungsverhaltens. IP-Adressen werden anonymisiert. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO. Sie können Ihre Einwilligung jederzeit widerrufen, indem Sie den Browser-Speicher (localStorage) löschen.</p>
       </section>
@@ -72,13 +80,19 @@ export default function Datenschutz() {
         <h2 style={h2}>7. Drittdienste</h2>
         <p style={p}><strong>Google Analytics 4</strong> (nur auf staccato-music.de, nach Einwilligung): Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Irland. IP-Adressen werden anonymisiert. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO. Weitere Informationen: <a href="https://policies.google.com/privacy" style={link} target="_blank" rel="noreferrer">policies.google.com/privacy</a></p>
         <p style={{ ...p, marginTop: 12 }}><strong>Firebase Cloud Messaging (FCM)</strong> (nur Android-App, nur bei aktivierten Push-Benachrichtigungen): Google Ireland Ltd. FCM wird genutzt, um Push-Benachrichtigungen an Android-Geräte zu übermitteln. Dabei wird ein gerätegebundenes FCM-Token erzeugt und auf unserem Server gespeichert. Das Token enthält keine personenbezogenen Daten, ermöglicht jedoch die gezielte Zustellung von Benachrichtigungen an ein bestimmtes Gerät. Das Token wird gelöscht, sobald Push-Benachrichtigungen in den Einstellungen deaktiviert oder das Konto gelöscht wird. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Weitere Informationen: <a href="https://firebase.google.com/support/privacy" style={link} target="_blank" rel="noreferrer">firebase.google.com/support/privacy</a></p>
-        <p style={{ ...p, marginTop: 12 }}><strong>OneSignal</strong> (nur Web-App, nur bei aktivierten Push-Benachrichtigungen): OneSignal, Inc., 2850 S Delaware St, Suite 201, San Mateo, CA 94403, USA. OneSignal wird für die Zustellung von Web-Push-Benachrichtigungen im Browser verwendet. Dabei wird ein Subscription-Token gespeichert. OneSignal verarbeitet Daten auf Basis eines Auftragsverarbeitungsvertrags (Art. 28 DSGVO) und des EU-US Data Privacy Frameworks. Weitere Informationen: <a href="https://onesignal.com/privacy_policy" style={link} target="_blank" rel="noreferrer">onesignal.com/privacy_policy</a></p>
-        <p style={{ ...p, marginTop: 12 }}>Im Bereich der Web-App und der Android-App findet darüber hinaus keine Weitergabe personenbezogener Daten an Dritte statt.</p>
+        <p style={{ ...p, marginTop: 12 }}><strong>Stripe und SumUp</strong> (nur beim Kauf im Ticketshop): Die Musikschule wählt den Zahlungsanbieter und nutzt dort ihr eigenes Konto. Zum Bezahlen werden Sie auf die Seite des Anbieters weitergeleitet. Wir übermitteln Betrag, Veranstaltung, Anzahl der Tickets und eine Bestellnummer, an Stripe zusätzlich Ihre E-Mail-Adresse. Zahlungsdaten (z. B. Kartennummer, Apple Pay, Google Pay) geben Sie nur dort ein; wir erhalten lediglich Status, Betrag und Vorgangsnummern. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Es gelten die Datenschutzhinweise des Anbieters: <a href="https://stripe.com/de/privacy" style={link} target="_blank" rel="noreferrer">stripe.com/de/privacy</a>, <a href="https://www.sumup.com/de-de/datenschutzbestimmungen/" style={link} target="_blank" rel="noreferrer">sumup.com/datenschutz</a></p>
+        <p style={{ ...p, marginTop: 12 }}><strong>Web Push</strong> (nur Web-App, nur bei aktivierten Push-Benachrichtigungen): Die Zustellung läuft über den Push-Dienst Ihres Browsers (z. B. Google, Apple oder Mozilla). Dort liegt eine gerätebezogene Adresse; der Inhalt der Benachrichtigung wird verschlüsselt übertragen. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO; widerrufbar in den Einstellungen.</p>
+        <p style={{ ...p, marginTop: 12 }}><strong>Google Fonts</strong>: Beim Öffnen der App (nicht im öffentlichen Ticketshop) und der Marketingwebsite wird eine Schriftart von Servern von Google geladen. Dabei wird Ihre IP-Adresse an Google übermittelt, gegebenenfalls auch in die USA. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (einheitliche Darstellung). <a href="https://policies.google.com/privacy" style={link} target="_blank" rel="noreferrer">policies.google.com/privacy</a></p>
+        <p style={{ ...p, marginTop: 12 }}><strong>OpenStreetMap (Nominatim)</strong>: Wenn Sie in ein Adressfeld tippen (z. B. im Profil, bei Mitgliedern oder Veranstaltungen), wird der eingegebene Text zusammen mit Ihrer IP-Adresse an den Suchdienst der OpenStreetMap Foundation (Vereinigtes Königreich) übermittelt, um Vorschläge anzuzeigen. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. <a href="https://osmfoundation.org/wiki/Privacy_Policy" style={link} target="_blank" rel="noreferrer">osmfoundation.org</a></p>
+        <p style={{ ...p, marginTop: 12 }}><strong>YouTube und Spotify</strong>: Wird zu einem Lied ein Video oder Player angezeigt (z. B. im Live-Unterricht oder am Beamer), lädt Ihr Gerät ihn direkt von YouTube (Google) bzw. Spotify. Dabei werden Ihre IP-Adresse und Gerätedaten übermittelt; es können Cookies gesetzt werden. Links öffnen den jeweiligen Anbieter erst nach einem Klick. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.</p>
+        <p style={{ ...p, marginTop: 12 }}><strong>Texterkennung und Transkription</strong> (nur wenn Lehrkräfte diese Werkzeuge öffnen): Fotos und Aufnahmen werden auf dem Gerät verarbeitet und nicht hochgeladen. Die dafür nötigen Programm- und Sprachdateien lädt der Browser von jsDelivr bzw. Hugging Face (USA); dabei wird die IP-Adresse übermittelt. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.</p>
+        <p style={{ ...p, marginTop: 12 }}><strong>Liedsuche</strong> (nur für Lehrkräfte und Verwaltung): Titel und Interpret werden an Musikdienste (u. a. Spotify, YouTube Music) übermittelt, um Liedangaben und Texte zu finden. Daten von Mitgliedern werden dabei nicht übermittelt. Bei der Suche in MusicBrainz ruft der Browser den Dienst direkt auf, dabei wird die IP-Adresse der suchenden Person übermittelt.</p>
       </section>
 
       <section style={sek}>
         <h2 style={h2}>8. Speicherdauer</h2>
         <p style={p}>Personenbezogene Daten werden gelöscht, sobald sie für den Zweck ihrer Erhebung nicht mehr benötigt werden — in der Regel nach Beendigung der Mitgliedschaft in der jeweiligen Musikschule. Steuerrelevante Unterlagen werden gemäß gesetzlicher Aufbewahrungsfristen aufbewahrt (i. d. R. 10 Jahre).</p>
+        <p style={{ ...p, marginTop: 10 }}>Gelöschte Daten können noch in Sicherungskopien enthalten sein, bis diese gelöscht werden.</p>
         <p style={{ ...p, marginTop: 10 }}>Bankverbindungen (IBAN, BIC, Kontoinhaber) werden gelöscht, sobald sie für den Beitragseinzug nicht mehr benötigt werden, spätestens mit Löschung des Kontos. SEPA-Lastschriftmandate bewahrt die Musikschule bis mindestens 14 Monate nach der letzten Lastschrift auf (Erstattungsfristen nach § 676b BGB). Bereits ausgestellte Rechnungen bleiben aufgrund der gesetzlichen Aufbewahrungspflicht (10 Jahre) erhalten; sie enthalten keine Bankverbindung des Mitglieds.</p>
       </section>
 
@@ -131,7 +145,9 @@ export default function Datenschutz() {
           <li>Verschlüsselte Übertragung aller Daten via HTTPS/TLS</li>
           <li>Passwortverschlüsselung mit bcrypt</li>
           <li>Rollenbasierte Zugriffskontrollen (Row Level Security auf Datenbankebene)</li>
-          <li>Signierte, zeitlich begrenzte URLs für Dateizugriffe (1 Stunde Gültigkeit)</li>
+          <li>Signierte, zeitlich begrenzte Adressen für Dateizugriffe</li>
+          <li>Verschlüsselte Speicherung der Zugangsdaten zu Zahlungsanbietern</li>
+          <li>Verschlüsselte tägliche Sicherung</li>
           <li>Keine öffentlichen Datenbankzugriffe ohne Authentifizierung</li>
         </ul>
       </section>
