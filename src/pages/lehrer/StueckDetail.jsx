@@ -23,6 +23,7 @@ import LiedtextBearbeiten from '../../components/stueck/LiedtextBearbeiten'
 import { s } from '../../components/stueck/stueckStyles'
 import { VorschlagModal } from '../../components/LiedVorschlaege'
 import EigeneDateien from '../../components/stueck/EigeneDateien'
+import ExternesMedium from '../../components/ExternesMedium'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_HEADERS = {
@@ -423,9 +424,7 @@ ${html}
       <div>
         {stueck.youtube_url && !youtubeEdit ? (
           <>
-            <div style={{ position:'relative', paddingBottom:'56.25%', height:0, overflow:'hidden', borderRadius:'var(--radius)', background:'#000' }}>
-              <iframe style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }} src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_url)}`} title="YouTube" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-            </div>
+            <ExternesMedium id={youtubeId(stueck.youtube_url)} titel={stueck.titel} />
             <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <a href={stueck.youtube_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'var(--accent)', textDecoration:'none', fontWeight:600 }}>{T('piece_open_youtube')}</a>
               {kannBearbeiten && <button onClick={() => { setYoutubeInput(stueck.youtube_url ?? ''); setYoutubeEdit(true) }} style={{ padding:'6px 14px', borderRadius:'var(--radius)', border:'1.5px solid var(--border)', background:'transparent', color:'var(--text-2)', fontSize:13, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>✎ {T('link_change')}</button>}
@@ -448,9 +447,7 @@ ${html}
       <div>
         {stueck.youtube_music_url && !ytMusicEdit ? (
           <>
-            <div style={{ position:'relative', paddingBottom:'56.25%', height:0, overflow:'hidden', borderRadius:'var(--radius)', background:'#000' }}>
-              <iframe style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }} src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_music_url)}`} title="YouTube Music" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-            </div>
+            <ExternesMedium id={youtubeId(stueck.youtube_music_url)} titel={stueck.titel} />
             <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
               <a href={stueck.youtube_music_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'#FF0000', textDecoration:'none', fontWeight:600 }}>{T('piece_open_ytmusic')}</a>
               {kannBearbeiten && (
@@ -494,7 +491,7 @@ ${html}
       <div>
         {stueck.spotify_url ? (
           <>
-            <iframe src={`https://open.spotify.com/embed/track/${spotifyTrackId(stueck.spotify_url)}?utm_source=generator`} width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style={{ borderRadius:12, display:'block' }} />
+            <ExternesMedium anbieter="Spotify" id={spotifyTrackId(stueck.spotify_url)} titel={stueck.titel} />
             <div style={{ marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:8 }}>
               <a href={stueck.spotify_url} target="_blank" rel="noreferrer" style={{ fontSize:13, color:'#1DB954', textDecoration:'none', fontWeight:600 }}>{T('piece_open_spotify')}</a>
               {kannBearbeiten && (

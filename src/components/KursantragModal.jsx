@@ -75,17 +75,11 @@ export default function KursantragModal({ schueler, kurs, onClose }) {
   const [profil, setProfil] = useState(null)
 
   useEffect(() => {
-    supabase.from('profiles')
-      .select('telefon, adresse, email_benachrichtigungen, iban, bic, kontoinhaber, zahlungsweise, zahlungsrhythmus, mitgliedsbeitrag, erziehungsberechtigter_name, erziehungsberechtigter_telefon, erziehungsberechtigter_email')
-      .eq('id', schueler.id)
-      .single()
-      .then(({ data }) => setProfil(data))
-  }, [schueler.id])
-
-  // E-Mail direkt aus auth.users via View holen
-  useEffect(() => {
-    supabase.from('mitglieder_mit_email').select('email').eq('id', schueler.id).single()
-      .then(({ data }) => { if (data) setProfil(p => ({ ...p, email: data.email })) })
+    // E-Mail und Bankdaten kommen aus der View; Bankdaten nur für Admins, bei Lehrkräften bleiben die Felder zum Ausfüllen leer
+    Promise.all([
+      supabase.from('profiles').select('telefon, adresse, erziehungsberechtigter_name, erziehungsberechtigter_telefon, erziehungsberechtigter_email').eq('id', schueler.id).maybeSingle(),
+      supabase.from('mitglieder_mit_email').select('email, iban, bic, kontoinhaber, zahlungsweise, zahlungsrhythmus, mitgliedsbeitrag').eq('id', schueler.id).maybeSingle(),
+    ]).then(([p, m]) => setProfil({ ...p.data, ...m.data }))
   }, [schueler.id])
 
   const hatErziehung = !!profil?.erziehungsberechtigter_name

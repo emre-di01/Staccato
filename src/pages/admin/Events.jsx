@@ -373,6 +373,7 @@ export default function AdminEvents() {
                   onChange={v => setForm(f => ({...f, ort: v}))}
                   inputStyle={s.inp}
                   showMap={true}
+                  suche
                 />
               </div>
               <div style={s.formRow}>

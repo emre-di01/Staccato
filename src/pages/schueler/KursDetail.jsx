@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import Hinweis from '../../components/Hinweis'
+import ExternesMedium from '../../components/ExternesMedium'
 
 const TYP_ICON = { einzel: '🎵', gruppe: '👥', chor: '🎼', ensemble: '🎻' }
 
@@ -128,10 +129,7 @@ function StueckModal({ stueck, onClose }) {
                 </div>
               )}
               {tab === 'youtube' && stueck.youtube_url && (
-                <iframe width="100%" height={300}
-                  src={`https://www.youtube.com/embed/${youtubeId(stueck.youtube_url)}`}
-                  title="YouTube" frameBorder="0" allowFullScreen
-                  style={{ borderRadius:'var(--radius)' }} />
+                <ExternesMedium id={youtubeId(stueck.youtube_url)} titel={stueck.titel} />
               )}
             </>
           )}

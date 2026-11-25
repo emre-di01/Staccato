@@ -23,7 +23,7 @@ const NOTES = [
 ]
 
 export default function LoginPage() {
-  const { session, rolle, laden, T, theme, darkMode, changeTheme, toggleDark, lang, setLang, schulenListe } = useApp()
+  const { session, rolle, laden, T, theme, darkMode, changeTheme, toggleDark, lang, setLang, schulenListe, abmelden } = useApp()
   const [email,      setEmail]      = useState('')
   const [passwort,   setPasswort]   = useState('')
   const [fehler,     setFehler]     = useState('')
@@ -42,7 +42,7 @@ export default function LoginPage() {
             <div style={{ fontSize: 36, marginBottom: 16 }}>⚠️</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Profil nicht gefunden</div>
             <div style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 24 }}>Für diesen Account existiert kein Benutzerprofil. Bitte den Administrator kontaktieren.</div>
-            <button onClick={() => supabase.auth.signOut()} style={{ padding: '10px 20px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={abmelden} style={{ padding: '10px 20px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--primary)', color: 'var(--primary-fg)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               Abmelden
             </button>
           </div>
@@ -365,7 +365,6 @@ export default function LoginPage() {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
 
         /* Floating notes */

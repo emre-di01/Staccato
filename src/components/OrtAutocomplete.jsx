@@ -35,7 +35,7 @@ function combine(f) {
   return [...main, f.land].filter(Boolean).join(', ')
 }
 
-export default function OrtAutocomplete({ value, onChange, inputStyle = {}, showMap = false }) {
+export default function OrtAutocomplete({ value, onChange, inputStyle = {}, showMap = false, suche: mitSuche = false }) {
   // Initialize sub-fields from value ONCE — never re-parse on subsequent value changes
   // (re-parsing would corrupt fields while the user is typing)
   const [felder, setFelder]           = useState(() => parse(value ?? ''))
@@ -73,8 +73,10 @@ export default function OrtAutocomplete({ value, onChange, inputStyle = {}, show
     suche(next)
   }
 
+  // Nur für Veranstaltungsorte: Wohnadressen gehen nicht an OpenStreetMap
   function suche(f) {
     clearTimeout(timerRef.current)
+    if (!mitSuche) return
     const q = combine(f)
     if (q.replace(/,\s*/g, '').length < 3) { setSuggestions([]); setOffen(false); return }
     timerRef.current = setTimeout(async () => {

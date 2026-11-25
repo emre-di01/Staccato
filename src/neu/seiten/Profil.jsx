@@ -45,7 +45,7 @@ export default function NeuProfil() {
     if (!datei) return
     if (datei.size > 5 * 1024 * 1024) { toast(T('file_too_large').replace('{n}', 5), 'error'); return }
     setBildLaedt(true)
-    const pfad = `${profil.id}/avatar_${Date.now()}_${datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const pfad = `${profil.id}/avatar_${crypto.randomUUID()}_${datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
     const { error: upErr } = await supabase.storage.from('avatare').upload(pfad, datei, { upsert: true })
     if (upErr) { setBildLaedt(false); toast(upErr.message, 'error'); return }
     const alt = avatarPfad(profil.avatar_url)

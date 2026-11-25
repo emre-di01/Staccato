@@ -228,7 +228,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## Architecture
 
-**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.20** (see `package.json` and `src/changelog.js`).
+**Staccato** is a music school management SPA built with React 18 + Vite + Supabase (auth, database, realtime, storage). No CSS framework — all styling is done via inline styles using CSS custom properties. Current version: **2.9.21** (see `package.json` and `src/changelog.js`).
 
 ### Role-based routing
 
@@ -685,6 +685,7 @@ Migration files in `supabase/migrations/` — applied in filename order by `supa
 | `20261124000012_shop_demo.sql` | Shop als Demo mit Stripe-Testschlüssel (auch Prod): `ticket_bestellungen.demo`, Ticketstatus `demo` (zählt nirgends mit, Einlass meldet `demo`), `shop_demo_loeschen(schule)` räumt nur Demo-Bestellungen weg |
 | `20261124000013_session_codes_demo_drossel.sql` | Laufende Live-Stunden samt Beitrittscode nur noch für Teilnehmer (`ist_session_teilnehmer()`) und Kurslehrer lesbar (vorher auch ohne Anmeldung); `demo_anfragen` nur noch über die Function, `ip_hash` für die Drossel |
 | `20261124000014_stunden_erinnerung_reparieren.sql` | Cron-Auftrag der Stunden-Erinnerung über `http://kong:8000`; Adresse und Kennwort aus dem Vault (`functions_basis`, `internal_secret` – bei neuem `INTERNAL_SECRET` mit ändern, auf dev nicht gesetzt). Prüfen ohne Versand: Header `x-nur-pruefen` |
+| `20261125000002_datenschutz.sql` | Bankdaten in `profil_bankdaten` (lesen: eigene; Admins über `mitglieder_mit_email`; schreiben nur `bankdaten_setzen`), Kalender-Schlüssel in `profil_kalender` (nur `mein_kalender_token`). Die alten Spalten in `profiles` sind leer, Trigger leiten Schreibzugriffe alter App-Versionen um. `schulen` nur noch eigene, `raum_belegung` schulgebunden. Tests: `supabase/tests/datenschutz.test.sql` |
 | `20261125000001_sumup.sql` | SumUp neben Stripe: `schul_zahlungskonten` mit PK (schule_id, anbieter), `aktiv` = im Shop verwendet (`zahlungskonto_waehlen`), `art` schluessel/oauth; `ticket_bestellungen.anbieter` (Erstattungen immer über den Anbieter der Bestellung); `zahlung_sperren()` gegen doppelte Erstattung/Token-Erneuerung; `sumup_abgleich_liste()` + Cron `sumup-abgleich` (alle 10 min) fängt verlorene Meldungen auf. Functions: `_shared/sumup.ts`, `sumup-webhook`. Tests: `supabase/tests/shop-e2e/sumup.py` |
 | `20261125000000_event_loeschen.sql` | `event_loeschen(event, nur_pruefen)`: Admins löschen vergangene Veranstaltungen mit Ticketbestellungen — ohne angenommenes Geld endgültig, sonst `events.geloescht_am` (RESTRICTIVE-Policy blendet überall aus, Zahlungen bleiben als Beleg). SECURITY-DEFINER-Funktionen über `events` müssen `geloescht_am IS NULL` selbst prüfen |
 | `20261124000015_konto_dateien_loeschen.sql` | Dateien gelöschter Konten: Trigger auf `auth.users` merkt die Konto-ID in `geloeschte_konten` vor; Cron `konto-dateien-loeschen` (alle 10 min) ruft `stunden-erinnerung` mit `{"aufgabe":"dateien"}` auf, entfernt den Kontoordner in `avatare`, `mitglied-dateien`, `schueler-dateien`, `eigene-dateien`. Neuer Bucket mit Konto-ID als erstem Ordner → in beiden Funktionen ergänzen |

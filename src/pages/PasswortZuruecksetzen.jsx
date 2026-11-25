@@ -153,7 +153,6 @@ export default function PasswortZuruecksetzen() {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
         @media (max-width: 640px) {
           .login-left { display: none !important; }

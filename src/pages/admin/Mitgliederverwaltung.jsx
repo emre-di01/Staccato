@@ -21,6 +21,7 @@ const ROLLEN_FARBE = {
 
 export { ibanGueltig, bicGueltig } from '../../lib/bank'
 import { ibanGueltig, bicGueltig } from '../../lib/bank'
+import { profilSpeichern } from '../../lib/bankdaten'
 
 // ─── UI Komponenten ───────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export function NutzerAnlegenModal({ onClose, onErfolg, T, abo, stats }) {
     }
     const hasUpdate = Object.values(profilUpdate).some(v => v != null)
     if (hasUpdate && userId) {
-      await supabase.from('profiles').update(profilUpdate).eq('id', userId)
+      await profilSpeichern(supabase, userId, profilUpdate)
     }
 
     setErfolg(true)
@@ -424,7 +425,7 @@ function ProfilModal({ mitglied, onClose, onErfolg, T }) {
       erziehungsberechtigter_telefon: form.erziehungsberechtigter_telefon || null,
       erziehungsberechtigter_email:   form.erziehungsberechtigter_email   || null,
     }
-    const { error } = await supabase.from('profiles').update(payload).eq('id', mitglied.id)
+    const error = await profilSpeichern(supabase, mitglied.id, payload)
     if (error) setFehler(error.message)
     else { onErfolg(); onClose() }
     setLaden(false)

@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { Blatt, Feld, Knopf, Gruppe, Trenner, SchalterZeile, eingabeStil } from '../../ui'
 import OrtAutocomplete from '../../components/OrtAutocomplete'
 import { ibanGueltig, bicGueltig } from '../../lib/bank'
+import { profilSpeichern } from '../../lib/bankdaten'
 
 const ROLLEN = ['schueler', 'lehrer', 'eltern', 'vorstand']
 const ALLE_ROLLEN = ['admin', ...ROLLEN]
@@ -38,7 +39,7 @@ export default function MitgliedBlatt({ mitglied: m, onClose, onFertig }) {
     if (form.zahlungsweise === 'sepa' && bicFalsch) { toast(T('nm_bic_ungueltig'), 'error'); return }
     setSendet(true)
     const leer = v => (typeof v === 'string' ? v.trim() : v) || null
-    const { error } = await supabase.from('profiles').update({
+    const error = await profilSpeichern(supabase, m.id, {
       voller_name: form.voller_name.trim(), rolle: form.rolle, telefon: leer(form.telefon), adresse: leer(form.adresse),
       geburtsdatum: form.geburtsdatum || null, notizen: leer(form.notizen), aktiv: form.aktiv,
       kann_kurse_anlegen: form.rolle === 'lehrer' ? form.kann_kurse_anlegen : false,
@@ -48,7 +49,7 @@ export default function MitgliedBlatt({ mitglied: m, onClose, onFertig }) {
       erziehungsberechtigter_name: leer(form.erziehungsberechtigter_name),
       erziehungsberechtigter_telefon: leer(form.erziehungsberechtigter_telefon),
       erziehungsberechtigter_email: leer(form.erziehungsberechtigter_email),
-    }).eq('id', m.id)
+    })
     setSendet(false)
     if (error) { toast(error.message, 'error'); return }
     toast(T('nl_gespeichert'), 'success')

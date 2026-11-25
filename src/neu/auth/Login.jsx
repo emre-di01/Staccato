@@ -9,7 +9,7 @@ import AuthRahmen, { Meldung, Zustand } from './Rahmen'
 
 // Anmeldung im neuen Design. Ansichten: Passwort · Link per E-Mail · Passwort vergessen
 export default function NeuLogin() {
-  const { session, rolle, laden, T, schulenListe } = useApp()
+  const { session, rolle, laden, T, schulenListe, abmelden } = useApp()
   const [ansicht, setAnsicht] = useState('login') // 'login' | 'magic' | 'reset'
   const [email,    setEmail]    = useState('')
   const [passwort, setPasswort] = useState('')
@@ -22,7 +22,7 @@ export default function NeuLogin() {
       return (
         <AuthRahmen zeichen={<span />}>
           <Zustand icon={UserX} farbe="var(--danger)" titel={T('nau_profil_fehlt_titel')} text={T('nau_profil_fehlt_text')}>
-            <Knopf variante="sekundaer" voll onClick={() => supabase.auth.signOut()}>{T('logout')}</Knopf>
+            <Knopf variante="sekundaer" voll onClick={abmelden}>{T('logout')}</Knopf>
           </Zustand>
         </AuthRahmen>
       )

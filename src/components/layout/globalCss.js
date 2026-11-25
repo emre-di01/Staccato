@@ -1,6 +1,5 @@
 // Globale Basis-Styles (Reset, Fokus, Animationen, Modal-Breakpoints) für alte und neue App-Hülle
-export const GLOBAL_CSS = `        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
-
+export const GLOBAL_CSS = `
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { height: -webkit-fill-available; }
 

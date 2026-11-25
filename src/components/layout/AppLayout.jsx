@@ -263,7 +263,7 @@ export default function AppLayout() {
             🔧 {T('tools_nav')}
           </NavLink>
           <button onClick={() => window.location.reload()} style={{ ...btnStyle, fontSize: 14, fontWeight: 700, color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 10%, transparent)', padding: '10px 12px', borderRadius: 'var(--radius)', marginTop: 2, marginBottom: 2 }}>↻ Aktualisieren</button>
-          <button onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/login' })} style={btnStyle}>👋 {T('logout')}</button>
+          <button onClick={() => abmelden().then(() => { window.location.href = '/login' })} style={btnStyle}>👋 {T('logout')}</button>
           <button onClick={() => setChangelogOffen(true)} aria-label="Versionshistorie anzeigen" style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 8, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '8px 0' }}>
             v{version} ✨
           </button>
@@ -324,7 +324,7 @@ export default function AppLayout() {
                 <NavLink to={`/${rolle === 'superadmin' ? 'admin' : rolle}/tools`} onClick={() => setSidebarOffen(false)} style={({ isActive }) => ({ ...btnStyle, textDecoration: 'none', color: isActive ? 'var(--primary)' : 'var(--text-3)' })}>
                   🔧 {T('tools_nav')}
                 </NavLink>
-                <button onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/login' })} style={btnStyle}>👋 {T('logout')}</button>
+                <button onClick={() => abmelden().then(() => { window.location.href = '/login' })} style={btnStyle}>👋 {T('logout')}</button>
                 <button onClick={() => { setChangelogOffen(true); setSidebarOffen(false) }} aria-label="Versionshistorie anzeigen" style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 6, opacity: 0.5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '8px 0' }}>
                   v{version} ✨
                 </button>

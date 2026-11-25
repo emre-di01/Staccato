@@ -160,7 +160,7 @@ export default function ProfilSeite() {
     if (datei.size > 5 * 1024 * 1024) { setFehler(T('file_too_large').replace('{n}', 5)); return }
     setAvatarLaden(true); setFehler(''); setErfolg('')
     const sauberName = datei.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const pfad = `${profil.id}/avatar_${Date.now()}_${sauberName}`
+    const pfad = `${profil.id}/avatar_${crypto.randomUUID()}_${sauberName}`
     const { error: sErr } = await supabase.storage.from('avatare').upload(pfad, datei, { upsert: true })
     if (sErr) { setFehler('Bild-Upload fehlgeschlagen: ' + sErr.message); setAvatarLaden(false); return }
     const { data } = supabase.storage.from('avatare').getPublicUrl(pfad)

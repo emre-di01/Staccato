@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { ibanGueltig, bicGueltig } from '../../lib/bank'
+import { profilSpeichern } from '../../lib/bankdaten'
 import OrtAutocomplete from '../../components/OrtAutocomplete'
 import { Feld, Knopf, Laden, FehlerText, eingabeStil } from '../../ui'
 
@@ -38,6 +39,7 @@ export default function MeineAngaben({ persoenlich = false, rolle, knopfText, on
   const [alt, setAlt] = useState(null)
   const [form, setForm] = useState(null)
   const [fehler, setFehler] = useState('')
+  const [ladefehler, setLadefehler] = useState('')
   const [sendet, setSendet] = useState(false)
   const setze = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -46,11 +48,14 @@ export default function MeineAngaben({ persoenlich = false, rolle, knopfText, on
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || !aktiv) return
-      const { data } = await supabase.from('profiles')
-        .select('telefon, adresse, geburtsdatum, zahlungsweise, kontoinhaber, iban, bic, erziehungsberechtigter_name, erziehungsberechtigter_telefon, erziehungsberechtigter_email')
-        .eq('id', user.id).single()
+      const [profil, bank] = await Promise.all([
+        supabase.from('profiles').select('telefon, adresse, geburtsdatum, erziehungsberechtigter_name, erziehungsberechtigter_telefon, erziehungsberechtigter_email').eq('id', user.id).single(),
+        supabase.from('profil_bankdaten').select('zahlungsweise, kontoinhaber, iban, bic').eq('profil_id', user.id).maybeSingle(),
+      ])
       if (!aktiv) return
-      const p = data ?? {}
+      // Nie mit leeren Feldern starten, wenn das Laden misslang: Speichern würde die Bankverbindung löschen
+      if (profil.error || bank.error) { setLadefehler((profil.error ?? bank.error).message); return }
+      const p = { ...profil.data, ...bank.data }
       setUid(user.id)
       setAlt(p)
       setForm({
@@ -64,6 +69,7 @@ export default function MeineAngaben({ persoenlich = false, rolle, knopfText, on
     return () => { aktiv = false }
   }, [])
 
+  if (ladefehler) return <FehlerText>{ladefehler}</FehlerText>
   if (!form) return <Laden hoehe={200} />
 
   const zahlt = ZAHLENDE_ROLLEN.includes(rolle)
@@ -95,7 +101,7 @@ export default function MeineAngaben({ persoenlich = false, rolle, knopfText, on
       erziehungsberechtigter_email: leer(form.erziehungsberechtigter_email),
     })
     setSendet(true)
-    const { error } = await supabase.from('profiles').update(daten).eq('id', uid)
+    const error = await profilSpeichern(supabase, uid, daten)
     setSendet(false)
     if (error) { setFehler(error.message); return }
     setAlt(a => ({ ...a, ...daten }))

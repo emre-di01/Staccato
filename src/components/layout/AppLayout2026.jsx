@@ -126,7 +126,7 @@ function BottomNavItem({ item, ungelesen }) {
 
 // ─── Main Layout ──────────────────────────────────────────────
 export default function AppLayout2026() {
-  const { profil, rolle, schule, abo, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe, darkMode, großeSchrift, toast } = useApp()
+  const { profil, rolle, schule, abo, abmelden, T, toasts, removeToast, confirmState, resolveConfirm, schulenListe, darkMode, großeSchrift, toast } = useApp()
   const prefersReducedMotion = useReducedMotion()
   const logoUrl = darkMode && schule?.logo_url_dark ? schule.logo_url_dark : schule?.logo_url
   const navigate  = useNavigate()
@@ -359,7 +359,7 @@ export default function AppLayout2026() {
           ))}
 
           <button
-            onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/login' })}
+            onClick={() => abmelden().then(() => { window.location.href = '/login' })}
             title={(!isMobile && !expanded) ? T('logout') : undefined}
             style={{ display: 'flex', alignItems: 'center', justifyContent: (isMobile || expanded) ? 'flex-start' : 'center', gap: (isMobile || expanded) ? 10 : 0, padding: (isMobile || expanded) ? '9px 12px' : '9px', borderRadius: 10, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}
           >

@@ -4,6 +4,7 @@ import { safeMarkdown } from '../lib/markdown'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { startseiteNach } from '../components/ProtectedRoute'
+import ExternesMedium from '../components/ExternesMedium'
 
 function ChordPro({ text }) {
   if (!text) return null
@@ -244,8 +245,7 @@ export default function SchuelerSession() {
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🎬</div>
         <div style={{ fontSize: 16, color: 'var(--text-3)', fontWeight: 600 }}>{T('join_connecting')}</div>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');`}</style>
-      </div>
+        </div>
     )
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', 'DM Sans', sans-serif" }}>
@@ -289,8 +289,7 @@ export default function SchuelerSession() {
             {phase === 'verbinden' ? T('join_connecting') : T('join_btn')}
           </button>
         </div>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');`}</style>
-      </div>
+        </div>
     )
   }
 
@@ -402,9 +401,7 @@ export default function SchuelerSession() {
 
             {ansicht === 'youtube' && (
               stueck.youtube_url
-                ? <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-                    <iframe src={`https://www.youtube.com/embed/${getYouTubeId(stueck.youtube_url)}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} frameBorder="0" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-                  </div>
+                ? <ExternesMedium id={getYouTubeId(stueck.youtube_url)} titel={stueck.titel} />
                 : <PlatzhalterBox info={ansichtInfo} />
             )}
 
@@ -476,7 +473,6 @@ export default function SchuelerSession() {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
       `}</style>
     </div>

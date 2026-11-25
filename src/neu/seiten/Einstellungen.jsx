@@ -18,8 +18,7 @@ export default function NeuEinstellungen() {
 
   useEffect(() => {
     if (!profil?.id) return
-    supabase.from('profiles').select('kalender_token').eq('id', profil.id).single()
-      .then(({ data }) => setToken(data?.kalender_token ?? null))
+    supabase.rpc('mein_kalender_token').then(({ data }) => setToken(data ?? null))
   }, [profil?.id])
 
   // E-Mail-Einstellungen sofort speichern (kein extra „Speichern“-Knopf)
@@ -50,8 +49,7 @@ export default function NeuEinstellungen() {
   async function neuerLink() {
     const ok = await confirm(T('ical_reset_confirm'), { confirmLabel: T('ical_reset') })
     if (!ok) return
-    const neu = crypto.randomUUID()
-    const { error } = await supabase.from('profiles').update({ kalender_token: neu }).eq('id', profil.id)
+    const { data: neu, error } = await supabase.rpc('mein_kalender_token', { p_neu: true })
     if (error) { toast(error.message, 'error'); return }
     setToken(neu)
   }

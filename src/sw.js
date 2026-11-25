@@ -1,37 +1,17 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { clientsClaim } from 'workbox-core'
-import { NetworkFirst, CacheFirst } from 'workbox-strategies'
-import { registerRoute } from 'workbox-routing'
-import { ExpirationPlugin } from 'workbox-expiration'
-import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
 self.skipWaiting()
 clientsClaim()
+// Nur das Programm selbst wird zwischengespeichert. Antworten der API und Dateien nie: Der Zwischenspeicher
+// kennt keine Nutzer, auf gemeinsam genutzten Geräten wären sie für die nächste Person sichtbar.
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
-registerRoute(
-  ({ url }) => url.origin === 'https://api.401dev.de' && url.pathname.startsWith('/rest'),
-  new NetworkFirst({
-    cacheName: 'supabase-data',
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 86400 }),
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
-    ],
-  })
-)
-
-registerRoute(
-  ({ url }) => url.origin === 'https://api.401dev.de' && url.pathname.startsWith('/storage'),
-  new CacheFirst({
-    cacheName: 'supabase-storage',
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 2592000 }),
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
-    ],
-  })
-)
+// Reste früherer Versionen entfernen
+self.addEventListener('activate', event => {
+  event.waitUntil(Promise.all(['supabase-data', 'supabase-storage'].map(n => caches.delete(n))))
+})
 
 self.addEventListener('push', event => {
   if (!event.data) return

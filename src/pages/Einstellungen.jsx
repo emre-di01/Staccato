@@ -27,8 +27,8 @@ export default function Einstellungen() {
 
   useEffect(() => {
     if (!profil?.id) return
-    supabase.from('profiles').select('kalender_token').eq('id', profil.id).single()
-      .then(({ data }) => { setKalenderToken(data?.kalender_token ?? null); setKalTokenLaden(false) })
+    supabase.rpc('mein_kalender_token')
+      .then(({ data }) => { setKalenderToken(data ?? null); setKalTokenLaden(false) })
   }, [profil?.id])
 
   const kalenderUrl = kalenderToken
@@ -43,8 +43,8 @@ export default function Einstellungen() {
   }
 
   async function kalenderTokenNeu() {
-    const neuToken = crypto.randomUUID()
-    await supabase.from('profiles').update({ kalender_token: neuToken }).eq('id', profil.id)
+    const { data: neuToken, error } = await supabase.rpc('mein_kalender_token', { p_neu: true })
+    if (error) return
     setKalenderToken(neuToken)
   }
 

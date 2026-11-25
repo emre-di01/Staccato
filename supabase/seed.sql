@@ -79,38 +79,20 @@ CREATE OR REPLACE VIEW public.mitglieder_mit_email
 WITH (security_invoker = false)
 AS
 SELECT
-  p.id,
-  p.voller_name,
-  p.rolle,
-  p.schule_id,
-  p.sprache,
-  p.telefon,
-  p.adresse,
-  p.geburtsdatum,
-  p.aktiv,
-  p.notizen,
-  p.avatar_url,
-  p.kann_kurse_anlegen,
-  p.iban,
-  p.bic,
-  p.kontoinhaber,
-  p.zahlungsweise,
-  p.zahlungsrhythmus,
-  p.mitgliedsbeitrag,
-  p.erziehungsberechtigter_name,
-  p.erziehungsberechtigter_telefon,
-  p.erziehungsberechtigter_email,
-  p.aktualisiert_am,
-  p.erstellt_am,
+  p.id, p.voller_name, p.rolle, p.schule_id, p.sprache, p.telefon, p.adresse, p.geburtsdatum, p.aktiv, p.notizen, p.avatar_url, p.kann_kurse_anlegen,
+  CASE WHEN p.id = auth.uid() OR public.meine_rolle() IN ('admin', 'superadmin') THEN b.iban END AS iban,
+  CASE WHEN p.id = auth.uid() OR public.meine_rolle() IN ('admin', 'superadmin') THEN b.bic END AS bic,
+  CASE WHEN p.id = auth.uid() OR public.meine_rolle() IN ('admin', 'superadmin') THEN b.kontoinhaber END AS kontoinhaber,
+  CASE WHEN p.id = auth.uid() OR public.meine_rolle() IN ('admin', 'superadmin') THEN b.zahlungsweise END AS zahlungsweise,
+  CASE WHEN p.id = auth.uid() OR public.meine_rolle() IN ('admin', 'superadmin') THEN b.zahlungsrhythmus END AS zahlungsrhythmus,
+  (CASE WHEN p.id = auth.uid() OR public.meine_rolle() IN ('admin', 'superadmin') THEN b.mitgliedsbeitrag END)::numeric(8,2) AS mitgliedsbeitrag,
+  p.erziehungsberechtigter_name, p.erziehungsberechtigter_telefon, p.erziehungsberechtigter_email, p.aktualisiert_am, p.erstellt_am,
   u.email
 FROM public.profiles p
 LEFT JOIN auth.users u ON u.id = p.id
+LEFT JOIN public.profil_bankdaten b ON b.profil_id = p.id
 WHERE p.schule_id = public.meine_schule_id()
-  AND (
-    p.id = auth.uid()
-    OR public.meine_rolle() IN ('admin', 'superadmin')
-    OR public.ist_lehrer_von_schueler(p.id)
-  );
+  AND (p.id = auth.uid() OR public.meine_rolle() IN ('admin', 'superadmin') OR public.ist_lehrer_von_schueler(p.id));
 
 GRANT SELECT ON public.mitglieder_mit_email TO authenticated;
 

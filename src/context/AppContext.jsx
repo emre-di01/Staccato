@@ -5,6 +5,7 @@ import { t as translate } from '../i18n/translations'
 import OneSignal from 'react-onesignal'
 import { isNative } from '../lib/nativePush'
 import { pushErneuern } from '../lib/pushErneuern'
+import { geraetLeeren, pushAbmelden } from '../lib/geraet'
 import { NEU_ROLLEN } from '../neu/neuRollen'
 import { schulfarbenTokens } from '../neu/schulfarbe'
 
@@ -220,6 +221,7 @@ export function AppProvider({ children }) {
       }
       if (!session) {
         loadedUidRef.current = null
+        geraetLeeren()
         setSession(null)
         setProfil(null)
         setSchule(null)
@@ -227,6 +229,7 @@ export function AppProvider({ children }) {
         setLaden(false)
         return
       }
+      if (loadedUidRef.current && loadedUidRef.current !== session.user.id) geraetLeeren()
       setSession(session)
       if (loadedUidRef.current !== session.user.id) {
         setLaden(true)
@@ -247,6 +250,7 @@ export function AppProvider({ children }) {
 
   async function abmelden() {
     OneSignal.logout().catch(() => {})
+    await pushAbmelden(supabase, profilIdRef.current)
     await supabase.auth.signOut()
   }
 

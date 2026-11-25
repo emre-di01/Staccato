@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useIsMobile } from '../../hooks/useWindowWidth'
 import QRCode from 'qrcode'
+import ExternesMedium from '../../components/ExternesMedium'
 
 function getYouTubeId(url) {
   const m = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?]+)/)
@@ -690,9 +691,7 @@ export default function Unterrichtsmodus() {
               )}
               {vorschauAnsicht === 'youtube' && (
                 vorschauStueck.youtube_url
-                  ? <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                      <iframe src={`https://www.youtube.com/embed/${getYouTubeId(vorschauStueck.youtube_url)}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} frameBorder="0" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-                    </div>
+                  ? <ExternesMedium id={getYouTubeId(vorschauStueck.youtube_url)} titel={vorschauStueck.titel} />
                   : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
               )}
               {vorschauAnsicht === 'dateiverwaltung' && (
@@ -858,9 +857,7 @@ export default function Unterrichtsmodus() {
                 )}
                 {vorschauAnsicht === 'youtube' && (
                   vorschauStueck.youtube_url
-                    ? <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                        <iframe src={`https://www.youtube.com/embed/${getYouTubeId(vorschauStueck.youtube_url)}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} frameBorder="0" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-                      </div>
+                    ? <ExternesMedium id={getYouTubeId(vorschauStueck.youtube_url)} titel={vorschauStueck.titel} />
                     : <VorschauPlatzhalter ansicht={vorschauAnsicht} />
                 )}
                 {vorschauAnsicht === 'dateiverwaltung' && (

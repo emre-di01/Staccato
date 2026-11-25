@@ -1,9 +1,27 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.20'
+export const CURRENT_VERSION = '2.9.21'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.21',
+    date: '2026-11-25',
+    features: [
+      {
+        icon: '🔒',
+        de: 'Mehr Datenschutz: Bankdaten sehen nur noch du und die Verwaltung, nach dem Abmelden bleibt nichts Persönliches auf dem Gerät, Videos laden erst nach einem Tipp',
+        en: 'More privacy: only you and the school office see bank details, nothing personal stays on the device after signing out, videos load only after a tap',
+        tr: 'Daha fazla gizlilik: Banka bilgilerini yalnızca sen ve yönetim görür, çıkış yapınca cihazda kişisel veri kalmaz, videolar ancak dokununca yüklenir',
+      },
+      {
+        icon: '🔔',
+        de: 'Hinweis: Nach dem Abmelden musst du Push-Benachrichtigungen neu einschalten',
+        en: 'Note: after signing out you need to turn push notifications on again',
+        tr: 'Not: Çıkış yaptıktan sonra anlık bildirimleri yeniden açman gerekir',
+      },
+    ],
+  },
   {
     version: '2.9.20',
     date: '2026-11-25',

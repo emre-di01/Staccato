@@ -13,6 +13,7 @@ import AkkordDateiAnzeige from '../../components/stueck/AkkordDateiAnzeige'
 import PdfCard from '../../components/stueck/PdfCard'
 import AudioPlayer from '../../components/stueck/AudioPlayer'
 import { OeffnenButton, DownloadButton } from '../../components/stueck/FileButtons'
+import ExternesMedium from '../../components/ExternesMedium'
 
 // Live-Unterricht aus Sicht der Teilnehmer (auch Gäste ohne Login). Logik wie bisher:
 // session_beitreten → Realtime-Broadcast `session-live-<id>` → Stück laden.
@@ -204,7 +205,7 @@ export default function NeuSession() {
               </div>
             )}
             {ansicht === 'youtube' && (yt
-              ? <div style={{ position: 'relative', paddingTop: '56.25%', borderRadius: 16, overflow: 'hidden' }}><iframe src={`https://www.youtube-nocookie.com/embed/${yt}`} title={stueck.titel} allow="encrypted-media; picture-in-picture" allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} /></div>
+              ? <ExternesMedium id={yt} titel={stueck.titel} />
               : <Leer text={T('nl_kein_inhalt')} />)}
           </div>
           {(ansicht === 'noten' || ansicht === 'dateiverwaltung') && (

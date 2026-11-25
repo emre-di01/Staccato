@@ -15,12 +15,14 @@ serve(async (req) => {
   )
 
   // resolve user by token
-  const { data: profil } = await supabase
-    .from('profiles')
-    .select('id, voller_name, rolle, schule_id, schulen!profiles_schule_id_fkey(zeitzone)')
-    .eq('kalender_token', token)
-    .single()
+  const { data: eintrag } = await supabase
+    .from('profil_kalender')
+    .select('profiles(id, voller_name, rolle, schule_id, schulen!profiles_schule_id_fkey(zeitzone))')
+    .eq('token', token)
+    .maybeSingle()
 
+  // deno-lint-ignore no-explicit-any
+  const profil = eintrag?.profiles as any
   if (!profil) {
     return new Response('Invalid token', { status: 401, headers: { 'Content-Type': 'text/plain' } })
   }
