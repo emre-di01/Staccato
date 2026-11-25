@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.22'
+export const CURRENT_VERSION = '2.9.23'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.23',
+    date: '2026-11-25',
+    features: [
+      {
+        icon: '🎟️',
+        de: 'Tickets in neuem Aussehen in den Farben der Schule, als PDF und in der Mail. Das PDF hängt jetzt an jeder Ticket-Mail',
+        en: 'Tickets have a new look in your school’s colours, as PDF and in the email. Every ticket email now has the PDF attached',
+        tr: 'Biletler okulun renkleriyle yeni bir görünümde, hem PDF olarak hem e-postada. Artık her bilet e-postasının ekinde PDF var',
+      },
+    ],
+  },
   {
     version: '2.9.22',
     date: '2026-11-25',

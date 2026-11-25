@@ -11,6 +11,8 @@ class G(BaseHTTPRequestHandler):
             try: c=json.loads(base64.urlsafe_b64decode(t[1]+'=='))
             except Exception: c={}
             return self.out(200 if c.get('sub') else 401, json.dumps({'id':c.get('sub'),'email':'x@example.test'}).encode(),'application/json')
+        if self.path.startswith('/auth/v1/admin/users/'):
+            return self.out(200, json.dumps({'id':self.path.split('/')[-1],'email':'mitglied@example.test'}).encode(),'application/json')
         if self.path.startswith('/rest/v1'):
             h={k:v for k,v in self.headers.items() if k.lower() not in('host','content-length','apikey')}
             try: r=u.urlopen(u.Request('http://t-rest:3000'+self.path[8:],data=body,headers=h,method=self.command)); self.out(r.status,r.read(),r.headers.get('Content-Type') or 'application/json')

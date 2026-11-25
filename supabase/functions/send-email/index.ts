@@ -526,7 +526,7 @@ async function sendSchuleinladung(body: Record<string, unknown>, supabase: Retur
 async function sendTickets(body: Record<string, unknown>, supabase: ReturnType<typeof createClient>, userClient: ReturnType<typeof createClient>, absenderId: string) {
   const { bestellung_id } = body as { bestellung_id: string }
   const { data: b } = await supabase.from('ticket_bestellungen')
-    .select('id, event_id, kaeufer_id, events(titel, beginn, ort, raeume(name)), schulen(name, zeitzone)')
+    .select('id, event_id, kaeufer_id, events(titel, beginn, ort, raeume(name)), schulen(name, zeitzone, farbe)')
     .eq('id', bestellung_id).single()
   if (!b) throw new Error('Bestellung nicht gefunden')
   if (b.kaeufer_id !== absenderId) {
@@ -536,7 +536,7 @@ async function sendTickets(body: Record<string, unknown>, supabase: ReturnType<t
   if (!b.kaeufer_id) throw new Error('Kein Empfänger')
 
   const [{ data: tickets }, { data: profil }, { data: { user } }] = await Promise.all([
-    supabase.from('tickets').select('id, code').eq('bestellung_id', b.id).eq('status', 'gueltig').order('preis').order('id'),
+    supabase.from('tickets').select('id, code, preis').eq('bestellung_id', b.id).eq('status', 'gueltig').order('preis').order('id'),
     supabase.from('profiles').select('voller_name, sprache').eq('id', b.kaeufer_id).single(),
     supabase.auth.admin.getUserById(b.kaeufer_id as string),
   ])
@@ -548,11 +548,11 @@ async function sendTickets(body: Record<string, unknown>, supabase: ReturnType<t
   const mail = await ticketMail({
     name: (profil?.voller_name as string) ?? '', lang: (profil?.sprache as string) ?? 'de',
     event: { titel: event.titel, beginn: event.beginn, ort: event.ort || event.raeume?.name || null },
-    schule: b.schulen as { name: string; zeitzone: string | null },
-    tickets: tickets as { id: string; code: string }[],
+    schule: b.schulen as { name: string; zeitzone: string | null; farbe: string | null },
+    tickets: tickets as { id: string; code: string; preis: number }[],
     link: `${APP_URL}/tickets?event=${b.event_id}`,
   })
-  await transport.sendMail({ from: SMTP_FROM, to: user.email, subject: mail.subject, html: html(mail.content), attachments: mail.attachments })
+  await transport.sendMail({ from: SMTP_FROM, to: user.email, subject: mail.subject, html: mail.html, attachments: mail.attachments })
 }
 
 // Bestätigung der eigenen Reservierung mit Betrag und Frist (nur an den Käufer, nur von ihm ausgelöst)
