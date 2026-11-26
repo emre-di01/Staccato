@@ -4,7 +4,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path TO public, extensions;
-SELECT plan(276);
+SELECT plan(289);
 
 CREATE FUNCTION pg_temp.als(p uuid) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -359,6 +359,28 @@ SELECT pg_temp.als('7d000000-0000-0000-0000-000000000000');
 SELECT is((SELECT array_agg(v->>'titel') FROM jsonb_array_elements(meine_scan_events()) v WHERE (v->>'scanbar')::boolean), ARRAY['Einlass'], 'Freigegebene Person sieht nur ihre Veranstaltung');
 SELECT throws_ok($$SELECT pg_temp.scan(10, 'scan-n')$$, '42501', NULL, 'Freigabe gilt nur für ihre Veranstaltung');
 SELECT is(pg_temp.scan(8, 'scan-a'), 'zu_frueh', 'Tage vorher nicht scanbar');
+-- Prüfmodus: liest nur, entwertet nichts, protokolliert nichts
+SELECT is(ticket_pruefen('73000000-0000-0000-0000-000000000009', 'scan-a'), '{"ergebnis": "gueltig", "event_titel": null, "eingeloest_am": null}'::jsonb, 'Prüfen: gültig, ohne Namen und Preise');
+SELECT is(ticket_pruefen('73000000-0000-0000-0000-000000000009', 'scan-a')->>'ergebnis', 'gueltig', 'Prüfen zweimal: bleibt gültig');
+SELECT is(ticket_pruefen('73000000-0000-0000-0000-000000000009', 'scan-s')->>'ergebnis', 'storniert', 'Prüfen: storniert');
+SELECT is(ticket_pruefen('73000000-0000-0000-0000-000000000009', 'scan-n')->>'event_titel', 'Nebenan', 'Prüfen: nennt die richtige Veranstaltung');
+SELECT is(ticket_pruefen('73000000-0000-0000-0000-000000000009', 'scan-fremd')->>'ergebnis', 'unbekannt', 'Prüfen: fremde Schule wird nicht verraten');
+SELECT throws_ok($$SELECT ticket_pruefen('73000000-0000-0000-0000-000000000010', 'scan-n')$$, '42501', NULL, 'Prüfen nur mit Freigabe für diese Veranstaltung');
+SELECT is((SELECT (v->>'helfer')::boolean FROM jsonb_array_elements(meine_scan_events()) v WHERE v->>'id' = '73000000-0000-0000-0000-000000000009'), true, 'Helfer-Kennzeichen für die Startseite');
+RESET ROLE;
+SELECT is((SELECT status FROM tickets WHERE code = 'scan-a'), 'gueltig', 'Prüfen hat nicht entwertet');
+SELECT is((SELECT count(*) FROM ticket_scans), 0::bigint, 'Prüfen legt keinen Scan an');
+SELECT pg_temp.als('7c000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT ticket_pruefen('73000000-0000-0000-0000-000000000009', 'scan-a')$$, '42501', NULL, 'Käufer prüft nicht');
+RESET ROLE;
+SELECT pg_temp.als('7b000000-0000-0000-0000-000000000000');
+SELECT throws_ok($$SELECT ticket_pruefen('73000000-0000-0000-0000-000000000009', 'scan-a')$$, '42501', NULL, 'Admin B prüft nicht bei Schule A');
+RESET ROLE;
+SELECT pg_temp.als('7a000000-0000-0000-0000-000000000000');
+SELECT is(ticket_pruefen('73000000-0000-0000-0000-000000000008', 'scan-a')->>'ergebnis', 'falsche_veranstaltung', 'Admin prüft auch Tage vorher');
+SELECT is((SELECT (v->>'helfer')::boolean FROM jsonb_array_elements(meine_scan_events()) v WHERE v->>'id' = '73000000-0000-0000-0000-000000000009'), false, 'Admin ohne Freigabe ist kein Helfer');
+RESET ROLE;
+SELECT pg_temp.als('7d000000-0000-0000-0000-000000000000');
 SELECT is(pg_temp.scan(9, 'scan-a', '7f000000-0000-0000-0000-000000000001'), 'ok', 'Erster Scan');
 SELECT is(pg_temp.scan(9, 'scan-a', '7f000000-0000-0000-0000-000000000001'), 'ok', 'Wiederholung mit gleicher ID bleibt ok');
 SELECT is(pg_temp.scan(9, 'scan-a'), 'schon_eingeloest', 'Zweiter Scan abgelehnt');

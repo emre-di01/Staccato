@@ -86,7 +86,7 @@ export function useKameraScan(onErkannt, formate, { dauerhaft = false } = {}) {
 }
 
 // Vollbild mit Kamerabild und Sucher-Rahmen (dunkel, unabhängig vom Farbmodus)
-export function KameraVollbild({ titel, hinweis, rahmen, onClose, videoRef, canvasRef, fehler, zeigeKamera = true, children, unten }) {
+export function KameraVollbild({ titel, hinweis, rahmen, onClose, videoRef, canvasRef, fehler, zeigeKamera = true, children, unten, band }) {
   const { T } = useApp()
   useEffect(() => {
     const esc = e => e.key === 'Escape' && onClose()
@@ -100,6 +100,7 @@ export function KameraVollbild({ titel, hinweis, rahmen, onClose, videoRef, canv
         <span style={{ fontSize: 20, fontWeight: 800 }}>{titel}</span>
         <button onClick={onClose} aria-label={T('close')} style={{ width: 44, height: 44, borderRadius: 22, border: 'none', background: 'rgba(255,255,255,0.16)', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={22} /></button>
       </div>
+      {band && <div role="note" style={{ padding: '10px 16px', background: '#1D4ED8', color: '#FFFFFF', textAlign: 'center', fontSize: 18, fontWeight: 800 }}>{band}</div>}
       {/* Video bleibt immer eingehängt, sonst findet ein Neustart der Kamera kein Element */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <video ref={videoRef} playsInline muted autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

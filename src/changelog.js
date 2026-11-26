@@ -1,9 +1,21 @@
 // Each entry: { version, date, features: [{ icon, de, en, tr }] }
 // Newest first.
 
-export const CURRENT_VERSION = '2.9.23'
+export const CURRENT_VERSION = '2.9.24'
 
 export const CHANGELOG = [
+  {
+    version: '2.9.24',
+    date: '2026-11-26',
+    features: [
+      {
+        icon: '🔍',
+        de: 'Einlass: Tickets nur prüfen, ohne sie zu entwerten – auch schon Tage vorher. Mit dem Probe-Code testen Helfer vorab, ob ihr Handy scannt',
+        en: 'Admission: check tickets without using them up – even days before. Helpers can use the test code to see in advance whether their phone scans',
+        tr: 'Giriş: Biletleri kullanmadan sadece kontrol et – günler öncesinden bile. Yardımcılar deneme koduyla telefonlarının okutup okutmadığını önceden test eder',
+      },
+    ],
+  },
   {
     version: '2.9.23',
     date: '2026-11-25',

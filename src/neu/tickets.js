@@ -202,6 +202,9 @@ export function bestellungenAuswerten(bestellungen, jetzt = Date.now()) {
 // Nur der Zufallscode, keine persönlichen Daten; kein Link, die Handy-Kamera öffnet damit nichts
 export const TICKET_PREFIX = 'staccato:ticket:'
 export const ticketQrInhalt = code => TICKET_PREFIX + code
+// Probe-Code für Helfer: prüft nur, ob die Kamera liest – kein Ticket, keine Serveranfrage
+export const PROBE_QR = 'staccato:probe'
+export const istProbeQr = text => String(text ?? '').trim() === PROBE_QR
 
 // Kurze Nummer für Rückfragen – aus der Ticket-ID, nicht aus dem geheimen Code
 export const ticketNummer = ticket => ticket.id.slice(0, 8).toUpperCase()
@@ -301,6 +304,20 @@ export async function ticketScannen(eventId, code, scanId, pause = 600) {
     try {
       const abbruch = new Promise((_, nein) => setTimeout(() => nein(new Error('zeit')), ZEITLIMIT))
       const { data, error } = await Promise.race([supabase.rpc('ticket_scannen', { p_event_id: eventId, p_code: code, p_scan_id: scanId }), abbruch])
+      if (!error) return data
+      if (error.code === '42501') return { ergebnis: 'verboten' }
+    } catch { /* keine Verbindung – nochmal */ }
+  }
+  return { ergebnis: 'netz' }
+}
+
+// Prüfmodus: liest nur, entwertet nichts (ticket_pruefen). Lesen ist gefahrlos, darum einfach wiederholen.
+export async function ticketPruefen(eventId, code, pause = 600) {
+  for (let i = 0; i < VERSUCHE; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, pause))
+    try {
+      const abbruch = new Promise((_, nein) => setTimeout(() => nein(new Error('zeit')), ZEITLIMIT))
+      const { data, error } = await Promise.race([supabase.rpc('ticket_pruefen', { p_event_id: eventId, p_code: code }), abbruch])
       if (!error) return data
       if (error.code === '42501') return { ergebnis: 'verboten' }
     } catch { /* keine Verbindung – nochmal */ }

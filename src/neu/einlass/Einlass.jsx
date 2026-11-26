@@ -1,14 +1,15 @@
 // Einlass: ein großer Knopf, dann Kamera; Ergebnis bildschirmfüllend grün oder rot
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Check, ScanLine, X } from 'lucide-react'
+import { Check, QrCode, ScanLine, ScanSearch, X } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { Seite, Gruppe, Trenner, Zeile, Knopf, Leer, Laden, FehlerText } from '../../ui'
 import { useBasis } from '../rolle'
 import { useNeuLaden } from '../daten'
 import { uhrzeit } from '../zeit'
 import { useKameraScan, KameraVollbild } from '../kamera'
-import { useScanEvents, ticketAusQr, ticketScannen, tagAusgeschrieben } from '../tickets'
+import { useScanEvents, ticketAusQr, ticketScannen, ticketPruefen, istProbeQr, tagAusgeschrieben } from '../tickets'
+import ProbeCode from './ProbeCode'
 
 const QR_FORMATE = ['qr_code']
 const GRUEN_MS = 1800          // Grün verschwindet von selbst
@@ -21,8 +22,9 @@ export default function Einlass() {
   const neuLaden = useNeuLaden()
   const [params] = useSearchParams()
   const { data: events = [], isLoading, isLoadingError: isError } = useScanEvents()
-  const [scannt, setScannt] = useState(false)
-  const schliessen = useCallback(() => { setScannt(false); neuLaden('n-scan-events', 'na-ticket-bestellungen') }, [neuLaden])
+  const [scannt, setScannt] = useState(null)   // null | 'scannen' | 'pruefen'
+  const [probe, setProbe] = useState(false)
+  const schliessen = useCallback(() => { setScannt(null); neuLaden('n-scan-events', 'na-ticket-bestellungen') }, [neuLaden])
 
   const heute = events.filter(e => e.scanbar)
   const ev = params.get('event') ? events.find(e => e.id === params.get('event')) : (heute.length === 1 ? heute[0] : null)
@@ -47,15 +49,20 @@ export default function Einlass() {
         <div style={{ fontSize: 52, fontWeight: 800, lineHeight: 1 }}>{ev.eingelassen}</div>
         <div style={{ marginTop: 8, fontSize: 18, color: 'var(--text-2)' }}>{T('ei_von_drin').replace('{n}', ev.gesamt)}</div>
         {ev.scanbar
-          ? <Knopf voll icon={ScanLine} onClick={() => setScannt(true)} style={{ marginTop: 24, height: 64, fontSize: 20 }}>{T('ei_scannen')}</Knopf>
+          ? <Knopf voll icon={ScanLine} onClick={() => setScannt('scannen')} style={{ marginTop: 24, height: 64, fontSize: 20 }}>{T('ei_scannen')}</Knopf>
           : <p role="status" style={{ margin: '20px 0 0', fontSize: 18, fontWeight: 600 }}>{T('ei_zu_frueh').replace('{zeit}', tagAusgeschrieben(ev.ab, ev.zeitzone, lang))}</p>}
+        <Knopf voll variante="rahmen" icon={ScanSearch} onClick={() => setScannt('pruefen')} style={{ marginTop: 12, whiteSpace: 'normal' }}>{T('ei_nur_pruefen')}</Knopf>
       </div>
-      {scannt && <Scanner ev={ev} onClose={schliessen} />}
+      <div style={{ margin: '12px 20px 0' }}>
+        <Knopf voll variante="sekundaer" icon={QrCode} onClick={() => setProbe(true)} style={{ whiteSpace: 'normal' }}>{T('ei_probe_zeigen')}</Knopf>
+      </div>
+      {scannt && <Scanner ev={ev} pruefen={scannt === 'pruefen'} onClose={schliessen} />}
+      {probe && <ProbeCode onClose={() => setProbe(false)} />}
     </Seite>
   )
 }
 
-export function Scanner({ ev, onClose }) {
+export function Scanner({ ev, pruefen: nurPruefen = false, onClose }) {
   const { T, lang } = useApp()
   const [ergebnis, setErgebnis] = useState(null)   // null = Kamera; { ergebnis, … } inkl. 'pruefe'
   const [stand, setStand] = useState({ eingelassen: ev.eingelassen, gesamt: ev.gesamt })
@@ -72,13 +79,13 @@ export function Scanner({ ev, onClose }) {
   async function pruefen() {
     setErgebnis({ ergebnis: 'pruefe' })
     const { code, scanId } = offen.current
-    const r = await ticketScannen(ev.id, code, scanId)
+    const r = nurPruefen ? await ticketPruefen(ev.id, code) : await ticketScannen(ev.id, code, scanId)
     if (r.gesamt != null) setStand({ eingelassen: r.eingelassen, gesamt: r.gesamt })
     zeigen(r)
   }
 
   function zeigen(r) {
-    try { navigator.vibrate?.(r.ergebnis === 'ok' ? 80 : [180, 90, 180]) } catch { /* nicht überall erlaubt */ }
+    try { navigator.vibrate?.(['ok', 'gueltig', 'probe'].includes(r.ergebnis) ? 80 : [180, 90, 180]) } catch { /* nicht überall erlaubt */ }
     setErgebnis(r)
   }
 
@@ -86,6 +93,7 @@ export function Scanner({ ev, onClose }) {
     if (beschaeftigt.current || (text === letzter.current.text && Date.now() < letzter.current.bis)) return
     beschaeftigt.current = true
     letzter.current = { text, bis: 0 }
+    if (istProbeQr(text)) { zeigen({ ergebnis: 'probe' }); return }
     const code = ticketAusQr(text)
     if (!code) { zeigen({ ergebnis: 'unbekannt' }); return }
     offen.current = { code, scanId: crypto.randomUUID() }
@@ -95,15 +103,15 @@ export function Scanner({ ev, onClose }) {
   const { videoRef, canvasRef, fehler } = useKameraScan(erkannt, QR_FORMATE, { dauerhaft: true })
 
   useEffect(() => {
-    if (ergebnis?.ergebnis !== 'ok') return
+    if (ergebnis?.ergebnis !== 'ok') return   // Blau bleibt stehen, bis man „Weiter“ drückt
     const t = setTimeout(weiter, GRUEN_MS)
     return () => clearTimeout(t)
   }, [ergebnis, weiter])
 
   return (
-    <KameraVollbild titel={ev.titel} hinweis={T('ei_hinweis')} rahmen={{ w: 260, h: 260 }} onClose={onClose} videoRef={videoRef} canvasRef={canvasRef} fehler={fehler}
+    <KameraVollbild titel={nurPruefen ? T('ei_pruefmodus') : ev.titel} hinweis={T('ei_hinweis')} band={nurPruefen ? T('ei_pruefmodus_band') : null} rahmen={{ w: 260, h: 260 }} onClose={onClose} videoRef={videoRef} canvasRef={canvasRef} fehler={fehler}
       zeigeKamera={!ergebnis}
-      unten={<div style={{ padding: '14px 16px calc(14px + env(safe-area-inset-bottom, 0px))', textAlign: 'center', fontSize: 20, fontWeight: 800 }}>{T('ei_stand').replace('{a}', stand.eingelassen).replace('{n}', stand.gesamt)}</div>}>
+      unten={nurPruefen ? null : <div style={{ padding: '14px 16px calc(14px + env(safe-area-inset-bottom, 0px))', textAlign: 'center', fontSize: 20, fontWeight: 800 }}>{T('ei_stand').replace('{a}', stand.eingelassen).replace('{n}', stand.gesamt)}</div>}>
       {ergebnis && <Ergebnis r={ergebnis} zeit={iso => iso ? uhrzeit(iso, ev.zeitzone ?? 'Europe/Berlin', lang) : ''} onWeiter={weiter} onNochmal={pruefen} />}
     </KameraVollbild>
   )
@@ -111,23 +119,27 @@ export function Scanner({ ev, onClose }) {
 
 const TEXTE = {
   ok: 'ei_ok', schon_eingeloest: 'ei_schon', storniert: 'ei_storniert', falsche_veranstaltung: 'ei_falsch',
+  gueltig: 'ei_gueltig', probe: 'ei_probe_ok',
   unbekannt: 'ei_unbekannt', zu_frueh: 'ei_noch_zu_frueh', vorbei: 'ei_vorbei', verboten: 'ei_verboten', netz: 'ei_netz', demo: 'ei_demo',
 }
 
 function Ergebnis({ r, zeit, onWeiter, onNochmal }) {
   const { T } = useApp()
   if (r.ergebnis === 'pruefe') return <div role="status" style={{ ...flaeche, background: '#000', fontSize: 24, fontWeight: 700 }}>{T('ei_pruefe')}</div>
-  const ok = r.ergebnis === 'ok'
+  // Blau = gut, aber niemand wird eingelassen (Prüfmodus, Probe-Code). Grün gibt es nur beim echten Einlass.
+  const blau = r.ergebnis === 'gueltig' || r.ergebnis === 'probe'
+  const ok = r.ergebnis === 'ok' || blau
   const netz = r.ergebnis === 'netz'
   const Icon = ok ? Check : X
   const zusatz = r.ergebnis === 'schon_eingeloest' ? T('ei_schon_um').replace('{zeit}', zeit(r.eingeloest_am))
-    : r.ergebnis === 'falsche_veranstaltung' ? r.event_titel : netz ? T('ei_netz_hinweis') : null
+    : r.ergebnis === 'falsche_veranstaltung' ? r.event_titel : netz ? T('ei_netz_hinweis')
+    : r.ergebnis === 'gueltig' ? T('ei_gueltig_hinweis') : r.ergebnis === 'probe' ? T('ei_probe_ok_hinweis') : null
   return (
-    <div role={ok ? 'status' : 'alert'} onClick={ok ? onWeiter : undefined} style={{ ...flaeche, background: ok ? '#15803D' : netz ? '#92400E' : '#B91C1C' }}>
+    <div role={ok ? 'status' : 'alert'} onClick={ok && !blau ? onWeiter : undefined} style={{ ...flaeche, background: blau ? '#1D4ED8' : ok ? '#15803D' : netz ? '#92400E' : '#B91C1C' }}>
       <Icon aria-hidden="true" size={150} strokeWidth={3} />
       <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1.15 }}>{T(TEXTE[r.ergebnis] ?? 'ei_unbekannt')}</div>
       {zusatz && <div style={{ fontSize: 24, fontWeight: 600, overflowWrap: 'anywhere' }}>{zusatz}</div>}
-      {!ok && (
+      {(!ok || blau) && (
         <div style={{ width: 'min(360px, 100%)', display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
           {netz && <button onClick={onNochmal} style={{ ...grosserKnopf, background: '#FFFFFF', color: '#111114' }}>{T('ei_nochmal')}</button>}
           <button onClick={onWeiter} style={netz ? { ...grosserKnopf, background: 'rgba(255,255,255,0.18)', color: '#FFFFFF' } : { ...grosserKnopf, background: '#FFFFFF', color: '#111114' }}>{T('ei_weiter')}</button>

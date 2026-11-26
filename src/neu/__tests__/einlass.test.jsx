@@ -22,9 +22,9 @@ let root
 const text = () => document.body.textContent
 const knopf = n => [...document.querySelectorAll('button')].find(b => b.textContent === n)
 const scanne = inhalt => act(async () => { kamera.melden(inhalt); await Promise.resolve() })
-async function zeige(el) {
+async function zeige(el, url = '/einlass') {
   root = createRoot(document.body.appendChild(document.createElement('div')))
-  await act(async () => root.render(<MemoryRouter><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{el}</QueryClientProvider></MemoryRouter>))
+  await act(async () => root.render(<MemoryRouter initialEntries={[url]}><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{el}</QueryClientProvider></MemoryRouter>))
 }
 beforeEach(() => rpc.mockReset())
 afterEach(() => { if (root) act(() => root.unmount()); root = null; document.body.innerHTML = ''; vi.useRealTimers() })
@@ -94,7 +94,49 @@ describe('Scanner', () => {
   })
 })
 
+describe('Prüfmodus', () => {
+  it('prüft nur, zeigt Blau statt Grün und bleibt stehen', async () => {
+    vi.useFakeTimers()
+    rpc.mockResolvedValue({ data: { ergebnis: 'gueltig' }, error: null })
+    await zeige(<Scanner ev={ev} pruefen onClose={() => {}} />)
+    expect(text()).toContain('PRÜFMODUS – niemand wird eingelassen')
+    expect(text()).not.toContain('von 80 drin')
+    await scanne(QR('a'))
+    expect(rpc).toHaveBeenCalledWith('ticket_pruefen', { p_event_id: 'ev1', p_code: 'a'.repeat(32) })
+    expect(text()).toContain('Gültiges Ticket')
+    expect(text()).not.toContain('Willkommen!')
+    await act(async () => vi.advanceTimersByTime(10000))
+    expect(text()).toContain('Gültiges Ticket')
+    await act(async () => knopf('Weiter').click())
+    expect(text()).not.toContain('Gültiges Ticket')
+  })
+  it('meldet eingelöste Tickets wie beim Scannen', async () => {
+    rpc.mockResolvedValue({ data: { ergebnis: 'schon_eingeloest', eingeloest_am: '2099-12-12T17:02:00Z' }, error: null })
+    await zeige(<Scanner ev={ev} pruefen onClose={() => {}} />)
+    await scanne(QR('a'))
+    expect(text()).toContain('Schon benutzt')
+  })
+  it('Probe-Code geht in beiden Modi ohne Serveranfrage', async () => {
+    for (const pruefen of [false, true]) {
+      await zeige(<Scanner ev={ev} pruefen={pruefen} onClose={() => {}} />)
+      await scanne('staccato:probe')
+      expect(text()).toContain('Probe erfolgreich')
+      act(() => root.unmount()); root = null; document.body.innerHTML = ''
+    }
+    expect(rpc).not.toHaveBeenCalled()
+  })
+})
+
 describe('Einlass', () => {
+  it('bietet vor dem Einlass nur den Prüfmodus an', async () => {
+    rpc.mockResolvedValue({ data: [{ ...ev, scanbar: false, helfer: true }], error: null })
+    await zeige(<Einlass />, '/einlass?event=ev1')
+    await act(() => new Promise(r => setTimeout(r, 20)))
+    expect(text()).toContain('Scannen geht ab')
+    expect(knopf('Tickets scannen')).toBeFalsy()
+    expect(knopf('Nur prüfen (ohne Einlass)')).toBeTruthy()
+    expect(knopf('Probe-Code zeigen')).toBeTruthy()
+  })
   it('führt bei einer Veranstaltung direkt zum Scannen', async () => {
     rpc.mockResolvedValue({ data: [ev], error: null })
     await zeige(<Einlass />)

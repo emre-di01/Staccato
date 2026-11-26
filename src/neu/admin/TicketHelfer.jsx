@@ -3,7 +3,9 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
-import { Blatt, Suchfeld, Gruppe, Trenner, Zeile, Leer, Laden, FehlerText } from '../../ui'
+import { QrCode } from 'lucide-react'
+import { Blatt, Suchfeld, Gruppe, Trenner, Zeile, Leer, Laden, FehlerText, Knopf } from '../../ui'
+import { ProbeQr } from '../einlass/ProbeCode'
 import { useNeuLaden } from '../daten'
 import { Avatar } from './ListeDetail'
 
@@ -24,6 +26,7 @@ export default function TicketHelfer({ ev, onClose }) {
   const neuLaden = useNeuLaden()
   const [suche, setSuche] = useState('')
   const [sendet, setSendet] = useState(false)
+  const [probe, setProbe] = useState(false)
   const { data: helfer = [], isLoadingError: isError } = useTicketHelfer(ev.id)
   const { data: personen = [], isLoading } = useQuery({
     queryKey: ['na-schulmitglieder', schule?.id],
@@ -60,6 +63,8 @@ export default function TicketHelfer({ ev, onClose }) {
     <Blatt titel={T('ei_helfer')} onClose={onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <p style={{ margin: 0, fontSize: 16, lineHeight: 1.45, color: 'var(--text-2)' }}>{T('ei_helfer_hinweis')}</p>
+        <Knopf variante="sekundaer" icon={QrCode} aria-expanded={probe} onClick={() => setProbe(p => !p)} style={{ whiteSpace: 'normal' }}>{T('ei_probe_zeigen')}</Knopf>
+        {probe && <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}><p style={{ margin: 0, fontSize: 16, lineHeight: 1.45, color: 'var(--text-2)' }}>{T('ei_probe_hinweis')}</p><ProbeQr /></div>}
         {isLoading ? <Laden hoehe={200} /> : isError ? <FehlerText>{T('tk_laden_fehler')}</FehlerText> : <>
           {dabei.length > 0 && (
             <Gruppe style={{ margin: 0 }}>
