@@ -2,7 +2,7 @@
 -- Führe aus mit: supabase test db
 
 BEGIN;
-SELECT plan(35);
+SELECT plan(36);
 
 -- ─── Fixture: Fixtures sauber einfügen ─────────────────────────────────────
 -- Konstanten als Variablen in Temp-Tabelle, damit die UUIDs konsistent bleiben
@@ -181,8 +181,8 @@ SELECT results_eq(
 
 SELECT results_eq(
   $$ SELECT COUNT(*)::int FROM profiles WHERE schule_id = '11111111-1111-1111-1111-111111111111'::uuid $$,
-  ARRAY[5],
-  'Admin A sieht 5 Profile der eigenen Schule'
+  ARRAY[6],
+  'Admin A sieht 6 Profile der eigenen Schule (inkl. Schüler B2)'
 );
 
 SELECT results_eq(
